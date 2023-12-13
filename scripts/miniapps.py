@@ -144,7 +144,7 @@ class JobText:
         launch_cmd = launch_cmd.format(job_path=job_path, job_file=job_file)
         # get default SHELL if not specified
         shell = environ["SHELL"]
-        if shell == None:
+        if shell is None:
             raise ValueError(f"no $SHELL environemt variable found")
         print(f"Submitting : {launch_cmd} using shell {shell}")
 

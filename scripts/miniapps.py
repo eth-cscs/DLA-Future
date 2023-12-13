@@ -149,7 +149,7 @@ class JobText:
         print(f"Submitting : {launch_cmd} using shell {shell}")
 
         process = Popen(
-            f"{launch_cmd}",
+            launch_cmd,
             shell=True,
             executable=shell,
             universal_newlines=True,

@@ -14,8 +14,8 @@
 
 #include <dlaf/blas/enum_output.h>
 #include <dlaf/blas/tile.h>
-#include <dlaf/matrix/tile.h>
 #include <dlaf/blas/tile_extensions.h>
+#include <dlaf/matrix/tile.h>
 
 #include <gtest/gtest.h>
 
@@ -34,16 +34,14 @@ using namespace dlaf::matrix::test;
 using namespace testing;
 
 template <Device D, class T, class CT = const T>
-void testScal(const SizeType m,
-              const SizeType n, const SizeType extra_lda) {
+void testScal(const SizeType m, const SizeType n, const SizeType extra_lda) {
   const TileElementSize size_a(m, n);
 
   const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
 
   const T beta = TypeUtilities<T>::element(1.1, .4);
 
-  auto [el_a, res_a] =
-      getMatrixScal<TileElementIndex, T>(beta);
+  auto [el_a, res_a] = getMatrixScal<TileElementIndex, T>(beta);
 
   auto a = createTile<T, D>(el_a, size_a, lda);
 
@@ -56,8 +54,7 @@ void testScal(const SizeType m,
   SCOPED_TRACE(s.str());
 
   // Check result against analytical result.
-  CHECK_TILE_NEAR(res_a, a, 2 * TypeUtilities<T>::error,
-                  2 * TypeUtilities<T>::error);
+  CHECK_TILE_NEAR(res_a, a, 2 * TypeUtilities<T>::error, 2 * TypeUtilities<T>::error);
 }
 
 }

@@ -15,6 +15,7 @@
 #include <dlaf/blas/enum_output.h>
 #include <dlaf/blas/tile.h>
 #include <dlaf/matrix/tile.h>
+#include <dlaf/blas/tile_extensions.h>
 
 #include <gtest/gtest.h>
 
@@ -44,9 +45,9 @@ void testScal(const SizeType m,
   auto [el_a, res_a] =
       getMatrixScal<TileElementIndex, T>(beta);
 
-  auto a = createTile<CT, D>(el_a, size_a, lda);
+  auto a = createTile<T, D>(el_a, size_a, lda);
 
-  invokeBlas<D>(tile::internal::scal, beta, a);
+  invokeBlas<D>(tile::internal::scal_o, beta, a);
 
   std::stringstream s;
   s << "Scal: ";

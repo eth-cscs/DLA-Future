@@ -21,35 +21,12 @@
 
 #include <dlaf_test/util_types.h>
 
+
+#include <dlaf_test/matrix/util_generic_blas.h>
+
 /// @file
 
 namespace dlaf::matrix::test {
-
-namespace internal {
-template <class ElementGetter>
-auto opValFunc(ElementGetter&& val, const blas::Op op) {
-  std::function op_val = val;
-  switch (op) {
-    case blas::Op::NoTrans:
-      break;
-    case blas::Op::Trans: {
-      op_val = [&val](auto i) {
-        i.transpose();
-        return val(i);
-      };
-      break;
-    }
-    case blas::Op::ConjTrans: {
-      op_val = [&val](auto i) {
-        i.transpose();
-        return dlaf::conj(val(i));
-      };
-      break;
-    }
-  }
-  return op_val;
-}
-}
 
 template <class ElementIndex, class T>
 auto getMatrixScal(const T beta) {
@@ -62,9 +39,7 @@ auto getMatrixScal(const T beta) {
   };
 
   auto res_a = [beta, el_a](const ElementIndex& index) {
-    const double i = index.row();
-    const double j = index.col();
-    return beta * el_op_a(index);
+    return beta * el_a(index);
   };
 
   using internal::opValFunc;

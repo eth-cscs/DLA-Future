@@ -19,10 +19,8 @@
 #include <dlaf/matrix/index.h>
 #include <dlaf/types.h>
 
-#include <dlaf_test/util_types.h>
-
-
 #include <dlaf_test/matrix/util_generic_blas.h>
+#include <dlaf_test/util_types.h>
 
 /// @file
 
@@ -38,9 +36,7 @@ auto getMatrixScal(const T beta) {
     return TypeUtilities<T>::polar(.9 * (i + 1) / (k + .5), 2 * i - k);
   };
 
-  auto res_a = [beta, el_a](const ElementIndex& index) {
-    return beta * el_a(index);
-  };
+  auto res_a = [beta, el_a](const ElementIndex& index) { return beta * el_a(index); };
 
   using internal::opValFunc;
   return std::make_tuple(el_a, res_a);

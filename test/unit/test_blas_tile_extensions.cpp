@@ -11,7 +11,7 @@
 #include <dlaf/blas/tile.h>
 
 #include "test_blas_tile/test_scal.h"
-//#include "test_blas_tile/test_add.h"
+// #include "test_blas_tile/test_add.h"
 
 #include <gtest/gtest.h>
 
@@ -50,19 +50,18 @@ TYPED_TEST(TileOperationsExtensionsTestMC, Scal) {
     // Test a and b non const Tiles.
     dlaf::test::testScal<Device::CPU, Type>(m, n, extra_lda);
   }
-
 }
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(TileOperationsExtensionsTestGPU, Scal) {
   using Type = TypeParam;
 
-      for (const auto& [m, n, k, extra_lda, extra_ldb, extra_ldc] : gemm_sizes) {
-        // Test a and b const Tiles.
-        dlaf::test::testScal<Device::GPU, Type>(m, n, extra_lda);
+  for (const auto& [m, n, k, extra_lda, extra_ldb, extra_ldc] : gemm_sizes) {
+    // Test a and b const Tiles.
+    dlaf::test::testScal<Device::GPU, Type>(m, n, extra_lda);
 
-        // Test a and b non const Tiles.
-       dlaf::test::testScal<Device::CPU, Type, Type>(m, n, extra_lda);
-      }
+    // Test a and b non const Tiles.
+    dlaf::test::testScal<Device::CPU, Type, Type>(m, n, extra_lda);
+  }
 }
 #endif

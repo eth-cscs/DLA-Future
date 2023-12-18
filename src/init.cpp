@@ -191,13 +191,17 @@ void updateConfiguration(const pika::program_options::variables_map& vm, configu
   cfg.mpi_pool = (pika::resource::pool_exists("mpi")) ? "mpi" : "default";
 
   // Warn if not using MPI pool without --dlaf:no-mpi-pool
-  int ntasks;
-  DLAF_MPI_CHECK_ERROR(MPI_Comm_size(MPI_COMM_WORLD, &ntasks));
-  if (ntasks != 1 && cfg.mpi_pool == "default" && !vm["dlaf:no-mpi-pool"].as<bool>()) {
-    std::cerr << "Warning! DLA-Future is not using the \"mpi\" pika thread pool for "
-                 "MPI communication but --dlaf:no-mpi-pool is not set. This may "
-                 "indicate a bug in DLA-Future or pika. Performance may be degraded."
-              << std::endl;
+  int mpi_initialized;
+  DLAF_MPI_CHECK_ERROR(MPI_Initialized(&mpi_initialized));
+  if (mpi_initialized) {
+    int ntasks;
+    DLAF_MPI_CHECK_ERROR(MPI_Comm_size(MPI_COMM_WORLD, &ntasks));
+    if (ntasks != 1 && cfg.mpi_pool == "default" && !vm["dlaf:no-mpi-pool"].as<bool>()) {
+      std::cerr << "Warning! DLA-Future is not using the \"mpi\" pika thread pool for "
+                   "MPI communication but --dlaf:no-mpi-pool is not set. This may "
+                   "indicate a bug in DLA-Future or pika. Performance may be degraded."
+                << std::endl;
+    }
   }
 
   // update tune parameters

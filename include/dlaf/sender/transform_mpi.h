@@ -90,9 +90,7 @@ template <typename F, typename Sender,
 [[nodiscard]] decltype(auto) transformMPI(F&& f, Sender&& sender) {
   namespace ex = pika::execution::experimental;
 
-  return ex::transfer(std::forward<Sender>(sender),
-                      ex::with_priority(dlaf::internal::getMPIScheduler(),
-                                        pika::execution::thread_priority::boost)) |
+  return ex::transfer(std::forward<Sender>(sender), dlaf::internal::getMPIScheduler()) |
          ex::then(dlaf::common::internal::ConsumeRvalues{MPICallHelper{std::forward<F>(f)}}) |
          ex::drop_operation_state();
 }

@@ -10,8 +10,8 @@
 
 #include <dlaf/blas/tile.h>
 
+#include "test_blas_tile/test_add.h"
 #include "test_blas_tile/test_scal.h"
-// #include "test_blas_tile/test_add.h"
 
 #include <gtest/gtest.h>
 

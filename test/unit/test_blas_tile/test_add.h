@@ -52,8 +52,7 @@ void testAdd(const blas::Op op_a, const blas::Op op_b, const SizeType m, const S
   const T alpha = TypeUtilities<T>::element(-1.2, .7);
   const T beta = TypeUtilities<T>::element(1.1, .4);
 
-  auto [el_a, el_b, el_c, res_c] =
-      getMatrixMatrixMultiplication<TileElementIndex, T>(op_a, op_b, k, alpha, beta);
+  auto [el_a, el_b, el_c, res_c] = getMatrixAdd<TileElementIndex, T>(op_a, op_b, k, alpha, beta);
 
   auto a = createTile<CT, D>(el_a, size_a, lda);
   auto b = createTile<CT, D>(el_b, size_b, ldb);

@@ -41,4 +41,20 @@ auto getMatrixScal(const T beta) {
   using internal::opValFunc;
   return std::make_tuple(el_a, res_a);
 }
+
+template <class ElementIndex, class T>
+auto getMatrixAdd(const T beta) {
+  using dlaf::test::TypeUtilities;
+
+  auto el_a = [](const ElementIndex& index) {
+    const double i = index.row();
+    const double k = index.col();
+    return TypeUtilities<T>::polar(.9 * (i + 1) / (k + .5), 2 * i - k);
+  };
+
+  auto res_a = [beta, el_a](const ElementIndex& index) { return beta * el_a(index); };
+
+  using internal::opValFunc;
+  return std::make_tuple(el_a, res_a);
+}
 }

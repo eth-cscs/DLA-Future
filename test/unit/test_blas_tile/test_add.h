@@ -27,6 +27,8 @@
 namespace dlaf {
 namespace test {
 
+// Computes A += alpha * B
+
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
 using namespace testing;

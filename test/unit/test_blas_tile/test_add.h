@@ -14,12 +14,14 @@
 
 #include <dlaf/blas/enum_output.h>
 #include <dlaf/blas/tile.h>
+#include <dlaf/blas/tile_extensions.h>
 #include <dlaf/matrix/tile.h>
 
 #include <gtest/gtest.h>
 
 #include <dlaf_test/blas/invoke.h>
 #include <dlaf_test/matrix/util_generic_blas.h>
+#include <dlaf_test/matrix/util_generic_blas_extensions.h>
 #include <dlaf_test/matrix/util_tile.h>
 #include <dlaf_test/matrix/util_tile_blas.h>
 #include <dlaf_test/util_types.h>
@@ -34,9 +36,9 @@ using namespace dlaf::matrix::test;
 using namespace testing;
 
 template <Device D, class T, class CT = const T>
-void testGemm(const blas::Op op_a, const blas::Op op_b, const SizeType m, const SizeType n,
-              const SizeType k, const SizeType extra_lda, const SizeType extra_ldb,
-              const SizeType extra_ldc) {
+void testAdd(const blas::Op op_a, const blas::Op op_b, const SizeType m, const SizeType n,
+             const SizeType k, const SizeType extra_lda, const SizeType extra_ldb,
+             const SizeType extra_ldc) {
   const TileElementSize size_a =
       (op_a == blas::Op::NoTrans) ? TileElementSize(m, k) : TileElementSize(k, m);
   const TileElementSize size_b =
@@ -60,7 +62,7 @@ void testGemm(const blas::Op op_a, const blas::Op op_b, const SizeType m, const 
   invokeBlas<D>(tile::internal::gemm_o, op_a, op_b, alpha, a, b, beta, c);
 
   std::stringstream s;
-  s << "GEMM: " << op_a << ", " << op_b;
+  s << "Add: " << op_a << ", " << op_b;
   s << ", m = " << m << ", n = " << n << ", k = " << k;
   s << ", lda = " << lda << ", ldb = " << ldb << ", ldc = " << ldc;
   SCOPED_TRACE(s.str());

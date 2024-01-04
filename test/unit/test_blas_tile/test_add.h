@@ -36,39 +36,29 @@ using namespace dlaf::matrix::test;
 using namespace testing;
 
 template <Device D, class T, class CT = const T>
-void testAdd(const blas::Op op_a, const blas::Op op_b, const SizeType m, const SizeType n,
-             const SizeType k, const SizeType extra_lda, const SizeType extra_ldb,
-             const SizeType extra_ldc) {
-  const TileElementSize size_a =
-      (op_a == blas::Op::NoTrans) ? TileElementSize(m, k) : TileElementSize(k, m);
-  const TileElementSize size_b =
-      (op_b == blas::Op::NoTrans) ? TileElementSize(k, n) : TileElementSize(n, k);
-  const TileElementSize size_c(m, n);
+void testAdd(const SizeType m, const SizeType n, const SizeType extra_lda, const SizeType extra_ldb) {
+  const TileElementSize size(m, n);
 
-  const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
-  const SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
-  const SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
+  const SizeType lda = std::max<SizeType>(1, size.rows()) + extra_lda;
+  const SizeType ldb = std::max<SizeType>(1, size.rows()) + extra_ldb;
 
   const T alpha = TypeUtilities<T>::element(-1.2, .7);
-  const T beta = TypeUtilities<T>::element(1.1, .4);
 
-  auto [el_a, el_b, el_c, res_c] = getMatrixAdd<TileElementIndex, T>(op_a, op_b, k, alpha, beta);
+  auto [el_a, el_b, res_a] = getMatrixAdd<TileElementIndex, T>(alpha);
 
-  auto a = createTile<CT, D>(el_a, size_a, lda);
-  auto b = createTile<CT, D>(el_b, size_b, ldb);
-  auto c = createTile<T, D>(el_c, size_c, ldc);
+  auto a = createTile<T, D>(el_a, size, lda);
+  auto b = createTile<CT, D>(el_b, size, ldb);
 
-  invokeBlas<D>(tile::internal::gemm_o, op_a, op_b, alpha, a, b, beta, c);
+  invokeBlas<D>(tile::internal::add_o, alpha, b, a);
 
   std::stringstream s;
-  s << "Add: " << op_a << ", " << op_b;
-  s << ", m = " << m << ", n = " << n << ", k = " << k;
-  s << ", lda = " << lda << ", ldb = " << ldb << ", ldc = " << ldc;
+  s << "Add: ";
+  s << ", m = " << m << ", n = " << n;
+  s << ", lda = " << lda << ", ldb = " << ldb;
   SCOPED_TRACE(s.str());
 
   // Check result against analytical result.
-  CHECK_TILE_NEAR(res_c, c, 2 * (k + 1) * TypeUtilities<T>::error,
-                  2 * (k + 1) * TypeUtilities<T>::error);
+  CHECK_TILE_NEAR(res_a, a, 2 * TypeUtilities<T>::error, 2 * TypeUtilities<T>::error);
 }
 
 }

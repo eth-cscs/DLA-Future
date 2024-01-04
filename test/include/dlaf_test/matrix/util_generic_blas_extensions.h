@@ -35,29 +35,35 @@ auto getMatrixScal(const T beta) {
 
   auto el_a = [](const ElementIndex& index) {
     const double i = index.row();
-    const double k = index.col();
-    return TypeUtilities<T>::polar(.9 * (i + 1) / (k + .5), 2 * i - k);
+    const double j = index.col();
+    return TypeUtilities<T>::polar(.9 * (i + 1) / (j + .5), 2 * i - j);
   };
 
   auto res_a = [beta, el_a](const ElementIndex& index) { return beta * el_a(index); };
 
-  using internal::opValFunc;
   return std::make_tuple(el_a, res_a);
 }
 
 template <class ElementIndex, class T>
-auto getMatrixAdd(const T beta) {
+auto getMatrixAdd(const T alpha) {
   using dlaf::test::TypeUtilities;
 
   auto el_a = [](const ElementIndex& index) {
     const double i = index.row();
-    const double k = index.col();
-    return TypeUtilities<T>::polar(.9 * (i + 1) / (k + .5), 2 * i - k);
+    const double j = index.col();
+    return TypeUtilities<T>::polar(.9 * (i + 1) / (j + .5), 2 * i - j);
   };
 
-  auto res_a = [beta, el_a](const ElementIndex& index) { return beta * el_a(index); };
+  auto el_b = [](const ElementIndex& index) {
+    const double i = index.row();
+    const double j = index.col();
+    return TypeUtilities<T>::polar(1.2 * i / (j + 1), -i + j);
+  };
 
-  using internal::opValFunc;
-  return std::make_tuple(el_a, res_a);
+  auto res_a = [alpha, el_a, el_b](const ElementIndex& index) {
+    return el_a(index) + alpha * el_b(index);
+  };
+
+  return std::make_tuple(el_a, el_b, res_a);
 }
 }

@@ -61,7 +61,7 @@ TYPED_TEST(TileOperationsExtensionsTestGPU, Scal) {
     dlaf::test::testScal<Device::GPU, Type>(m, n, extra_lda);
 
     // Test a and b non const Tiles.
-    dlaf::test::testScal<Device::GPU, Type, Type>(m, n, extra_lda);
+    dlaf::test::testScal<Device::GPU, Type>(m, n, extra_lda);
   }
 }
 #endif
@@ -94,7 +94,7 @@ TYPED_TEST(TileOperationsExtensionsTestGPU, Add) {
     dlaf::test::testAdd<Device::GPU, Type>(m, n, extra_lda);
 
     // Test a and b non const Tiles.
-    dlaf::test::testAdd<Device::GPU, Type, Type>(m, n, extra_lda);
+    dlaf::test::testAdd<Device::GPU, Type>(m, n, extra_lda);
   }
 }
 #endif

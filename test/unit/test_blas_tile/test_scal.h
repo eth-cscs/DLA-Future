@@ -33,7 +33,7 @@ using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
 using namespace testing;
 
-template <Device D, class T, class CT = const T>
+template <Device D, class T>
 void testScal(const SizeType m, const SizeType n, const SizeType extra_lda) {
   const TileElementSize size_a(m, n);
 

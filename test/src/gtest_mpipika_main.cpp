@@ -50,10 +50,10 @@
 
 #include <gtest/gtest.h>
 
-GTEST_API_ int test_main(int argc, char** argv) {
+GTEST_API_ int test_main(pika::program_options::variables_map& vm) {
   std::printf("Running main() from gtest_mpipika_main.cpp\n");
   auto ret = [&] {
-    dlaf::ScopedInitializer init(argc, argv);
+    dlaf::ScopedInitializer init(vm);
     return RUN_ALL_TESTS();
   }();
   pika::finalize();

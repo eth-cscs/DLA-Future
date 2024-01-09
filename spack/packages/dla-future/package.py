@@ -136,18 +136,51 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         args.append(self.define_from_variant("BUILD_SHARED_LIBS", "shared"))
 
         # BLAS/LAPACK
-        if self.spec["lapack"].name in INTEL_MATH_LIBRARIES:
+        if spec["lapack"].name in INTEL_MATH_LIBRARIES:
+            mkl_provider = spec["lapack"].name
+
             vmap = {
-                "none": "seq",
-                "openmp": "omp",
-                "tbb": "tbb",
-            }  # Map MKL variants to LAPACK target name
-            mkl_threads = vmap[spec["intel-mkl"].variants["threads"].value]
-            # TODO: Generalise for intel-oneapi-mkl
-            args += [
-                self.define("DLAF_WITH_MKL", True),
-                self.define("MKL_LAPACK_TARGET", f"mkl::mkl_intel_32bit_{mkl_threads}_dyn"),
-            ]
+                    "intel-oneapi-mkl": {
+                        "threading": {
+                            "none": "sequential",
+                            "openmp": "gnu_thread",
+                            "tbb": "tbb_thread",
+                            },
+                        "mpi": {
+                            "mpich": "intelmpi",
+                            "openmpi": "openmpi",
+                            }
+                        },
+                    "intel-mkl": {
+                        "threading": {
+                            "none": "seq",
+                            "openmp": "omp",
+                            "tbb": "tbb",
+                            },
+                        "mpi": {
+                            "mpich": "mpich",
+                            "openmpi": "ompi",
+                            }
+                        },
+                    }
+
+            if mkl_provider not in vmap.keys():
+                raise RuntimeError("{0} is not supported".format(mkl_provider))
+            mkl_mapper = vmap[mkl_provider]
+
+            mkl_threads = mkl_mapper["threading"][spec[mkl_provider].variants["threads"].value]
+            if mkl_provider == "intel-oneapi-mkl":
+                args += [
+                        self.define("DLAF_WITH_MKL", True),
+                        self.define("MKL_INTERFACE", "lp64"),
+                        self.define("MKL_THREADING", mkl_threads),
+                        ]
+            elif mkl_provider == "intel-mkl":
+                args += [
+                        self.define("DLAF_WITH_MKL_LEGACY", True),
+                        self.define("MKL_LAPACK_TARGET", f"mkl::mkl_intel_32bit_{mkl_threads}_dyn"),
+                        ]
+
             if "+scalapack" in spec:
                 if (
                     "^mpich" in spec
@@ -156,15 +189,21 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                     or "^mvapich" in spec
                     or "^mvapich2" in spec
                 ):
-                    mkl_mpi = "mpich"
+                    mkl_mpi = mkl_mapper["mpi"]["mpich"]
                 elif "^openmpi" in spec:
-                    mkl_mpi = "ompi"
-                args.append(
-                    self.define(
-                        "MKL_SCALAPACK_TARGET",
-                        f"mkl::scalapack_{mkl_mpi}_intel_32bit_{mkl_threads}_dyn",
-                    )
-                )
+                    mkl_mpi = mkl_mapper["mpi"]["openmpi"]
+                else:
+                    raise RuntimeError("{0} is not supported".format(spec["mpi"].name))
+
+                if mkl_provider == "intel-oneapi-mkl":
+                    args.append(self.define("MKL_MPI", mkl_mpi))
+                elif mkl_provider == "intel-mkl":
+                    args.append(
+                            self.define(
+                                "MKL_SCALAPACK_TARGET",
+                                f"mkl::scalapack_{mkl_mpi}_intel_32bit_{mkl_threads}_dyn",
+                                )
+                            )
         else:
             args.append(self.define("DLAF_WITH_MKL", False))
             args.append(

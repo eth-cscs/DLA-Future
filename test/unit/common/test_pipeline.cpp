@@ -520,6 +520,7 @@ TEST(SubPipeline, TaskReadonlyParentAccess) {
   std::atomic<bool> second_access_done{false};
   std::atomic<bool> third_access_done{false};
   std::atomic<bool> last_parent_access_done{false};
+  pika::mutex ro_mutex;
 
   auto checkpointparent_first = std::move(first_parent_sender) | ex::then([&](auto wrapper) {
                                   EXPECT_EQ(wrapper.get().get(), 26);
@@ -530,9 +531,6 @@ TEST(SubPipeline, TaskReadonlyParentAccess) {
                                   EXPECT_FALSE(last_parent_access_done);
                                   ++wrapper.get();
                                   first_parent_access_done = true;
-                                  // This will delay releasing this rw access so that the first ro access
-                                  // will be done through a callback, not inline.
-                                  std::this_thread::sleep_for(std::chrono::seconds(1));
                                 });
 
   auto spawn_sub_pipeline =
@@ -543,19 +541,16 @@ TEST(SubPipeline, TaskReadonlyParentAccess) {
                                   // nullable_int specially allows modification on const objects for
                                   // testing purposes.
                                   ex::start_detached(sub_pipeline.read() | ex::then([&](auto wrapper) {
-                                                       // This delays accessing the wrapper so that the
-                                                       // second and third ro accesses get there first.
-                                                       std::this_thread::sleep_for(std::chrono::seconds(3));
+                                                       std::lock_guard l(ro_mutex);
                                                        EXPECT_GE(wrapper.get().get(), 27);
-                                                       EXPECT_LE(wrapper.get().get(), 27);
+                                                       EXPECT_LE(wrapper.get().get(), 29);
                                                        EXPECT_TRUE(first_parent_access_done);
                                                        EXPECT_FALSE(last_parent_access_done);
                                                        ++wrapper.get();
                                                        first_access_done = true;
                                                      }));
-                                  // This delays the second and third ro access so that they run inline.
-                                  std::this_thread::sleep_for(std::chrono::seconds(2));
                                   ex::start_detached(sub_pipeline.read() | ex::then([&](auto wrapper) {
+                                                       std::lock_guard l(ro_mutex);
                                                        EXPECT_GE(wrapper.get().get(), 27);
                                                        EXPECT_LE(wrapper.get().get(), 29);
                                                        EXPECT_TRUE(first_parent_access_done);
@@ -564,6 +559,7 @@ TEST(SubPipeline, TaskReadonlyParentAccess) {
                                                        second_access_done = true;
                                                      }));
                                   ex::start_detached(sub_pipeline.read() | ex::then([&](auto wrapper) {
+                                                       std::lock_guard l(ro_mutex);
                                                        EXPECT_GE(wrapper.get().get(), 27);
                                                        EXPECT_LE(wrapper.get().get(), 29);
                                                        EXPECT_TRUE(first_parent_access_done);

@@ -221,12 +221,12 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         args.append(self.define_from_variant("DLAF_WITH_CUDA", "cuda"))
         args.append(self.define_from_variant("DLAF_WITH_HIP", "rocm"))
         if "+rocm" in spec:
-            archs = self.spec.variants["amdgpu_target"].value
+            archs = spec.variants["amdgpu_target"].value
             if "none" not in archs:
                 arch_str = ";".join(archs)
                 args.append(self.define("CMAKE_HIP_ARCHITECTURES", arch_str))
         if "+cuda" in spec:
-            archs = self.spec.variants["cuda_arch"].value
+            archs = spec.variants["cuda_arch"].value
             if "none" not in archs:
                 arch_str = ";".join(archs)
                 args.append(self.define("CMAKE_CUDA_ARCHITECTURES", arch_str))
@@ -238,12 +238,12 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         args.append(self.define_from_variant("DLAF_BUILD_DOC", "doc"))
 
         ### For the spack repo only the else branch should remain.
-        if "+ci-test" in self.spec:
+        if "+ci-test" in spec:
             # Enable TESTS and setup CI specific parameters
             args.append(self.define("CMAKE_CXX_FLAGS", "-Werror"))
-            if "+cuda" in self.spec:
+            if "+cuda" in spec:
                 args.append(self.define("CMAKE_CUDA_FLAGS", "-Werror=all-warnings"))
-            if "+rocm" in self.spec:
+            if "+rocm" in spec:
                 args.append(self.define("CMAKE_HIP_FLAGS", "-Werror"))
             args.append(self.define("BUILD_TESTING", True))
             args.append(self.define("DLAF_BUILD_TESTING", True))
@@ -254,7 +254,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             args.append(self.define("DLAF_BUILD_TESTING", self.run_tests))
 
         ### Variants available only in the DLAF repo spack package
-        if "+ci-check-threads" in self.spec:
+        if "+ci-check-threads" in spec:
             args.append(self.define("DLAF_TEST_PREFLAGS", "check-threads"))
         ###
 

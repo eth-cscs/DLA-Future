@@ -520,6 +520,7 @@ TEST(SubPipeline, TaskReadonlyParentAccess) {
   std::atomic<bool> second_access_done{false};
   std::atomic<bool> third_access_done{false};
   std::atomic<bool> last_parent_access_done{false};
+  pika::mutex ro_mutex;
 
   auto checkpointparent_first = std::move(first_parent_sender) | ex::then([&](auto wrapper) {
                                   EXPECT_EQ(wrapper.get().get(), 26);
@@ -540,6 +541,7 @@ TEST(SubPipeline, TaskReadonlyParentAccess) {
                                   // nullable_int specially allows modification on const objects for
                                   // testing purposes.
                                   ex::start_detached(sub_pipeline.read() | ex::then([&](auto wrapper) {
+                                                       std::lock_guard l(ro_mutex);
                                                        EXPECT_GE(wrapper.get().get(), 27);
                                                        EXPECT_LE(wrapper.get().get(), 29);
                                                        EXPECT_TRUE(first_parent_access_done);
@@ -548,6 +550,7 @@ TEST(SubPipeline, TaskReadonlyParentAccess) {
                                                        first_access_done = true;
                                                      }));
                                   ex::start_detached(sub_pipeline.read() | ex::then([&](auto wrapper) {
+                                                       std::lock_guard l(ro_mutex);
                                                        EXPECT_GE(wrapper.get().get(), 27);
                                                        EXPECT_LE(wrapper.get().get(), 29);
                                                        EXPECT_TRUE(first_parent_access_done);
@@ -556,6 +559,7 @@ TEST(SubPipeline, TaskReadonlyParentAccess) {
                                                        second_access_done = true;
                                                      }));
                                   ex::start_detached(sub_pipeline.read() | ex::then([&](auto wrapper) {
+                                                       std::lock_guard l(ro_mutex);
                                                        EXPECT_GE(wrapper.get().get(), 27);
                                                        EXPECT_LE(wrapper.get().get(), 29);
                                                        EXPECT_TRUE(first_parent_access_done);

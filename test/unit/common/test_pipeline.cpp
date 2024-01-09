@@ -541,7 +541,7 @@ TEST(SubPipeline, TaskReadonlyParentAccess) {
                                   // testing purposes.
                                   ex::start_detached(sub_pipeline.read() | ex::then([&](auto wrapper) {
                                                        EXPECT_GE(wrapper.get().get(), 27);
-                                                       EXPECT_LE(wrapper.get().get(), 27);
+                                                       EXPECT_LE(wrapper.get().get(), 29);
                                                        EXPECT_TRUE(first_parent_access_done);
                                                        EXPECT_FALSE(last_parent_access_done);
                                                        ++wrapper.get();

@@ -130,8 +130,23 @@ if(DLAF_WITH_OPENMP)
 endif()
 
 # ----- LAPACK/SCALAPACK
-if(DLAF_WITH_MKL)
-  find_package(MKL REQUIRED)
+if(DLAF_WITH_MKL) # oneMKL
+  set(MKL_INTERFACE "lp64" CACHE STRING "")
+  set(MKL_THREADING "sequential" CACHE STRING "")
+  set(MKL_MPI "mpich" CACHE STRING "")
+
+  find_package(MKL CONFIG REQUIRED)
+
+  set(LAPACK_FOUND TRUE)
+  add_library(DLAF::LAPACK INTERFACE IMPORTED GLOBAL)
+  target_link_libraries(DLAF::LAPACK INTERFACE MKL::MKL)
+
+  if(DLAF_WITH_SCALAPACK)
+    set(SCALAPACK_FOUND TRUE)
+    add_library(DLAF::SCALAPACK INTERFACE IMPORTED GLOBAL)
+  endif()
+elseif(DLAF_WITH_MKL_LEGACY) # MKL (deprecated)
+  find_package(MKL MODULE REQUIRED)
 
   set(MKL_LAPACK_TARGET "mkl::mkl_intel_32bit_seq_dyn"
       CACHE STRING "MKL LAPACK target (see FindMKL for details)"

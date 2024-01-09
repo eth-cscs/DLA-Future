@@ -768,7 +768,7 @@ TEST(SubPipeline, RandomAccess) {
   constexpr std::size_t num_seeds = 10;
 
   for (const auto& test : pipeline_tests) {
-    for (std::size_t seed = 0; seed < num_seeds; ++seed) {
+    for (typename std::mt19937::result_type seed = 0; seed < num_seeds; ++seed) {
       std::mt19937 gen(seed);
 
       PipelineTestState state{};

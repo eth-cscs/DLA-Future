@@ -85,7 +85,7 @@ TYPED_TEST(TileOperationsExtensionsTestGPU, Add) {
     dlaf::test::testAdd<Device::GPU, Type>(m, n, extra_lda, extra_ldb);
 
     // Test a and b non const Tiles.
-    dlaf::test::testAdd<Device::GPU, Type>(m, n, extra_lda, extra_ldb);
+    dlaf::test::testAdd<Device::GPU, Type>(m, n, extra_lda, );
   }
 }
 #endif

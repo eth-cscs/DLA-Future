@@ -70,9 +70,9 @@ TYPED_TEST(TileOperationsExtensionsTestMC, Add) {
   using Type = TypeParam;
   for (const auto& [m, n, k, extra_lda, extra_ldb, extra_ldc] : gemm_sizes) {
     // Test a and b const Tiles.
-    dlaf::test::testAdd<Device::CPU, Type>(m, n, extra_lda);
+    dlaf::test::testAdd<Device::CPU, Type>(m, n, extra_lda, extra_ldb);
     // Test a and b non const Tiles.
-    dlaf::test::testAdd<Device::CPU, Type>(m, n, extra_lda);
+    dlaf::test::testAdd<Device::CPU, Type>(m, n, extra_lda, extra_ldb);
   }
 }
 
@@ -82,10 +82,10 @@ TYPED_TEST(TileOperationsExtensionsTestGPU, Add) {
 
   for (const auto& [m, n, k, extra_lda, extra_ldb, extra_ldc] : gemm_sizes) {
     // Test a and b const Tiles.
-    dlaf::test::testAdd<Device::GPU, Type>(m, n, extra_lda);
+    dlaf::test::testAdd<Device::GPU, Type>(m, n, extra_lda, extra_ldb);
 
     // Test a and b non const Tiles.
-    dlaf::test::testAdd<Device::GPU, Type>(m, n, extra_lda);
+    dlaf::test::testAdd<Device::GPU, Type>(m, n, extra_lda, extra_ldb);
   }
 }
 #endif

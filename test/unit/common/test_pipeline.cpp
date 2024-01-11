@@ -423,66 +423,76 @@ TEST(SubPipeline, TaskParentAccess) {
   std::atomic<bool> third_access_done{false};
   std::atomic<bool> last_parent_access_done{false};
 
-  auto checkpointparent_first = std::move(first_parent_sender) | ex::then([&](auto wrapper) {
-                                  EXPECT_EQ(wrapper.get().get(), 26);
-                                  EXPECT_FALSE(first_parent_access_done);
-                                  EXPECT_FALSE(first_access_done);
-                                  EXPECT_FALSE(second_access_done);
-                                  EXPECT_FALSE(third_access_done);
-                                  EXPECT_FALSE(last_parent_access_done);
-                                  ++wrapper.get();
-                                  first_parent_access_done = true;
-                                });
+  auto checkpointparent_first =
+      std::move(first_parent_sender) |
+      dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(), [&](auto& wrapper) {
+        EXPECT_EQ(wrapper.get(), 26);
+        EXPECT_FALSE(first_parent_access_done);
+        EXPECT_FALSE(first_access_done);
+        EXPECT_FALSE(second_access_done);
+        EXPECT_FALSE(third_access_done);
+        EXPECT_FALSE(last_parent_access_done);
+        ++wrapper;
+        first_parent_access_done = true;
+      });
 
   auto spawn_sub_pipeline =
       ex::just() |
       dlaf::internal::transform(
           dlaf::internal::Policy<dlaf::Backend::MC>(),
           [&, sub_pipeline = std::move(sub_pipeline)]() mutable {
-            ex::start_detached(sub_pipeline.readwrite() | ex::then([&](auto wrapper) {
-                                 EXPECT_EQ(wrapper.get().get(), 27);
-                                 EXPECT_TRUE(first_parent_access_done);
-                                 EXPECT_FALSE(first_access_done);
-                                 EXPECT_FALSE(second_access_done);
-                                 EXPECT_FALSE(third_access_done);
-                                 EXPECT_FALSE(last_parent_access_done);
-                                 ++wrapper.get();
-                                 first_access_done = true;
-                               }));
-            ex::start_detached(sub_pipeline.readwrite() | ex::then([&](auto wrapper) {
-                                 EXPECT_EQ(wrapper.get().get(), 28);
-                                 EXPECT_TRUE(first_parent_access_done);
-                                 EXPECT_TRUE(first_access_done);
-                                 EXPECT_FALSE(second_access_done);
-                                 EXPECT_FALSE(third_access_done);
-                                 EXPECT_FALSE(last_parent_access_done);
-                                 ++wrapper.get();
-                                 second_access_done = true;
-                               }));
-            ex::start_detached(sub_pipeline.readwrite() | ex::then([&](auto wrapper) {
-                                 EXPECT_EQ(wrapper.get().get(), 29);
-                                 EXPECT_TRUE(first_parent_access_done);
-                                 EXPECT_TRUE(first_access_done);
-                                 EXPECT_TRUE(second_access_done);
-                                 EXPECT_FALSE(third_access_done);
-                                 EXPECT_FALSE(last_parent_access_done);
-                                 ++wrapper.get();
-                                 third_access_done = true;
-                               }));
+            ex::start_detached(sub_pipeline.readwrite() |
+                               dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
+                                                         [&](auto& wrapper) {
+                                                           EXPECT_EQ(wrapper.get(), 27);
+                                                           EXPECT_TRUE(first_parent_access_done);
+                                                           EXPECT_FALSE(first_access_done);
+                                                           EXPECT_FALSE(second_access_done);
+                                                           EXPECT_FALSE(third_access_done);
+                                                           EXPECT_FALSE(last_parent_access_done);
+                                                           ++wrapper;
+                                                           first_access_done = true;
+                                                         }));
+            ex::start_detached(sub_pipeline.readwrite() |
+                               dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
+                                                         [&](auto& wrapper) {
+                                                           EXPECT_EQ(wrapper.get(), 28);
+                                                           EXPECT_TRUE(first_parent_access_done);
+                                                           EXPECT_TRUE(first_access_done);
+                                                           EXPECT_FALSE(second_access_done);
+                                                           EXPECT_FALSE(third_access_done);
+                                                           EXPECT_FALSE(last_parent_access_done);
+                                                           ++wrapper;
+                                                           second_access_done = true;
+                                                         }));
+            ex::start_detached(sub_pipeline.readwrite() |
+                               dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
+                                                         [&](auto& wrapper) {
+                                                           EXPECT_EQ(wrapper.get(), 29);
+                                                           EXPECT_TRUE(first_parent_access_done);
+                                                           EXPECT_TRUE(first_access_done);
+                                                           EXPECT_TRUE(second_access_done);
+                                                           EXPECT_FALSE(third_access_done);
+                                                           EXPECT_FALSE(last_parent_access_done);
+                                                           ++wrapper;
+                                                           third_access_done = true;
+                                                         }));
             return std::move(sub_pipeline);
           }) |
       ex::ensure_started();
 
-  auto checkpointparent_last = pipeline.readwrite() | ex::then([&](auto wrapper) {
-                                 EXPECT_EQ(wrapper.get().get(), 30);
-                                 EXPECT_TRUE(first_parent_access_done);
-                                 EXPECT_TRUE(first_access_done);
-                                 EXPECT_TRUE(second_access_done);
-                                 EXPECT_TRUE(third_access_done);
-                                 EXPECT_FALSE(last_parent_access_done);
-                                 ++wrapper.get();
-                                 last_parent_access_done = true;
-                               });
+  auto checkpointparent_last =
+      pipeline.readwrite() |
+      dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(), [&](auto& wrapper) {
+        EXPECT_EQ(wrapper.get(), 30);
+        EXPECT_TRUE(first_parent_access_done);
+        EXPECT_TRUE(first_access_done);
+        EXPECT_TRUE(second_access_done);
+        EXPECT_TRUE(third_access_done);
+        EXPECT_FALSE(last_parent_access_done);
+        ++wrapper;
+        last_parent_access_done = true;
+      });
 
   // None of the sub pipeline accesses should have completed at this point even if they were spawned. We
   // can start the last parent access without releasing previous accesses.
@@ -498,6 +508,7 @@ TEST(SubPipeline, TaskParentAccess) {
   // The last parent access should not complete until the sub pipeline has been reset.
   EXPECT_FALSE(last_parent_access_done);
   auto sub_pipeline_from_sender = tt::sync_wait(std::move(spawn_sub_pipeline));
+  { [[maybe_unused]] auto wrapper = tt::sync_wait(sub_pipeline_from_sender.readwrite()); }
   EXPECT_TRUE(first_parent_access_done);
   EXPECT_TRUE(first_access_done);
   EXPECT_TRUE(second_access_done);
@@ -520,63 +531,78 @@ TEST(SubPipeline, TaskReadonlyParentAccess) {
   std::atomic<bool> second_access_done{false};
   std::atomic<bool> third_access_done{false};
   std::atomic<bool> last_parent_access_done{false};
+  pika::mutex ro_mutex;
 
-  auto checkpointparent_first = std::move(first_parent_sender) | ex::then([&](auto wrapper) {
-                                  EXPECT_EQ(wrapper.get().get(), 26);
-                                  EXPECT_FALSE(first_parent_access_done);
-                                  EXPECT_FALSE(first_access_done);
-                                  EXPECT_FALSE(second_access_done);
-                                  EXPECT_FALSE(third_access_done);
-                                  EXPECT_FALSE(last_parent_access_done);
-                                  ++wrapper.get();
-                                  first_parent_access_done = true;
-                                });
+  auto checkpointparent_first =
+      std::move(first_parent_sender) |
+      dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(), [&](auto& wrapper) {
+        EXPECT_EQ(wrapper.get(), 26);
+        EXPECT_FALSE(first_parent_access_done);
+        EXPECT_FALSE(first_access_done);
+        EXPECT_FALSE(second_access_done);
+        EXPECT_FALSE(third_access_done);
+        EXPECT_FALSE(last_parent_access_done);
+        ++wrapper;
+        first_parent_access_done = true;
+      });
 
   auto spawn_sub_pipeline =
       ex::just() |
-      dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
-                                [&, sub_pipeline = std::move(sub_pipeline)]() mutable {
-                                  // Note also we can modify the value in the wrapper only because
-                                  // nullable_int specially allows modification on const objects for
-                                  // testing purposes.
-                                  ex::start_detached(sub_pipeline.read() | ex::then([&](auto wrapper) {
-                                                       EXPECT_GE(wrapper.get().get(), 27);
-                                                       EXPECT_LE(wrapper.get().get(), 27);
-                                                       EXPECT_TRUE(first_parent_access_done);
-                                                       EXPECT_FALSE(last_parent_access_done);
-                                                       ++wrapper.get();
-                                                       first_access_done = true;
-                                                     }));
-                                  ex::start_detached(sub_pipeline.read() | ex::then([&](auto wrapper) {
-                                                       EXPECT_GE(wrapper.get().get(), 27);
-                                                       EXPECT_LE(wrapper.get().get(), 29);
-                                                       EXPECT_TRUE(first_parent_access_done);
-                                                       EXPECT_FALSE(last_parent_access_done);
-                                                       ++wrapper.get();
-                                                       second_access_done = true;
-                                                     }));
-                                  ex::start_detached(sub_pipeline.read() | ex::then([&](auto wrapper) {
-                                                       EXPECT_GE(wrapper.get().get(), 27);
-                                                       EXPECT_LE(wrapper.get().get(), 29);
-                                                       EXPECT_TRUE(first_parent_access_done);
-                                                       EXPECT_FALSE(last_parent_access_done);
-                                                       ++wrapper.get();
-                                                       third_access_done = true;
-                                                     }));
-                                  return std::move(sub_pipeline);
-                                }) |
+      dlaf::internal::transform(
+          dlaf::internal::Policy<dlaf::Backend::MC>(),
+          [&, sub_pipeline = std::move(sub_pipeline)]() mutable {
+            // Note also we can modify the value in the wrapper only because
+            // nullable_int specially allows modification on const objects for
+            // testing purposes.
+            ex::start_detached(sub_pipeline.read() |
+                               dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
+                                                         [&](auto& wrapper) {
+                                                           std::lock_guard l(ro_mutex);
+                                                           EXPECT_GE(wrapper.get(), 27);
+                                                           EXPECT_LE(wrapper.get(), 29);
+                                                           EXPECT_TRUE(first_parent_access_done);
+                                                           EXPECT_FALSE(last_parent_access_done);
+                                                           ++wrapper;
+                                                           first_access_done = true;
+                                                         }));
+            ex::start_detached(sub_pipeline.read() |
+                               dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
+                                                         [&](auto& wrapper) {
+                                                           std::lock_guard l(ro_mutex);
+                                                           EXPECT_GE(wrapper.get(), 27);
+                                                           EXPECT_LE(wrapper.get(), 29);
+                                                           EXPECT_TRUE(first_parent_access_done);
+                                                           EXPECT_FALSE(last_parent_access_done);
+                                                           ++wrapper;
+                                                           second_access_done = true;
+                                                         }));
+            ex::start_detached(sub_pipeline.read() |
+                               dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
+                                                         [&](auto& wrapper) {
+                                                           std::lock_guard l(ro_mutex);
+                                                           EXPECT_GE(wrapper.get(), 27);
+                                                           EXPECT_LE(wrapper.get(), 29);
+                                                           EXPECT_TRUE(first_parent_access_done);
+                                                           EXPECT_FALSE(last_parent_access_done);
+                                                           ++wrapper;
+                                                           third_access_done = true;
+                                                         }));
+            return std::move(sub_pipeline);
+          }) |
       ex::ensure_started();
 
-  auto checkpointparent_last = pipeline.read() | ex::then([&](auto wrapper) {
-                                 EXPECT_EQ(wrapper.get().get(), 30);
-                                 EXPECT_TRUE(first_parent_access_done);
-                                 EXPECT_TRUE(first_access_done);
-                                 EXPECT_TRUE(second_access_done);
-                                 EXPECT_TRUE(third_access_done);
-                                 EXPECT_FALSE(last_parent_access_done);
-                                 ++wrapper.get();
-                                 last_parent_access_done = true;
-                               });
+  auto checkpointparent_last =
+      pipeline.read() |
+      dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(), [&](auto& wrapper) {
+        EXPECT_EQ(wrapper.get(), 30);
+        EXPECT_TRUE(first_parent_access_done);
+        EXPECT_TRUE(first_access_done);
+        EXPECT_TRUE(second_access_done);
+        EXPECT_TRUE(third_access_done);
+        EXPECT_FALSE(last_parent_access_done);
+        ++wrapper;
+        last_parent_access_done = true;
+      });
 
   // None of the sub pipeline accesses should have completed at this point even if they were spawned. We
   // can start the last parent access without releasing previous accesses.
@@ -760,7 +786,7 @@ TEST(SubPipeline, RandomAccess) {
   constexpr std::size_t num_seeds = 10;
 
   for (const auto& test : pipeline_tests) {
-    for (std::size_t seed = 0; seed < num_seeds; ++seed) {
+    for (typename std::mt19937::result_type seed = 0; seed < num_seeds; ++seed) {
       std::mt19937 gen(seed);
 
       PipelineTestState state{};
@@ -768,13 +794,15 @@ TEST(SubPipeline, RandomAccess) {
 
       // Make the first access to the parent pipeline, but do not eagerly start it
       ++state.spawn_count;
-      auto first_access = pipeline.readwrite() | ex::then([&state](auto wrapper) {
-                            ++state.access_count;
-                            ++wrapper.get();
+      auto first_access =
+          pipeline.readwrite() | dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
+                                                           [&state](auto& wrapper) {
+                                                             ++state.access_count;
+                                                             ++wrapper;
 
-                            EXPECT_EQ(state.access_count.load(), 1);
-                            EXPECT_EQ(wrapper.get().get(), 1);
-                          });
+                                                             EXPECT_EQ(state.access_count.load(), 1);
+                                                             EXPECT_EQ(wrapper.get(), 1);
+                                                           });
 
       test_recurse_sub_pipeline(pipeline, state, gen, test, depth);
 

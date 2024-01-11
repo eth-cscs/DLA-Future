@@ -4,7 +4,6 @@
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 # dlaf-no-license-check
-
 from spack.package import *
 
 
@@ -105,7 +104,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             depends_on(f"pika cuda_arch={arch}", when=f"cuda_arch={arch}")
             depends_on(f"umpire cuda_arch={arch}", when=f"cuda_arch={arch}")
 
-    ### Variants available only in the DLAF repo spack package
+    # Variants available only in the DLAF repo spack package
     cxxstds = ("17", "20")
     variant(
         "cxxstd",
@@ -127,7 +126,6 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         default=False,
         description="Check number of spawned threads in CI (Advanced usage).",
     )
-    ###
 
     def cmake_args(self):
         spec = self.spec
@@ -140,29 +138,19 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             mkl_provider = spec["lapack"].name
 
             vmap = {
-                    "intel-oneapi-mkl": {
-                        "threading": {
-                            "none": "sequential",
-                            "openmp": "gnu_thread",
-                            "tbb": "tbb_thread",
-                            },
-                        "mpi": {
-                            "mpich": "intelmpi",
-                            "openmpi": "openmpi",
-                            }
-                        },
-                    "intel-mkl": {
-                        "threading": {
-                            "none": "seq",
-                            "openmp": "omp",
-                            "tbb": "tbb",
-                            },
-                        "mpi": {
-                            "mpich": "mpich",
-                            "openmpi": "ompi",
-                            }
-                        },
-                    }
+                "intel-oneapi-mkl": {
+                    "threading": {
+                        "none": "sequential",
+                        "openmp": "gnu_thread",
+                        "tbb": "tbb_thread",
+                    },
+                    "mpi": {"mpich": "intelmpi", "openmpi": "openmpi"},
+                },
+                "intel-mkl": {
+                    "threading": {"none": "seq", "openmp": "omp", "tbb": "tbb"},
+                    "mpi": {"mpich": "mpich", "openmpi": "ompi"},
+                },
+            }
 
             if mkl_provider not in vmap.keys():
                 raise RuntimeError("{0} is not supported".format(mkl_provider))
@@ -171,15 +159,15 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             mkl_threads = mkl_mapper["threading"][spec[mkl_provider].variants["threads"].value]
             if mkl_provider == "intel-oneapi-mkl":
                 args += [
-                        self.define("DLAF_WITH_MKL", True),
-                        self.define("MKL_INTERFACE", "lp64"),
-                        self.define("MKL_THREADING", mkl_threads),
-                        ]
+                    self.define("DLAF_WITH_MKL", True),
+                    self.define("MKL_INTERFACE", "lp64"),
+                    self.define("MKL_THREADING", mkl_threads),
+                ]
             elif mkl_provider == "intel-mkl":
                 args += [
-                        self.define("DLAF_WITH_MKL_LEGACY", True),
-                        self.define("MKL_LAPACK_TARGET", f"mkl::mkl_intel_32bit_{mkl_threads}_dyn"),
-                        ]
+                    self.define("DLAF_WITH_MKL_LEGACY", True),
+                    self.define("MKL_LAPACK_TARGET", f"mkl::mkl_intel_32bit_{mkl_threads}_dyn"),
+                ]
 
             if "+scalapack" in spec:
                 if (
@@ -199,11 +187,11 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                     args.append(self.define("MKL_MPI", mkl_mpi))
                 elif mkl_provider == "intel-mkl":
                     args.append(
-                            self.define(
-                                "MKL_SCALAPACK_TARGET",
-                                f"mkl::scalapack_{mkl_mpi}_intel_32bit_{mkl_threads}_dyn",
-                                )
-                            )
+                        self.define(
+                            "MKL_SCALAPACK_TARGET",
+                            f"mkl::scalapack_{mkl_mpi}_intel_32bit_{mkl_threads}_dyn",
+                        )
+                    )
         else:
             args.append(self.define("DLAF_WITH_MKL", False))
             args.append(
@@ -237,7 +225,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         # DOC
         args.append(self.define_from_variant("DLAF_BUILD_DOC", "doc"))
 
-        ### For the spack repo only the else branch should remain.
+        # For the spack repo only the else branch should remain.
         if "+ci-test" in spec:
             # Enable TESTS and setup CI specific parameters
             args.append(self.define("CMAKE_CXX_FLAGS", "-Werror"))
@@ -253,10 +241,10 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             # TEST
             args.append(self.define("DLAF_BUILD_TESTING", self.run_tests))
 
-        ### Variants available only in the DLAF repo spack package
+        # Variants available only in the DLAF repo spack package
         if "+ci-check-threads" in spec:
             args.append(self.define("DLAF_TEST_PREFLAGS", "check-threads"))
-        ###
+        #
 
         # MINIAPPS
         args.append(self.define_from_variant("DLAF_BUILD_MINIAPPS", "miniapps"))

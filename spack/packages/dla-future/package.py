@@ -104,7 +104,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             depends_on(f"pika cuda_arch={arch}", when=f"cuda_arch={arch}")
             depends_on(f"umpire cuda_arch={arch}", when=f"cuda_arch={arch}")
 
-    # Variants available only in the DLAF repo spack package
+    ### Variants available only in the DLAF repo spack package
     cxxstds = ("17", "20")
     variant(
         "cxxstd",
@@ -126,6 +126,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         default=False,
         description="Check number of spawned threads in CI (Advanced usage).",
     )
+    ###
 
     def cmake_args(self):
         spec = self.spec
@@ -230,7 +231,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         # DOC
         args.append(self.define_from_variant("DLAF_BUILD_DOC", "doc"))
 
-        # For the spack repo only the else branch should remain.
+        ### For the spack repo only the else branch should remain.
         if "+ci-test" in spec:
             # Enable TESTS and setup CI specific parameters
             args.append(self.define("CMAKE_CXX_FLAGS", "-Werror"))
@@ -246,10 +247,10 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             # TEST
             args.append(self.define("DLAF_BUILD_TESTING", self.run_tests))
 
-        # Variants available only in the DLAF repo spack package
+        ### Variants available only in the DLAF repo spack package
         if "+ci-check-threads" in spec:
             args.append(self.define("DLAF_TEST_PREFLAGS", "check-threads"))
-        #
+        ###
 
         # MINIAPPS
         args.append(self.define_from_variant("DLAF_BUILD_MINIAPPS", "miniapps"))

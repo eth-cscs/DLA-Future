@@ -153,7 +153,9 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             }
 
             if mkl_provider not in vmap.keys():
-                raise RuntimeError("{0} is not supported".format(mkl_provider))
+                raise RuntimeError(
+                    f"dla-future does not support {mkl_provider} as lapack provider"
+                )
             mkl_mapper = vmap[mkl_provider]
 
             mkl_threads = mkl_mapper["threading"][spec[mkl_provider].variants["threads"].value]
@@ -181,7 +183,10 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                 elif "^openmpi" in spec:
                     mkl_mpi = mkl_mapper["mpi"]["openmpi"]
                 else:
-                    raise RuntimeError("{0} is not supported".format(spec["mpi"].name))
+                    raise RuntimeError(
+                        f"dla-future does not support {spec['mpi'].name} as mpi provider with "
+                        f"the selected scalapack provider {mkl_provider}"
+                    )
 
                 if mkl_provider == "intel-oneapi-mkl":
                     args.append(self.define("MKL_MPI", mkl_mpi))

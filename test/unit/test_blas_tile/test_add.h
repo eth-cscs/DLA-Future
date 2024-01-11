@@ -49,7 +49,7 @@ void testAdd(const SizeType m, const SizeType n, const SizeType extra_lda, const
   auto a = createTile<T, D>(el_a, size, lda);
   auto b = createTile<CT, D>(el_b, size, ldb);
 
-  invokeBlas<D>(tile::internal::add_o, alpha, b, a);
+  invokeBlas<D>(alpha, b, a, tile::internal::add_o);
 
   std::stringstream s;
   s << "Add: ";

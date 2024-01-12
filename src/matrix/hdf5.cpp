@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2023, ETH Zurich
+// Copyright (c) 2018-2024, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -9,9 +9,9 @@
 //
 
 #ifdef DLAF_WITH_HDF5
-#include "dlaf/matrix/hdf5.h"
-
 #include <H5Cpp.h>
+
+#include "dlaf/matrix/hdf5.h"
 
 namespace dlaf::matrix::internal {
 

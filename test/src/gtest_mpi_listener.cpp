@@ -1,17 +1,17 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2023, ETH Zurich
+// Copyright (c) 2018-2024, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "gtest_mpi_listener.h"
-
 #include <algorithm>
 #include <functional>
+
+#include "gtest_mpi_listener.h"
 
 #define MASTER_CALLS_DEFAULT_LISTENER(name, ...) \
   if (isMasterRank())                            \

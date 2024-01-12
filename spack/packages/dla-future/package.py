@@ -53,6 +53,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("scalapack", when="+scalapack")
     depends_on("blaspp@2022.05.00:")
     depends_on("lapackpp@2022.05.00:")
+    depends_on("intel-oneapi-mkl +cluster", when="^[virtuals=scalapack] intel-oneapi-mkl")
 
     depends_on("umpire~examples")
     depends_on("umpire~cuda", when="~cuda")

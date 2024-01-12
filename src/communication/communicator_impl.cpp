@@ -8,10 +8,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "communicator_impl.h"
-
 #include <dlaf/common/assert.h>
 #include <dlaf/communication/error.h>
+
+#include "communicator_impl.h"
 
 namespace dlaf {
 namespace comm {

@@ -8,10 +8,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "gtest_mpi_listener.h"
-
 #include <algorithm>
 #include <functional>
+
+#include "gtest_mpi_listener.h"
 
 #define MASTER_CALLS_DEFAULT_LISTENER(name, ...) \
   if (isMasterRank())                            \

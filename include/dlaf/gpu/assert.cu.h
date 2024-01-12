@@ -13,7 +13,6 @@
 #ifdef DLAF_WITH_GPU
 
 #include <stdio.h>
-
 #include <whip.hpp>
 
 #ifdef DLAF_ASSERT_HEAVY_ENABLE

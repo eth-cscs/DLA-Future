@@ -9,9 +9,9 @@
 //
 
 #ifdef DLAF_WITH_HDF5
-#include "dlaf/matrix/hdf5.h"
-
 #include <H5Cpp.h>
+
+#include "dlaf/matrix/hdf5.h"
 
 namespace dlaf::matrix::internal {
 

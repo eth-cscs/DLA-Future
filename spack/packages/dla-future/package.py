@@ -145,11 +145,11 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                         "openmp": "gnu_thread",
                         "tbb": "tbb_thread",
                     },
-                    "mpi": {"mpich": "intelmpi", "openmpi": "openmpi"},
+                    "mpi": {"intel-mpi": "intelmpi", "mpich": "mpich", "openmpi": "openmpi"},
                 },
                 "intel-mkl": {
                     "threading": {"none": "seq", "openmp": "omp", "tbb": "tbb"},
-                    "mpi": {"mpich": "mpich", "openmpi": "ompi"},
+                    "mpi": {"intel-mpi": "mpich", "mpich": "mpich", "openmpi": "ompi"},
                 },
             }
 
@@ -173,17 +173,13 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                 ]
 
             if "+scalapack" in spec:
-                if (
-                    "^mpich" in spec
-                    or "^cray-mpich" in spec
-                    or "^intel-mpi" in spec
-                    or "^mvapich" in spec
-                    or "^mvapich2" in spec
-                ):
-                    mkl_mpi = mkl_mapper["mpi"]["mpich"]
-                elif "^openmpi" in spec:
-                    mkl_mpi = mkl_mapper["mpi"]["openmpi"]
-                else:
+                try:
+                    mpi_provider = spec["mpi"].name
+                    if mpi_provider in ["mpich", "cray-mpich", "mvapich", "mvapich2"]:
+                        mkl_mpi = mkl_mapper["mpi"]["mpich"]
+                    else:
+                        mkl_mpi = mkl_mapper["mpi"][mpi_provider]
+                except KeyError:
                     raise RuntimeError(
                         f"dla-future does not support {spec['mpi'].name} as mpi provider with "
                         f"the selected scalapack provider {mkl_provider}"

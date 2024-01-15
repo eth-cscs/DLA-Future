@@ -58,7 +58,7 @@ if(DLAF_WITH_MKL)
   set(MKL_THREADING "@MKL_THREADING@")
   set(MKL_MPI "@MKL_MPI@")
 
-  find_dependency(MKL)
+  find_dependency(MKL CONFIG)
 
   add_library(DLAF::LAPACK INTERFACE IMPORTED GLOBAL)
   target_link_libraries(DLAF::LAPACK INTERFACE MKL::MKL)

@@ -34,7 +34,7 @@ stages:
     reports:
       dotenv: build.env
   variables:
-    SPACK_SHA: 4d7a51d308f27e58b53601e95a4fefc69edbdd6f # alby/fix-intel-oneapi-mkl-threading
+    SPACK_SHA: 7d8100c63f16e7d65a6819c38911a5f2b66819c9 # alby/fix-intel-oneapi-mkl-threading
     SPACK_DLAF_REPO: ./spack
     DOCKER_BUILD_ARGS: '[
         "BASE_IMAGE",

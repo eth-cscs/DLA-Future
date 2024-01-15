@@ -71,7 +71,7 @@ RUN spack external find \
     python \
     xz && \
     if [ "$USE_MKL" = "ON" ]; then \
-      echo -e "  intel-oneapi-mkl:\n    externals:\n    - spec: \"intel-oneapi-mkl@$MKL_SPEC\"\n      prefix: /opt/intel/oneapi\n    buildable: False" >> ~/.spack/packages.yaml ; \
+      echo -e "  intel-oneapi-mkl:\n    externals:\n    - spec: \"intel-oneapi-mkl@$MKL_SPEC mpi_family=mpich\"\n      prefix: /opt/intel/oneapi\n    buildable: False" >> ~/.spack/packages.yaml ; \
     fi
 
 # Add our custom spack repo from here

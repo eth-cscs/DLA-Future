@@ -35,7 +35,7 @@ ARG MKL_SPEC=2024.0.0
 RUN if [ "$USE_MKL" = "ON" ]; then \
       wget -qO - https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB 2>/dev/null > /etc/apt/trusted.gpg.d/intel.asc  && \
       apt-add-repository 'deb https://apt.repos.intel.com/oneapi all main' && \
-      apt-get install -y -qq --no-install-recommends intel-oneapi-mkl-${MKL_VERSION} && \
+      apt-get install -y -qq --no-install-recommends intel-oneapi-mkl-devel-${MKL_VERSION} && \
       rm -rf /var/lib/apt/lists/* && \
       find "/opt/intel/oneapi" -name "*.a" -delete ; \
     fi

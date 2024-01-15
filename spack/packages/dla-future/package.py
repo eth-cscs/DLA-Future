@@ -55,6 +55,8 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("lapackpp@2022.05.00:")
     depends_on("intel-oneapi-mkl +cluster", when="^[virtuals=scalapack] intel-oneapi-mkl")
 
+    conflicts("intel-oneapi-mkl", when="@:0.3")
+
     depends_on("umpire~examples")
     depends_on("umpire~cuda", when="~cuda")
     depends_on("umpire~rocm", when="~rocm")
@@ -169,7 +171,9 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                 ]
             elif mkl_provider == "intel-mkl":
                 args += [
-                    self.define("DLAF_WITH_MKL_LEGACY", True),
+                    self.define("DLAF_WITH_MKL", True)
+                    if spec.version.satisfies(":0.3")
+                    else self.define("DLAF_WITH_MKL_LEGACY", True),
                     self.define("MKL_LAPACK_TARGET", f"mkl::mkl_intel_32bit_{mkl_threads}_dyn"),
                 ]
 

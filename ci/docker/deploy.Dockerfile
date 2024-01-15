@@ -54,7 +54,7 @@ RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
 # Deploy MKL separately, since it dlopen's some libs
 ARG USE_MKL=ON
 RUN if [ "$USE_MKL" = "ON" ]; then \
-      export MKL_LIB=$(dirname $(find $(spack location -i intel-oneapi-mkl) -name libmkl_core.so))` && \
+      export MKL_LIB=$(dirname $(find $(spack location -i intel-oneapi-mkl) -name libmkl_core.so)) && \
       libtree -d ${DEPLOY} \
       ${MKL_LIB}/libmkl_avx2.so.2 \
       ${MKL_LIB}/libmkl_avx512.so.2 \

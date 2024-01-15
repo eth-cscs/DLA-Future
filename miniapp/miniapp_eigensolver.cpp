@@ -183,7 +183,7 @@ struct EigensolverMiniapp {
       matrix.reset();
 
       // print benchmark results
-      if (0 == world.rank() && run_index >= 0)
+      if (0 == world.rank() && run_index >= 0) {
         std::cout << "[" << run_index << "]"
                   << " " << elapsed_time << "s"
                   << " " << dlaf::internal::FormatShort{opts.type}
@@ -192,7 +192,24 @@ struct EigensolverMiniapp {
                   << dlaf::eigensolver::internal::getBandSize(matrix_host.blockSize().rows()) << " "
                   << comm_grid.size() << " " << pika::get_os_thread_count() << " " << backend
                   << std::endl;
-
+        if (opts.csv_output) {
+          // CSV formatted output with column names that can be read by pandas to simplify
+          // post-processing CSVData{-version}, value_0, title_0, value_1, title_1
+          std::cout << "CSVData-2, "
+                    << "run, " << run_index << ", "
+                    << "time, " << elapsed_time << ", "
+                    << "type, " << dlaf::internal::FormatShort{opts.type}.value << ", "
+                    << "uplo, " << dlaf::internal::FormatShort{opts.uplo}.value << ", "
+                    << "matrixsize, " << matrix_host.size().rows() << ", "
+                    << "blocksize, " << matrix_host.blockSize().rows() << ", "
+                    << "bandsize, "
+                    << dlaf::eigensolver::internal::getBandSize(matrix_host.blockSize().rows()) << ", "
+                    << "comm_rows, " << comm_grid.size().rows() << ", "
+                    << "comm_cols, " << comm_grid.size().cols() << ", "
+                    << "threads, " << pika::get_os_thread_count() << ", "
+                    << "backend, " << backend << ", " << opts.info << std::endl;
+        }
+      }
       // (optional) run test
       if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
           opts.do_check == dlaf::miniapp::CheckIterFreq::All) {

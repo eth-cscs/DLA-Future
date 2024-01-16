@@ -34,7 +34,8 @@ endif()
 
 option(BUILD_SHARED_LIBS "Build shared libraries." ON)
 option(DLAF_WITH_OPENMP "${DLAF_WITH_OPENMP_DESCRIPTION}" ${DLAF_WITH_OPENMP_DEFAULT})
-option(DLAF_WITH_MKL "Enable MKL as provider for LAPACK" OFF)
+option(DLAF_WITH_MKL "Enable oneMKL as provider for BLAS and LAPACK" OFF)
+option(DLAF_WITH_MKL_LEGACY "Enable MKL as provider for BLAS and LAPACK" OFF)
 option(DLAF_WITH_CUDA "Enable CUDA support" OFF)
 option(DLAF_WITH_HIP "Enable HIP support" OFF)
 cmake_dependent_option(DLAF_WITH_CUDA_MPI_RDMA "Enable MPI CUDA RDMA" OFF "DLAF_WITH_CUDA" OFF)
@@ -48,7 +49,11 @@ option(DLAF_BUILD_DOC "Build documentation" OFF)
 option(DLAF_WITH_PRECOMPILED_HEADERS "Use precompiled headers." OFF)
 option(DLAF_WITH_SCALAPACK "Build ScaLAPACK-like C API (requires ScaLAPACK)" OFF)
 
-if(DLAF_WITH_MKL)
+if(DLAF_WITH_MKL AND DLAF_WITH_MKL_LEGACY)
+  message(SEND_ERROR "DLAF_WITH_MKL and DLAF_WITH_MKL_LEGACY are mutually exclusive.")
+endif()
+
+if(DLAF_WITH_MKL OR DLAF_WITH_MKL_LEGACY)
   # When using MKL there is no need to set the number of threads with
   # omp_set_num_threads; it's sufficient to use MKL's own mechanisms.
   set(DLAF_WITH_OPENMP OFF CACHE BOOL "${DLAF_WITH_OPENMP_DESCRIPTION}" FORCE)
@@ -130,8 +135,23 @@ if(DLAF_WITH_OPENMP)
 endif()
 
 # ----- LAPACK/SCALAPACK
-if(DLAF_WITH_MKL)
-  find_package(MKL REQUIRED)
+if(DLAF_WITH_MKL) # oneMKL
+  set(MKL_INTERFACE "lp64" CACHE STRING "")
+  set(MKL_THREADING "sequential" CACHE STRING "")
+  set(MKL_MPI "mpich" CACHE STRING "")
+
+  find_package(MKL CONFIG REQUIRED)
+
+  set(LAPACK_FOUND TRUE)
+  add_library(DLAF::LAPACK INTERFACE IMPORTED GLOBAL)
+  target_link_libraries(DLAF::LAPACK INTERFACE MKL::MKL)
+
+  if(DLAF_WITH_SCALAPACK)
+    set(SCALAPACK_FOUND TRUE)
+    add_library(DLAF::SCALAPACK INTERFACE IMPORTED GLOBAL)
+  endif()
+elseif(DLAF_WITH_MKL_LEGACY) # MKL (deprecated)
+  find_package(MKL MODULE REQUIRED)
 
   set(MKL_LAPACK_TARGET "mkl::mkl_intel_32bit_seq_dyn"
       CACHE STRING "MKL LAPACK target (see FindMKL for details)"

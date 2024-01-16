@@ -63,7 +63,8 @@ CMake option | Values | Note
 `pika_DIR` | CMAKE:PATH | Location of the pika CMake-config file
 `blaspp_DIR` | CMAKE:PATH | Location of the blaspp CMake-config file
 `lapackpp_DIR` | CMAKE:PATH | Location of the lapackpp CMake-config file
-`DLAF_WITH_MKL` | `{ON,OFF}` (default: `OFF`) | if blaspp/lapackpp is built with MKL
+`DLAF_WITH_MKL` | `{ON,OFF}` (default: `OFF`) | if blaspp/lapackpp is built with oneMKL
+`DLAF_WITH_LEGACY_MKL` | `{ON,OFF}` (default: `OFF`) | if blaspp/lapackpp is built with MKL (deprecated)
 `MKL_ROOT` | CMAKE:PATH | Location of the MKL library
 `DLAF_ASSERT_ENABLE` | `{ON,OFF}` (default: `ON`) | enable/disable cheap assertions
 `DLAF_ASSERT_MODERATE_ENABLE` | `{ON,OFF}` (default: `ON` in Debug, `OFF` otherwise) | enable/disable moderate assertions

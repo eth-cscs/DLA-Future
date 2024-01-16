@@ -14,11 +14,11 @@ packages:
   # Set intel MKL as default blas, lapack and scalapack provider.
   # Can be overwritten in environments if needed.
   blas:
-    require: 'intel-mkl'
+    require: 'intel-oneapi-mkl'
   lapack:
-    require: 'intel-mkl'
+    require: 'intel-oneapi-mkl'
   scalapack:
-    require: 'intel-mkl'
+    require: 'intel-oneapi-mkl'
   mpi:
     require: 'mpich'
   blaspp:
@@ -26,7 +26,7 @@ packages:
       - '~cuda'
       - '~openmp'
       - '~rocm'
-  intel-mkl:
+  intel-oneapi-mkl:
     variants:
       - 'threads=openmp'
   openblas:

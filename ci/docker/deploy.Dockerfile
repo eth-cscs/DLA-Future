@@ -54,23 +54,21 @@ RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
 # Deploy MKL separately, since it dlopen's some libs
 ARG USE_MKL=ON
 RUN if [ "$USE_MKL" = "ON" ]; then \
-      export MKL_LIB=`spack -e ci location -i intel-mkl`/mkl/lib/intel64 && \
+      export MKL_LIB=$(dirname $(find $(spack location -i intel-oneapi-mkl) -name libmkl_core.so)) && \
       libtree -d ${DEPLOY} \
-      ${MKL_LIB}/libmkl_avx.so \
-      ${MKL_LIB}/libmkl_avx2.so \
+      ${MKL_LIB}/libmkl_avx2.so.2 \
+      ${MKL_LIB}/libmkl_avx512.so.2 \
       ${MKL_LIB}/libmkl_core.so \
-      ${MKL_LIB}/libmkl_def.so \
+      ${MKL_LIB}/libmkl_def.so.2 \
       ${MKL_LIB}/libmkl_intel_thread.so \
-      ${MKL_LIB}/libmkl_mc.so \
-      ${MKL_LIB}/libmkl_mc3.so \
+      ${MKL_LIB}/libmkl_mc3.so.2 \
       ${MKL_LIB}/libmkl_sequential.so \
       ${MKL_LIB}/libmkl_tbb_thread.so \
-      ${MKL_LIB}/libmkl_vml_avx.so \
-      ${MKL_LIB}/libmkl_vml_avx2.so \
-      ${MKL_LIB}/libmkl_vml_cmpt.so \
-      ${MKL_LIB}/libmkl_vml_def.so \
-      ${MKL_LIB}/libmkl_vml_mc.so \
-      ${MKL_LIB}/libmkl_vml_mc3.so ; \
+      ${MKL_LIB}/libmkl_vml_avx2.so.2 \
+      ${MKL_LIB}/libmkl_vml_avx512.so.2 \
+      ${MKL_LIB}/libmkl_vml_cmpt.so.2 \
+      ${MKL_LIB}/libmkl_vml_def.so.2 \
+      ${MKL_LIB}/libmkl_vml_mc3.so.2 ; \
     fi
 
 # Deploy Extra RocBlas files separately.

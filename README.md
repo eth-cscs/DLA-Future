@@ -39,9 +39,13 @@ This will add a new repository with namespace `dlaf`.
 
 Example installation:
 
-`spack install dla-future ^intel-oneapi-mkl`
+`spack install dla-future ^[virtuals=blas,lapack] intel-oneapi-mkl`
 
-Or you can go even further with a more detailed spec like this one, which builds dla-future in debug mode, using the clang compiler, specifying that the pika on which it depends has to be built
+or you can also build C API compatible with ScaLAPACK with:
+
+`spack install dla-future +scalapack ^[virtuals=blas,lapack,scalapack] intel-oneapi-mkl`
+
+You can go even further with a more detailed spec like this one, which builds dla-future in debug mode, using the clang compiler, specifying that the pika on which it depends has to be built
 in debug mode too, and that we want to use MPICH as MPI implementation, without fortran support (because clang does not support it).
 
 `spack install dla-future %clang build_type=Debug ^pika build_type=Debug ^mpich ~fortran`
@@ -110,6 +114,7 @@ target_link_libraries(<your_target> PRIVATE DLAF::DLAF)
 - [Documentation of `v0.2.1`](https://eth-cscs.github.io/DLA-Future/v0.2.1/)
 - [Documentation of `v0.3.0`](https://eth-cscs.github.io/DLA-Future/v0.3.0/)
 - [Documentation of `v0.3.1`](https://eth-cscs.github.io/DLA-Future/v0.3.1/)
+- [Documentation of `v0.4.0`](https://eth-cscs.github.io/DLA-Future/v0.4.0/)
 - [Documentation of `master` branch](https://eth-cscs.github.io/DLA-Future/master/)
 
 #### How to generate the documentation

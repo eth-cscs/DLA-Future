@@ -44,20 +44,20 @@ std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, SizeTyp
 
 // Tuple elements:  m, n, extra_lda
 std::vector<std::tuple<SizeType, SizeType, SizeType>> scal_sizes = {
-    {0, 0, 0, 0, 0, 0},                                               // all 0 sizes
-    {7, 0, 0, 3, 1, 0},  {0, 5, 0, 0, 0, 1},    {0, 0, 11, 1, 1, 2},  // two 0 sizes
-    {0, 5, 13, 1, 0, 1}, {7, 0, 4, 1, 2, 0},    {3, 11, 0, 0, 1, 0},  // one 0 size
-    {1, 1, 1, 0, 3, 0},  {1, 12, 1, 1, 0, 7},   {17, 12, 16, 1, 3, 0}, {11, 23, 8, 0, 3, 4},
-    {6, 9, 12, 1, 1, 1}, {32, 32, 32, 0, 0, 0}, {32, 32, 32, 4, 5, 7}, {128, 128, 128, 0, 0, 0},
+    {0, 0, 0},                             // all 0 sizes
+    {7, 0, 0},  {0, 5, 0},    {0, 0, 11},  // two 0 sizes
+    {0, 5, 13}, {7, 0, 4},    {3, 11, 0},  // one 0 size
+    {1, 1, 1},  {1, 12, 1},   {17, 12, 16}, {11, 23, 8},
+    {6, 9, 12}, {32, 32, 32}, {32, 32, 32}, {128, 128, 128},
 };
 
 // Tuple elements:  m, n, k, extra_lda, extra_ldb
-std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> add_sizes = {
-    {0, 0, 0, 0, 0, 0},                                               // all 0 sizes
-    {7, 0, 0, 3, 1, 0},  {0, 5, 0, 0, 0, 1},    {0, 0, 11, 1, 1, 2},  // two 0 sizes
-    {0, 5, 13, 1, 0, 1}, {7, 0, 4, 1, 2, 0},    {3, 11, 0, 0, 1, 0},  // one 0 size
-    {1, 1, 1, 0, 3, 0},  {1, 12, 1, 1, 0, 7},   {17, 12, 16, 1, 3, 0}, {11, 23, 8, 0, 3, 4},
-    {6, 9, 12, 1, 1, 1}, {32, 32, 32, 0, 0, 0}, {32, 32, 32, 4, 5, 7}, {128, 128, 128, 0, 0, 0},
+std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType>> add_sizes = {
+    {0, 0, 0},                             // all 0 sizes
+    {7, 0, 0},  {0, 5, 0},    {0, 0, 11},  // two 0 sizes
+    {0, 5, 13}, {7, 0, 4},    {3, 11, 0},  // one 0 size
+    {1, 1, 1},  {1, 12, 1},   {17, 12, 16}, {11, 23, 8},
+    {6, 9, 12}, {32, 32, 32}, {32, 32, 32}, {128, 128, 128},
 };
 
 TYPED_TEST(TileOperationsExtensionsTestMC, Scal) {

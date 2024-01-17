@@ -112,8 +112,8 @@ void laset(blas::Uplo uplo, SizeType m, SizeType n, T alpha, T beta, T* a, SizeT
   dim3 nr_threads(kernel_tile_size_rows, 1);
   dim3 nr_blocks(util::ceilDiv(um, kernel_tile_size_rows), util::ceilDiv(un, kernel_tile_size_cols));
   kernels::laset<<<nr_blocks, nr_threads, 0, stream>>>(util::blasToCublas(uplo), um, un,
-                                                       util::cppToCudaCast(alpha),
-                                                       util::cppToCudaCast(beta), util::cppToCudaCast(a),
+                                                       util::cppToCudaWrapperCast(alpha),
+                                                       util::cppToCudaWrapperCast(beta), util::cppToCudaWrapperCast(a),
                                                        to_uint(lda));
 }
 

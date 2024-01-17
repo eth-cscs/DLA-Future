@@ -44,8 +44,9 @@ repository-code: 'https://github.com/eth-cscs/DLA-Future'
 abstract: Distributed Linear Algebra from the Future
 keywords:
   - c++
-  - linear algebra
+  - eigensolver
   - high performance computing
+  - linear algebra
   - mpi
 license: BSD-3-Clause
 version: 0.5.0

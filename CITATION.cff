@@ -1,0 +1,51 @@
+cff-version: 1.2.0
+title: DLA-Future
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Alberto
+    family-names: Invernizzi
+  - given-names: Raffaele
+    family-names: Solcà
+    orcid: 'https://orcid.org/0009-0009-9346-4376'
+  - given-names: Mikael
+    family-names: Simberg
+    orcid: 'https://orcid.org/0000-0002-7238-8935'
+  - given-names: Teodor
+    family-names: Nikolov
+  - given-names: Lara
+    family-names: Querciagrossa
+  - given-names: Auriane
+    family-names: Reverdell
+    orcid: 'https://orcid.org/0000-0002-5531-0458'
+  - given-names: Harmen
+    family-names: Stoppels
+  - given-names: Rocco
+    family-names: Meli
+  - given-names: Alessandro
+    family-names: Colombo
+  - given-names: John
+    family-names: Biddiscombe
+    orcid: 'https://orcid.org/0000-0002-6552-2833'
+  - given-names: Alo
+    family-names: Roosing
+  - given-names: Andreas
+    family-names: Fink
+  - given-names: Guglielmo
+    family-names: Gagliardi
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.10518288
+    description: The concept DOI of the work.
+repository-code: 'https://github.com/eth-cscs/DLA-Future'
+abstract: Distributed Linear Algebra from the Future
+keywords:
+  - c++
+  - linear algebra
+  - high performance computing
+  - mpi
+license: BSD-3-Clause
+version: 0.5.0
+date-released: '2024-01-01'

@@ -45,8 +45,8 @@ abstract: Distributed Linear Algebra from the Future
 keywords:
   - c++
   - eigensolver
-  - high performance computing
-  - linear algebra
+  - "high performance computing"
+  - "linear algebra"
   - mpi
 license: BSD-3-Clause
 version: 0.5.0

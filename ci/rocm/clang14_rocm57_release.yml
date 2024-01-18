@@ -1,0 +1,22 @@
+include:
+  - local: 'ci/common-ci.yml'
+
+rocm clang14 rocm57 release deps:
+  extends: .build_deps_common
+  variables:
+    # BASE_IMAGE: docker.io/rocm/dev-ubuntu-22.04:5.7.1
+    EXTRA_APTGET: "clang-14 libomp-14-dev" # rocblas rocblas-dev rocsolver rocsolver-dev llvm-amdgpu rocm-device-libs"
+    COMPILER: clang@14
+    USE_ROCBLAS: "ON"
+    SPACK_ENVIRONMENT: ci/docker/release-rocm571.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/rocm57-clang14-release/build
+
+rocm clang14 rocm57 release build:
+  extends:
+    - .build_common
+  after_script: null
+  needs:
+    - rocm clang14 rocm57 release deps
+  variables:
+    # DEPLOY_BASE_IMAGE: docker.io/rocm/dev-ubuntu-22.04:5.7.1
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/rocm57-clang14-release/deploy:$CI_COMMIT_SHA

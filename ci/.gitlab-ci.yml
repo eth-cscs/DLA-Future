@@ -14,3 +14,4 @@ include:
   - local: 'ci/cuda/gcc11_debug_scalapack.yml'
   - local: 'ci/rocm/clang14_release.yml'
   - local: 'ci/rocm/clang14_release_stdexec.yml'
+  - local: 'ci/rocm/clang14_rocm57_release.yml'

@@ -1,0 +1,70 @@
+#
+# Distributed Linear Algebra with Future (DLAF)
+#
+# Copyright (c) 2018-2023, ETH Zurich
+# All rights reserved.
+#
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+
+spack:
+  include:
+  - /spack_environment/common.yaml
+
+  view: false
+  concretizer:
+    unify:
+      true
+
+  specs:
+  - dla-future@master +rocm amdgpu_target=gfx90a:xnack- +miniapps +ci-test
+
+  packages:
+    all:
+      variants:
+      - build_type=Release
+      - cxxstd=17
+      - amdgpu_target=gfx90a:xnack-
+    blas:
+      require:: openblas
+    lapack:
+      require:: openblas
+    mpich:
+      require:
+        - '~rocm'
+        - 'device=ch3'
+        - 'netmod=tcp'
+    hip:
+      require:
+        - '@5.7.1'
+#    llvm-amdgpu:
+#      externals:
+#      - spec: llvm-amdgpu@5.7.1 ~rocm-device-libs
+#        prefix: /opt/rocm-5.7.1/llvm
+#      buildable: false
+#    rocm-device-libs:
+#      externals:
+#      - spec: rocm-device-libs@5.7.1
+#        prefix: /opt/rocm-5.7.1
+#      buildable: false
+#    hip:
+#      externals:
+#      - spec: hip@5.7.1
+#        prefix: /opt/rocm-5.7.1
+#      buildable: false
+#    rocblas:
+#      externals:
+#      - spec: rocblas@5.7.1
+#        prefix: /opt/rocm-5.7.1
+#      buildable: false
+#    rocsolver:
+#      externals:
+#      - spec: rocsolver@5.7.1
+#        prefix: /opt/rocm-5.7.1
+#      buildable: false
+#    hsa-rocr-dev:
+#      externals:
+#      - spec: hsa-rocr-dev@5.7.1
+#        prefix: /opt/rocm-5.7.1
+#      buildable: false

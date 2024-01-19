@@ -58,9 +58,6 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
     conflicts("intel-oneapi-mkl", when="@:0.3")
 
-    # https://github.com/spack/spack/issues/42084
-    conflicts("netlib-scalapack", when="^[virtuals=lapack] intel-oneapi-mkl")
-
     depends_on("umpire~examples")
     depends_on("umpire~cuda", when="~cuda")
     depends_on("umpire~rocm", when="~rocm")

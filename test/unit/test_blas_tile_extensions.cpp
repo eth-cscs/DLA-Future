@@ -62,7 +62,7 @@ std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType>> add_si
 
 TYPED_TEST(TileOperationsExtensionsTestMC, Scal) {
   using Type = TypeParam;
-  for (const auto& [m, n, k, extra_lda] : scal_sizes) {
+  for (const auto& [m, n, extra_lda] : scal_sizes) {
     // Test a and b const Tiles.
     dlaf::test::testScal<Device::CPU, Type>(m, n, extra_lda);
     // Test a and b non const Tiles.
@@ -74,7 +74,7 @@ TYPED_TEST(TileOperationsExtensionsTestMC, Scal) {
 TYPED_TEST(TileOperationsExtensionsTestGPU, Scal) {
   using Type = TypeParam;
 
-  for (const auto& [m, n, k, extra_lda] : scal_sizes) {
+  for (const auto& [m, n, extra_lda] : scal_sizes) {
     // Test a and b const Tiles.
     dlaf::test::testScal<Device::GPU, Type>(m, n, extra_lda);
 
@@ -86,7 +86,7 @@ TYPED_TEST(TileOperationsExtensionsTestGPU, Scal) {
 
 TYPED_TEST(TileOperationsExtensionsTestMC, Add) {
   using Type = TypeParam;
-  for (const auto& [m, n, k, extra_lda, extra_ldb] : add_sizes) {
+  for (const auto& [m, n, extra_lda, extra_ldb] : add_sizes) {
     // Test a and b const Tiles.
     dlaf::test::testAdd<Device::CPU, Type>(m, n, extra_lda, extra_ldb);
     // Test a and b non const Tiles.
@@ -98,7 +98,7 @@ TYPED_TEST(TileOperationsExtensionsTestMC, Add) {
 TYPED_TEST(TileOperationsExtensionsTestGPU, Add) {
   using Type = TypeParam;
 
-  for (const auto& [m, n, k, extra_lda, extra_ldb] : add_sizes) {
+  for (const auto& [m, n, extra_lda, extra_ldb] : add_sizes) {
     // Test a and b const Tiles.
     dlaf::test::testAdd<Device::GPU, Type>(m, n, extra_lda, extra_ldb);
 

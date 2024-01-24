@@ -37,6 +37,7 @@ authors:
     family-names: Roosing
   - given-names: Alessandro
     family-names: Colombo
+    orcid: 'https://orcid.org/0000-0002-7950-293X'
 identifiers:
   - type: doi
     value: 10.5281/zenodo.10518288

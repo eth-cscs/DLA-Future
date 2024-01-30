@@ -17,12 +17,30 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
     license("BSD-3-Clause")
 
-    version("0.4.0", sha256="34fd0da0d1a72b6981bed0bba029ba0947e0d0d99beb3e0aad0a478095c9527d")
-    version("0.3.1", sha256="350a7fd216790182aa52639a3d574990a9d57843e02b92d87b854912f4812bfe")
-    version("0.3.0", sha256="9887ac0b466ca03d704a8738bc89e68550ed33509578c576390e98e76b64911b")
-    version("0.2.1", sha256="4c2669d58f041304bd618a9d69d9879a42e6366612c2fc932df3894d0326b7fe")
-    version("0.2.0", sha256="da73cbd1b88287c86d84b1045a05406b742be924e65c52588bbff200abd81a10")
-    version("0.1.0", sha256="f7ffcde22edabb3dc24a624e2888f98829ee526da384cd752b2b271c731ca9b1")
+    version(
+        "0.4.0",
+        sha256="34fd0da0d1a72b6981bed0bba029ba0947e0d0d99beb3e0aad0a478095c9527d",
+    )
+    version(
+        "0.3.1",
+        sha256="350a7fd216790182aa52639a3d574990a9d57843e02b92d87b854912f4812bfe",
+    )
+    version(
+        "0.3.0",
+        sha256="9887ac0b466ca03d704a8738bc89e68550ed33509578c576390e98e76b64911b",
+    )
+    version(
+        "0.2.1",
+        sha256="4c2669d58f041304bd618a9d69d9879a42e6366612c2fc932df3894d0326b7fe",
+    )
+    version(
+        "0.2.0",
+        sha256="da73cbd1b88287c86d84b1045a05406b742be924e65c52588bbff200abd81a10",
+    )
+    version(
+        "0.1.0",
+        sha256="f7ffcde22edabb3dc24a624e2888f98829ee526da384cd752b2b271c731ca9b1",
+    )
     version("master", branch="master")
 
     variant("shared", default=True, description="Build shared libraries.")
@@ -46,6 +64,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     )
 
     depends_on("cmake@3.22:", type="build")
+    depends_on("pkgconfig", type="build")
     depends_on("doxygen", type="build", when="+doc")
     depends_on("mpi")
 
@@ -54,7 +73,9 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("scalapack", when="+scalapack")
     depends_on("blaspp@2022.05.00:")
     depends_on("lapackpp@2022.05.00:")
-    depends_on("intel-oneapi-mkl +cluster", when="^[virtuals=scalapack] intel-oneapi-mkl")
+    depends_on(
+        "intel-oneapi-mkl +cluster", when="^[virtuals=scalapack] intel-oneapi-mkl"
+    )
 
     conflicts("intel-oneapi-mkl", when="@:0.3")
 
@@ -171,7 +192,11 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                         "openmp": "gnu_thread",
                         "tbb": "tbb_thread",
                     },
-                    "mpi": {"intel-mpi": "intelmpi", "mpich": "mpich", "openmpi": "openmpi"},
+                    "mpi": {
+                        "intel-mpi": "intelmpi",
+                        "mpich": "mpich",
+                        "openmpi": "openmpi",
+                    },
                 },
                 "intel-mkl": {
                     "threading": {"none": "seq", "openmp": "omp", "tbb": "tbb"},
@@ -185,7 +210,9 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                 )
             mkl_mapper = vmap[mkl_provider]
 
-            mkl_threads = mkl_mapper["threading"][spec[mkl_provider].variants["threads"].value]
+            mkl_threads = mkl_mapper["threading"][
+                spec[mkl_provider].variants["threads"].value
+            ]
             if mkl_provider == "intel-oneapi-mkl":
                 args += [
                     self.define("DLAF_WITH_MKL", True),
@@ -197,7 +224,9 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                     self.define("DLAF_WITH_MKL", True)
                     if spec.version <= Version("0.3")
                     else self.define("DLAF_WITH_MKL_LEGACY", True),
-                    self.define("MKL_LAPACK_TARGET", f"mkl::mkl_intel_32bit_{mkl_threads}_dyn"),
+                    self.define(
+                        "MKL_LAPACK_TARGET", f"mkl::mkl_intel_32bit_{mkl_threads}_dyn"
+                    ),
                 ]
 
             if "+scalapack" in spec:
@@ -231,7 +260,9 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                 )
             )
             if "+scalapack" in spec:
-                args.append(self.define("SCALAPACK_LIBRARY", spec["scalapack"].libs.ld_flags))
+                args.append(
+                    self.define("SCALAPACK_LIBRARY", spec["scalapack"].libs.ld_flags)
+                )
 
         args.append(self.define_from_variant("DLAF_WITH_SCALAPACK", "scalapack"))
 

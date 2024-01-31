@@ -8,8 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#ifdef DLAF_WITH_CUDA_RDMA
-#warning "Reduce is not using CUDA_RDMA."
+#ifdef DLAF_WITH_CUDA_MPI_RDMA
+#warning "Reduce is not using CUDA_MPI_RDMA."
 #endif
 
 #include <complex>

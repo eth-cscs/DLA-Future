@@ -38,7 +38,9 @@ option(DLAF_WITH_MKL "Enable oneMKL as provider for BLAS and LAPACK" OFF)
 option(DLAF_WITH_MKL_LEGACY "Enable MKL as provider for BLAS and LAPACK" OFF)
 option(DLAF_WITH_CUDA "Enable CUDA support" OFF)
 option(DLAF_WITH_HIP "Enable HIP support" OFF)
-cmake_dependent_option(DLAF_WITH_CUDA_MPI_RDMA "Enable MPI CUDA RDMA" OFF "DLAF_WITH_CUDA" OFF)
+cmake_dependent_option(
+  DLAF_WITH_CUDA_MPI_RDMA "Enable MPI CUDA RDMA" OFF "DLAF_WITH_CUDA OR DLAF_WITH_HIP" OFF
+)
 option(DLAF_WITH_HDF5 "Enable HDF5 support" OFF)
 mark_as_advanced(DLAF_WITH_HDF5)
 option(DLAF_WITH_COVERAGE "Enable coverage" OFF)

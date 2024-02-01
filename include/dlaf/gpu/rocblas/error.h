@@ -21,6 +21,10 @@ namespace dlaf::gpublas::rocblas::internal {
 inline std::string getErrorString(rocblas_status st) {
   // clang-format off
   switch (st) {
+#if ROCBLAS_VERSION_MAJOR >= 3 && (ROCBLAS_VERSION_MINOR >= 1 || ROCBLAS_VERSION_MAJOR >= 4)
+    case rocblas_status_arch_mismatch:          return "rocblas_status_arch_mismatch";
+    case rocblas_status_excluded_from_build:    return "rocblas_status_excluded_from_build";
+#endif
     case rocblas_status_check_numerics_fail:    return "rocblas_status_check_numerics_fail";
     case rocblas_status_continue:               return "rocblas_status_continue";
     case rocblas_status_internal_error:         return "rocblas_status_internal_error";

@@ -16,6 +16,11 @@
 
 #include <mpi.h>
 
+#ifdef DLAF_WITH_HIP
+#include <hip/hip_runtime.h>
+#include <whip.hpp>
+#endif
+
 #include <pika/mutex.hpp>
 
 #include <dlaf/communication/error.h>
@@ -26,6 +31,12 @@ namespace comm {
 struct mpi_init {
   /// Initialize MPI to MPI_THREAD_MULTIPLE
   mpi_init(int argc, char** argv) noexcept {
+    // On older Cray MPICH versions initializing HIP after MPI leads to HIP not seeing any devices. Hence
+    // we eagerly initialize HIP here before MPI.
+#ifdef DLAF_WITH_HIP
+    whip::check_error(hipInit(0));
+#endif
+
     int required_threading = MPI_THREAD_MULTIPLE;
     int provided_threading;
     MPI_Init_thread(&argc, &argv, required_threading, &provided_threading);

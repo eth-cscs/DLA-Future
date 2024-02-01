@@ -785,7 +785,8 @@ def gen_trsm_plots_weak(
 
 def gen_trmm_plots_strong(
     df,
-    logx=False,
+    logx=None,
+    logy=None,
     combine_mb=False,
     filename_suffix=None,
     customize_ppn=add_basic_legend,
@@ -806,6 +807,7 @@ def gen_trmm_plots_strong(
         size_type="mn",
         df=df,
         logx=logx,
+        logy=logy,
         combine_mb=combine_mb,
         filename_suffix=filename_suffix,
         ppn_plot=True,
@@ -819,7 +821,8 @@ def gen_trmm_plots_strong(
 def gen_trmm_plots_weak(
     df,
     weak_rt_approx,
-    logx=False,
+    logx=None,
+    logy=None,
     combine_mb=False,
     filename_suffix=None,
     customize_ppn=add_basic_legend,
@@ -840,6 +843,7 @@ def gen_trmm_plots_weak(
         size_type="mn",
         df=df,
         logx=logx,
+        logy=logy,
         combine_mb=combine_mb,
         filename_suffix=filename_suffix,
         ppn_plot=True,

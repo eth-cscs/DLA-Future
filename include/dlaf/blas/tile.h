@@ -149,7 +149,11 @@ DLAF_MAKE_GPUBLAS_OP(Trmm, trmm);
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
+#if ROCBLAS_VERSION_MAJOR >= 3
+DLAF_MAKE_GPUBLAS_OP(Trmm, trmm);
+#else
 DLAF_MAKE_GPUBLAS_OP(Trmm, trmm_outofplace);
+#endif
 
 #if defined(__clang__)
 #pragma clang diagnostic pop

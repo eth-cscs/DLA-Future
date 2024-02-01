@@ -100,6 +100,7 @@ target_compile_definitions(
             $<$<BOOL:${DLAF_WITH_CUDA}>:DLAF_WITH_CUDA>
             $<$<BOOL:${DLAF_WITH_HIP}>:DLAF_WITH_HIP>
             $<$<BOOL:${DLAF_WITH_HIP}>:ROCM_MATHLIBS_API_USE_HIP_COMPLEX>
+            $<$<BOOL:${DLAF_WITH_HIP}>:ROCBLAS_V3>
             $<$<BOOL:${DLAF_WITH_CUDA_MPI_RDMA}>:DLAF_WITH_CUDA_MPI_RDMA>
             $<$<BOOL:${DLAF_WITH_HDF5}>:DLAF_WITH_HDF5>
             $<$<BOOL:${DLAF_WITH_SCALAPACK}>:DLAF_WITH_SCALAPACK>

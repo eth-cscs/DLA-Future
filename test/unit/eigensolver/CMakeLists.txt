@@ -63,6 +63,14 @@ DLAF_addTest(
 )
 
 DLAF_addTest(
+  test_reduction_to_trid
+  SOURCES test_reduction_to_trid.cpp
+  LIBRARIES dlaf.eigensolver dlaf.core
+  USE_MAIN MPIPIKA
+  MPIRANKS 6
+)
+
+DLAF_addTest(
   test_bt_reduction_to_band
   SOURCES test_bt_reduction_to_band.cpp
   LIBRARIES dlaf.eigensolver dlaf.core

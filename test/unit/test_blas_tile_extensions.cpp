@@ -51,8 +51,8 @@ std::vector<std::tuple<SizeType, SizeType, SizeType>> scal_sizes = {
     {6, 9, 12}, {32, 32, 32}, {32, 32, 32}, {128, 128, 128},
 };
 
-// Tuple elements:  m, n, k, extra_lda, extra_ldb
-std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType>> add_sizes = {
+// Tuple elements:  m, n, extra_lda, extra_ldb
+std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> add_sizes = {
     {0, 0, 0},                             // all 0 sizes
     {7, 0, 0},  {0, 5, 0},    {0, 0, 11},  // two 0 sizes
     {0, 5, 13}, {7, 0, 4},    {3, 11, 0},  // one 0 size

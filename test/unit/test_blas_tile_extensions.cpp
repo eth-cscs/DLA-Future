@@ -53,11 +53,11 @@ std::vector<std::tuple<SizeType, SizeType, SizeType>> scal_sizes = {
 
 // Tuple elements:  m, n, extra_lda, extra_ldb
 std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> add_sizes = {
-    {0, 0, 0},                             // all 0 sizes
-    {7, 0, 0},  {0, 5, 0},    {0, 0, 11},  // two 0 sizes
-    {0, 5, 13}, {7, 0, 4},    {3, 11, 0},  // one 0 size
-    {1, 1, 1},  {1, 12, 1},   {17, 12, 16}, {11, 23, 8},
-    {6, 9, 12}, {32, 32, 32}, {32, 32, 32}, {128, 128, 128},
+    {0, 0, 0, 0},                                     // all 0 sizes
+    {7, 0, 0, 0},   {0, 5, 0, 0},     {0, 0, 11, 0},  // two 0 sizes
+    {0, 5, 13, 15}, {7, 0, 4, 5},     {3, 11, 0, 5},  // one 0 size
+    {1, 1, 1, 1},   {1, 12, 1, 12},   {17, 12, 16, 11}, {11, 23, 8, 12},
+    {6, 9, 12, 15}, {32, 32, 32, 32}, {32, 32, 32, 32}, {128, 128, 128, 128},
 };
 
 TYPED_TEST(TileOperationsExtensionsTestMC, Scal) {

@@ -29,8 +29,6 @@
 namespace dlaf {
 namespace test {
 
-// Computes A += alpha * B
-
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
 using namespace testing;
@@ -57,7 +55,6 @@ void testAdd(const SizeType m, const SizeType n, const SizeType extra_lda, const
   s << ", lda = " << lda << ", ldb = " << ldb;
   SCOPED_TRACE(s.str());
 
-  // Check result against analytical result.
   CHECK_TILE_NEAR(res_a, a, 2 * TypeUtilities<T>::error, 2 * TypeUtilities<T>::error);
 }
 

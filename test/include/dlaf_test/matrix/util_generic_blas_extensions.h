@@ -24,9 +24,6 @@
 
 /// @file
 
-// https://github.com/eth-cscs/DLA-Future/blob/master/include/dlaf/blas/tile_extensions.h#L56-L71
-// https://github.com/eth-cscs/DLA-Future/blob/master/include/dlaf/blas/tile_extensions.h#L100
-
 namespace dlaf::matrix::test {
 
 template <class ElementIndex, class T>

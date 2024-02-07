@@ -35,20 +35,19 @@ TYPED_TEST_SUITE(TileOperationsExtensionsTestGPU, MatrixElementTypes);
 
 // Tuple elements:  m, n, extra_lda
 std::vector<std::tuple<SizeType, SizeType, SizeType>> scal_sizes = {
-    {0, 0, 0},                             // all 0 sizes
-    {7, 0, 0},  {0, 5, 0},    {0, 0, 11},  // two 0 sizes
-    {0, 5, 13}, {7, 0, 4},    {3, 11, 0},  // one 0 size
-    {1, 1, 1},  {1, 12, 1},   {17, 12, 16}, {11, 23, 8},
-    {6, 9, 12}, {32, 32, 32}, {32, 32, 32}, {128, 128, 128},
+    {0, 0, 0},                          // all 0 sizes
+    {7, 0, 3}, {0, 5, 0},  {0, 0, 1},   // two 0 sizes
+    {0, 5, 1}, {7, 0, 1},  {3, 11, 0},  // one 0 size
+    {1, 1, 0}, {1, 12, 1}, {17, 12, 1}, {11, 23, 0}, {6, 9, 1}, {32, 32, 0}, {32, 32, 4}, {128, 128, 0},
 };
 
 // Tuple elements:  m, n, extra_lda, extra_ldb
 std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> add_sizes = {
-    {0, 0, 0, 0},                                     // all 0 sizes
-    {7, 0, 0, 0},   {0, 5, 1, 0},     {0, 4, 11, 0},  // two 0 sizes
-    {0, 5, 13, 15}, {7, 0, 4, 5},     {3, 11, 0, 5},  // one 0 size
-    {1, 1, 1, 1},   {1, 12, 1, 12},   {17, 12, 16, 11}, {11, 23, 8, 12},
-    {6, 9, 12, 15}, {32, 32, 32, 32}, {32, 32, 32, 32}, {128, 128, 128, 128},
+    {0, 0, 0, 0},                                 // all 0 sizes
+    {7, 0, 3, 1}, {0, 5, 0, 0},   {0, 0, 1, 1},   // two 0 sizes
+    {0, 5, 1, 0}, {7, 0, 1, 2},   {3, 11, 0, 1},  // one 0 size
+    {1, 1, 0, 3}, {1, 12, 1, 0},  {17, 12, 1, 3}, {11, 23, 0, 3},
+    {6, 9, 1, 1}, {32, 32, 0, 0}, {32, 32, 4, 5}, {128, 128, 0, 0},
 };
 
 TYPED_TEST(TileOperationsExtensionsTestMC, Scal) {

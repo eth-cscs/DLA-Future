@@ -66,8 +66,7 @@ DLAF_addTest(
   test_reduction_to_trid
   SOURCES test_reduction_to_trid.cpp
   LIBRARIES dlaf.eigensolver dlaf.core
-  USE_MAIN MPIPIKA
-  MPIRANKS 6
+  USE_MAIN PIKA
 )
 
 DLAF_addTest(

@@ -19,7 +19,6 @@
 
 #include <gtest/gtest.h>
 
-#include <dlaf_test/comm_grids/grids_6_ranks.h>
 #include <dlaf_test/matrix/matrix_local.h>
 #include <dlaf_test/matrix/util_matrix.h>
 #include <dlaf_test/matrix/util_matrix_local.h>
@@ -32,7 +31,7 @@ using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
 
 template <class T>
-struct ReductionToTridTest : public TestWithCommGrids {};
+struct ReductionToTridTest : public testing::Test {};
 
 template <class T>
 using ReductionToTridTestMC = ReductionToTridTest<T>;
@@ -52,15 +51,33 @@ struct config_t {
 };
 
 std::vector<config_t> configs{
-    {{0, 0}, {3, 3}},   {{3, 3}, {3, 3}},  // single tile (nothing to do)
-    {{12, 12}, {3, 3}},  // tile always full size (less room for distribution over ranks)
-    {{13, 13}, {3, 3}},  // tile incomplete
-    {{24, 24}, {3, 3}},  // tile always full size (more room for distribution)
-    {{40, 40}, {5, 5}},
+    {{4, 4}, {2, 2}},
+    // {{0, 0}, {3, 3}},   {{3, 3}, {3, 3}},  // single tile (nothing to do)
+    // {{12, 12}, {3, 3}},  // tile always full size (less room for distribution over ranks)
+    // {{13, 13}, {3, 3}},  // tile incomplete
+    // {{24, 24}, {3, 3}},  // tile always full size (more room for distribution)
+    // {{40, 40}, {5, 5}},
 };
 
 template <class T, Backend B, Device D>
-void testReductionToTridLocal(const LocalElementSize, const TileElementSize) {}
+void testReductionToTridLocal(const LocalElementSize size, const TileElementSize tile_size) {
+  Distribution distribution({size.rows(), size.cols()}, tile_size);
+
+  // setup the reference input matrix
+  Matrix<const T, Device::CPU> reference = [size = size, block_size = tile_size]() {
+    Matrix<T, Device::CPU> reference(size, block_size);
+    matrix::util::set_random_hermitian(reference);
+    return reference;
+  }();
+
+  Matrix<T, Device::CPU> mat_a_h(distribution);
+  copy(reference, mat_a_h);
+
+  eigensolver::internal::TridiagResult1Stage<T, D> res = [&]() mutable {
+    MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
+    return eigensolver::internal::reduction_to_trid<B, D, T>(mat_a.get());
+  }();
+}
 
 TYPED_TEST(ReductionToTridTestMC, CorrectnessLocal) {
   for (const auto& config : configs) {

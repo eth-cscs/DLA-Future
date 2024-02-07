@@ -133,54 +133,56 @@ $(function() {
 <div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;<span class="keywordtype">void</span> <a class="code" href="tile__extensions_8h.html#aaff9e7cefc29db10ec4d5619a723b1e8">add</a>(T alpha, <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">matrix::Tile&lt;const T, Device::CPU&gt;</a>&amp; tile_b,</div>
 <div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;         <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">matrix::Tile&lt;T, Device::CPU&gt;</a>&amp; tile_a) {</div>
 <div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;  DLAF_ASSERT(equal_size(tile_a, tile_b), tile_a, tile_b);</div>
-<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;  <a class="code" href="classdlaf_1_1common_1_1internal_1_1_single_threaded_blas_scope.html">common::internal::SingleThreadedBlasScope</a> single;</div>
-<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;  <span class="keywordflow">for</span> (<span class="keyword">auto</span> j = 0; j &lt; tile_a.size().cols(); ++j)</div>
-<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;    blas::axpy(tile_a.size().rows(), alpha, tile_b.<a class="code" href="classdlaf_1_1matrix_1_1_tile.html#ad14d471389721941e830f73d7ae0716d">ptr</a>({0, j}), 1, tile_a.<a class="code" href="classdlaf_1_1matrix_1_1_tile.html#ad14d471389721941e830f73d7ae0716d">ptr</a>({0, j}), 1);</div>
-<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;}</div>
-<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160; </div>
-<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;<span class="preprocessor">#ifdef DLAF_WITH_GPU</span></div>
-<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;<span class="keywordtype">void</span> add(T alpha, <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">matrix::Tile&lt;const T, Device::GPU&gt;</a>&amp; tile_b,</div>
-<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;         <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">matrix::Tile&lt;T, Device::GPU&gt;</a>&amp; tile_a, whip::stream_t stream) {</div>
-<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;  DLAF_ASSERT(equal_size(tile_a, tile_b), tile_a, tile_b);</div>
-<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160; </div>
-<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;  gpulapack::add(blas::Uplo::General, tile_a.size().rows(), tile_a.size().cols(), alpha, tile_b.<a class="code" href="classdlaf_1_1matrix_1_1_tile.html#ad14d471389721941e830f73d7ae0716d">ptr</a>(),</div>
-<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;                 tile_b.ld(), tile_a.<a class="code" href="classdlaf_1_1matrix_1_1_tile.html#ad14d471389721941e830f73d7ae0716d">ptr</a>(), tile_a.ld(), stream);</div>
-<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;}</div>
-<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;<span class="preprocessor">#endif</span></div>
-<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160; </div>
-<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(add);</div>
+<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;  <span class="keywordflow">if</span> (tile_a.size().isEmpty())</div>
+<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;    <span class="keywordflow">return</span>;</div>
+<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;  <a class="code" href="classdlaf_1_1common_1_1internal_1_1_single_threaded_blas_scope.html">common::internal::SingleThreadedBlasScope</a> single;</div>
+<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;  <span class="keywordflow">for</span> (<span class="keyword">auto</span> j = 0; j &lt; tile_a.size().cols(); ++j)</div>
+<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;    blas::axpy(tile_a.size().rows(), alpha, tile_b.<a class="code" href="classdlaf_1_1matrix_1_1_tile.html#ad14d471389721941e830f73d7ae0716d">ptr</a>({0, j}), 1, tile_a.<a class="code" href="classdlaf_1_1matrix_1_1_tile.html#ad14d471389721941e830f73d7ae0716d">ptr</a>({0, j}), 1);</div>
+<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;}</div>
+<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160; </div>
+<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;<span class="preprocessor">#ifdef DLAF_WITH_GPU</span></div>
+<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;<span class="keywordtype">void</span> add(T alpha, <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">matrix::Tile&lt;const T, Device::GPU&gt;</a>&amp; tile_b,</div>
+<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;         <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">matrix::Tile&lt;T, Device::GPU&gt;</a>&amp; tile_a, whip::stream_t stream) {</div>
+<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;  DLAF_ASSERT(equal_size(tile_a, tile_b), tile_a, tile_b);</div>
+<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160; </div>
+<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;  gpulapack::add(blas::Uplo::General, tile_a.size().rows(), tile_a.size().cols(), alpha, tile_b.<a class="code" href="classdlaf_1_1matrix_1_1_tile.html#ad14d471389721941e830f73d7ae0716d">ptr</a>(),</div>
+<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;                 tile_b.ld(), tile_a.<a class="code" href="classdlaf_1_1matrix_1_1_tile.html#ad14d471389721941e830f73d7ae0716d">ptr</a>(), tile_a.ld(), stream);</div>
+<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;}</div>
+<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;<span class="preprocessor">#endif</span></div>
 <div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160; </div>
-<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;<span class="keywordtype">void</span> scal(T beta, <span class="keyword">const</span> matrix::Tile&lt;T, Device::CPU&gt;&amp; tile) {</div>
-<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160;  common::internal::SingleThreadedBlasScope single;</div>
-<div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160;  blas::gemm(blas::Layout::ColMajor, blas::Op::NoTrans, blas::Op::NoTrans, tile.size().rows(),</div>
-<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160;             tile.size().cols(), 0, T(0), <span class="keyword">nullptr</span>, tile.ld(), <span class="keyword">nullptr</span>, 1, beta, tile.ptr(), tile.ld());</div>
-<div class="line"><a name="l00104"></a><span class="lineno">  104</span>&#160;}</div>
-<div class="line"><a name="l00105"></a><span class="lineno">  105</span>&#160; </div>
-<div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160;<span class="preprocessor">#ifdef DLAF_WITH_GPU</span></div>
-<div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00108"></a><span class="lineno">  108</span>&#160;<span class="keywordtype">void</span> scal(cublasHandle_t handle, T beta, <span class="keyword">const</span> matrix::Tile&lt;T, Device::GPU&gt;&amp; tile) {</div>
-<div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160;  <span class="keyword">using</span> util::blasToCublasCast;</div>
-<div class="line"><a name="l00110"></a><span class="lineno">  110</span>&#160; </div>
-<div class="line"><a name="l00111"></a><span class="lineno">  111</span>&#160;  <span class="keyword">const</span> T alpha = 0;</div>
-<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160;  gpublas::internal::Gemm&lt;T&gt;::call(handle, CUBLAS_OP_N, CUBLAS_OP_N, <a class="code" href="types_8h.html#af90e7fd5acadf5987b7199b0bd44deea">to_int</a>(tile.size().rows()),</div>
-<div class="line"><a name="l00113"></a><span class="lineno">  113</span>&#160;                                   <a class="code" href="types_8h.html#af90e7fd5acadf5987b7199b0bd44deea">to_int</a>(tile.size().cols()), 0, blasToCublasCast(&amp;alpha),</div>
-<div class="line"><a name="l00114"></a><span class="lineno">  114</span>&#160;                                   blasToCublasCast&lt;T*&gt;(<span class="keyword">nullptr</span>), <a class="code" href="types_8h.html#af90e7fd5acadf5987b7199b0bd44deea">to_int</a>(tile.ld()),</div>
-<div class="line"><a name="l00115"></a><span class="lineno">  115</span>&#160;                                   blasToCublasCast&lt;T*&gt;(<span class="keyword">nullptr</span>), <a class="code" href="types_8h.html#af90e7fd5acadf5987b7199b0bd44deea">to_int</a>(1), blasToCublasCast(&amp;beta),</div>
-<div class="line"><a name="l00116"></a><span class="lineno">  116</span>&#160;                                   blasToCublasCast(tile.ptr()), <a class="code" href="types_8h.html#af90e7fd5acadf5987b7199b0bd44deea">to_int</a>(tile.ld()));</div>
-<div class="line"><a name="l00117"></a><span class="lineno">  117</span>&#160;}</div>
-<div class="line"><a name="l00118"></a><span class="lineno">  118</span>&#160;<span class="preprocessor">#endif</span></div>
-<div class="line"><a name="l00119"></a><span class="lineno">  119</span>&#160; </div>
-<div class="line"><a name="l00120"></a><span class="lineno">  120</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(scal);</div>
-<div class="line"><a name="l00121"></a><span class="lineno">  121</span>&#160;}</div>
-<div class="line"><a name="l00122"></a><span class="lineno">  122</span>&#160; </div>
-<div class="line"><a name="l00123"></a><span class="lineno">  123</span>&#160;DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::TransformDispatchType::Plain, add, internal::add_o)</div>
-<div class="line"><a name="l00124"></a><span class="lineno">  124</span>&#160;DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::TransformDispatchType::Blas, scal, internal::scal_o)</div>
-<div class="line"><a name="l00125"></a><span class="lineno">  125</span>&#160; </div>
-<div class="line"><a name="l00126"></a><span class="lineno">  126</span>&#160;<span class="preprocessor">#endif</span></div>
-<div class="line"><a name="l00127"></a><span class="lineno">  127</span>&#160;}</div>
-<div class="line"><a name="l00128"></a><span class="lineno">  128</span>&#160;}</div>
+<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(add);</div>
+<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160; </div>
+<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160;<span class="keywordtype">void</span> scal(T beta, <span class="keyword">const</span> matrix::Tile&lt;T, Device::CPU&gt;&amp; tile) {</div>
+<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160;  common::internal::SingleThreadedBlasScope single;</div>
+<div class="line"><a name="l00104"></a><span class="lineno">  104</span>&#160;  blas::gemm(blas::Layout::ColMajor, blas::Op::NoTrans, blas::Op::NoTrans, tile.size().rows(),</div>
+<div class="line"><a name="l00105"></a><span class="lineno">  105</span>&#160;             tile.size().cols(), 0, T(0), <span class="keyword">nullptr</span>, tile.ld(), <span class="keyword">nullptr</span>, 1, beta, tile.ptr(), tile.ld());</div>
+<div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160;}</div>
+<div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160; </div>
+<div class="line"><a name="l00108"></a><span class="lineno">  108</span>&#160;<span class="preprocessor">#ifdef DLAF_WITH_GPU</span></div>
+<div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00110"></a><span class="lineno">  110</span>&#160;<span class="keywordtype">void</span> scal(cublasHandle_t handle, T beta, <span class="keyword">const</span> matrix::Tile&lt;T, Device::GPU&gt;&amp; tile) {</div>
+<div class="line"><a name="l00111"></a><span class="lineno">  111</span>&#160;  <span class="keyword">using</span> util::blasToCublasCast;</div>
+<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160; </div>
+<div class="line"><a name="l00113"></a><span class="lineno">  113</span>&#160;  <span class="keyword">const</span> T alpha = 0;</div>
+<div class="line"><a name="l00114"></a><span class="lineno">  114</span>&#160;  gpublas::internal::Gemm&lt;T&gt;::call(handle, CUBLAS_OP_N, CUBLAS_OP_N, <a class="code" href="types_8h.html#af90e7fd5acadf5987b7199b0bd44deea">to_int</a>(tile.size().rows()),</div>
+<div class="line"><a name="l00115"></a><span class="lineno">  115</span>&#160;                                   <a class="code" href="types_8h.html#af90e7fd5acadf5987b7199b0bd44deea">to_int</a>(tile.size().cols()), 0, blasToCublasCast(&amp;alpha),</div>
+<div class="line"><a name="l00116"></a><span class="lineno">  116</span>&#160;                                   blasToCublasCast&lt;T*&gt;(<span class="keyword">nullptr</span>), <a class="code" href="types_8h.html#af90e7fd5acadf5987b7199b0bd44deea">to_int</a>(tile.ld()),</div>
+<div class="line"><a name="l00117"></a><span class="lineno">  117</span>&#160;                                   blasToCublasCast&lt;T*&gt;(<span class="keyword">nullptr</span>), <a class="code" href="types_8h.html#af90e7fd5acadf5987b7199b0bd44deea">to_int</a>(1), blasToCublasCast(&amp;beta),</div>
+<div class="line"><a name="l00118"></a><span class="lineno">  118</span>&#160;                                   blasToCublasCast(tile.ptr()), <a class="code" href="types_8h.html#af90e7fd5acadf5987b7199b0bd44deea">to_int</a>(tile.ld()));</div>
+<div class="line"><a name="l00119"></a><span class="lineno">  119</span>&#160;}</div>
+<div class="line"><a name="l00120"></a><span class="lineno">  120</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="line"><a name="l00121"></a><span class="lineno">  121</span>&#160; </div>
+<div class="line"><a name="l00122"></a><span class="lineno">  122</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(scal);</div>
+<div class="line"><a name="l00123"></a><span class="lineno">  123</span>&#160;}</div>
+<div class="line"><a name="l00124"></a><span class="lineno">  124</span>&#160; </div>
+<div class="line"><a name="l00125"></a><span class="lineno">  125</span>&#160;DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::TransformDispatchType::Plain, add, internal::add_o)</div>
+<div class="line"><a name="l00126"></a><span class="lineno">  126</span>&#160;DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::TransformDispatchType::Blas, scal, internal::scal_o)</div>
+<div class="line"><a name="l00127"></a><span class="lineno">  127</span>&#160; </div>
+<div class="line"><a name="l00128"></a><span class="lineno">  128</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="line"><a name="l00129"></a><span class="lineno">  129</span>&#160;}</div>
+<div class="line"><a name="l00130"></a><span class="lineno">  130</span>&#160;}</div>
 <div class="ttc" id="ablas_2tile_8h_html"><div class="ttname"><a href="blas_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="acallable__object_8h_html"><div class="ttname"><a href="callable__object_8h.html">callable_object.h</a></div></div>
 <div class="ttc" id="acallable__object_8h_html_a5aafa5a9c65ad07da48410427f4825b2"><div class="ttname"><a href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a></div><div class="ttdeci">#define DLAF_MAKE_CALLABLE_OBJECT(fname)</div><div class="ttdef"><b>Definition:</b> callable_object.h:26</div></div>

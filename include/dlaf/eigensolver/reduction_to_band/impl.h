@@ -37,6 +37,7 @@
 #include <dlaf/eigensolver/internal/get_red2band_barrier_busy_wait.h>
 #include <dlaf/eigensolver/internal/get_red2band_panel_nworkers.h>
 #include <dlaf/eigensolver/reduction_to_band/api.h>
+#include <dlaf/eigensolver/reduction_utils/misc.h>
 #include <dlaf/factorization/qr.h>
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/copy_tile.h>
@@ -66,73 +67,6 @@ void reduceColumnVectors(std::vector<common::internal::vector<T>>& columnVectors
 }
 
 namespace red2band {
-
-// Extract x0 and compute local cumulative sum of squares of the reflector column
-template <Device D, class T>
-std::array<T, 2> computeX0AndSquares(const bool has_head, const std::vector<matrix::Tile<T, D>>& panel,
-                                     SizeType j) {
-  std::array<T, 2> x0_and_squares{0, 0};
-  auto it_begin = panel.begin();
-  auto it_end = panel.end();
-
-  common::internal::SingleThreadedBlasScope single;
-
-  if (has_head) {
-    auto& tile_v0 = *it_begin++;
-
-    const TileElementIndex idx_x0(j, j);
-    x0_and_squares[0] = tile_v0(idx_x0);
-
-    T* reflector_ptr = tile_v0.ptr({idx_x0});
-    x0_and_squares[1] =
-        blas::dot(tile_v0.size().rows() - idx_x0.row(), reflector_ptr, 1, reflector_ptr, 1);
-  }
-
-  for (auto it = it_begin; it != it_end; ++it) {
-    const auto& tile = *it;
-
-    T* reflector_ptr = tile.ptr({0, j});
-    x0_and_squares[1] += blas::dot(tile.size().rows(), reflector_ptr, 1, reflector_ptr, 1);
-  }
-  return x0_and_squares;
-}
-
-template <Device D, class T>
-T computeReflectorAndTau(const bool has_head, const std::vector<matrix::Tile<T, D>>& panel,
-                         const SizeType j, std::array<T, 2> x0_and_squares) {
-  if (x0_and_squares[1] == T(0))
-    return T(0);
-
-  const T norm = std::sqrt(x0_and_squares[1]);
-  const T x0 = x0_and_squares[0];
-  const T y = std::signbit(std::real(x0_and_squares[0])) ? norm : -norm;
-  const T tau = (y - x0) / y;
-
-  auto it_begin = panel.begin();
-  auto it_end = panel.end();
-
-  common::internal::SingleThreadedBlasScope single;
-
-  if (has_head) {
-    const auto& tile_v0 = *it_begin++;
-
-    const TileElementIndex idx_x0(j, j);
-    tile_v0(idx_x0) = y;
-
-    if (j + 1 < tile_v0.size().rows()) {
-      T* v = tile_v0.ptr({j + 1, j});
-      blas::scal(tile_v0.size().rows() - (j + 1), T(1) / (x0 - y), v, 1);
-    }
-  }
-
-  for (auto it = it_begin; it != it_end; ++it) {
-    auto& tile_v = *it;
-    T* v = tile_v.ptr({0, j});
-    blas::scal(tile_v.size().rows(), T(1) / (x0 - y), v, 1);
-  }
-
-  return tau;
-}
 
 template <Device D, class T>
 void computeWTrailingPanel(const bool has_head, const std::vector<matrix::Tile<T, D>>& panel,
@@ -281,9 +215,9 @@ template <Device D, class T>
 T computeReflector(const std::vector<matrix::Tile<T, D>>& panel, SizeType j) {
   constexpr bool has_head = true;
 
-  std::array<T, 2> x0_and_squares = computeX0AndSquares(has_head, panel, j);
+  std::array<T, 2> x0_and_squares = computeX0AndSquares(has_head, panel, j, j);
 
-  auto tau = computeReflectorAndTau(has_head, panel, j, std::move(x0_and_squares));
+  auto tau = computeReflectorAndTau(has_head, panel, j, j, std::move(x0_and_squares));
 
   return tau;
 }
@@ -585,7 +519,7 @@ namespace distributed {
 template <Device D, class T>
 T computeReflector(const bool has_head, comm::Communicator& communicator,
                    const std::vector<matrix::Tile<T, D>>& panel, SizeType j) {
-  std::array<T, 2> x0_and_squares = computeX0AndSquares(has_head, panel, j);
+  std::array<T, 2> x0_and_squares = computeX0AndSquares(has_head, panel, j, j);
 
   // Note:
   // This is an optimization for grouping two separate low bandwidth communications, respectively
@@ -603,7 +537,7 @@ T computeReflector(const bool has_head, comm::Communicator& communicator,
                                common::make_data(x0_and_squares.data(),
                                                  to_SizeType(x0_and_squares.size())));
 
-  auto tau = computeReflectorAndTau(has_head, panel, j, std::move(x0_and_squares));
+  auto tau = computeReflectorAndTau(has_head, panel, j, j, std::move(x0_and_squares));
 
   return tau;
 }

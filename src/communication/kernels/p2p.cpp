@@ -33,8 +33,8 @@ namespace internal {
 template <class T, Device D>
 void send(const Communicator& comm, IndexT_MPI dest, IndexT_MPI tag,
           const matrix::Tile<const T, D>& tile, MPI_Request* req) {
-#if !defined(DLAF_WITH_CUDA_MPI_RDMA)
-  static_assert(D == Device::CPU, "DLAF_WITH_CUDA_MPI_RDMA=off, MPI accepts just CPU memory.");
+#if !defined(DLAF_WITH_MPI_GPU_SUPPORT)
+  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_SUPPORT=off, MPI accepts only CPU memory.");
 #endif
 
   auto msg = comm::make_message(common::make_data(tile));
@@ -69,8 +69,8 @@ template <class CommSender, class Sender>
 template <class T, Device D>
 auto recv(const Communicator& comm, IndexT_MPI source, IndexT_MPI tag, const matrix::Tile<T, D>& tile,
           MPI_Request* req) {
-#if !defined(DLAF_WITH_CUDA_MPI_RDMA)
-  static_assert(D == Device::CPU, "DLAF_WITH_CUDA_MPI_RDMA=off, MPI accepts just CPU memory.");
+#if !defined(DLAF_WITH_MPI_GPU_SUPPORT)
+  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_SUPPORT=off, MPI accepts only CPU memory.");
 #endif
 
   auto msg = comm::make_message(common::make_data(tile));

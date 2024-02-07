@@ -33,15 +33,6 @@ using TileOperationsExtensionsTestGPU = TileOperationsTest<T, Device::GPU>;
 TYPED_TEST_SUITE(TileOperationsExtensionsTestGPU, MatrixElementTypes);
 #endif
 
-// Tuple elements:  m, n, k, extra_lda, extra_ldb, extra_ldc
-std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, SizeType>> gemm_sizes = {
-    {0, 0, 0, 0, 0, 0},                                               // all 0 sizes
-    {7, 0, 0, 3, 1, 0},  {0, 5, 0, 0, 0, 1},    {0, 0, 11, 1, 1, 2},  // two 0 sizes
-    {0, 5, 13, 1, 0, 1}, {7, 0, 4, 1, 2, 0},    {3, 11, 0, 0, 1, 0},  // one 0 size
-    {1, 1, 1, 0, 3, 0},  {1, 12, 1, 1, 0, 7},   {17, 12, 16, 1, 3, 0}, {11, 23, 8, 0, 3, 4},
-    {6, 9, 12, 1, 1, 1}, {32, 32, 32, 0, 0, 0}, {32, 32, 32, 4, 5, 7}, {128, 128, 128, 0, 0, 0},
-};
-
 // Tuple elements:  m, n, extra_lda
 std::vector<std::tuple<SizeType, SizeType, SizeType>> scal_sizes = {
     {0, 0, 0},                             // all 0 sizes
@@ -54,7 +45,7 @@ std::vector<std::tuple<SizeType, SizeType, SizeType>> scal_sizes = {
 // Tuple elements:  m, n, extra_lda, extra_ldb
 std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> add_sizes = {
     {0, 0, 0, 0},                                     // all 0 sizes
-    {7, 0, 0, 0},   {0, 5, 0, 0},     {0, 0, 11, 0},  // two 0 sizes
+    {7, 0, 0, 0},   {0, 5, 1, 0},     {0, 4, 11, 0},  // two 0 sizes
     {0, 5, 13, 15}, {7, 0, 4, 5},     {3, 11, 0, 5},  // one 0 size
     {1, 1, 1, 1},   {1, 12, 1, 12},   {17, 12, 16, 11}, {11, 23, 8, 12},
     {6, 9, 12, 15}, {32, 32, 32, 32}, {32, 32, 32, 32}, {128, 128, 128, 128},

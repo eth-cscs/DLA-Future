@@ -8,10 +8,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#ifdef DLAF_WITH_MPI_GPU_SUPPORT
-#warning "Reduce is not using MPI_GPU_SUPPORT."
-#endif
-
 #include <complex>
 #include <utility>
 

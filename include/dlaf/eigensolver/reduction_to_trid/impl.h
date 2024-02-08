@@ -316,11 +316,32 @@ TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
     }
 
     // TRAILING MATRIX
-    // cut V and W
-    // update trailing matrix
 
+    // no trailing matrix, the last panel computed was the last one
     if (j == dist_a.nr_tiles().cols() - 1)
       break;
+
+    const GlobalElementIndex at_offset = dist_a.global_element_index({j + 1, j + 1}, {0, 0});
+    const matrix::SubMatrixView at_view(dist_a, at_offset);
+
+    for (const auto& ij : at_view.iteratorLocal()) {
+      auto&& tile_v = mat_a.read(GlobalTileIndex{ij.row(), j});
+      auto&& tile_w = W.read(ij);
+
+      auto get_rw_tile_at = [&mat_a, &at_view, ij]() {
+        return splitTile(mat_a.readwrite(ij), at_view(ij));  // TODO splitTile should not be needed
+      };
+
+      const auto priority = (ij.col() == 0) ? pika::execution::thread_priority::high
+                                            : pika::execution::thread_priority::normal;
+
+      if (ij.row() == ij.col())
+        her2kDiag<B>(priority, tile_v, tile_w, get_rw_tile_at());
+      else {
+        her2kOffDiag<B>(priority, tile_v, tile_w, get_rw_tile_at());
+        her2kOffDiag<B>(priority, tile_w, tile_v, get_rw_tile_at());
+      }
+    }
 
     W.reset();
   }

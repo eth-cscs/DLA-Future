@@ -35,9 +35,8 @@ TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
 
   const auto dist_a = mat_a.distribution();
 
-  // Note:
-  // Reflector of size = 1 is not considered whatever T is (i.e. neither real nor complex)
-  const SizeType nrefls = std::max<SizeType>(0, dist_a.size().rows() - 1 - 1);
+  // TODO nrefls? complex/real? probably real can be one less
+  const SizeType nrefls = std::max<SizeType>(0, dist_a.size().rows() - 1);
 
   Matrix<BaseType<T>, Device::CPU> mat_trid({dist_a.size().rows(), 2}, {dist_a.tile_size().rows(), 2});
 
@@ -71,7 +70,7 @@ TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
       }
 
       const SizeType i_el = j_el + 1;
-      const std::size_t i = to_sizet(dist_a.template global_tile_from_global_element<Coord::Row>(i_el));
+      const SizeType i = dist_a.template global_tile_from_global_element<Coord::Row>(i_el);
       const SizeType i_el_tl = dist_a.template tile_element_from_global_element<Coord::Row>(i_el);
 
       // Note:
@@ -99,7 +98,7 @@ TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
                        mat_trid.readwrite(GlobalTileIndex{j, 0}),
                        ex::when_all_vector(std::move(w_panel_ro)),
                        ex::when_all_vector(std::move(v_panel_rw))) |
-          ex::then([dist_a, i, i_el, i_el_tl, j_el_tl](auto&& panel_taus, auto&& panel_trid,
+          ex::then([dist_a, offset = i - j, i_el, i_el_tl, j_el_tl](auto&& panel_taus, auto&& panel_trid,
                                                        auto&& w_tiles, auto&& v_tiles) -> T {
             // panel update
             if (j_el_tl > 0) {
@@ -140,22 +139,30 @@ TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
             }
 
             // compute reflector
-            const SizeType i_first_tl = i_el_tl != 0 ? i_el_tl : 0;
             constexpr bool has_head = true;
-            const auto tau = computeReflectorAndTau(has_head, v_tiles, i_first_tl, j_el_tl,
-                                                    computeX0AndSquares(has_head, v_tiles, i_first_tl,
-                                                                        j_el_tl, to_SizeType(i)),
-                                                    to_SizeType(i));
+            const auto tau = computeReflectorAndTau(has_head, v_tiles, i_el_tl, j_el_tl,
+                                                    computeX0AndSquares(has_head, v_tiles, i_el_tl,
+                                                                        j_el_tl, offset),
+                                                    offset);
 
             panel_taus({j_el_tl, 0}) = tau;
 
             // Note: V is set in-place and off-diagonal is stored out-of-place in the result
-            T& head = v_tiles[i]({i_first_tl, j_el_tl});
+            T& head = v_tiles[to_sizet(offset)]({i_el_tl, j_el_tl});
 
-            if constexpr (isComplex_v<T>)
-              panel_trid({j_el_tl, 1}) = head.real();
-            else
-              panel_trid({j_el_tl, 1}) = head;
+            // TODO probably better to copy the full diagonal later
+            const T& diag_value = v_tiles[0]({j_el_tl, j_el_tl});
+
+            BaseType<T>& diag = panel_trid({j_el_tl, 0});
+            BaseType<T>& offdiag = panel_trid({j_el_tl, 1});
+            if constexpr (isComplex_v<T>) {
+              diag = diag_value.real();
+              offdiag = head.real();
+            }
+            else {
+              diag = diag_value;
+              offdiag = head;
+            }
 
             head = T(1.0);
 

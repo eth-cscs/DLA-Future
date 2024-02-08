@@ -46,12 +46,14 @@ TYPED_TEST_SUITE(ReductionToTridTestGPU, MatrixElementTypes);
 #endif
 
 struct config_t {
-  LocalElementSize size;
-  TileElementSize block_size;
+  const SizeType m;
+  const SizeType mb;
 };
 
 std::vector<config_t> configs{
-    {{4, 4}, {2, 2}},
+    //{4, 2},
+    //{6, 2},
+    {8, 3}
     // {{0, 0}, {3, 3}},   {{3, 3}, {3, 3}},  // single tile (nothing to do)
     // {{12, 12}, {3, 3}},  // tile always full size (less room for distribution over ranks)
     // {{13, 13}, {3, 3}},  // tile incomplete
@@ -60,8 +62,11 @@ std::vector<config_t> configs{
 };
 
 template <class T, Backend B, Device D>
-void testReductionToTridLocal(const LocalElementSize size, const TileElementSize tile_size) {
-  Distribution distribution({size.rows(), size.cols()}, tile_size);
+void testReductionToTridLocal(const SizeType m, const SizeType mb) {
+  const LocalElementSize size(m, m);
+  const TileElementSize tile_size(mb, mb);
+
+  const Distribution distribution({size.rows(), size.cols()}, tile_size);
 
   // setup the reference input matrix
   Matrix<const T, Device::CPU> reference = [size = size, block_size = tile_size]() {
@@ -81,17 +86,17 @@ void testReductionToTridLocal(const LocalElementSize size, const TileElementSize
 
 TYPED_TEST(ReductionToTridTestMC, CorrectnessLocal) {
   for (const auto& config : configs) {
-    const auto& [size, block_size] = config;
-    testReductionToTridLocal<TypeParam, Backend::MC, Device::CPU>(size, block_size);
+    const auto& [m, mb] = config;
+    testReductionToTridLocal<TypeParam, Backend::MC, Device::CPU>(m, mb);
   }
 }
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(ReductionToTridTestGPU, CorrectnessLocal) {
   for (const auto& config : configs) {
-    const auto& [size, block_size] = config;
+    const auto& [m, mb] = config;
 
-    testReductionToTridLocal<TypeParam, Backend::GPU, Device::GPU>(size, block_size);
+    testReductionToTridLocal<TypeParam, Backend::GPU, Device::GPU>(m, mb);
   }
 }
 

@@ -98,12 +98,12 @@ TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
                        mat_trid.readwrite(GlobalTileIndex{j, 0}),
                        ex::when_all_vector(std::move(w_panel_ro)),
                        ex::when_all_vector(std::move(v_panel_rw))) |
-          ex::then([dist_a, offset = i - j, i_el, i_el_tl, j_el_tl](auto&& panel_taus, auto&& panel_trid,
-                                                       auto&& w_tiles, auto&& v_tiles) -> T {
+          ex::then([dist_a, offset = i - j, j, i_el, i_el_tl,
+                    j_el_tl](auto&& panel_taus, auto&& panel_trid, auto&& w_tiles, auto&& v_tiles) -> T {
             // panel update
             if (j_el_tl > 0) {
               const std::size_t i_first =
-                  to_sizet(dist_a.template global_tile_from_global_element<Coord::Row>(i_el - 1));
+                  to_sizet(dist_a.template global_tile_from_global_element<Coord::Row>(i_el - 1) - j);
               const SizeType i_first_el_tl =
                   dist_a.template tile_element_from_global_element<Coord::Row>(i_el - 1);
               for (std::size_t i = i_first; i < v_tiles.size(); ++i) {
@@ -140,11 +140,10 @@ TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
 
             // compute reflector
             constexpr bool has_head = true;
-            const auto tau = computeReflectorAndTau(has_head, v_tiles, i_el_tl, j_el_tl,
-                                                    computeX0AndSquares(has_head, v_tiles, i_el_tl,
-                                                                        j_el_tl, offset),
-                                                    offset);
-
+            const auto tau =
+                computeReflectorAndTau(has_head, v_tiles, i_el_tl, j_el_tl,
+                                       computeX0AndSquares(has_head, v_tiles, i_el_tl, j_el_tl, offset),
+                                       offset);
             panel_taus({j_el_tl, 0}) = tau;
 
             // Note: V is set in-place and off-diagonal is stored out-of-place in the result
@@ -229,8 +228,8 @@ TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
       ex::start_detached(
           ex::when_all(ex::when_all_vector(std::move(w_panel_rw)),
                        ex::when_all_vector(std::move(v_panel_ro)), std::move(tau)) |
-          ex::then([i_first = to_sizet(i), i_el_tl, j_el_tl](auto&& w_tiles, auto&& v_tiles,
-                                                             auto&& tau) {
+          ex::then([i_first = to_sizet(i - j), i_el_tl, j_el_tl](auto&& w_tiles, auto&& v_tiles,
+                                                                 auto&& tau) {
             // computeW mods
             if (j_el_tl > 0) {
               auto&& w_up = w_tiles[0].ptr({0, j_el_tl});
@@ -243,7 +242,7 @@ TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
                 auto&& tile_w = w_tiles[i];
 
                 auto&& w = tile_w.ptr({i_first_tl, 0});
-                auto&& v_col = tile_v.ptr({i_el_tl, j_el_tl});
+                auto&& v_col = tile_v.ptr({i_first_tl, j_el_tl});
 
                 // TODO this shouldn't be needed: probably w is computed outside of needed bounds
                 const T beta = (i == i_first) ? 0 : 1;
@@ -275,9 +274,10 @@ TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
                 auto&& v = tile_v.ptr({i_first_tl, 0});
                 auto&& v_col = tile_v.ptr({i_first_tl, j_el_tl});
 
+                const T beta = (i == i_first) ? 0 : 1;
                 blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans,
                            tile_v.size().rows() - i_first_tl, j_el_tl, T(1), v, tile_v.ld(), v_col, 1,
-                           T(0), w_up, 1);
+                           beta, w_up, 1);
               }
 
               // w = w - W* . w_up
@@ -331,22 +331,25 @@ TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
     const GlobalElementIndex at_offset = dist_a.global_element_index({j + 1, j + 1}, {0, 0});
     const matrix::SubMatrixView at_view(dist_a, at_offset);
 
+    auto i_v = [j](const SizeType i) -> LocalTileIndex { return {i, j}; };
+    auto i_w = [](const SizeType i) -> LocalTileIndex { return {i, 0}; };  // TODO check if W is aligned
+
     for (const auto& ij : at_view.iteratorLocal()) {
-      auto&& tile_v = mat_a.read(GlobalTileIndex{ij.row(), j});
-      auto&& tile_w = W.read(ij);
+      if (ij.row() < ij.col())
+        continue;
 
       auto get_rw_tile_at = [&mat_a, &at_view, ij]() {
         return splitTile(mat_a.readwrite(ij), at_view(ij));  // TODO splitTile should not be needed
       };
 
-      const auto priority = (ij.col() == 0) ? pika::execution::thread_priority::high
-                                            : pika::execution::thread_priority::normal;
+      const auto priority = (ij.col() == j + 1) ? pika::execution::thread_priority::high
+                                                : pika::execution::thread_priority::normal;
 
       if (ij.row() == ij.col())
-        her2kDiag<B>(priority, tile_v, tile_w, get_rw_tile_at());
+        her2kDiag<B>(priority, mat_a.read(i_v(ij.row())), W.read(i_w(ij.row())), get_rw_tile_at());
       else {
-        her2kOffDiag<B>(priority, tile_v, tile_w, get_rw_tile_at());
-        her2kOffDiag<B>(priority, tile_w, tile_v, get_rw_tile_at());
+        her2kOffDiag<B>(priority, mat_a.read(i_v(ij.row())), W.read(i_w(ij.col())), get_rw_tile_at());
+        her2kOffDiag<B>(priority, W.read(i_w(ij.row())), mat_a.read(i_v(ij.col())), get_rw_tile_at());
       }
     }
 

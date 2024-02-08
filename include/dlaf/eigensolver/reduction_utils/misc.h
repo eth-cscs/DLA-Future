@@ -14,7 +14,10 @@
 
 #include <dlaf/blas/tile.h>
 #include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/matrix/panel.h>
 #include <dlaf/matrix/tile.h>
+#include <dlaf/matrix/views.h>
+#include <dlaf/sender/traits.h>
 #include <dlaf/types.h>
 
 namespace dlaf::eigensolver::internal {
@@ -85,6 +88,33 @@ T computeReflectorAndTau(const bool has_head, const std::vector<matrix::Tile<T, 
   }
 
   return tau;
+}
+
+template <Backend B, typename VSender, typename XSender, typename ASender>
+void her2kDiag(pika::execution::thread_priority priority, VSender&& tile_v, XSender&& tile_x,
+               ASender&& tile_a) {
+  using T = dlaf::internal::SenderElementType<VSender>;
+  using pika::execution::thread_stacksize;
+
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Uplo::Lower, blas::Op::NoTrans, T(-1),
+                                  std::forward<VSender>(tile_v), std::forward<XSender>(tile_x),
+                                  BaseType<T>(1), std::forward<ASender>(tile_a)) |
+      tile::her2k(dlaf::internal::Policy<B>(priority, thread_stacksize::nostack)));
+}
+
+// C -= A . B*
+template <Backend B, typename ASender, typename BSender, typename CSender>
+void her2kOffDiag(pika::execution::thread_priority priority, ASender&& tile_a, BSender&& tile_b,
+                  CSender&& tile_c) {
+  using T = dlaf::internal::SenderElementType<ASender>;
+  using pika::execution::thread_stacksize;
+
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
+                                  std::forward<ASender>(tile_a), std::forward<BSender>(tile_b), T(1),
+                                  std::forward<CSender>(tile_c)) |
+      tile::gemm(dlaf::internal::Policy<B>(priority, thread_stacksize::nostack)));
 }
 
 }

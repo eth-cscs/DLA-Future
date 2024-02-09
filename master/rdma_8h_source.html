@@ -88,25 +88,25 @@ $(function() {
 <div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="types_8h.html">dlaf/types.h</a>&gt;</span></div>
 <div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160; </div>
 <div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="keyword">namespace </span>dlaf::comm {</div>
-<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="keyword">template</span> &lt;Device D&gt;</div>
-<div class="line"><a name="l00026"></a><span class="lineno"><a class="line" href="structdlaf_1_1comm_1_1_communication_device.html">   26</a></span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1comm_1_1_communication_device.html">CommunicationDevice</a> {</div>
-<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;  <span class="keyword">static</span> constexpr Device value = D;</div>
-<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;};</div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160; </div>
-<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;<span class="preprocessor">#if defined(DLAF_WITH_GPU) &amp;&amp; !defined(DLAF_WITH_CUDA_RDMA)</span></div>
-<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="keyword">template</span> &lt;&gt;</div>
-<div class="line"><a name="l00032"></a><span class="lineno"><a class="line" href="structdlaf_1_1comm_1_1_communication_device_3_01_device_1_1_g_p_u_01_4.html">   32</a></span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1comm_1_1_communication_device.html">CommunicationDevice</a>&lt;Device::GPU&gt; {</div>
-<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;  <span class="keyword">static</span> constexpr Device value = Device::CPU;</div>
-<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;};</div>
-<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;<span class="preprocessor">#endif</span></div>
-<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160; </div>
-<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;<span class="keyword">template</span> &lt;Device D&gt;</div>
-<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;<span class="keyword">inline</span> constexpr <span class="keyword">auto</span> CommunicationDevice_v = <a class="code" href="structdlaf_1_1comm_1_1_communication_device.html">CommunicationDevice&lt;D&gt;::value</a>;</div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;}</div>
+<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="keyword">template</span> &lt;Device D&gt;</div>
+<div class="line"><a name="l00027"></a><span class="lineno"><a class="line" href="structdlaf_1_1comm_1_1_communication_device.html">   27</a></span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1comm_1_1_communication_device.html">CommunicationDevice</a> {</div>
+<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;  <span class="keyword">static</span> constexpr Device value = D;</div>
+<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;};</div>
+<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160; </div>
+<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="preprocessor">#if defined(DLAF_WITH_GPU) &amp;&amp; !defined(DLAF_WITH_MPI_GPU_SUPPORT)</span></div>
+<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;<span class="keyword">template</span> &lt;&gt;</div>
+<div class="line"><a name="l00033"></a><span class="lineno"><a class="line" href="structdlaf_1_1comm_1_1_communication_device_3_01_device_1_1_g_p_u_01_4.html">   33</a></span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1comm_1_1_communication_device.html">CommunicationDevice</a>&lt;Device::GPU&gt; {</div>
+<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;  <span class="keyword">static</span> constexpr Device value = Device::CPU;</div>
+<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;};</div>
+<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160; </div>
+<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;<span class="keyword">template</span> &lt;Device D&gt;</div>
+<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;<span class="keyword">inline</span> constexpr <span class="keyword">auto</span> CommunicationDevice_v = <a class="code" href="structdlaf_1_1comm_1_1_communication_device.html">CommunicationDevice&lt;D&gt;::value</a>;</div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;}</div>
 <div class="ttc" id="acopy__tile_8h_html"><div class="ttname"><a href="copy__tile_8h.html">copy_tile.h</a></div></div>
 <div class="ttc" id="amatrix_2tile_8h_html"><div class="ttname"><a href="matrix_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="amessage_8h_html"><div class="ttname"><a href="message_8h.html">message.h</a></div></div>
-<div class="ttc" id="astructdlaf_1_1comm_1_1_communication_device_html"><div class="ttname"><a href="structdlaf_1_1comm_1_1_communication_device.html">dlaf::comm::CommunicationDevice</a></div><div class="ttdef"><b>Definition:</b> rdma.h:26</div></div>
+<div class="ttc" id="astructdlaf_1_1comm_1_1_communication_device_html"><div class="ttname"><a href="structdlaf_1_1comm_1_1_communication_device.html">dlaf::comm::CommunicationDevice</a></div><div class="ttdef"><b>Definition:</b> rdma.h:27</div></div>
 <div class="ttc" id="atypes_8h_html"><div class="ttname"><a href="types_8h.html">types.h</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->

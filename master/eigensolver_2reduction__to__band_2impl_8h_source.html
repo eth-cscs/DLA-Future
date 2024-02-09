@@ -1399,97 +1399,98 @@ $(function() {
 <div class="line"><a name="l01328"></a><span class="lineno"> 1328</span>&#160;    <span class="comment">// * Why is it different between MC and GPU?</span></div>
 <div class="line"><a name="l01329"></a><span class="lineno"> 1329</span>&#160;    <span class="comment">// As said above, the problem is related to the communication. But the communication is not said</span></div>
 <div class="line"><a name="l01330"></a><span class="lineno"> 1330</span>&#160;    <span class="comment">// to be an atomic operation happening in a single task. It might have to create a copy to</span></div>
-<div class="line"><a name="l01331"></a><span class="lineno"> 1331</span>&#160;    <span class="comment">// a buffer more suitable for the communication (e.g. GPU -&gt; CPU if RDMA is not available).</span></div>
-<div class="line"><a name="l01332"></a><span class="lineno"> 1332</span>&#160;    <span class="comment">//</span></div>
-<div class="line"><a name="l01333"></a><span class="lineno"> 1333</span>&#160;    <span class="comment">// And in order to not be blocked, it must be ensured that the actual communication task has</span></div>
-<div class="line"><a name="l01334"></a><span class="lineno"> 1334</span>&#160;    <span class="comment">// been scheduled.</span></div>
-<div class="line"><a name="l01335"></a><span class="lineno"> 1335</span>&#160;    <span class="keyword">const</span> SizeType j_tile_current = ij_offset.col() / dist.blockSize().cols();</div>
-<div class="line"><a name="l01336"></a><span class="lineno"> 1336</span>&#160;    <span class="keyword">const</span> SizeType j_tile_next = at_offset.col() / dist.blockSize().cols();</div>
-<div class="line"><a name="l01337"></a><span class="lineno"> 1337</span>&#160;    <span class="keyword">const</span> <span class="keywordtype">bool</span> isNextColumnOnSameRank = (j_tile_current == j_tile_next);</div>
-<div class="line"><a name="l01338"></a><span class="lineno"> 1338</span>&#160;    <span class="keyword">const</span> comm::IndexT_MPI rank_next_col =</div>
-<div class="line"><a name="l01339"></a><span class="lineno"> 1339</span>&#160;        isNextColumnOnSameRank ? rank_v0.col() : (rank_v0.col() + 1) % dist.commGridSize().cols();</div>
-<div class="line"><a name="l01340"></a><span class="lineno"> 1340</span>&#160; </div>
-<div class="line"><a name="l01341"></a><span class="lineno"> 1341</span>&#160;    <span class="keywordflow">if</span> (rank.col() == rank_next_col) {</div>
-<div class="line"><a name="l01342"></a><span class="lineno"> 1342</span>&#160;      <span class="keyword">const</span> LocalTileIndex at{</div>
-<div class="line"><a name="l01343"></a><span class="lineno"> 1343</span>&#160;          dist.template nextLocalTileFromGlobalElement&lt;Coord::Row&gt;(at_offset.row()),</div>
-<div class="line"><a name="l01344"></a><span class="lineno"> 1344</span>&#160;          dist.template nextLocalTileFromGlobalElement&lt;Coord::Col&gt;(at_offset.col()),</div>
-<div class="line"><a name="l01345"></a><span class="lineno"> 1345</span>&#160;      };</div>
-<div class="line"><a name="l01346"></a><span class="lineno"> 1346</span>&#160; </div>
-<div class="line"><a name="l01347"></a><span class="lineno"> 1347</span>&#160;      <span class="comment">// Note:</span></div>
-<div class="line"><a name="l01348"></a><span class="lineno"> 1348</span>&#160;      <span class="comment">// This additional communication of the last tile is a workaround for supporting following trigger</span></div>
-<div class="line"><a name="l01349"></a><span class="lineno"> 1349</span>&#160;      <span class="comment">// when b &lt; mb.</span></div>
-<div class="line"><a name="l01350"></a><span class="lineno"> 1350</span>&#160;      <span class="comment">// Indeed, if b &lt; mb the last column have (at least) a panel to compute, but differently from</span></div>
-<div class="line"><a name="l01351"></a><span class="lineno"> 1351</span>&#160;      <span class="comment">// other columns, broadcast transposed doesn&#39;t communicate the last tile, which is an assumption</span></div>
-<div class="line"><a name="l01352"></a><span class="lineno"> 1352</span>&#160;      <span class="comment">// needed to make the following trigger work correctly.</span></div>
-<div class="line"><a name="l01353"></a><span class="lineno"> 1353</span>&#160;      <span class="keyword">const</span> SizeType at_tile_col =</div>
-<div class="line"><a name="l01354"></a><span class="lineno"> 1354</span>&#160;          dist.template globalTileFromGlobalElement&lt;Coord::Col&gt;(at_offset.col());</div>
-<div class="line"><a name="l01355"></a><span class="lineno"> 1355</span>&#160; </div>
-<div class="line"><a name="l01356"></a><span class="lineno"> 1356</span>&#160;      <span class="keywordflow">if</span> (at_tile_col == dist.nrTiles().cols() - 1) {</div>
-<div class="line"><a name="l01357"></a><span class="lineno"> 1357</span>&#160;        <span class="keyword">const</span> comm::IndexT_MPI owner = rank_v0.row();</div>
-<div class="line"><a name="l01358"></a><span class="lineno"> 1358</span>&#160;        <span class="keywordflow">if</span> (rank.row() == owner) {</div>
-<div class="line"><a name="l01359"></a><span class="lineno"> 1359</span>&#160;          xt.setTile(at, x.read(at));</div>
-<div class="line"><a name="l01360"></a><span class="lineno"> 1360</span>&#160; </div>
-<div class="line"><a name="l01361"></a><span class="lineno"> 1361</span>&#160;          <span class="keywordflow">if</span> (dist.commGridSize().rows() &gt; 1)</div>
-<div class="line"><a name="l01362"></a><span class="lineno"> 1362</span>&#160;            ex::start_detached(comm::scheduleSendBcast(mpi_col_chain.exclusive(), xt.read(at)));</div>
-<div class="line"><a name="l01363"></a><span class="lineno"> 1363</span>&#160;        }</div>
-<div class="line"><a name="l01364"></a><span class="lineno"> 1364</span>&#160;        <span class="keywordflow">else</span> {</div>
-<div class="line"><a name="l01365"></a><span class="lineno"> 1365</span>&#160;          <span class="keywordflow">if</span> (dist.commGridSize().rows() &gt; 1)</div>
-<div class="line"><a name="l01366"></a><span class="lineno"> 1366</span>&#160;            ex::start_detached(comm::scheduleRecvBcast(mpi_col_chain.exclusive(), owner,</div>
-<div class="line"><a name="l01367"></a><span class="lineno"> 1367</span>&#160;                                                       xt.readwrite(at)));</div>
-<div class="line"><a name="l01368"></a><span class="lineno"> 1368</span>&#160;        }</div>
-<div class="line"><a name="l01369"></a><span class="lineno"> 1369</span>&#160;      }</div>
-<div class="line"><a name="l01370"></a><span class="lineno"> 1370</span>&#160; </div>
-<div class="line"><a name="l01371"></a><span class="lineno"> 1371</span>&#160;      <span class="keywordflow">if</span> constexpr (dlaf::comm::CommunicationDevice_v&lt;D&gt; == D) {</div>
-<div class="line"><a name="l01372"></a><span class="lineno"> 1372</span>&#160;        <span class="comment">// Note:</span></div>
-<div class="line"><a name="l01373"></a><span class="lineno"> 1373</span>&#160;        <span class="comment">// if there is no need for additional buffers, we can just wait that xt[0] is ready for</span></div>
-<div class="line"><a name="l01374"></a><span class="lineno"> 1374</span>&#160;        <span class="comment">// reading.</span></div>
-<div class="line"><a name="l01375"></a><span class="lineno"> 1375</span>&#160;        <span class="keywordflow">if</span> (rank.row() == rank_v0.row()) {</div>
-<div class="line"><a name="l01376"></a><span class="lineno"> 1376</span>&#160;          trigger_panel = xt.read(at) | ex::drop_value() | ex::ensure_started();</div>
-<div class="line"><a name="l01377"></a><span class="lineno"> 1377</span>&#160;        }</div>
-<div class="line"><a name="l01378"></a><span class="lineno"> 1378</span>&#160;        <span class="keywordflow">else</span> {</div>
-<div class="line"><a name="l01379"></a><span class="lineno"> 1379</span>&#160;          <span class="comment">// Note:</span></div>
-<div class="line"><a name="l01380"></a><span class="lineno"> 1380</span>&#160;          <span class="comment">// Conservatively ensure that xt[0] needed for updating the first column has been</span></div>
-<div class="line"><a name="l01381"></a><span class="lineno"> 1381</span>&#160;          <span class="comment">// received. Just wait for xt because communication of x happens over rows, while the</span></div>
-<div class="line"><a name="l01382"></a><span class="lineno"> 1382</span>&#160;          <span class="comment">// pivot rank can just block rank in the same column.</span></div>
-<div class="line"><a name="l01383"></a><span class="lineno"> 1383</span>&#160;          trigger_panel = xt.read(at) | ex::drop_value() | ex::ensure_started();</div>
-<div class="line"><a name="l01384"></a><span class="lineno"> 1384</span>&#160;        }</div>
-<div class="line"><a name="l01385"></a><span class="lineno"> 1385</span>&#160;      }</div>
-<div class="line"><a name="l01386"></a><span class="lineno"> 1386</span>&#160;      <span class="keywordflow">else</span> {</div>
-<div class="line"><a name="l01387"></a><span class="lineno"> 1387</span>&#160;        <span class="keywordflow">if</span> (rank.row() == rank_v0.row()) {</div>
-<div class="line"><a name="l01388"></a><span class="lineno"> 1388</span>&#160;          <span class="comment">// Note:</span></div>
-<div class="line"><a name="l01389"></a><span class="lineno"> 1389</span>&#160;          <span class="comment">// on the pivot rank, i.e. the one that would quickly go to the next panel and block, from</span></div>
-<div class="line"><a name="l01390"></a><span class="lineno"> 1390</span>&#160;          <span class="comment">// implementation we know that xt[0] is set as an external tile pointing to x[0].</span></div>
-<div class="line"><a name="l01391"></a><span class="lineno"> 1391</span>&#160;          <span class="comment">// We cannot wait on xt readwrite (because it is an external tile in a panel, that constraints</span></div>
-<div class="line"><a name="l01392"></a><span class="lineno"> 1392</span>&#160;          <span class="comment">// it to be just readable), but we can wait on its source x[0]. This has a subtle implication,</span></div>
-<div class="line"><a name="l01393"></a><span class="lineno"> 1393</span>&#160;          <span class="comment">// since we will wait not just for the communication to be complete (which is already more</span></div>
-<div class="line"><a name="l01394"></a><span class="lineno"> 1394</span>&#160;          <span class="comment">// than what needed), but we will also wait till xt[0] will be released, so after all local</span></div>
-<div class="line"><a name="l01395"></a><span class="lineno"> 1395</span>&#160;          <span class="comment">// communication and computation on the first column of the trailing matrix will be completed.</span></div>
-<div class="line"><a name="l01396"></a><span class="lineno"> 1396</span>&#160;          trigger_panel = x.readwrite(at) | ex::drop_value() | ex::ensure_started();</div>
-<div class="line"><a name="l01397"></a><span class="lineno"> 1397</span>&#160;        }</div>
-<div class="line"><a name="l01398"></a><span class="lineno"> 1398</span>&#160;        <span class="keywordflow">else</span> {</div>
-<div class="line"><a name="l01399"></a><span class="lineno"> 1399</span>&#160;          <span class="comment">// Note:</span></div>
-<div class="line"><a name="l01400"></a><span class="lineno"> 1400</span>&#160;          <span class="comment">// Conservatively ensure that xt[0] needed for updating the first column has been</span></div>
-<div class="line"><a name="l01401"></a><span class="lineno"> 1401</span>&#160;          <span class="comment">// received. Just wait for xt because communication of x happens over rows, while the</span></div>
-<div class="line"><a name="l01402"></a><span class="lineno"> 1402</span>&#160;          <span class="comment">// pivot rank can just block rank in the same column.</span></div>
-<div class="line"><a name="l01403"></a><span class="lineno"> 1403</span>&#160;          trigger_panel = xt.read(at) | ex::drop_value() | ex::ensure_started();</div>
-<div class="line"><a name="l01404"></a><span class="lineno"> 1404</span>&#160;        }</div>
-<div class="line"><a name="l01405"></a><span class="lineno"> 1405</span>&#160;      }</div>
-<div class="line"><a name="l01406"></a><span class="lineno"> 1406</span>&#160;    }</div>
-<div class="line"><a name="l01407"></a><span class="lineno"> 1407</span>&#160; </div>
-<div class="line"><a name="l01408"></a><span class="lineno"> 1408</span>&#160;    <span class="comment">// At -= X . V* + V . X*</span></div>
-<div class="line"><a name="l01409"></a><span class="lineno"> 1409</span>&#160;    her2kUpdateTrailingMatrix&lt;B&gt;(trailing_matrix_view, mat_a, x, vt, v, xt);</div>
-<div class="line"><a name="l01410"></a><span class="lineno"> 1410</span>&#160; </div>
-<div class="line"><a name="l01411"></a><span class="lineno"> 1411</span>&#160;    xt.reset();</div>
-<div class="line"><a name="l01412"></a><span class="lineno"> 1412</span>&#160;    x.reset();</div>
-<div class="line"><a name="l01413"></a><span class="lineno"> 1413</span>&#160;    wt.reset();</div>
-<div class="line"><a name="l01414"></a><span class="lineno"> 1414</span>&#160;    w.reset();</div>
-<div class="line"><a name="l01415"></a><span class="lineno"> 1415</span>&#160;    vt.reset();</div>
-<div class="line"><a name="l01416"></a><span class="lineno"> 1416</span>&#160;    v.reset();</div>
-<div class="line"><a name="l01417"></a><span class="lineno"> 1417</span>&#160;  }</div>
-<div class="line"><a name="l01418"></a><span class="lineno"> 1418</span>&#160; </div>
-<div class="line"><a name="l01419"></a><span class="lineno"> 1419</span>&#160;  <span class="keywordflow">return</span> mat_taus;</div>
-<div class="line"><a name="l01420"></a><span class="lineno"> 1420</span>&#160;}</div>
+<div class="line"><a name="l01331"></a><span class="lineno"> 1331</span>&#160;    <span class="comment">// a buffer more suitable for the communication (e.g. GPU -&gt; CPU if MPI GPU support is not</span></div>
+<div class="line"><a name="l01332"></a><span class="lineno"> 1332</span>&#160;    <span class="comment">// available).</span></div>
+<div class="line"><a name="l01333"></a><span class="lineno"> 1333</span>&#160;    <span class="comment">//</span></div>
+<div class="line"><a name="l01334"></a><span class="lineno"> 1334</span>&#160;    <span class="comment">// And in order to not be blocked, it must be ensured that the actual communication task has</span></div>
+<div class="line"><a name="l01335"></a><span class="lineno"> 1335</span>&#160;    <span class="comment">// been scheduled.</span></div>
+<div class="line"><a name="l01336"></a><span class="lineno"> 1336</span>&#160;    <span class="keyword">const</span> SizeType j_tile_current = ij_offset.col() / dist.blockSize().cols();</div>
+<div class="line"><a name="l01337"></a><span class="lineno"> 1337</span>&#160;    <span class="keyword">const</span> SizeType j_tile_next = at_offset.col() / dist.blockSize().cols();</div>
+<div class="line"><a name="l01338"></a><span class="lineno"> 1338</span>&#160;    <span class="keyword">const</span> <span class="keywordtype">bool</span> isNextColumnOnSameRank = (j_tile_current == j_tile_next);</div>
+<div class="line"><a name="l01339"></a><span class="lineno"> 1339</span>&#160;    <span class="keyword">const</span> comm::IndexT_MPI rank_next_col =</div>
+<div class="line"><a name="l01340"></a><span class="lineno"> 1340</span>&#160;        isNextColumnOnSameRank ? rank_v0.col() : (rank_v0.col() + 1) % dist.commGridSize().cols();</div>
+<div class="line"><a name="l01341"></a><span class="lineno"> 1341</span>&#160; </div>
+<div class="line"><a name="l01342"></a><span class="lineno"> 1342</span>&#160;    <span class="keywordflow">if</span> (rank.col() == rank_next_col) {</div>
+<div class="line"><a name="l01343"></a><span class="lineno"> 1343</span>&#160;      <span class="keyword">const</span> LocalTileIndex at{</div>
+<div class="line"><a name="l01344"></a><span class="lineno"> 1344</span>&#160;          dist.template nextLocalTileFromGlobalElement&lt;Coord::Row&gt;(at_offset.row()),</div>
+<div class="line"><a name="l01345"></a><span class="lineno"> 1345</span>&#160;          dist.template nextLocalTileFromGlobalElement&lt;Coord::Col&gt;(at_offset.col()),</div>
+<div class="line"><a name="l01346"></a><span class="lineno"> 1346</span>&#160;      };</div>
+<div class="line"><a name="l01347"></a><span class="lineno"> 1347</span>&#160; </div>
+<div class="line"><a name="l01348"></a><span class="lineno"> 1348</span>&#160;      <span class="comment">// Note:</span></div>
+<div class="line"><a name="l01349"></a><span class="lineno"> 1349</span>&#160;      <span class="comment">// This additional communication of the last tile is a workaround for supporting following trigger</span></div>
+<div class="line"><a name="l01350"></a><span class="lineno"> 1350</span>&#160;      <span class="comment">// when b &lt; mb.</span></div>
+<div class="line"><a name="l01351"></a><span class="lineno"> 1351</span>&#160;      <span class="comment">// Indeed, if b &lt; mb the last column have (at least) a panel to compute, but differently from</span></div>
+<div class="line"><a name="l01352"></a><span class="lineno"> 1352</span>&#160;      <span class="comment">// other columns, broadcast transposed doesn&#39;t communicate the last tile, which is an assumption</span></div>
+<div class="line"><a name="l01353"></a><span class="lineno"> 1353</span>&#160;      <span class="comment">// needed to make the following trigger work correctly.</span></div>
+<div class="line"><a name="l01354"></a><span class="lineno"> 1354</span>&#160;      <span class="keyword">const</span> SizeType at_tile_col =</div>
+<div class="line"><a name="l01355"></a><span class="lineno"> 1355</span>&#160;          dist.template globalTileFromGlobalElement&lt;Coord::Col&gt;(at_offset.col());</div>
+<div class="line"><a name="l01356"></a><span class="lineno"> 1356</span>&#160; </div>
+<div class="line"><a name="l01357"></a><span class="lineno"> 1357</span>&#160;      <span class="keywordflow">if</span> (at_tile_col == dist.nrTiles().cols() - 1) {</div>
+<div class="line"><a name="l01358"></a><span class="lineno"> 1358</span>&#160;        <span class="keyword">const</span> comm::IndexT_MPI owner = rank_v0.row();</div>
+<div class="line"><a name="l01359"></a><span class="lineno"> 1359</span>&#160;        <span class="keywordflow">if</span> (rank.row() == owner) {</div>
+<div class="line"><a name="l01360"></a><span class="lineno"> 1360</span>&#160;          xt.setTile(at, x.read(at));</div>
+<div class="line"><a name="l01361"></a><span class="lineno"> 1361</span>&#160; </div>
+<div class="line"><a name="l01362"></a><span class="lineno"> 1362</span>&#160;          <span class="keywordflow">if</span> (dist.commGridSize().rows() &gt; 1)</div>
+<div class="line"><a name="l01363"></a><span class="lineno"> 1363</span>&#160;            ex::start_detached(comm::scheduleSendBcast(mpi_col_chain.exclusive(), xt.read(at)));</div>
+<div class="line"><a name="l01364"></a><span class="lineno"> 1364</span>&#160;        }</div>
+<div class="line"><a name="l01365"></a><span class="lineno"> 1365</span>&#160;        <span class="keywordflow">else</span> {</div>
+<div class="line"><a name="l01366"></a><span class="lineno"> 1366</span>&#160;          <span class="keywordflow">if</span> (dist.commGridSize().rows() &gt; 1)</div>
+<div class="line"><a name="l01367"></a><span class="lineno"> 1367</span>&#160;            ex::start_detached(comm::scheduleRecvBcast(mpi_col_chain.exclusive(), owner,</div>
+<div class="line"><a name="l01368"></a><span class="lineno"> 1368</span>&#160;                                                       xt.readwrite(at)));</div>
+<div class="line"><a name="l01369"></a><span class="lineno"> 1369</span>&#160;        }</div>
+<div class="line"><a name="l01370"></a><span class="lineno"> 1370</span>&#160;      }</div>
+<div class="line"><a name="l01371"></a><span class="lineno"> 1371</span>&#160; </div>
+<div class="line"><a name="l01372"></a><span class="lineno"> 1372</span>&#160;      <span class="keywordflow">if</span> constexpr (dlaf::comm::CommunicationDevice_v&lt;D&gt; == D) {</div>
+<div class="line"><a name="l01373"></a><span class="lineno"> 1373</span>&#160;        <span class="comment">// Note:</span></div>
+<div class="line"><a name="l01374"></a><span class="lineno"> 1374</span>&#160;        <span class="comment">// if there is no need for additional buffers, we can just wait that xt[0] is ready for</span></div>
+<div class="line"><a name="l01375"></a><span class="lineno"> 1375</span>&#160;        <span class="comment">// reading.</span></div>
+<div class="line"><a name="l01376"></a><span class="lineno"> 1376</span>&#160;        <span class="keywordflow">if</span> (rank.row() == rank_v0.row()) {</div>
+<div class="line"><a name="l01377"></a><span class="lineno"> 1377</span>&#160;          trigger_panel = xt.read(at) | ex::drop_value() | ex::ensure_started();</div>
+<div class="line"><a name="l01378"></a><span class="lineno"> 1378</span>&#160;        }</div>
+<div class="line"><a name="l01379"></a><span class="lineno"> 1379</span>&#160;        <span class="keywordflow">else</span> {</div>
+<div class="line"><a name="l01380"></a><span class="lineno"> 1380</span>&#160;          <span class="comment">// Note:</span></div>
+<div class="line"><a name="l01381"></a><span class="lineno"> 1381</span>&#160;          <span class="comment">// Conservatively ensure that xt[0] needed for updating the first column has been</span></div>
+<div class="line"><a name="l01382"></a><span class="lineno"> 1382</span>&#160;          <span class="comment">// received. Just wait for xt because communication of x happens over rows, while the</span></div>
+<div class="line"><a name="l01383"></a><span class="lineno"> 1383</span>&#160;          <span class="comment">// pivot rank can just block rank in the same column.</span></div>
+<div class="line"><a name="l01384"></a><span class="lineno"> 1384</span>&#160;          trigger_panel = xt.read(at) | ex::drop_value() | ex::ensure_started();</div>
+<div class="line"><a name="l01385"></a><span class="lineno"> 1385</span>&#160;        }</div>
+<div class="line"><a name="l01386"></a><span class="lineno"> 1386</span>&#160;      }</div>
+<div class="line"><a name="l01387"></a><span class="lineno"> 1387</span>&#160;      <span class="keywordflow">else</span> {</div>
+<div class="line"><a name="l01388"></a><span class="lineno"> 1388</span>&#160;        <span class="keywordflow">if</span> (rank.row() == rank_v0.row()) {</div>
+<div class="line"><a name="l01389"></a><span class="lineno"> 1389</span>&#160;          <span class="comment">// Note:</span></div>
+<div class="line"><a name="l01390"></a><span class="lineno"> 1390</span>&#160;          <span class="comment">// on the pivot rank, i.e. the one that would quickly go to the next panel and block, from</span></div>
+<div class="line"><a name="l01391"></a><span class="lineno"> 1391</span>&#160;          <span class="comment">// implementation we know that xt[0] is set as an external tile pointing to x[0].</span></div>
+<div class="line"><a name="l01392"></a><span class="lineno"> 1392</span>&#160;          <span class="comment">// We cannot wait on xt readwrite (because it is an external tile in a panel, that constraints</span></div>
+<div class="line"><a name="l01393"></a><span class="lineno"> 1393</span>&#160;          <span class="comment">// it to be just readable), but we can wait on its source x[0]. This has a subtle implication,</span></div>
+<div class="line"><a name="l01394"></a><span class="lineno"> 1394</span>&#160;          <span class="comment">// since we will wait not just for the communication to be complete (which is already more</span></div>
+<div class="line"><a name="l01395"></a><span class="lineno"> 1395</span>&#160;          <span class="comment">// than what needed), but we will also wait till xt[0] will be released, so after all local</span></div>
+<div class="line"><a name="l01396"></a><span class="lineno"> 1396</span>&#160;          <span class="comment">// communication and computation on the first column of the trailing matrix will be completed.</span></div>
+<div class="line"><a name="l01397"></a><span class="lineno"> 1397</span>&#160;          trigger_panel = x.readwrite(at) | ex::drop_value() | ex::ensure_started();</div>
+<div class="line"><a name="l01398"></a><span class="lineno"> 1398</span>&#160;        }</div>
+<div class="line"><a name="l01399"></a><span class="lineno"> 1399</span>&#160;        <span class="keywordflow">else</span> {</div>
+<div class="line"><a name="l01400"></a><span class="lineno"> 1400</span>&#160;          <span class="comment">// Note:</span></div>
+<div class="line"><a name="l01401"></a><span class="lineno"> 1401</span>&#160;          <span class="comment">// Conservatively ensure that xt[0] needed for updating the first column has been</span></div>
+<div class="line"><a name="l01402"></a><span class="lineno"> 1402</span>&#160;          <span class="comment">// received. Just wait for xt because communication of x happens over rows, while the</span></div>
+<div class="line"><a name="l01403"></a><span class="lineno"> 1403</span>&#160;          <span class="comment">// pivot rank can just block rank in the same column.</span></div>
+<div class="line"><a name="l01404"></a><span class="lineno"> 1404</span>&#160;          trigger_panel = xt.read(at) | ex::drop_value() | ex::ensure_started();</div>
+<div class="line"><a name="l01405"></a><span class="lineno"> 1405</span>&#160;        }</div>
+<div class="line"><a name="l01406"></a><span class="lineno"> 1406</span>&#160;      }</div>
+<div class="line"><a name="l01407"></a><span class="lineno"> 1407</span>&#160;    }</div>
+<div class="line"><a name="l01408"></a><span class="lineno"> 1408</span>&#160; </div>
+<div class="line"><a name="l01409"></a><span class="lineno"> 1409</span>&#160;    <span class="comment">// At -= X . V* + V . X*</span></div>
+<div class="line"><a name="l01410"></a><span class="lineno"> 1410</span>&#160;    her2kUpdateTrailingMatrix&lt;B&gt;(trailing_matrix_view, mat_a, x, vt, v, xt);</div>
+<div class="line"><a name="l01411"></a><span class="lineno"> 1411</span>&#160; </div>
+<div class="line"><a name="l01412"></a><span class="lineno"> 1412</span>&#160;    xt.reset();</div>
+<div class="line"><a name="l01413"></a><span class="lineno"> 1413</span>&#160;    x.reset();</div>
+<div class="line"><a name="l01414"></a><span class="lineno"> 1414</span>&#160;    wt.reset();</div>
+<div class="line"><a name="l01415"></a><span class="lineno"> 1415</span>&#160;    w.reset();</div>
+<div class="line"><a name="l01416"></a><span class="lineno"> 1416</span>&#160;    vt.reset();</div>
+<div class="line"><a name="l01417"></a><span class="lineno"> 1417</span>&#160;    v.reset();</div>
+<div class="line"><a name="l01418"></a><span class="lineno"> 1418</span>&#160;  }</div>
+<div class="line"><a name="l01419"></a><span class="lineno"> 1419</span>&#160; </div>
+<div class="line"><a name="l01420"></a><span class="lineno"> 1420</span>&#160;  <span class="keywordflow">return</span> mat_taus;</div>
 <div class="line"><a name="l01421"></a><span class="lineno"> 1421</span>&#160;}</div>
+<div class="line"><a name="l01422"></a><span class="lineno"> 1422</span>&#160;}</div>
 <div class="ttc" id="ablas_2tile_8h_html"><div class="ttname"><a href="blas_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="abroadcast__panel_8h_html"><div class="ttname"><a href="broadcast__panel_8h.html">broadcast_panel.h</a></div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html">dlaf::common::Index2D&lt; IndexT_MPI, TAG_MPI &gt;</a></div></div>

@@ -150,7 +150,6 @@ TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
             // Note: V is set in-place and off-diagonal is stored out-of-place in the result
             T& head = v_tiles[to_sizet(offset)]({i_el_tl, j_el_tl});
 
-            // TODO probably better to copy the full diagonal later
             const T& diag_value = v_tiles[0]({j_el_tl, j_el_tl});
 
             BaseType<T>& diag = panel_trid({j_el_tl, 0});
@@ -327,15 +326,10 @@ TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
                                       mat_trid.readwrite(GlobalTileIndex{j, 0}),
                                       mat_a.readwrite(GlobalTileIndex{j, j})) |
                          ex::then([](auto&& tile_taus, auto&& tile_tri, auto&& tile_a) {
-                           // TODO implement wrapper for real sytrd and complex hetrd
-                           if constexpr (isComplex_v<T>)
-                             lapack::hetrd(lapack::Uplo::Lower, tile_a.size().rows(), tile_a.ptr(),
-                                           tile_a.ld(), tile_tri.ptr({0, 0}), tile_tri.ptr({0, 1}),
-                                           tile_taus.ptr());
-                           else
-                             lapack::sytrd(lapack::Uplo::Lower, tile_a.size().rows(), tile_a.ptr(),
-                                           tile_a.ld(), tile_tri.ptr({0, 0}), tile_tri.ptr({0, 1}),
-                                           tile_taus.ptr());
+                           // TODO create tile wrapper
+                           lapack::hetrd(lapack::Uplo::Lower, tile_a.size().rows(), tile_a.ptr(),
+                                         tile_a.ld(), tile_tri.ptr({0, 0}), tile_tri.ptr({0, 1}),
+                                         tile_taus.ptr());
                          }));
     }
 

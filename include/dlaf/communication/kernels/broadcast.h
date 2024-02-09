@@ -32,8 +32,8 @@ namespace dlaf::comm {
 namespace internal {
 template <class T, Device D>
 void sendBcast(const Communicator& comm, const matrix::Tile<const T, D>& tile, MPI_Request* req) {
-#if !defined(DLAF_WITH_CUDA_RDMA)
-  static_assert(D == Device::CPU, "DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.");
+#if !defined(DLAF_WITH_MPI_GPU_SUPPORT)
+  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_SUPPORT=off, MPI accepts only CPU memory.");
 #endif
 
   auto msg = comm::make_message(common::make_data(tile));
@@ -46,8 +46,8 @@ DLAF_MAKE_CALLABLE_OBJECT(sendBcast);
 template <class T, Device D>
 void recvBcast(const Communicator& comm, comm::IndexT_MPI root_rank, const matrix::Tile<T, D>& tile,
                MPI_Request* req) {
-#if !defined(DLAF_WITH_CUDA_RDMA)
-  static_assert(D == Device::CPU, "DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.");
+#if !defined(DLAF_WITH_MPI_GPU_SUPPORT)
+  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_SUPPORT=off, MPI accepts only CPU memory.");
 #endif
 
   auto msg = comm::make_message(common::make_data(tile));

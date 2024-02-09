@@ -50,8 +50,13 @@ template <class CommSender, class TileSender>
   // The input tile must be copied to the temporary tile used for the send, but
   // the temporary tile does not need to be copied back to the input since the
   // data is not changed by the send. A send does not require contiguous memory.
+  constexpr bool require_contiguous =
+#if defined(DLAF_WITH_MPI_GPU_SUPPORT) && defined(DLAF_WITH_MPI_GPU_SUPPORT_FORCE_CONTIGUOUS)
+      comm_device_type == Device::GPU ? RequireContiguous::Yes :
+#endif
+                                      RequireContiguous::No;
   return withTemporaryTile<comm_device_type, CopyToDestination::Yes, CopyFromDestination::No,
-                           RequireContiguous::No>(std::forward<TileSender>(tile), std::move(send));
+                           require_contiguous>(std::forward<TileSender>(tile), std::move(send));
 }
 }
 
@@ -101,8 +106,13 @@ template <class T, Device D, class Comm>
   // tile (the input tile may be uninitialized). The received data is copied
   // back from the temporary tile to the input. A receive does not require
   // contiguous memory.
+  constexpr bool require_contiguous =
+#if defined(DLAF_WITH_MPI_GPU_SUPPORT) && defined(DLAF_WITH_MPI_GPU_SUPPORT_FORCE_CONTIGUOUS)
+      comm_device_type == Device::GPU ? RequireContiguous::Yes :
+#endif
+                                      RequireContiguous::No;
   return withTemporaryTile<comm_device_type, CopyToDestination::No, CopyFromDestination::Yes,
-                           RequireContiguous::No>(std::move(tile), std::move(recv));
+                           require_contiguous>(std::move(tile), std::move(recv));
 }
 
 // clang-format off

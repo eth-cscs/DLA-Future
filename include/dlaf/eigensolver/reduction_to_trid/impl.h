@@ -35,7 +35,7 @@ TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
 
   const auto dist_a = mat_a.distribution();
 
-  // TODO nrefls? complex/real? probably real can be one less
+  // TODO complex/real: real can be one less
   const SizeType nrefls = std::max<SizeType>(0, dist_a.size().rows() - 1);
 
   Matrix<BaseType<T>, Device::CPU> mat_trid({dist_a.size().rows(), 2}, {dist_a.tile_size().rows(), 2});
@@ -46,6 +46,9 @@ TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
                                                        comm::Size2D(mat_a.commGridSize().cols(), 1),
                                                        comm::Index2D(mat_a.rankIndex().col(), 0),
                                                        comm::Index2D(mat_a.sourceRankIndex().col(), 0)));
+
+  if (dist_a.size().isEmpty())
+    return {std::move(mat_taus), std::move(mat_trid)};
 
   constexpr std::size_t n_workspaces = 2;
   const matrix::Distribution dist({mat_a.size().rows(), mat_a.tile_size().cols()}, dist_a.tile_size());
@@ -60,14 +63,12 @@ TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
     matrix::util::set0<B>(pika::execution::thread_priority::high, W);
 
     // PANEL
+    const bool is_last_tile = j == dist_a.nr_tiles().cols() - 1;
+
     const SizeType panel_width = dist_a.template tile_size_of<Coord::Col>(j);
-    for (SizeType j_el_tl = 0; j_el_tl < panel_width; ++j_el_tl) {
+    for (SizeType j_el_tl = 0; !is_last_tile && j_el_tl < panel_width; ++j_el_tl) {
       const SizeType j_el =
           dist_a.template global_element_from_global_tile_and_tile_element<Coord::Col>(j, j_el_tl);
-
-      if (j_el >= nrefls) {
-        break;
-      }
 
       const SizeType i_el = j_el + 1;
       const SizeType i = dist_a.template global_tile_from_global_element<Coord::Row>(i_el);
@@ -321,11 +322,27 @@ TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
             }
           }));
     }
+    if (is_last_tile && dist_a.template tile_size_of<Coord::Col>(j) != 1) {
+      ex::start_detached(ex::when_all(mat_taus.readwrite(GlobalTileIndex{j, 0}),
+                                      mat_trid.readwrite(GlobalTileIndex{j, 0}),
+                                      mat_a.readwrite(GlobalTileIndex{j, j})) |
+                         ex::then([](auto&& tile_taus, auto&& tile_tri, auto&& tile_a) {
+                           // TODO implement wrapper for real sytrd and complex hetrd
+                           if constexpr (isComplex_v<T>)
+                             lapack::hetrd(lapack::Uplo::Lower, tile_a.size().rows(), tile_a.ptr(),
+                                           tile_a.ld(), tile_tri.ptr({0, 0}), tile_tri.ptr({0, 1}),
+                                           tile_taus.ptr());
+                           else
+                             lapack::sytrd(lapack::Uplo::Lower, tile_a.size().rows(), tile_a.ptr(),
+                                           tile_a.ld(), tile_tri.ptr({0, 0}), tile_tri.ptr({0, 1}),
+                                           tile_taus.ptr());
+                         }));
+    }
 
     // TRAILING MATRIX
 
     // no trailing matrix, the last panel computed was the last one
-    if (j == dist_a.nr_tiles().cols() - 1)
+    if (is_last_tile)
       break;
 
     const GlobalElementIndex at_offset = dist_a.global_element_index({j + 1, j + 1}, {0, 0});

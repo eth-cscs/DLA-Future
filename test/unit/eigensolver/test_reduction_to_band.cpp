@@ -34,6 +34,7 @@
 #include <gtest/gtest.h>
 
 #include <dlaf_test/comm_grids/grids_6_ranks.h>
+#include <dlaf_test/eigensolver/reduction_utils.h>
 #include <dlaf_test/matrix/matrix_local.h>
 #include <dlaf_test/matrix/util_matrix.h>
 #include <dlaf_test/matrix/util_matrix_local.h>
@@ -192,122 +193,6 @@ void splitReflectorsAndBand(MatrixLocal<const T>& mat_v, MatrixLocal<T>& mat_b,
   }
 
   setupHermitianBand(mat_b, band_size);
-}
-
-template <class T>
-auto allGatherTaus(const SizeType k, Matrix<T, Device::CPU>& mat_local_taus) {
-  auto local_taus_tiles = sync_wait(when_all_vector(selectRead(
-      mat_local_taus, common::iterate_range2d(LocalTileSize(mat_local_taus.nrTiles().rows(), 1)))));
-
-  std::vector<T> taus;
-  taus.reserve(to_sizet(k));
-  for (const auto& t : local_taus_tiles) {
-    std::copy(t.get().ptr(), t.get().ptr() + t.get().size().rows(), std::back_inserter(taus));
-  }
-
-  DLAF_ASSERT(to_SizeType(taus.size()) == k, taus.size(), k);
-
-  return taus;
-}
-
-template <class T>
-auto allGatherTaus(const SizeType k, Matrix<T, Device::CPU>& mat_taus,
-                   comm::CommunicatorGrid& comm_grid) {
-  const auto local_num_tiles = mat_taus.distribution().localNrTiles().rows();
-  const auto num_tiles = mat_taus.distribution().nrTiles().rows();
-  const auto local_num_tiles_expected =
-      num_tiles / comm_grid.size().cols() +
-      (comm_grid.rank().col() < (num_tiles % comm_grid.size().cols()) ? 1 : 0);
-  EXPECT_EQ(local_num_tiles, local_num_tiles_expected);
-
-  std::vector<T> taus;
-  taus.reserve(to_sizet(k));
-
-  for (SizeType i = 0; i < mat_taus.nrTiles().rows(); ++i) {
-    const auto owner = mat_taus.rankGlobalTile(GlobalTileIndex(i, 0)).row();
-    const bool is_owner = owner == comm_grid.rank().col();
-
-    const auto chunk_size = mat_taus.tileSize(GlobalTileIndex(i, 0)).rows();
-
-    if (is_owner) {
-      auto tile_local = sync_wait(mat_taus.read(GlobalTileIndex(i, 0)));
-      sync::broadcast::send(comm_grid.rowCommunicator(), common::make_data(tile_local.get()));
-      std::copy(tile_local.get().ptr(), tile_local.get().ptr() + tile_local.get().size().rows(),
-                std::back_inserter(taus));
-    }
-    else {
-      Tile<T, Device::CPU> tile_local(TileElementSize(chunk_size, 1),
-                                      MemoryView<T, Device::CPU>(chunk_size), chunk_size);
-      sync::broadcast::receive_from(owner, comm_grid.rowCommunicator(), common::make_data(tile_local));
-      std::copy(tile_local.ptr(), tile_local.ptr() + tile_local.size().rows(), std::back_inserter(taus));
-    }
-  }
-
-  return taus;
-}
-
-// Verify equality of all the elements in the upper part of the matrices
-template <class T>
-auto checkUpperPartUnchanged(Matrix<const T, Device::CPU>& reference,
-                             Matrix<const T, Device::CPU>& matrix_a) {
-  auto merged_matrices = [&reference, &matrix_a](const GlobalElementIndex& index) {
-    const auto& dist = reference.distribution();
-    const auto ij_tile = dist.globalTileIndex(index);
-    const auto ij_element_wrt_tile = dist.tileElementIndex(index);
-
-    const bool is_in_upper = index.row() < index.col();
-
-    if (!is_in_upper)
-      return sync_wait(matrix_a.read(ij_tile)).get()(ij_element_wrt_tile);
-    else
-      return sync_wait(reference.read(ij_tile)).get()(ij_element_wrt_tile);
-  };
-  CHECK_MATRIX_NEAR(merged_matrices, matrix_a, 0, TypeUtilities<T>::error);
-}
-
-template <class T>
-auto checkResult(const SizeType k, const SizeType band_size, Matrix<const T, Device::CPU>& reference,
-                 const MatrixLocal<T>& mat_v, const MatrixLocal<T>& mat_b, const std::vector<T>& taus) {
-  const GlobalElementIndex offset(band_size, 0);
-  // Now that all input are collected locally, it's time to apply the transformation,
-  // ...but just if there is any
-  if (offset.isIn(mat_v.size())) {
-    // Reduction to band returns a sequence of transformations applied from left and right to A
-    // allowing to reduce the matrix A to a band matrix B
-    //
-    // Hn* ... H2* H1* A H1 H2 ... Hn
-    // Q* A Q = B
-    //
-    // Applying the inverse of the same transformations, we can go from B to A
-    // Q B Q* = A
-    // Q = H1 H2 ... Hn
-    // H1 H2 ... Hn B Hn* ... H2* H1*
-
-    dlaf::common::internal::SingleThreadedBlasScope single;
-
-    // apply from left...
-    const GlobalElementIndex left_offset = offset;
-    const GlobalElementSize left_size{mat_b.size().rows() - band_size, mat_b.size().cols()};
-    lapack::unmqr(lapack::Side::Left, lapack::Op::NoTrans, left_size.rows(), left_size.cols(), k,
-                  mat_v.ptr(offset), mat_v.ld(), taus.data(), mat_b.ptr(left_offset), mat_b.ld());
-
-    // ... and from right
-    const GlobalElementIndex right_offset = common::transposed(left_offset);
-    const GlobalElementSize right_size = common::transposed(left_size);
-
-    lapack::unmqr(lapack::Side::Right, lapack::Op::ConjTrans, right_size.rows(), right_size.cols(), k,
-                  mat_v.ptr(offset), mat_v.ld(), taus.data(), mat_b.ptr(right_offset), mat_b.ld());
-  }
-
-  // Eventually, check the result obtained by applying the inverse transformation equals the original matrix
-  auto result = [&dist = reference.distribution(),
-                 &mat_local = mat_b](const GlobalElementIndex& element) {
-    const auto tile_index = dist.globalTileIndex(element);
-    const auto tile_element = dist.tileElementIndex(element);
-    return mat_local.tile_read(tile_index)(tile_element);
-  };
-  CHECK_MATRIX_NEAR(result, reference, 0,
-                    std::max<SizeType>(1, mat_b.size().linear_size()) * TypeUtilities<T>::error);
 }
 
 template <class T, Backend B, Device D>

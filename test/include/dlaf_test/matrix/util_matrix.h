@@ -31,6 +31,7 @@
 
 #include <dlaf_test/matrix/matrix_local.h>
 #include <dlaf_test/matrix/util_tile.h>
+#include <dlaf_test/util_types.h>
 
 namespace dlaf {
 namespace matrix {
@@ -305,6 +306,25 @@ void checkMatrixDistribution(const Distribution& distribution, const MatrixType&
     SCOPED_TRACE(s.str());                                            \
     ::dlaf::matrix::test::checkMatrixDistribution(distribution, mat); \
   } while (0)
+
+template <class T>
+auto checkUpperPartUnchanged(Matrix<const T, Device::CPU>& reference,
+                             Matrix<const T, Device::CPU>& matrix_a) {
+  namespace tt = pika::this_thread::experimental;
+  auto merged_matrices = [&reference, &matrix_a](const GlobalElementIndex& index) {
+    const auto& dist = reference.distribution();
+    const auto ij_tile = dist.globalTileIndex(index);
+    const auto ij_element_wrt_tile = dist.tileElementIndex(index);
+
+    const bool is_in_upper = index.row() < index.col();
+
+    if (!is_in_upper)
+      return tt::sync_wait(matrix_a.read(ij_tile)).get()(ij_element_wrt_tile);
+    else
+      return tt::sync_wait(reference.read(ij_tile)).get()(ij_element_wrt_tile);
+  };
+  CHECK_MATRIX_NEAR(merged_matrices, matrix_a, 0, dlaf::test::TypeUtilities<T>::error);
+}
 
 }
 }

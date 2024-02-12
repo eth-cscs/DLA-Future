@@ -111,7 +111,12 @@ TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
                 // Note: this is needed because first tile has to align with mask without "diagonal"
                 const SizeType i_first_tl = (i == i_first) ? i_first_el_tl : 0;
 
-                // TODO problem with transposed vector (we can use the gemm, even if less optimized)
+                // Note:
+                // Here we are going to do a matrix-vector multiplication with GEMM instead of GEMV.
+                // The reason is that we have to conjugate transpose the vector, and with the GEMV
+                // we can workaround the problem for real values using ld as gap between elements of the
+                // vector, but for complex type it does not allow to conjugate the value. So, we
+                // ended up using the more generic GEMM.
 
                 {
                   auto&& tile_v = v_tiles[i];
@@ -119,10 +124,10 @@ TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
                   auto&& tile_wt = tile_wt_snd.get();
                   auto&& col_out = v_tiles[i];
 
-                  blas::gemv(blas::Layout::ColMajor, blas::Op::NoTrans,
-                             tile_v.size().rows() - i_first_tl, j_el_tl, T(-1),
+                  blas::gemm(blas::Layout::ColMajor, blas::Op::NoTrans, blas::Op::ConjTrans,
+                             tile_v.size().rows() - i_first_tl, 1, j_el_tl, T(-1),
                              tile_v.ptr({i_first_tl, 0}), tile_v.ld(), tile_wt.ptr({j_el_tl, 0}),
-                             tile_wt.ld(), T(1), col_out.ptr({i_first_tl, j_el_tl}), 1);
+                             tile_wt.ld(), T(1), col_out.ptr({i_first_tl, j_el_tl}), col_out.ld());
                 }
 
                 {
@@ -131,10 +136,10 @@ TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
                   auto&& tile_vt = v_tiles[0];
                   auto&& col_out = v_tiles[i];
 
-                  blas::gemv(blas::Layout::ColMajor, blas::Op::NoTrans,
-                             tile_w.size().rows() - i_first_tl, j_el_tl, T(-1),
+                  blas::gemm(blas::Layout::ColMajor, blas::Op::NoTrans, blas::Op::ConjTrans,
+                             tile_w.size().rows() - i_first_tl, 1, j_el_tl, T(-1),
                              tile_w.ptr({i_first_tl, 0}), tile_w.ld(), tile_vt.ptr({j_el_tl, 0}),
-                             tile_vt.ld(), T(1), col_out.ptr({i_first_tl, j_el_tl}), 1);
+                             tile_vt.ld(), T(1), col_out.ptr({i_first_tl, j_el_tl}), col_out.ld());
                 }
               }
             }

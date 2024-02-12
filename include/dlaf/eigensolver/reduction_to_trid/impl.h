@@ -22,6 +22,8 @@
 #include <dlaf/matrix/matrix_ref.h>
 #include <dlaf/matrix/panel.h>
 #include <dlaf/matrix/views.h>
+#include <dlaf/sender/policy.h>
+#include <dlaf/sender/transform.h>
 #include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 
@@ -30,6 +32,7 @@ namespace dlaf::eigensolver::internal {
 template <Backend B, Device D, class T>
 TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
   namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
 
   using matrix::internal::MatrixRef;
 
@@ -99,79 +102,81 @@ TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
                        mat_trid.readwrite(GlobalTileIndex{j, 0}),
                        ex::when_all_vector(std::move(w_panel_ro)),
                        ex::when_all_vector(std::move(v_panel_rw))) |
-          ex::then([dist_a, offset = i - j, j, i_el, i_el_tl,
-                    j_el_tl](auto&& panel_taus, auto&& panel_trid, auto&& w_tiles, auto&& v_tiles) -> T {
-            // panel update
-            if (j_el_tl > 0) {
-              const std::size_t i_first =
-                  to_sizet(dist_a.template global_tile_from_global_element<Coord::Row>(i_el - 1) - j);
-              const SizeType i_first_el_tl =
-                  dist_a.template tile_element_from_global_element<Coord::Row>(i_el - 1);
-              for (std::size_t i = i_first; i < v_tiles.size(); ++i) {
-                // Note: this is needed because first tile has to align with mask without "diagonal"
-                const SizeType i_first_tl = (i == i_first) ? i_first_el_tl : 0;
+          di::transform(
+              di::Policy<B>(),
+              [dist_a, offset = i - j, j, i_el, i_el_tl, j_el_tl](auto&& panel_taus, auto&& panel_trid,
+                                                                  auto&& w_tiles, auto&& v_tiles) -> T {
+                // panel update
+                if (j_el_tl > 0) {
+                  const std::size_t i_first =
+                      to_sizet(dist_a.template global_tile_from_global_element<Coord::Row>(i_el - 1) -
+                               j);
+                  const SizeType i_first_el_tl =
+                      dist_a.template tile_element_from_global_element<Coord::Row>(i_el - 1);
+                  for (std::size_t i = i_first; i < v_tiles.size(); ++i) {
+                    // Note: this is needed because first tile has to align with mask without "diagonal"
+                    const SizeType i_first_tl = (i == i_first) ? i_first_el_tl : 0;
 
-                // Note:
-                // Here we are going to do a matrix-vector multiplication with GEMM instead of GEMV.
-                // The reason is that we have to conjugate transpose the vector, and with the GEMV
-                // we can workaround the problem for real values using ld as gap between elements of the
-                // vector, but for complex type it does not allow to conjugate the value. So, we
-                // ended up using the more generic GEMM.
+                    // Note:
+                    // Here we are going to do a matrix-vector multiplication with GEMM instead of GEMV.
+                    // The reason is that we have to conjugate transpose the vector, and with the GEMV
+                    // we can workaround the problem for real values using ld as gap between elements of
+                    // the vector, but for complex type it does not allow to conjugate the value. So, we
+                    // ended up using the more generic GEMM.
 
-                {
-                  auto&& tile_v = v_tiles[i];
-                  auto&& tile_wt_snd = w_tiles[0];
-                  auto&& tile_wt = tile_wt_snd.get();
-                  auto&& col_out = v_tiles[i];
+                    {
+                      auto&& tile_v = v_tiles[i];
+                      auto&& tile_wt_snd = w_tiles[0];
+                      auto&& tile_wt = tile_wt_snd.get();
+                      auto&& col_out = v_tiles[i];
 
-                  blas::gemm(blas::Layout::ColMajor, blas::Op::NoTrans, blas::Op::ConjTrans,
-                             tile_v.size().rows() - i_first_tl, 1, j_el_tl, T(-1),
-                             tile_v.ptr({i_first_tl, 0}), tile_v.ld(), tile_wt.ptr({j_el_tl, 0}),
-                             tile_wt.ld(), T(1), col_out.ptr({i_first_tl, j_el_tl}), col_out.ld());
+                      blas::gemm(blas::Layout::ColMajor, blas::Op::NoTrans, blas::Op::ConjTrans,
+                                 tile_v.size().rows() - i_first_tl, 1, j_el_tl, T(-1),
+                                 tile_v.ptr({i_first_tl, 0}), tile_v.ld(), tile_wt.ptr({j_el_tl, 0}),
+                                 tile_wt.ld(), T(1), col_out.ptr({i_first_tl, j_el_tl}), col_out.ld());
+                    }
+
+                    {
+                      auto&& tile_w_snd = w_tiles[i];
+                      auto&& tile_w = tile_w_snd.get();
+                      auto&& tile_vt = v_tiles[0];
+                      auto&& col_out = v_tiles[i];
+
+                      blas::gemm(blas::Layout::ColMajor, blas::Op::NoTrans, blas::Op::ConjTrans,
+                                 tile_w.size().rows() - i_first_tl, 1, j_el_tl, T(-1),
+                                 tile_w.ptr({i_first_tl, 0}), tile_w.ld(), tile_vt.ptr({j_el_tl, 0}),
+                                 tile_vt.ld(), T(1), col_out.ptr({i_first_tl, j_el_tl}), col_out.ld());
+                    }
+                  }
                 }
 
-                {
-                  auto&& tile_w_snd = w_tiles[i];
-                  auto&& tile_w = tile_w_snd.get();
-                  auto&& tile_vt = v_tiles[0];
-                  auto&& col_out = v_tiles[i];
+                // compute reflector
+                constexpr bool has_head = true;
+                const auto tau = computeReflectorAndTau(
+                    has_head, v_tiles, i_el_tl, j_el_tl,
+                    computeX0AndSquares(has_head, v_tiles, i_el_tl, j_el_tl, offset), offset);
+                panel_taus({j_el_tl, 0}) = tau;
 
-                  blas::gemm(blas::Layout::ColMajor, blas::Op::NoTrans, blas::Op::ConjTrans,
-                             tile_w.size().rows() - i_first_tl, 1, j_el_tl, T(-1),
-                             tile_w.ptr({i_first_tl, 0}), tile_w.ld(), tile_vt.ptr({j_el_tl, 0}),
-                             tile_vt.ld(), T(1), col_out.ptr({i_first_tl, j_el_tl}), col_out.ld());
+                // Note: V is set in-place and off-diagonal is stored out-of-place in the result
+                T& head = v_tiles[to_sizet(offset)]({i_el_tl, j_el_tl});
+
+                const T& diag_value = v_tiles[0]({j_el_tl, j_el_tl});
+
+                BaseType<T>& diag = panel_trid({j_el_tl, 0});
+                BaseType<T>& offdiag = panel_trid({j_el_tl, 1});
+                if constexpr (isComplex_v<T>) {
+                  diag = diag_value.real();
+                  offdiag = head.real();
                 }
-              }
-            }
+                else {
+                  diag = diag_value;
+                  offdiag = head;
+                }
 
-            // compute reflector
-            constexpr bool has_head = true;
-            const auto tau =
-                computeReflectorAndTau(has_head, v_tiles, i_el_tl, j_el_tl,
-                                       computeX0AndSquares(has_head, v_tiles, i_el_tl, j_el_tl, offset),
-                                       offset);
-            panel_taus({j_el_tl, 0}) = tau;
+                head = T(1.0);
 
-            // Note: V is set in-place and off-diagonal is stored out-of-place in the result
-            T& head = v_tiles[to_sizet(offset)]({i_el_tl, j_el_tl});
-
-            const T& diag_value = v_tiles[0]({j_el_tl, j_el_tl});
-
-            BaseType<T>& diag = panel_trid({j_el_tl, 0});
-            BaseType<T>& offdiag = panel_trid({j_el_tl, 1});
-            if constexpr (isComplex_v<T>) {
-              diag = diag_value.real();
-              offdiag = head.real();
-            }
-            else {
-              diag = diag_value;
-              offdiag = head;
-            }
-
-            head = T(1.0);
-
-            return tau;
-          }));
+                return tau;
+              }));
 
       // W = At @ v
       const SizeType mt = dist_a.size().rows() - i_el;
@@ -195,24 +200,26 @@ TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
         const GlobalTileIndex ij_lower = is_lower ? ij : transposed(ij);
         auto&& tile_at = At.read(ij_lower);
 
-        ex::start_detached(
-            ex::when_all(std::move(tile_at), std::move(tile_v), std::move(tile_w)) |
-            ex::then([ij, is_lower, i_first_tl, j_el_tl](auto&& at, auto&& v, auto&& tile_w) {
-              auto&& tile_v = v.get();
-              auto&& tile_a = at.get();
+        ex::start_detached(ex::when_all(std::move(tile_at), std::move(tile_v), std::move(tile_w)) |
+                           di::transform(di::Policy<B>(), [ij, is_lower, i_first_tl,
+                                                           j_el_tl](auto&& at, auto&& v, auto&& tile_w) {
+                             auto&& tile_v = v;
+                             auto&& tile_a = at;
 
-              if (ij.row() == ij.col()) {
-                blas::hemv(blas::Layout::ColMajor, blas::Uplo::Lower, tile_a.size().rows(), T(1),
-                           tile_a.ptr(), tile_a.ld(), tile_v.ptr({0, 0}), 1, T(1),
-                           tile_w.ptr({i_first_tl, j_el_tl}), 1);
-              }
-              else {
-                const blas::Op op = is_lower ? blas::Op::NoTrans : blas::Op::ConjTrans;
-                blas::gemv(blas::Layout::ColMajor, op, tile_a.size().rows(), tile_a.size().cols(), T(1),
-                           tile_a.ptr(), tile_a.ld(), tile_v.ptr({0, 0}), 1, T(1),
-                           tile_w.ptr({i_first_tl, j_el_tl}), 1);
-              }
-            }));
+                             if (ij.row() == ij.col()) {
+                               blas::hemv(blas::Layout::ColMajor, blas::Uplo::Lower,
+                                          tile_a.size().rows(), T(1), tile_a.ptr(), tile_a.ld(),
+                                          tile_v.ptr({0, 0}), 1, T(1), tile_w.ptr({i_first_tl, j_el_tl}),
+                                          1);
+                             }
+                             else {
+                               const blas::Op op = is_lower ? blas::Op::NoTrans : blas::Op::ConjTrans;
+                               blas::gemv(blas::Layout::ColMajor, op, tile_a.size().rows(),
+                                          tile_a.size().cols(), T(1), tile_a.ptr(), tile_a.ld(),
+                                          tile_v.ptr({0, 0}), 1, T(1), tile_w.ptr({i_first_tl, j_el_tl}),
+                                          1);
+                             }
+                           }));
       }
 
       // compute W
@@ -233,8 +240,8 @@ TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
       ex::start_detached(
           ex::when_all(ex::when_all_vector(std::move(w_panel_rw)),
                        ex::when_all_vector(std::move(v_panel_ro)), std::move(tau)) |
-          ex::then([i_first = to_sizet(i - j), i_el_tl, j_el_tl](auto&& w_tiles, auto&& v_tiles,
-                                                                 auto&& tau) {
+          di::transform(di::Policy<B>(), [i_first = to_sizet(i - j), i_el_tl,
+                                          j_el_tl](auto&& w_tiles, auto&& v_tiles, auto&& tau) {
             // computeW mods
             if (j_el_tl > 0) {
               auto&& w_up = w_tiles[0].ptr({0, j_el_tl});

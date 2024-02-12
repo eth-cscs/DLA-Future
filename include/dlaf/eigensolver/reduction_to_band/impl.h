@@ -762,24 +762,26 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
   // panel Xt col-wise, by collecting all Xt results on the rank which can "mirror" the result on its
   // rows (i.e. diagonal). So, for each tile of the row panel, select who is the "diagonal" rank that can
   // mirror and reduce on it.
-  for (const auto& index_xt : xt.iteratorLocal()) {
-    const auto index_k = dist.template globalTileFromLocalTile<Coord::Col>(index_xt.col());
-    const auto rank_owner_row = dist.template rankGlobalTile<Coord::Row>(index_k);
+  if (mpi_col_chain.size() > 1) {
+    for (const auto& index_xt : xt.iteratorLocal()) {
+      const auto index_k = dist.template globalTileFromLocalTile<Coord::Col>(index_xt.col());
+      const auto rank_owner_row = dist.template rankGlobalTile<Coord::Row>(index_k);
 
-    if (rank_owner_row == rank.row()) {
-      // Note:
-      // Since it is the owner, it has to perform the "mirroring" of the results from columns to
-      // rows.
-      //
-      // Moreover, it reduces in place because the owner of the diagonal stores the partial result
-      // directly in x (without using xt)
-      const auto i = dist.template localTileFromGlobalTile<Coord::Row>(index_k);
-      ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_chain.exclusive(), MPI_SUM,
-                                                         x.readwrite({i, 0})));
-    }
-    else {
-      ex::start_detached(comm::scheduleReduceSend(mpi_col_chain.exclusive(), rank_owner_row, MPI_SUM,
-                                                  xt.read(index_xt)));
+      if (rank_owner_row == rank.row()) {
+        // Note:
+        // Since it is the owner, it has to perform the "mirroring" of the results from columns to
+        // rows.
+        //
+        // Moreover, it reduces in place because the owner of the diagonal stores the partial result
+        // directly in x (without using xt)
+        const auto i = dist.template localTileFromGlobalTile<Coord::Row>(index_k);
+        ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_chain.exclusive(), MPI_SUM,
+                                                           x.readwrite({i, 0})));
+      }
+      else {
+        ex::start_detached(comm::scheduleReduceSend(mpi_col_chain.exclusive(), rank_owner_row, MPI_SUM,
+                                                    xt.read(index_xt)));
+      }
     }
   }
 
@@ -787,13 +789,15 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
   // At this point partial results are all collected in X (Xt has been embedded in previous step),
   // so the last step needed is to reduce these last partial results in the final results.
   // The result is needed just on the column with reflectors.
-  for (const auto& index_x : x.iteratorLocal()) {
-    if (reducer_col == rank.col())
-      ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_chain.exclusive(), MPI_SUM,
-                                                         x.readwrite(index_x)));
-    else
-      ex::start_detached(comm::scheduleReduceSend(mpi_row_chain.exclusive(), reducer_col, MPI_SUM,
-                                                  x.read(index_x)));
+  if (mpi_row_chain.size() > 1) {
+    for (const auto& index_x : x.iteratorLocal()) {
+      if (reducer_col == rank.col())
+        ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_chain.exclusive(), MPI_SUM,
+                                                           x.readwrite(index_x)));
+      else
+        ex::start_detached(comm::scheduleReduceSend(mpi_row_chain.exclusive(), reducer_col, MPI_SUM,
+                                                    x.read(index_x)));
+    }
   }
 }
 
@@ -1275,8 +1279,10 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
       matrix::Matrix<T, D> w2 = std::move(t);
 
       red2band::local::gemmComputeW2<B, D>(w2, w, x);
-      ex::start_detached(comm::scheduleAllReduceInPlace(mpi_col_chain.exclusive(), MPI_SUM,
-                                                        w2.readwrite(LocalTileIndex(0, 0))));
+      if (mpi_col_chain.size() > 1) {
+        ex::start_detached(comm::scheduleAllReduceInPlace(mpi_col_chain.exclusive(), MPI_SUM,
+                                                          w2.readwrite(LocalTileIndex(0, 0))));
+      }
 
       red2band::local::gemmUpdateX<B, D>(x, w2, v);
     }

@@ -1209,7 +1209,9 @@ void assembleDistZVec(comm::CommunicatorPipeline<comm::CommunicatorType::Full>& 
     if (evecs_tile_rank == this_rank) {
       // Copy the row into the column vector `z`
       assembleRank1UpdateVectorTileAsync<T, D>(top_tile, rho, evecs.read(idx_evecs), z.readwrite(z_idx));
-      ex::start_detached(comm::scheduleSendBcast(full_task_chain.exclusive(), z.read(z_idx)));
+      if (full_task_chain.size() > 1) {
+        ex::start_detached(comm::scheduleSendBcast(full_task_chain.exclusive(), z.read(z_idx)));
+      }
     }
     else {
       const comm::IndexT_MPI root_rank = full_task_chain.rank_full_communicator(evecs_tile_rank);
@@ -1443,7 +1445,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
 
                  // Note: this ensures that evals broadcasting finishes before bulk releases resources
                  ScopedSenderWait bcast_barrier;
-                 if (thread_idx == 0)
+                 if (thread_idx == 0 && row_comm_chain.size() > 1)
                    bcast_barrier.sender_ = bcast_evals(row_comm_chain, eval_tiles);
 
                  // Note: laed4 handles k <= 2 cases differently
@@ -1546,9 +1548,11 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                      }
                    }
 
-                   tt::sync_wait(ex::when_all(row_comm_chain.exclusive(),
-                                              ex::just(MPI_PROD, common::make_data(w, m_el_lc))) |
-                                 transformMPI(all_reduce_in_place));
+                   if (row_comm_chain.size() > 1) {
+                     tt::sync_wait(ex::when_all(row_comm_chain.exclusive(),
+                                                ex::just(MPI_PROD, common::make_data(w, m_el_lc))) |
+                                   transformMPI(all_reduce_in_place));
+                   }
 
 #ifdef DLAF_ASSERT_HEAVY_ENABLE
                    // Note: all input for weights computation of non-deflated rows should be strictly less than 0
@@ -1623,7 +1627,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                  barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
                  // STEP 3b: Reduce to get the sum of all squares on all ranks
-                 if (thread_idx == 0)
+                 if (thread_idx == 0 && col_comm.size() > 1)
                    tt::sync_wait(ex::just(std::cref(col_comm), MPI_SUM,
                                           common::make_data(ws_row(), k_lc)) |
                                  transformMPI(all_reduce_in_place));

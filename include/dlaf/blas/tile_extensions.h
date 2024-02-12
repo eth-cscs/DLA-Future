@@ -78,6 +78,8 @@ template <class T>
 void add(T alpha, const matrix::Tile<const T, Device::CPU>& tile_b,
          const matrix::Tile<T, Device::CPU>& tile_a) {
   DLAF_ASSERT(equal_size(tile_a, tile_b), tile_a, tile_b);
+  if (tile_a.size().isEmpty())
+    return;
   common::internal::SingleThreadedBlasScope single;
   for (auto j = 0; j < tile_a.size().cols(); ++j)
     blas::axpy(tile_a.size().rows(), alpha, tile_b.ptr({0, j}), 1, tile_a.ptr({0, j}), 1);

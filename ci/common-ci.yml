@@ -34,7 +34,8 @@ stages:
     reports:
       dotenv: build.env
   variables:
-    SPACK_SHA: ce81175cf30ce31b769c03561b0123de6e9e7cc4
+    # https://github.com/albestro/spack/tree/alby/intel-oneapi-mkl-openmp-workaround
+    SPACK_SHA: e366bd083d2860897df0dfd1ae273e9188efc9a0
     SPACK_DLAF_REPO: ./spack
     DOCKER_BUILD_ARGS: '[
         "BASE_IMAGE",

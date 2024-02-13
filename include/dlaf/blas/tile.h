@@ -141,20 +141,10 @@ DLAF_MAKE_GPUBLAS_SYHE_OP(Herk, rk);
 DLAF_MAKE_GPUBLAS_OP(Trmm, trmm);
 #elif defined(DLAF_WITH_HIP)
 
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#elif defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
-
+#if ROCBLAS_VERSION_MAJOR >= 3 && defined(ROCBLAS_V3)
+DLAF_MAKE_GPUBLAS_OP(Trmm, trmm);
+#else
 DLAF_MAKE_GPUBLAS_OP(Trmm, trmm_outofplace);
-
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#elif defined(__GNUC__)
-#pragma GCC diagnostic pop
 #endif
 
 #endif

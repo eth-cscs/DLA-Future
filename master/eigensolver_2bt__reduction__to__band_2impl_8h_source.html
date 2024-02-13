@@ -415,25 +415,27 @@ $(function() {
 <div class="line"><a name="l00344"></a><span class="lineno">  344</span>&#160;                      panelW2.readwrite(ij));</div>
 <div class="line"><a name="l00345"></a><span class="lineno">  345</span>&#160;    }</div>
 <div class="line"><a name="l00346"></a><span class="lineno">  346</span>&#160; </div>
-<div class="line"><a name="l00347"></a><span class="lineno">  347</span>&#160;    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; kj_panel : panelW2.iteratorLocal())</div>
-<div class="line"><a name="l00348"></a><span class="lineno">  348</span>&#160;      ex::start_detached(dlaf::comm::scheduleAllReduceInPlace(mpi_col_task_chain.exclusive(), MPI_SUM,</div>
-<div class="line"><a name="l00349"></a><span class="lineno">  349</span>&#160;                                                              panelW2.readwrite(kj_panel)));</div>
-<div class="line"><a name="l00350"></a><span class="lineno">  350</span>&#160; </div>
-<div class="line"><a name="l00351"></a><span class="lineno">  351</span>&#160;    <a class="code" href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">broadcast</a>(k_rank_col, panelV, mpi_row_task_chain);</div>
+<div class="line"><a name="l00347"></a><span class="lineno">  347</span>&#160;    <span class="keywordflow">if</span> (mpi_col_task_chain.size() &gt; 1) {</div>
+<div class="line"><a name="l00348"></a><span class="lineno">  348</span>&#160;      <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; kj_panel : panelW2.iteratorLocal())</div>
+<div class="line"><a name="l00349"></a><span class="lineno">  349</span>&#160;        ex::start_detached(dlaf::comm::scheduleAllReduceInPlace(mpi_col_task_chain.exclusive(), MPI_SUM,</div>
+<div class="line"><a name="l00350"></a><span class="lineno">  350</span>&#160;                                                                panelW2.readwrite(kj_panel)));</div>
+<div class="line"><a name="l00351"></a><span class="lineno">  351</span>&#160;    }</div>
 <div class="line"><a name="l00352"></a><span class="lineno">  352</span>&#160; </div>
-<div class="line"><a name="l00353"></a><span class="lineno">  353</span>&#160;    <span class="comment">// C = C - V W2</span></div>
-<div class="line"><a name="l00354"></a><span class="lineno">  354</span>&#160;    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; ij : mat_c_view.iteratorLocal()) {</div>
-<div class="line"><a name="l00355"></a><span class="lineno">  355</span>&#160;      gemmTrailingMatrix&lt;B&gt;(np, panelV.read(ij), panelW2.read(ij),</div>
-<div class="line"><a name="l00356"></a><span class="lineno">  356</span>&#160;                            <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_c.readwrite(ij), mat_c_view(ij)));</div>
-<div class="line"><a name="l00357"></a><span class="lineno">  357</span>&#160;    }</div>
-<div class="line"><a name="l00358"></a><span class="lineno">  358</span>&#160; </div>
-<div class="line"><a name="l00359"></a><span class="lineno">  359</span>&#160;    panelV.reset();</div>
-<div class="line"><a name="l00360"></a><span class="lineno">  360</span>&#160;    panelW.reset();</div>
-<div class="line"><a name="l00361"></a><span class="lineno">  361</span>&#160;    panelW2.reset();</div>
-<div class="line"><a name="l00362"></a><span class="lineno">  362</span>&#160;    panelT.reset();</div>
-<div class="line"><a name="l00363"></a><span class="lineno">  363</span>&#160;  }</div>
-<div class="line"><a name="l00364"></a><span class="lineno">  364</span>&#160;}</div>
-<div class="line"><a name="l00365"></a><span class="lineno">  365</span>&#160;}</div>
+<div class="line"><a name="l00353"></a><span class="lineno">  353</span>&#160;    <a class="code" href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">broadcast</a>(k_rank_col, panelV, mpi_row_task_chain);</div>
+<div class="line"><a name="l00354"></a><span class="lineno">  354</span>&#160; </div>
+<div class="line"><a name="l00355"></a><span class="lineno">  355</span>&#160;    <span class="comment">// C = C - V W2</span></div>
+<div class="line"><a name="l00356"></a><span class="lineno">  356</span>&#160;    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; ij : mat_c_view.iteratorLocal()) {</div>
+<div class="line"><a name="l00357"></a><span class="lineno">  357</span>&#160;      gemmTrailingMatrix&lt;B&gt;(np, panelV.read(ij), panelW2.read(ij),</div>
+<div class="line"><a name="l00358"></a><span class="lineno">  358</span>&#160;                            <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_c.readwrite(ij), mat_c_view(ij)));</div>
+<div class="line"><a name="l00359"></a><span class="lineno">  359</span>&#160;    }</div>
+<div class="line"><a name="l00360"></a><span class="lineno">  360</span>&#160; </div>
+<div class="line"><a name="l00361"></a><span class="lineno">  361</span>&#160;    panelV.reset();</div>
+<div class="line"><a name="l00362"></a><span class="lineno">  362</span>&#160;    panelW.reset();</div>
+<div class="line"><a name="l00363"></a><span class="lineno">  363</span>&#160;    panelW2.reset();</div>
+<div class="line"><a name="l00364"></a><span class="lineno">  364</span>&#160;    panelT.reset();</div>
+<div class="line"><a name="l00365"></a><span class="lineno">  365</span>&#160;  }</div>
+<div class="line"><a name="l00366"></a><span class="lineno">  366</span>&#160;}</div>
+<div class="line"><a name="l00367"></a><span class="lineno">  367</span>&#160;}</div>
 <div class="ttc" id="ablas_2tile_8h_html"><div class="ttname"><a href="blas_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="abroadcast__panel_8h_html"><div class="ttname"><a href="broadcast__panel_8h.html">broadcast_panel.h</a></div></div>
 <div class="ttc" id="abroadcast__panel_8h_html_a5e63a7fa440a442aa538d89b580eb3ed"><div class="ttname"><a href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">dlaf::comm::broadcast</a></div><div class="ttdeci">void broadcast(comm::IndexT_MPI rank_root, matrix::Panel&lt; axis, T, D, storage &gt; &amp;panel, comm::CommunicatorPipeline&lt; coord_to_communicator_type(orthogonal(axis))&gt; &amp;serial_comm)</div><div class="ttdef"><b>Definition:</b> broadcast_panel.h:60</div></div>

@@ -55,7 +55,7 @@ void bt_reduction_to_band(const SizeType b, Matrix<T, device>& mat_c, Matrix<con
   [[maybe_unused]] auto nr_reflectors_blocks = [&b, &mat_v]() {
     const SizeType m = mat_v.size().rows();
     const SizeType mb = mat_v.blockSize().rows();
-    return std::max<SizeType>(0, util::ceilDiv(m - b - 1, mb));
+    return std::max<SizeType>(0, util::ceilDiv(m - (b == 1 ? 1 : b + 1), mb));
   };
   DLAF_ASSERT(mat_taus.nrTiles().rows() == nr_reflectors_blocks(), mat_taus.size().rows(), mat_v, b);
 

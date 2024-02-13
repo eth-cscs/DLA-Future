@@ -22,6 +22,7 @@
 #include <dlaf/eigensolver/eigensolver/api.h>
 #include <dlaf/eigensolver/internal/get_band_size.h>
 #include <dlaf/eigensolver/reduction_to_band.h>
+#include <dlaf/eigensolver/reduction_to_trid.h>
 #include <dlaf/eigensolver/tridiag_solver.h>
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/copy.h>
@@ -36,19 +37,20 @@ namespace dlaf::eigensolver::internal {
 template <Backend B, Device D, class T>
 void Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<BaseType<T>, D>& evals,
                                 Matrix<T, D>& mat_e) {
-  const SizeType band_size = getBandSize(mat_a.blockSize().rows());
+  // const SizeType band_size = getBandSize(mat_a.blockSize().rows());
 
   // need uplo check as reduction to band doesn't have the uplo argument yet.
   if (uplo != blas::Uplo::Lower)
     DLAF_UNIMPLEMENTED(uplo);
 
-  auto mat_taus = reduction_to_band<B>(mat_a, band_size);
-  auto ret = band_to_tridiagonal<Backend::MC>(uplo, band_size, mat_a);
+  // auto mat_taus = reduction_to_band<B>(mat_a, band_size);
+  // auto ret = band_to_tridiagonal<Backend::MC>(uplo, band_size, mat_a);
+  auto ret = reduction_to_trid<Backend::MC>(mat_a);
 
   tridiagonal_eigensolver<B>(ret.tridiagonal, evals, mat_e);
 
-  bt_band_to_tridiagonal<B>(band_size, mat_e, ret.hh_reflectors);
-  bt_reduction_to_band<B>(band_size, mat_e, mat_a, mat_taus);
+  // bt_band_to_tridiagonal<B>(band_size, mat_e, ret.hh_reflectors);
+  bt_reduction_to_band<B>(1, mat_e, mat_a, ret.taus);
 }
 
 template <Backend B, Device D, class T>

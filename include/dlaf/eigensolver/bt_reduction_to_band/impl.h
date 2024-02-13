@@ -141,8 +141,14 @@ void BackTransformationReductionToBand<backend, device, T>::call(
   if (m == 0 || n == 0)
     return;
 
-  // Note: "-1" added to deal with size 1 reflector.
-  const SizeType total_nr_reflector = mat_v.size().rows() - b - 1;
+  // Note:
+  // b != 1 works on the b-th diagonal so it will skip b elements, in addition to last size-1 reflector
+  // b == 1 will just skip the main diagonal
+  //
+  // The point here is that with a b > 1 we are just interested at having a band matrix, so the last size-1
+  // reflector does not need any transformation. On the contrary, when working with b == 1 the target is
+  // to make the tridiagonal matrix of real values, so we have to work also on the last size-1 reflector.
+  const SizeType total_nr_reflector = mat_v.size().rows() - (b == 1 ? 1 : b + 1);
 
   if (total_nr_reflector <= 0)
     return;

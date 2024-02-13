@@ -437,9 +437,7 @@ TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
       if (ij.row() < ij.col())
         continue;
 
-      auto get_rw_tile_at = [&mat_a, &at_view, ij]() {
-        return splitTile(mat_a.readwrite(ij), at_view(ij));  // TODO splitTile should not be needed
-      };
+      auto get_rw_tile_at = [&mat_a, ij]() { return mat_a.readwrite(ij); };
 
       const auto priority = (ij.col() == j + 1) ? pika::execution::thread_priority::high
                                                 : pika::execution::thread_priority::normal;

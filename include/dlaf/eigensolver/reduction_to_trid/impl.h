@@ -306,7 +306,7 @@ void setupW(const GlobalTileIndex& ij, const TileElementIndex& ij_el_tl, SenderV
 }
 
 template <Backend B, Device D, class T>
-TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
+TridiagResult1Stage<T> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 

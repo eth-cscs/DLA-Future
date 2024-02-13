@@ -31,7 +31,7 @@ namespace dlaf::eigensolver::internal {
 /// @return the tau vector as needed by backtransformationReductionToBand
 ///
 template <Backend B, Device D, class T>
-TridiagResult1Stage<T, D> reduction_to_trid(Matrix<T, D>& mat_a) {
+TridiagResult1Stage<T> reduction_to_trid(Matrix<T, D>& mat_a) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);

@@ -17,15 +17,15 @@
 
 namespace dlaf::eigensolver::internal {
 
-template <class T, Device D>
+template <class T>
 struct TridiagResult1Stage {
-  Matrix<T, D> taus;
+  Matrix<T, Device::CPU> taus;
   Matrix<BaseType<T>, Device::CPU> tridiagonal;
 };
 
 template <Backend B, Device D, class T>
 struct ReductionToTrid {
-  static TridiagResult1Stage<T, D> call(Matrix<T, D>& mat_a);
+  static TridiagResult1Stage<T> call(Matrix<T, D>& mat_a);
 };
 
 // ETI

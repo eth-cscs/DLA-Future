@@ -90,7 +90,7 @@ void testReductionToTridLocal(const SizeType m, const SizeType mb) {
   Matrix<T, Device::CPU> mat_a_h(distribution);
   copy(reference, mat_a_h);
 
-  eigensolver::internal::TridiagResult1Stage<T, D> res = [&]() mutable {
+  eigensolver::internal::TridiagResult1Stage<T> res = [&]() mutable {
     MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
     return eigensolver::internal::reduction_to_trid<B, D, T>(mat_a.get());
   }();

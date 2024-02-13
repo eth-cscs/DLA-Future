@@ -45,7 +45,7 @@ void Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<Bas
 
   // auto mat_taus = reduction_to_band<B>(mat_a, band_size);
   // auto ret = band_to_tridiagonal<Backend::MC>(uplo, band_size, mat_a);
-  auto ret = reduction_to_trid<Backend::MC>(mat_a);
+  auto ret = reduction_to_trid<B>(mat_a);
 
   tridiagonal_eigensolver<B>(ret.tridiagonal, evals, mat_e);
 

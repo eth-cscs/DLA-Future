@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include <pika/execution.hpp>
 
 #include <dlaf/blas/tile.h>
@@ -183,43 +185,62 @@ TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
       MatrixRef<const T, D> V(mat_a, {{i_el, j_el}, {mt, 1}});
       MatrixRef<const T, D> At(mat_a, {{i_el, j_el + 1}, {mt, mt}});
 
-      for (auto ij : common::iterate_range2d(At.nr_tiles())) {
-        const LocalTileIndex ij_lc = At.distribution().local_tile_index(ij);
+      for (SizeType it = 0; it < At.nr_tiles().rows(); ++it) {
+        const SizeType i_lc = At.distribution().template local_tile_from_global_tile<Coord::Row>(it);
 
         // Note: this is for W which starts from the beginning
         // TODO fix for last reflector of the panel
-        const SizeType i_first_tl = ij.row() == 0 ? i_el_tl : 0;
-        auto&& tile_w =
-            W.readwrite({to_SizeType(i) + ij_lc.row(), 0});  // TODO workaround to align At and W
+        auto&& tile_w = W.readwrite({to_SizeType(i) + i_lc, 0});  // TODO workaround to align At and W
+
+        auto row_ij =
+            common::iterate_range2d(GlobalTileIndex{it, 0}, GlobalTileSize{1, At.nr_tiles().cols()});
 
         // Note: V is aligned with At, but it must be accessed with the col due to mul from right
-        auto&& tile_v = V.read(GlobalTileIndex{ij.col(), 0});
+        std::vector<matrix::ReadOnlyTileSender<T, D>> v_chunk;
+        v_chunk.reserve(to_sizet(At.nr_tiles().cols()));
+        for (const auto& ij : row_ij)
+          v_chunk.emplace_back(V.read(GlobalTileIndex{ij.col(), 0}));
 
-        // Note: this is for managing the access "transposed" for the hemv
-        const bool is_lower = ij.row() > ij.col();
-        const GlobalTileIndex ij_lower = is_lower ? ij : transposed(ij);
-        auto&& tile_at = At.read(ij_lower);
+        std::vector<GlobalTileIndex> row_ij_lower;
+        std::transform(row_ij.begin(), row_ij.end(), std::back_inserter(row_ij_lower), [](auto&& ij) {
+          const bool is_lower = ij.row() > ij.col();
+          return is_lower ? ij : transposed(ij);
+        });
 
-        ex::start_detached(ex::when_all(std::move(tile_at), std::move(tile_v), std::move(tile_w)) |
-                           di::transform(di::Policy<B>(), [ij, is_lower, i_first_tl,
-                                                           j_el_tl](auto&& at, auto&& v, auto&& tile_w) {
-                             auto&& tile_v = v;
-                             auto&& tile_a = at;
+        // Note: At has to be accessed just in the lower part
+        std::vector<matrix::ReadOnlyTileSender<T, D>> at_chunk;
+        at_chunk.reserve(to_sizet(At.nr_tiles().cols()));
+        for (const auto& ij_lower : row_ij_lower)
+          at_chunk.emplace_back(At.read(ij_lower));
 
-                             if (ij.row() == ij.col()) {
-                               blas::hemv(blas::Layout::ColMajor, blas::Uplo::Lower,
-                                          tile_a.size().rows(), T(1), tile_a.ptr(), tile_a.ld(),
-                                          tile_v.ptr({0, 0}), 1, T(1), tile_w.ptr({i_first_tl, j_el_tl}),
-                                          1);
-                             }
-                             else {
-                               const blas::Op op = is_lower ? blas::Op::NoTrans : blas::Op::ConjTrans;
-                               blas::gemv(blas::Layout::ColMajor, op, tile_a.size().rows(),
-                                          tile_a.size().cols(), T(1), tile_a.ptr(), tile_a.ld(),
-                                          tile_v.ptr({0, 0}), 1, T(1), tile_w.ptr({i_first_tl, j_el_tl}),
-                                          1);
-                             }
-                           }));
+        ex::start_detached(
+            ex::when_all(ex::when_all_vector(std::move(at_chunk)),
+                         ex::when_all_vector(std::move(v_chunk)), std::move(tile_w)) |
+            di::transform(di::Policy<B>(), [it, i_el_tl, j_el_tl](auto&& at_tiles, auto&& v_tiles,
+                                                                  auto&& tile_w) {
+              DLAF_ASSERT_HEAVY(at_tiles.size() = v_tiles.size(), at_tiles.size(), v_tiles.size());
+              for (std::size_t index = 0; index < at_tiles.size(); ++index) {
+                auto&& tile_at_snd = at_tiles[index];
+                auto&& tile_a = tile_at_snd.get();
+                auto&& tile_v_snd = v_tiles[index];
+                auto&& tile_v = tile_v_snd.get();
+
+                const SizeType i_first_tl = it == 0 ? i_el_tl : 0;
+
+                if (to_SizeType(index) == it) {
+                  blas::hemv(blas::Layout::ColMajor, blas::Uplo::Lower, tile_a.size().rows(), T(1),
+                             tile_a.ptr(), tile_a.ld(), tile_v.ptr({0, 0}), 1, T(1),
+                             tile_w.ptr({i_first_tl, j_el_tl}), 1);
+                }
+                else {
+                  const blas::Op op =
+                      (to_SizeType(index) < it) ? blas::Op::NoTrans : blas::Op::ConjTrans;
+                  blas::gemv(blas::Layout::ColMajor, op, tile_a.size().rows(), tile_a.size().cols(),
+                             T(1), tile_a.ptr(), tile_a.ld(), tile_v.ptr({0, 0}), 1, T(1),
+                             tile_w.ptr({i_first_tl, j_el_tl}), 1);
+                }
+              }
+            }));
       }
 
       // compute W

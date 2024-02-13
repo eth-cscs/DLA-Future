@@ -333,16 +333,30 @@ TridiagResult1Stage<T, D> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
             }
           }));
     }
-    if (is_last_tile && dist_a.template tile_size_of<Coord::Col>(j) != 1) {
-      ex::start_detached(
-          ex::when_all(mat_taus.readwrite(GlobalTileIndex{j, 0}),
-                       mat_trid.readwrite(GlobalTileIndex{j, 0}),
-                       mat_a.readwrite(GlobalTileIndex{j, j})) |
-          di::transform(di::Policy<B>(), [](auto&& tile_taus, auto&& tile_tri, auto&& tile_a) {
-            // TODO create tile wrapper
-            lapack::hetrd(lapack::Uplo::Lower, tile_a.size().rows(), tile_a.ptr(), tile_a.ld(),
-                          tile_tri.ptr({0, 0}), tile_tri.ptr({0, 1}), tile_taus.ptr());
-          }));
+    if (is_last_tile) {
+      if (dist_a.template tile_size_of<Coord::Col>(j) > 1) {
+        ex::start_detached(
+            ex::when_all(mat_taus.readwrite(GlobalTileIndex{j, 0}),
+                         mat_trid.readwrite(GlobalTileIndex{j, 0}),
+                         mat_a.readwrite(GlobalTileIndex{j, j})) |
+            di::transform(di::Policy<B>(), [](auto&& tile_taus, auto&& tile_tri, auto&& tile_a) {
+              // TODO create tile wrapper
+              lapack::hetrd(lapack::Uplo::Lower, tile_a.size().rows(), tile_a.ptr(), tile_a.ld(),
+                            tile_tri.ptr({0, 0}), tile_tri.ptr({0, 1}), tile_taus.ptr());
+            }));
+      }
+      else {
+        // Note: copy last diagonal element
+        ex::start_detached(ex::when_all(mat_a.read(GlobalTileIndex{j, j}),
+                                        mat_trid.readwrite(GlobalTileIndex{j, 0})) |
+                           ex::then([](auto&& a, auto&& tri) {
+                             const SizeType j_tl = tri.size().rows() - 1;
+                             if constexpr (isComplex_v<T>)
+                               tri({j_tl, 0}) = a.get()({j_tl, j_tl}).real();
+                             else
+                               tri({j_tl, 0}) = a.get()({j_tl, j_tl});
+                           }));
+      }
     }
 
     // TRAILING MATRIX

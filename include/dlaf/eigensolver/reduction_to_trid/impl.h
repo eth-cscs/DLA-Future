@@ -120,6 +120,38 @@ auto updatePanelAndComputeReflector(const matrix::Distribution& dist_a, const Gl
           }));
 }
 
+template <class T>
+struct kernelHEMV {
+  template <class SenderAt, class SenderV, class SenderW>
+  void operator()(const SizeType chunk_id, const TileElementIndex& ij_el_tl, SenderAt&& at_tiles,
+                  SenderV&& v_tiles, SenderW&& tile_w) {
+    const SizeType it = chunk_id;
+    const SizeType i_el_tl = ij_el_tl.row();
+    const SizeType j_el_tl = ij_el_tl.col();
+
+    DLAF_ASSERT_HEAVY(at_tiles.size() = v_tiles.size(), at_tiles.size(), v_tiles.size());
+    for (std::size_t index = 0; index < at_tiles.size(); ++index) {
+      auto&& tile_at_snd = at_tiles[index];
+      auto&& tile_a = tile_at_snd.get();
+      auto&& tile_v_snd = v_tiles[index];
+      auto&& tile_v = tile_v_snd.get();
+
+      const SizeType i_first_tl = it == 0 ? i_el_tl : 0;
+
+      if (to_SizeType(index) == it) {
+        blas::hemv(blas::Layout::ColMajor, blas::Uplo::Lower, tile_a.size().rows(), T(1), tile_a.ptr(),
+                   tile_a.ld(), tile_v.ptr({0, 0}), 1, T(1), tile_w.ptr({i_first_tl, j_el_tl}), 1);
+      }
+      else {
+        const blas::Op op = (to_SizeType(index) < it) ? blas::Op::NoTrans : blas::Op::ConjTrans;
+        blas::gemv(blas::Layout::ColMajor, op, tile_a.size().rows(), tile_a.size().cols(), T(1),
+                   tile_a.ptr(), tile_a.ld(), tile_v.ptr({0, 0}), 1, T(1),
+                   tile_w.ptr({i_first_tl, j_el_tl}), 1);
+      }
+    }
+  }
+};
+
 template <Backend B, class T, Device D>
 void hemvPanelColumn(const GlobalTileIndex& ij, const TileElementIndex& ij_el_tl,
                      dlaf::matrix::internal::MatrixRef<const T, D>& At,
@@ -160,33 +192,10 @@ void hemvPanelColumn(const GlobalTileIndex& ij, const TileElementIndex& ij_el_tl
     for (const auto& ij_lower : row_ij_lower)
       at_chunk.emplace_back(At.read(ij_lower));
 
-    ex::start_detached(
-        ex::when_all(ex::when_all_vector(std::move(at_chunk)), ex::when_all_vector(std::move(v_chunk)),
-                     std::move(tile_w)) |
-        di::transform(di::Policy<B>(), [it, i_el_tl, j_el_tl](auto&& at_tiles, auto&& v_tiles,
-                                                              auto&& tile_w) {
-          DLAF_ASSERT_HEAVY(at_tiles.size() = v_tiles.size(), at_tiles.size(), v_tiles.size());
-          for (std::size_t index = 0; index < at_tiles.size(); ++index) {
-            auto&& tile_at_snd = at_tiles[index];
-            auto&& tile_a = tile_at_snd.get();
-            auto&& tile_v_snd = v_tiles[index];
-            auto&& tile_v = tile_v_snd.get();
-
-            const SizeType i_first_tl = it == 0 ? i_el_tl : 0;
-
-            if (to_SizeType(index) == it) {
-              blas::hemv(blas::Layout::ColMajor, blas::Uplo::Lower, tile_a.size().rows(), T(1),
-                         tile_a.ptr(), tile_a.ld(), tile_v.ptr({0, 0}), 1, T(1),
-                         tile_w.ptr({i_first_tl, j_el_tl}), 1);
-            }
-            else {
-              const blas::Op op = (to_SizeType(index) < it) ? blas::Op::NoTrans : blas::Op::ConjTrans;
-              blas::gemv(blas::Layout::ColMajor, op, tile_a.size().rows(), tile_a.size().cols(), T(1),
-                         tile_a.ptr(), tile_a.ld(), tile_v.ptr({0, 0}), 1, T(1),
-                         tile_w.ptr({i_first_tl, j_el_tl}), 1);
-            }
-          }
-        }));
+    ex::start_detached(ex::when_all(ex::just(it), ex::just(TileElementIndex{i_el_tl, j_el_tl}),
+                                    ex::when_all_vector(std::move(at_chunk)),
+                                    ex::when_all_vector(std::move(v_chunk)), std::move(tile_w)) |
+                       di::transform(di::Policy<B>(), kernelHEMV<T>{}));
   }
 }
 

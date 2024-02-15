@@ -61,7 +61,7 @@ template <class CommSender, class Sender>
   constexpr Device in_device_type = SenderSingleValueType<std::decay_t<Sender>>::device;
   constexpr Device comm_device_type = CommunicationDevice_v<in_device_type>;
 
-  constexpr bool require_contiguous =
+  constexpr auto require_contiguous =
 #if defined(DLAF_WITH_MPI_GPU_SUPPORT) && defined(DLAF_WITH_MPI_GPU_SUPPORT_FORCE_CONTIGUOUS)
       comm_device_type == Device::GPU ? RequireContiguous::Yes :
 #endif
@@ -117,7 +117,7 @@ template <class T, Device D, class CommSender>
   constexpr Device in_device_type = D;
   constexpr Device comm_device_type = CommunicationDevice_v<in_device_type>;
 
-  constexpr bool require_contiguous =
+  constexpr auto require_contiguous =
 #if defined(DLAF_WITH_MPI_GPU_SUPPORT) && defined(DLAF_WITH_MPI_GPU_SUPPORT_FORCE_CONTIGUOUS)
       comm_device_type == Device::GPU ? RequireContiguous::Yes :
 #endif

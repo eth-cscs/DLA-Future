@@ -4,7 +4,7 @@ include:
 cpu clang16 release deps:
   extends: .build_deps_common
   variables:
-    EXTRA_APTGET: "clang-15" # TODO: clang-16 (not available in 20.04, update to 22.04?)
+    EXTRA_APTGET: "clang-15 libomp-15-dev" # TODO: clang-16 (not available in 20.04, update to 22.04?)
     COMPILER: clang@15
     USE_MKL: "ON"
     SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml

@@ -70,7 +70,7 @@ struct Helper<Backend::MC, Device::CPU, T> {
       w_panel_ro.emplace_back(splitTile(W.read(it), spec));
     }
 
-    auto kernelUpdateVandComputeTau = [&dist_a, offset = i - j, j, i_el, i_el_tl = ij_el_tl.row(),
+    auto kernelUpdateVandComputeTau = [dist_a, offset = i - j, j, i_el, i_el_tl = ij_el_tl.row(),
                                        j_el_tl = ij_el_tl.col()](auto&& panel_taus, auto&& panel_trid,
                                                                  auto&& w_tiles, auto&& v_tiles) -> T {
       // panel update

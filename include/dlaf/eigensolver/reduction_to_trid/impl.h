@@ -55,13 +55,14 @@ struct Helper<Backend::MC, Device::CPU, T> {
     const auto i = ij.row();
     const auto j = ij.col();
 
+    const std::size_t ntiles = to_sizet(std::distance(panel_uptonow.iteratorLocal().begin(),
+                                                      panel_uptonow.iteratorLocal().end()));
+
     std::vector<matrix::ReadWriteTileSender<T, D>> v_panel_rw;
-    v_panel_rw.reserve(to_sizet(std::distance(panel_uptonow.iteratorLocal().begin(),
-                                              panel_uptonow.iteratorLocal().end())));
+    v_panel_rw.reserve(ntiles);
 
     std::vector<matrix::ReadOnlyTileSender<T, D>> w_panel_ro;
-    w_panel_ro.reserve(to_sizet(std::distance(panel_uptonow.iteratorLocal().begin(),
-                                              panel_uptonow.iteratorLocal().end())));
+    w_panel_ro.reserve(ntiles);
 
     for (const auto& it : panel_uptonow.iteratorLocal()) {
       const auto spec = panel_uptonow(it);
@@ -91,8 +92,7 @@ struct Helper<Backend::MC, Device::CPU, T> {
 
           {
             auto&& tile_v = v_tiles[i];
-            auto&& tile_wt_snd = w_tiles[0];
-            auto&& tile_wt = tile_wt_snd.get();
+            auto&& tile_wt = w_tiles[0].get();
             auto&& col_out = v_tiles[i];
 
             blas::gemm(blas::Layout::ColMajor, blas::Op::NoTrans, blas::Op::ConjTrans,
@@ -102,8 +102,7 @@ struct Helper<Backend::MC, Device::CPU, T> {
           }
 
           {
-            auto&& tile_w_snd = w_tiles[i];
-            auto&& tile_w = tile_w_snd.get();
+            auto&& tile_w = w_tiles[i].get();
             auto&& tile_vt = v_tiles[0];
             auto&& col_out = v_tiles[i];
 
@@ -144,7 +143,7 @@ struct Helper<Backend::MC, Device::CPU, T> {
       return tau;
     };
 
-    return ex::ensure_started(ex::when_all(std::move(taus), std::move(trid),
+    return ex::ensure_started(ex::when_all(std::forward<SenderTau>(taus), std::forward<SenderTrid>(trid),
                                            ex::when_all_vector(std::move(w_panel_ro)),
                                            ex::when_all_vector(std::move(v_panel_rw))) |
                               di::transform(di::Policy<B>(), std::move(kernelUpdateVandComputeTau)));
@@ -152,7 +151,7 @@ struct Helper<Backend::MC, Device::CPU, T> {
 
   template <class SenderTau, class MatrixLike>
   void setupW(const GlobalTileIndex& ij, const TileElementIndex& ij_el_tl,
-              matrix::SubPanelView panel_uptonow, MatrixLike& mat_a,
+              const matrix::SubPanelView& panel_uptonow, MatrixLike& mat_a,
               matrix::Panel<Coord::Col, T, Device::CPU>& W, SenderTau&& tau) {
     namespace ex = pika::execution::experimental;
     namespace di = dlaf::internal;
@@ -254,8 +253,7 @@ struct Helper<Backend::MC, Device::CPU, T> {
           for (std::size_t i = i_first; i < w_tiles.size(); ++i) {
             const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
             auto&& tile_w = w_tiles[i];
-            auto&& tile_v_snd = v_tiles[i];
-            auto&& tile_v = tile_v_snd.get();
+            auto&& tile_v = v_tiles[i].get();
             alpha += blas::dot(tile_w.size().rows() - i_first_tl, tile_w.ptr({i_first_tl, j_el_tl}), 1,
                                tile_v.ptr({i_first_tl, j_el_tl}), 1);
           }
@@ -264,8 +262,7 @@ struct Helper<Backend::MC, Device::CPU, T> {
           for (std::size_t i = i_first; i < w_tiles.size(); ++i) {
             const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
             auto&& tile_w = w_tiles[i];
-            auto&& tile_v_snd = v_tiles[i];
-            auto&& tile_v = tile_v_snd.get();
+            auto&& tile_v = v_tiles[i].get();
             blas::axpy(tile_w.size().rows() - i_first_tl, alpha, tile_v.ptr({i_first_tl, j_el_tl}), 1,
                        tile_w.ptr({i_first_tl, j_el_tl}), 1);
           }
@@ -314,6 +311,7 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
         panels_v(n_workspaces, panel_dist), panels_w(n_workspaces, panel_dist) {}
 
   void align(const GlobalTileIndex& ij) {
+    Helper<Backend::MC, Device::CPU, T>::align(ij);
     auto& Vh = panels_v.nextResource();
     auto& Wh = panels_w.nextResource();
 
@@ -323,6 +321,7 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
 
   // TODO we can think about having just align there probably
   void reset() {
+    Helper<Backend::MC, Device::CPU, T>::reset();
     auto& Vh = panels_v.currentResource();
     auto& Wh = panels_w.currentResource();
 
@@ -378,8 +377,8 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
 
   template <class SenderTau, class MatrixLike>
   void setupW(const GlobalTileIndex& ij, const TileElementIndex& ij_el_tl,
-              matrix::SubPanelView panel_uptonow, MatrixLike& mat_a, matrix::Panel<Coord::Col, T, D>& W,
-              SenderTau&& tau) {
+              const matrix::SubPanelView& panel_uptonow, MatrixLike& mat_a,
+              matrix::Panel<Coord::Col, T, D>& W, SenderTau&& tau) {
     namespace ex = pika::execution::experimental;
     namespace di = dlaf::internal;
     using dlaf::matrix::internal::CopyBackend_v;
@@ -416,10 +415,14 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
   }
 
   template <class SenderTau, class SenderTri, class SenderV>
-  void computeLastTile(SenderTau&& tau, SenderTri&& mat_tri, SenderV&& v) {}
+  void computeLastTile(SenderTau&& tau, SenderTri&& mat_tri, SenderV&& v) {
+    dlaf::internal::silenceUnusedWarningFor(tau, mat_tri, v);
+  }
 
   template <class SenderA, class SenderTri>
-  void copyLastElement(SenderA&& mat_a, SenderTri&& mat_tri) {}
+  void copyLastElement(SenderA&& mat_a, SenderTri&& mat_tri) {
+    dlaf::internal::silenceUnusedWarningFor(mat_tri, mat_a);
+  }
 
 protected:
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panels_v;
@@ -440,10 +443,8 @@ struct kernelHEMV<Backend::MC, T> {
 
     DLAF_ASSERT_HEAVY(at_tiles.size() = v_tiles.size(), at_tiles.size(), v_tiles.size());
     for (std::size_t index = 0; index < at_tiles.size(); ++index) {
-      auto&& tile_at_snd = at_tiles[index];
-      auto&& tile_a = tile_at_snd.get();
-      auto&& tile_v_snd = v_tiles[index];
-      auto&& tile_v = tile_v_snd.get();
+      auto&& tile_a = at_tiles[index].get();
+      auto&& tile_v = v_tiles[index].get();
 
       const SizeType i_first_tl = it == 0 ? i_el_tl : 0;
 
@@ -472,10 +473,8 @@ struct kernelHEMV<Backend::GPU, T> {
 
     DLAF_ASSERT_HEAVY(at_tiles.size() = v_tiles.size(), at_tiles.size(), v_tiles.size());
     for (std::size_t index = 0; index < at_tiles.size(); ++index) {
-      auto&& tile_at_snd = at_tiles[index];
-      auto&& tile_a = tile_at_snd.get();
-      auto&& tile_v_snd = v_tiles[index];
-      auto&& tile_v = tile_v_snd.get();
+      auto&& tile_a = at_tiles[index].get();
+      auto&& tile_v = v_tiles[index].get();
 
       const SizeType i_first_tl = it == 0 ? i_el_tl : 0;
 
@@ -648,18 +647,14 @@ TridiagResult1Stage<T> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
       if (ij.row() < ij.col())
         continue;
 
-      auto get_rw_tile_at = [&mat_a, &at_view, ij]() {
-        return splitTile(mat_a.readwrite(ij), at_view(ij));  // TODO splitTile should not be needed
-      };
-
       const auto priority = (ij.col() == j + 1) ? pika::execution::thread_priority::high
                                                 : pika::execution::thread_priority::normal;
 
       if (ij.row() == ij.col())
-        her2kDiag<B>(priority, mat_a.read(i_v(ij.row())), W.read(i_w(ij.row())), get_rw_tile_at());
+        her2kDiag<B>(priority, mat_a.read(i_v(ij.row())), W.read(i_w(ij.row())), mat_a.readwrite(ij));
       else {
-        her2kOffDiag<B>(priority, mat_a.read(i_v(ij.row())), W.read(i_w(ij.col())), get_rw_tile_at());
-        her2kOffDiag<B>(priority, W.read(i_w(ij.row())), mat_a.read(i_v(ij.col())), get_rw_tile_at());
+        her2kOffDiag<B>(priority, mat_a.read(i_v(ij.row())), W.read(i_w(ij.col())), mat_a.readwrite(ij));
+        her2kOffDiag<B>(priority, W.read(i_w(ij.row())), mat_a.read(i_v(ij.col())), mat_a.readwrite(ij));
       }
     }
 

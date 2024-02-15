@@ -301,6 +301,7 @@ struct Helper<Backend::MC, Device::CPU, T> {
   }
 };
 
+#ifdef DLAF_WITH_GPU
 template <class T>
 struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T> {
   static constexpr Backend B = Backend::GPU;
@@ -428,6 +429,7 @@ protected:
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panels_v;
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panels_w;
 };
+#endif
 
 template <Backend B, class T>
 struct kernelHEMV;
@@ -462,6 +464,7 @@ struct kernelHEMV<Backend::MC, T> {
   }
 };
 
+#ifdef DLAF_WITH_GPU
 template <class T>
 struct kernelHEMV<Backend::GPU, T> {
   template <class SenderAt, class SenderV, class SenderW>
@@ -501,6 +504,7 @@ struct kernelHEMV<Backend::GPU, T> {
     }
   }
 };
+#endif
 
 template <Backend B, class T, Device D>
 void hemvPanelColumn(const GlobalTileIndex& ij, const TileElementIndex& ij_el_tl,

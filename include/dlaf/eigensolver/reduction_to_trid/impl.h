@@ -269,14 +269,14 @@ struct Helper<Backend::MC, Device::CPU, T> {
         }));
   }
 
-  template <class SenderTau, class SenderTri, class SenderV>
-  void computeLastTile(SenderTau&& tau, SenderTri&& mat_tri, SenderV&& v) {
+  template <class SenderTau, class SenderTri, class SenderA>
+  void computeLastTile(SenderTau&& tau, SenderTri&& mat_tri, SenderA&& mat_a) {
     namespace ex = pika::execution::experimental;
     namespace di = dlaf::internal;
 
     ex::start_detached(
         ex::when_all(std::forward<SenderTau>(tau), std::forward<SenderTri>(mat_tri),
-                     std::forward<SenderV>(v)) |
+                     std::forward<SenderA>(mat_a)) |
         di::transform(di::Policy<B>(), [](auto&& tile_taus, auto&& tile_tri, auto&& tile_a) {
           // TODO create tile wrapper
           lapack::hetrd(lapack::Uplo::Lower, tile_a.size().rows(), tile_a.ptr(), tile_a.ld(),
@@ -415,14 +415,49 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
     }
   }
 
-  template <class SenderTau, class SenderTri, class SenderV>
-  void computeLastTile(SenderTau&& tau, SenderTri&& mat_tri, SenderV&& v) {
-    dlaf::internal::silenceUnusedWarningFor(tau, mat_tri, v);
+  template <class SenderTau, class SenderTri>
+  void computeLastTile(SenderTau&& tau, SenderTri&& mat_tri, Matrix<T, D>& mat_a, SizeType j) {
+    namespace ex = pika::execution::experimental;
+    namespace di = dlaf::internal;
+    using dlaf::matrix::internal::CopyBackend_v;
+    using pika::execution::thread_priority;
+    using pika::execution::thread_stacksize;
+
+    auto& Vh = panels_v.currentResource();
+
+    ex::start_detached(
+        ex::when_all(mat_a.read(GlobalTileIndex{j, j}), Vh.readwrite(*Vh.iteratorLocal().begin())) |
+        matrix::copy(di::Policy<CopyBackend_v<Device::GPU, Device::CPU>>(thread_priority::high,
+                                                                         thread_stacksize::nostack)));
+
+    Helper<Backend::MC, Device::CPU, T>::computeLastTile(std::forward<SenderTau>(tau),
+                                                         std::forward<SenderTri>(mat_tri),
+                                                         Vh.readwrite(LocalTileIndex{0, 0}));
+
+    ex::start_detached(
+        ex::when_all(Vh.read(*Vh.iteratorLocal().begin()), mat_a.readwrite(GlobalTileIndex{j, j})) |
+        matrix::copy(di::Policy<CopyBackend_v<Device::CPU, Device::GPU>>(thread_priority::high,
+                                                                         thread_stacksize::nostack)));
   }
 
   template <class SenderA, class SenderTri>
   void copyLastElement(SenderA&& mat_a, SenderTri&& mat_tri) {
     dlaf::internal::silenceUnusedWarningFor(mat_tri, mat_a);
+    namespace ex = pika::execution::experimental;
+    namespace di = dlaf::internal;
+    using dlaf::matrix::internal::CopyBackend_v;
+    using pika::execution::thread_priority;
+    using pika::execution::thread_stacksize;
+
+    auto& Vh = panels_v.currentResource();
+
+    ex::start_detached(
+        ex::when_all(std::forward<SenderA>(mat_a), Vh.readwrite(*Vh.iteratorLocal().begin())) |
+        matrix::copy(di::Policy<CopyBackend_v<Device::GPU, Device::CPU>>(thread_priority::high,
+                                                                         thread_stacksize::nostack)));
+
+    Helper<Backend::MC, Device::CPU, T>::copyLastElement(Vh.read(*Vh.iteratorLocal().begin()),
+                                                         std::forward<SenderTri>(mat_tri));
   }
 
 protected:
@@ -626,10 +661,15 @@ TridiagResult1Stage<T> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
                     std::move(tau));
     }
     if (is_last_tile) {
-      if (dist_a.template tile_size_of<Coord::Col>(j) > 1)
-        helper.computeLastTile(mat_taus.readwrite(GlobalTileIndex{j, 0}),
-                               mat_trid.readwrite(GlobalTileIndex{j, 0}),
-                               mat_a.readwrite(GlobalTileIndex{j, j}));
+      if (dist_a.template tile_size_of<Coord::Col>(j) > 1) {
+        if constexpr (B == Backend::MC)
+          helper.computeLastTile(mat_taus.readwrite(GlobalTileIndex{j, 0}),
+                                 mat_trid.readwrite(GlobalTileIndex{j, 0}),
+                                 mat_a.readwrite(GlobalTileIndex{j, j}));
+        if constexpr (B == Backend::GPU)
+          helper.computeLastTile(mat_taus.readwrite(GlobalTileIndex{j, 0}),
+                                 mat_trid.readwrite(GlobalTileIndex{j, 0}), mat_a, j);
+      }
       else
         helper.copyLastElement(mat_a.read(GlobalTileIndex{j, j}),
                                mat_trid.readwrite(GlobalTileIndex{j, 0}));

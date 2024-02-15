@@ -126,6 +126,8 @@ DLAF_MAKE_GPUBLAS_OP(Axpy, axpy);
 // Level 2
 DLAF_MAKE_GPUBLAS_OP(Gemv, gemv);
 
+DLAF_MAKE_GPUBLAS_SYHE_OP(Hemv, mv);
+
 DLAF_MAKE_GPUBLAS_OP(Trmv, trmv);
 
 // Level 3

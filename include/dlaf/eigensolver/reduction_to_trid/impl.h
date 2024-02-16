@@ -424,20 +424,19 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
     using pika::execution::thread_stacksize;
 
     auto& Vh = panels_v.currentResource();
+    const LocalTileIndex top_lc(*Vh.iteratorLocal().begin());
 
-    ex::start_detached(
-        ex::when_all(mat_a.read(GlobalTileIndex{j, j}), Vh.readwrite(*Vh.iteratorLocal().begin())) |
-        matrix::copy(di::Policy<CopyBackend_v<Device::GPU, Device::CPU>>(thread_priority::high,
-                                                                         thread_stacksize::nostack)));
+    ex::start_detached(ex::when_all(mat_a.read(GlobalTileIndex{j, j}), Vh.readwrite(top_lc)) |
+                       matrix::copy(di::Policy<CopyBackend_v<Device::GPU, Device::CPU>>(
+                           thread_priority::high, thread_stacksize::nostack)));
 
     Helper<Backend::MC, Device::CPU, T>::computeLastTile(std::forward<SenderTau>(tau),
                                                          std::forward<SenderTri>(mat_tri),
-                                                         Vh.readwrite(LocalTileIndex{0, 0}));
+                                                         Vh.readwrite(top_lc));
 
-    ex::start_detached(
-        ex::when_all(Vh.read(*Vh.iteratorLocal().begin()), mat_a.readwrite(GlobalTileIndex{j, j})) |
-        matrix::copy(di::Policy<CopyBackend_v<Device::CPU, Device::GPU>>(thread_priority::high,
-                                                                         thread_stacksize::nostack)));
+    ex::start_detached(ex::when_all(Vh.read(top_lc), mat_a.readwrite(GlobalTileIndex{j, j})) |
+                       matrix::copy(di::Policy<CopyBackend_v<Device::CPU, Device::GPU>>(
+                           thread_priority::high, thread_stacksize::nostack)));
   }
 
   template <class SenderA, class SenderTri>

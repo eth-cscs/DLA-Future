@@ -34,8 +34,7 @@ stages:
     reports:
       dotenv: build.env
   variables:
-    # https://github.com/msimberg/spack/tree/intel-packages-clang-libomp-path
-    SPACK_SHA: 6eb5d339111ce48e486b457d9e9b3df06ac660ca
+    SPACK_SHA: 5c3df6e8cadd68e54f17f2dca56bf4fc5f1f8127
     SPACK_DLAF_REPO: ./spack
     DOCKER_BUILD_ARGS: '[
         "BASE_IMAGE",

@@ -337,6 +337,7 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
             Matrix<T, D>& mat_a) {
     namespace ex = pika::execution::experimental;
     namespace di = dlaf::internal;
+
     using dlaf::matrix::internal::CopyBackend_v;
     using pika::execution::thread_priority;
     using pika::execution::thread_stacksize;
@@ -345,16 +346,21 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
     auto& Wh = panels_w.currentResource();
 
     // Copy GPU to CPU
-    // TODO probably I can copy just the new col
+    // Note: for both V and W just the last column (i.e. the only one that got updated)
     for (const auto& it : panel_uptonow.iteratorLocal()) {
-      const auto spec = panel_uptonow(it);
+      const dlaf::matrix::SubTileSpec spec = panel_uptonow(it);
+      const dlaf::matrix::SubTileSpec spec_col{{spec.origin.row(),
+                                                spec.origin.col() + spec.size.cols() - 1},
+                                               {spec.size.rows(), 1}};
+
       ex::start_detached(
-          ex::when_all(splitTile(mat_a.read(it), spec), splitTile(Vh.readwrite(it), spec)) |
+          ex::when_all(splitTile(mat_a.read(it), spec_col), splitTile(Vh.readwrite(it), spec_col)) |
           matrix::copy(di::Policy<CopyBackend_v<Device::GPU, Device::CPU>>(thread_priority::high,
                                                                            thread_stacksize::nostack)));
-      ex::start_detached(ex::when_all(splitTile(W.read(it), spec), splitTile(Wh.readwrite(it), spec)) |
-                         matrix::copy(di::Policy<CopyBackend_v<Device::GPU, Device::CPU>>(
-                             thread_priority::high, thread_stacksize::nostack)));
+      ex::start_detached(
+          ex::when_all(splitTile(W.read(it), spec_col), splitTile(Wh.readwrite(it), spec_col)) |
+          matrix::copy(di::Policy<CopyBackend_v<Device::GPU, Device::CPU>>(thread_priority::high,
+                                                                           thread_stacksize::nostack)));
     }
 
     // Compute on CPU
@@ -363,12 +369,16 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
                                                   std::forward<SenderTau>(taus),
                                                   std::forward<SenderTrid>(trid), panel_uptonow, Wh, Vh);
 
-    // Copy back from CPU to GPU (just V which was RW)
-    // TODO probably I can copy just the new col
+    // Copy back from CPU to GPU
+    // Note: just V which was RW, and just the updated column
     for (const auto& it : panel_uptonow.iteratorLocal()) {
-      const auto spec = panel_uptonow(it);
+      const dlaf::matrix::SubTileSpec spec = panel_uptonow(it);
+      const dlaf::matrix::SubTileSpec spec_col{{spec.origin.row(),
+                                                spec.origin.col() + spec.size.cols() - 1},
+                                               {spec.size.rows(), 1}};
+
       ex::start_detached(
-          ex::when_all(splitTile(Vh.read(it), spec), splitTile(mat_a.readwrite(it), spec)) |
+          ex::when_all(splitTile(Vh.read(it), spec_col), splitTile(mat_a.readwrite(it), spec_col)) |
           matrix::copy(di::Policy<CopyBackend_v<Device::CPU, Device::GPU>>(thread_priority::high,
                                                                            thread_stacksize::nostack)));
     }
@@ -390,28 +400,39 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
     auto& Wh = panels_w.currentResource();
 
     // Copy GPU to CPU
-    // TODO probably I can copy just the new col
+    // Note: for both V and W just the last column (i.e. the only one that got updated)
     for (const auto& it : panel_uptonow.iteratorLocal()) {
-      const auto spec = panel_uptonow(it);
+      const dlaf::matrix::SubTileSpec spec = panel_uptonow(it);
+      // TODO probably we can
+      const dlaf::matrix::SubTileSpec spec_col{{spec.origin.row(),
+                                                spec.origin.col() + spec.size.cols() - 1},
+                                               {spec.size.rows(), 1}};
+
       ex::start_detached(
-          ex::when_all(splitTile(mat_a.read(it), spec), splitTile(Vh.readwrite(it), spec)) |
+          ex::when_all(splitTile(mat_a.read(it), spec_col), splitTile(Vh.readwrite(it), spec_col)) |
           matrix::copy(di::Policy<CopyBackend_v<Device::GPU, Device::CPU>>(thread_priority::high,
                                                                            thread_stacksize::nostack)));
-      ex::start_detached(ex::when_all(splitTile(W.read(it), spec), splitTile(Wh.readwrite(it), spec)) |
-                         matrix::copy(di::Policy<CopyBackend_v<Device::GPU, Device::CPU>>(
-                             thread_priority::high, thread_stacksize::nostack)));
+      ex::start_detached(
+          ex::when_all(splitTile(W.read(it), spec_col), splitTile(Wh.readwrite(it), spec_col)) |
+          matrix::copy(di::Policy<CopyBackend_v<Device::GPU, Device::CPU>>(thread_priority::high,
+                                                                           thread_stacksize::nostack)));
     }
 
     Helper<Backend::MC, Device::CPU, T>::setupW(ij, ij_el_tl, panel_uptonow, Vh, Wh,
                                                 std::forward<SenderTau>(tau));
 
-    // Copy back from CPU to GPU (just W which was RW)
-    // TODO probably I can copy just the new col
+    // Copy back from CPU to GPU
+    // Note: just W which was RW, and just the updated column
     for (const auto& it : panel_uptonow.iteratorLocal()) {
-      const auto spec = panel_uptonow(it);
-      ex::start_detached(ex::when_all(splitTile(Wh.read(it), spec), splitTile(W.readwrite(it), spec)) |
-                         matrix::copy(di::Policy<CopyBackend_v<Device::CPU, Device::GPU>>(
-                             thread_priority::high, thread_stacksize::nostack)));
+      const dlaf::matrix::SubTileSpec spec = panel_uptonow(it);
+      const dlaf::matrix::SubTileSpec spec_col{{spec.origin.row(),
+                                                spec.origin.col() + spec.size.cols() - 1},
+                                               {spec.size.rows(), 1}};
+
+      ex::start_detached(
+          ex::when_all(splitTile(Wh.read(it), spec_col), splitTile(W.readwrite(it), spec_col)) |
+          matrix::copy(di::Policy<CopyBackend_v<Device::CPU, Device::GPU>>(thread_priority::high,
+                                                                           thread_stacksize::nostack)));
     }
   }
 

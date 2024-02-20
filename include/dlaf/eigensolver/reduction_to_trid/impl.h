@@ -70,10 +70,8 @@ struct Helper<Backend::MC, Device::CPU, T> {
       w_panel_ro.emplace_back(splitTile(W.read(it), spec));
     }
 
-    auto kernelUpdateVandComputeTau = [dist_a, offset = i - j, j, i_el, i_el_tl = ij_el_tl.row(),
-                                       j_el_tl = ij_el_tl.col()](auto&& panel_taus, auto&& panel_trid,
-                                                                 auto&& w_tiles, auto&& v_tiles) -> T {
-      // panel update
+    auto kernelUpdateV = [dist_a, offset = i - j, j, i_el, i_el_tl = ij_el_tl.row(),
+                          j_el_tl = ij_el_tl.col()](auto&& w_tiles, auto&& v_tiles) {
       if (j_el_tl > 0) {
         const std::size_t i_first =
             to_sizet(dist_a.template global_tile_from_global_element<Coord::Row>(i_el - 1) - j);
@@ -113,7 +111,10 @@ struct Helper<Backend::MC, Device::CPU, T> {
           }
         }
       }
+    };
 
+    auto kernelComputeTau = [offset = i - j, i_el_tl = ij_el_tl.row(), j_el_tl = ij_el_tl.col()](
+                                auto&& panel_taus, auto&& panel_trid, auto&& v_tiles) -> T {
       // compute reflector
       constexpr bool has_head = true;
       const auto tau =
@@ -143,10 +144,19 @@ struct Helper<Backend::MC, Device::CPU, T> {
       return tau;
     };
 
-    return ex::ensure_started(ex::when_all(std::forward<SenderTau>(taus), std::forward<SenderTrid>(trid),
-                                           ex::when_all_vector(std::move(w_panel_ro)),
-                                           ex::when_all_vector(std::move(v_panel_rw))) |
-                              di::transform(di::Policy<B>(), std::move(kernelUpdateVandComputeTau)));
+    return ex::ensure_started(
+        ex::when_all_vector(std::move(v_panel_rw)) |
+        ex::let_value([w_panel_ro = std::move(w_panel_ro), trid = std::forward<SenderTrid>(trid),
+                       taus = std::forward<SenderTau>(taus), kernelUpdateV,
+                       kernelComputeTau](auto&& v_tiles) mutable {
+          // TODO minor optimisation possible: skip kernelUpdateV at the first iteration
+          auto updated_panel =
+              ex::when_all(ex::when_all_vector(std::move(w_panel_ro)), ex::just(std::ref(v_tiles))) |
+              di::transform(di::Policy<B>(), kernelUpdateV);
+          return ex::when_all(std::move(updated_panel), std::forward<SenderTau>(taus),
+                              std::forward<SenderTrid>(trid), ex::just(std::ref(v_tiles))) |
+                 di::transform(di::Policy<B>(), kernelComputeTau);
+        }));
   }
 
   template <class SenderTau, class MatrixLike>

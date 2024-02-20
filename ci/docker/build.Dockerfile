@@ -43,6 +43,7 @@ RUN if [ "$USE_MKL" = "ON" ]; then \
 # This is the spack version we want to have
 ARG SPACK_SHA
 ENV SPACK_SHA=$SPACK_SHA
+RUN echo $SPACK_SHA
 
 # Install the specific ref of Spack provided by the user and find compilers
 RUN mkdir -p /opt/spack && \
@@ -94,7 +95,4 @@ ARG CXXSTD=17
 RUN spack -e ci config add "packages:dla-future:variants:cxxstd=${CXXSTD}"
 # 3. Install only the dependencies of this (top level is our package)
 ARG NUM_PROCS
-RUN spack -e ci install --jobs ${NUM_PROCS} --fail-fast --only=dependencies
-
-# make ctest executable available.
-RUN ln -s `spack -e ci location -i cmake`/bin/ctest /usr/bin/ctest
+RUN spack -e ci concretize -f

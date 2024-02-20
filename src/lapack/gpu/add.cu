@@ -159,8 +159,8 @@ void add(const blas::Uplo uplo, const SizeType m, const SizeType n, const T& alp
   const dim3 nr_blocks(util::ceilDiv(um, kernel_tile_size_rows),
                        util::ceilDiv(un, kernel_tile_size_cols));
   kernels::add<<<nr_blocks, nr_threads, 0, stream>>>(util::blasToCublas(uplo), um, un,
-                                                     util::cppToCudaCast(alpha), util::cppToCudaCast(a),
-                                                     to_uint(lda), util::cppToCudaCast(b), to_uint(ldb));
+                                                     util::cppToCudaWrapperCast(alpha), util::cppToCudaWrapperCast(a),
+                                                     to_uint(lda), util::cppToCudaWrapperCast(b), to_uint(ldb));
 }
 
 DLAF_CUBLAS_ADD_ETI(, float);

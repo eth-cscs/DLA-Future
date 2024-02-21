@@ -52,15 +52,15 @@ struct Helper<Backend::MC, Device::CPU, T> {
     namespace ex = pika::execution::experimental;
     namespace di = dlaf::internal;
 
-    const auto j = ij.col();
-
-    const std::size_t ntiles = to_sizet(std::distance(panel_uptonow.iteratorLocal().begin(),
-                                                      panel_uptonow.iteratorLocal().end()));
+    const SizeType j = ij.col();
 
     const bool has_left_panel = ij_el_tl.col() > 0;
 
     if (!has_left_panel)
       return;
+
+    const std::size_t ntiles = to_sizet(std::distance(panel_uptonow.iteratorLocal().begin(),
+                                                      panel_uptonow.iteratorLocal().end()));
 
     std::vector<matrix::ReadWriteTileSender<T, D>> v_panel_rw;
     v_panel_rw.reserve(ntiles);
@@ -144,8 +144,8 @@ struct Helper<Backend::MC, Device::CPU, T> {
     namespace ex = pika::execution::experimental;
     namespace di = dlaf::internal;
 
-    const auto i = ij.row();
-    const auto j = ij.col();
+    const SizeType i = ij.row();
+    const SizeType j = ij.col();
 
     const std::size_t ntiles = to_sizet(std::distance(panel_uptonow.iteratorLocal().begin(),
                                                       panel_uptonow.iteratorLocal().end()));
@@ -207,13 +207,14 @@ struct Helper<Backend::MC, Device::CPU, T> {
     const SizeType i_el_tl = ij_el_tl.row();
     const SizeType j_el_tl = ij_el_tl.col();
 
+    const std::size_t ntiles = to_sizet(std::distance(panel_uptonow.iteratorLocal().begin(),
+                                                      panel_uptonow.iteratorLocal().end()));
+
     std::vector<matrix::ReadOnlyTileSender<T, D>> v_panel_ro;
-    v_panel_ro.reserve(to_sizet(std::distance(panel_uptonow.iteratorLocal().begin(),
-                                              panel_uptonow.iteratorLocal().end())));
+    v_panel_ro.reserve(ntiles);
 
     std::vector<matrix::ReadWriteTileSender<T, D>> w_panel_rw;
-    w_panel_rw.reserve(to_sizet(std::distance(panel_uptonow.iteratorLocal().begin(),
-                                              panel_uptonow.iteratorLocal().end())));
+    w_panel_rw.reserve(ntiles);
 
     for (const auto& it : panel_uptonow.iteratorLocal()) {
       const auto spec = panel_uptonow(it);

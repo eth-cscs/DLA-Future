@@ -45,6 +45,13 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         description="Build C API compatible with ScaLAPACK",
     )
 
+    variant(
+        "mpi-gpu-support",
+        default=False,
+        when="@master",
+        description="Use MPI with GPU support for communication.",
+    )
+
     generator("ninja")
 
     depends_on("cmake@3.22:", type="build")
@@ -237,6 +244,9 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                 args.append(self.define("SCALAPACK_LIBRARY", spec["scalapack"].libs.ld_flags))
 
         args.append(self.define_from_variant("DLAF_WITH_SCALAPACK", "scalapack"))
+
+        args.append(self.define_from_variant("DLAF_WITH_MPI_GPU_SUPPORT", "mpi-gpu-support"))
+        args.append(self.define("DLAF_WITH_MPI_GPU_SUPPORT_FORCE_CONTIGUOUS", True))
 
         # CUDA/HIP
         args.append(self.define_from_variant("DLAF_WITH_CUDA", "cuda"))

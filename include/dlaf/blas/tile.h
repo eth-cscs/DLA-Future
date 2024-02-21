@@ -116,12 +116,21 @@ inline void extendROCBlasWorkspace(cublasHandle_t handle,
   DLAF_DEFINE_GPUBLAS_OP(Name, double, Dsy##f);              \
   DLAF_DEFINE_GPUBLAS_OP(Name, std::complex<float>, Che##f); \
   DLAF_DEFINE_GPUBLAS_OP(Name, std::complex<double>, Zhe##f)
+
+#define DLAF_MAKE_GPUBLAS_DOTC_OP(Name, f)                    \
+  DLAF_DECLARE_GPUBLAS_OP(Name);                              \
+  DLAF_DEFINE_GPUBLAS_OP(Name, float, S##f);                  \
+  DLAF_DEFINE_GPUBLAS_OP(Name, double, D##f);                 \
+  DLAF_DEFINE_GPUBLAS_OP(Name, std::complex<float>, C##f##c); \
+  DLAF_DEFINE_GPUBLAS_OP(Name, std::complex<double>, Z##f##c)
 #endif
 
 namespace dlaf::gpublas::internal {
 
 // Level 1
 DLAF_MAKE_GPUBLAS_OP(Axpy, axpy);
+DLAF_MAKE_GPUBLAS_OP(Scal, scal);
+DLAF_MAKE_GPUBLAS_DOTC_OP(Dot, dot);
 
 // Level 2
 DLAF_MAKE_GPUBLAS_OP(Gemv, gemv);

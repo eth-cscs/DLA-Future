@@ -28,9 +28,234 @@
 #include <dlaf/sender/transform.h>
 #include <dlaf/sender/when_all_lift.h>
 #include <dlaf/types.h>
+#include <dlaf/util_cublas.h>
 #include <dlaf/util_matrix.h>
 
 namespace dlaf::eigensolver::internal {
+
+template <Backend B, class T>
+struct kernelSetupW;
+
+template <class T>
+struct kernelSetupW<Backend::MC, T> {
+  template <class SenderW, class SenderV, class SenderTau>
+  void operator()(const std::size_t i_first, const TileElementIndex ij_el_tl, SenderW&& w_tiles,
+                  SenderV&& v_tiles, SenderTau&& tau) {
+    const SizeType i_el_tl = ij_el_tl.row();
+    const SizeType j_el_tl = ij_el_tl.col();
+    // computeW mods
+    if (j_el_tl > 0) {
+      auto&& w_up = w_tiles[0].ptr({0, j_el_tl});
+
+      // w_up = W* . v
+      for (std::size_t i = i_first; i < v_tiles.size(); ++i) {
+        const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
+
+        auto&& tile_v = v_tiles[i].get();
+        auto&& tile_w = w_tiles[i];
+
+        auto&& w = tile_w.ptr({i_first_tl, 0});
+        auto&& v_col = tile_v.ptr({i_first_tl, j_el_tl});
+
+        // TODO this shouldn't be needed: probably w is computed outside of needed bounds
+        const T beta = (i == i_first) ? 0 : 1;
+        blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, tile_v.size().rows() - i_first_tl,
+                   j_el_tl, T(1), w, tile_w.ld(), v_col, 1, beta, w_up, 1);
+      }
+
+      // w = w - V . w_up
+      for (std::size_t i = i_first; i < v_tiles.size(); ++i) {
+        const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
+
+        auto&& tile_v = v_tiles[i].get();
+        auto&& tile_w = w_tiles[i];
+
+        auto&& v = tile_v.ptr({i_first_tl, 0});
+        auto&& w_col = tile_w.ptr({i_first_tl, j_el_tl});
+
+        blas::gemv(blas::Layout::ColMajor, blas::Op::NoTrans, tile_v.size().rows() - i_first_tl, j_el_tl,
+                   T(-1), v, tile_v.ld(), w_up, 1, T(1), w_col, 1);
+      }
+
+      // w_up = V* . v
+      for (std::size_t i = i_first; i < v_tiles.size(); ++i) {
+        const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
+
+        auto&& tile_v = v_tiles[i].get();
+
+        auto&& v = tile_v.ptr({i_first_tl, 0});
+        auto&& v_col = tile_v.ptr({i_first_tl, j_el_tl});
+
+        const T beta = (i == i_first) ? 0 : 1;
+        blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, tile_v.size().rows() - i_first_tl,
+                   j_el_tl, T(1), v, tile_v.ld(), v_col, 1, beta, w_up, 1);
+      }
+
+      // w = w - W . w_up
+      for (std::size_t i = i_first; i < v_tiles.size(); ++i) {
+        const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
+
+        auto&& tile_w = w_tiles[i];
+
+        auto&& w = tile_w.ptr({i_first_tl, 0});
+        auto&& w_col = tile_w.ptr({i_first_tl, j_el_tl});
+
+        blas::gemv(blas::Layout::ColMajor, blas::Op::NoTrans, tile_w.size().rows() - i_first_tl, j_el_tl,
+                   T(-1), w, tile_w.ld(), w_up, 1, T(1), w_col, 1);
+      }
+    }
+
+    for (std::size_t i = i_first; i < w_tiles.size(); ++i) {
+      const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
+      auto&& tile_w = w_tiles[i];
+      blas::scal(tile_w.size().rows() - i_first_tl, tau, tile_w.ptr({i_first_tl, j_el_tl}), 1);
+    }
+
+    T alpha = 0;
+    for (std::size_t i = i_first; i < w_tiles.size(); ++i) {
+      const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
+      auto&& tile_w = w_tiles[i];
+      auto&& tile_v = v_tiles[i].get();
+      alpha += blas::dot(tile_w.size().rows() - i_first_tl, tile_w.ptr({i_first_tl, j_el_tl}), 1,
+                         tile_v.ptr({i_first_tl, j_el_tl}), 1);
+    }
+    alpha *= T(-0.5) * tau;
+
+    for (std::size_t i = i_first; i < w_tiles.size(); ++i) {
+      const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
+      auto&& tile_w = w_tiles[i];
+      auto&& tile_v = v_tiles[i].get();
+      blas::axpy(tile_w.size().rows() - i_first_tl, alpha, tile_v.ptr({i_first_tl, j_el_tl}), 1,
+                 tile_w.ptr({i_first_tl, j_el_tl}), 1);
+    }
+  }
+};
+
+#ifdef DLAF_WITH_GPU
+template <class T>
+struct kernelSetupW<Backend::GPU, T> {
+  template <class SenderW, class SenderV, class SenderTau>
+  void operator()(cublasHandle_t handle, const std::size_t i_first, const TileElementIndex ij_el_tl,
+                  SenderW&& w_tiles, SenderV&& v_tiles, SenderTau&& tau) {
+    const SizeType i_el_tl = ij_el_tl.row();
+    const SizeType j_el_tl = ij_el_tl.col();
+    // computeW mods
+    if (j_el_tl > 0) {
+      auto&& w_up = w_tiles[0].ptr({0, j_el_tl});
+
+      // w_up = W* . v
+      for (std::size_t i = i_first; i < v_tiles.size(); ++i) {
+        const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
+
+        auto&& tile_v = v_tiles[i].get();
+        auto&& tile_w = w_tiles[i];
+
+        auto&& w = tile_w.ptr({i_first_tl, 0});
+        auto&& v_col = tile_v.ptr({i_first_tl, j_el_tl});
+
+        // TODO this shouldn't be needed: probably w is computed outside of needed bounds
+        const T alpha = 1;
+        const T beta = (i == i_first) ? 0 : 1;
+        gpublas::internal::Gemv<T>::call(handle, util::blasToCublas(blas::Op::ConjTrans),
+                                         to_int(tile_v.size().rows() - i_first_tl), to_int(j_el_tl),
+                                         util::blasToCublasCast(&alpha), util::blasToCublasCast(w),
+                                         to_int(tile_w.ld()), util::blasToCublasCast(v_col), 1,
+                                         util::blasToCublasCast(&beta), util::blasToCublasCast(w_up), 1);
+      }
+
+      // w = w - V . w_up
+      for (std::size_t i = i_first; i < v_tiles.size(); ++i) {
+        const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
+
+        auto&& tile_v = v_tiles[i].get();
+        auto&& tile_w = w_tiles[i];
+
+        auto&& v = tile_v.ptr({i_first_tl, 0});
+        auto&& w_col = tile_w.ptr({i_first_tl, j_el_tl});
+
+        const T alpha = -1;
+        const T beta = 1;
+        gpublas::internal::Gemv<T>::call(handle, util::blasToCublas(blas::Op::NoTrans),
+                                         to_int(tile_v.size().rows() - i_first_tl), to_int(j_el_tl),
+                                         util::blasToCublasCast(&alpha), util::blasToCublasCast(v),
+                                         to_int(tile_v.ld()), util::blasToCublasCast(w_up), 1,
+                                         util::blasToCublasCast(&beta), util::blasToCublasCast(w_col),
+                                         1);
+      }
+
+      // w_up = V* . v
+      for (std::size_t i = i_first; i < v_tiles.size(); ++i) {
+        const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
+
+        auto&& tile_v = v_tiles[i].get();
+
+        auto&& v = tile_v.ptr({i_first_tl, 0});
+        auto&& v_col = tile_v.ptr({i_first_tl, j_el_tl});
+
+        const T alpha = 1;
+        const T beta = (i == i_first) ? 0 : 1;
+        gpublas::internal::Gemv<T>::call(handle, util::blasToCublas(blas::Op::ConjTrans),
+                                         to_int(tile_v.size().rows() - i_first_tl), to_int(j_el_tl),
+                                         util::blasToCublasCast(&alpha), util::blasToCublasCast(v),
+                                         to_int(tile_v.ld()), util::blasToCublasCast(v_col), 1,
+                                         util::blasToCublasCast(&beta), util::blasToCublasCast(w_up), 1);
+      }
+
+      // w = w - W . w_up
+      for (std::size_t i = i_first; i < v_tiles.size(); ++i) {
+        const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
+
+        auto&& tile_w = w_tiles[i];
+
+        auto&& w = tile_w.ptr({i_first_tl, 0});
+        auto&& w_col = tile_w.ptr({i_first_tl, j_el_tl});
+
+        const T alpha = -1;
+        const T beta = 1;
+
+        gpublas::internal::Gemv<T>::call(handle, util::blasToCublas(blas::Op::NoTrans),
+                                         to_int(tile_w.size().rows() - i_first_tl), to_int(j_el_tl),
+                                         util::blasToCublasCast(&alpha), util::blasToCublasCast(w),
+                                         to_int(tile_w.ld()), util::blasToCublasCast(w_up), 1,
+                                         util::blasToCublasCast(&beta), util::blasToCublasCast(w_col),
+                                         1);
+      }
+    }
+
+    for (std::size_t i = i_first; i < w_tiles.size(); ++i) {
+      const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
+      auto&& tile_w = w_tiles[i];
+      gpublas::internal::Scal<T>::call(handle, to_int(tile_w.size().rows() - i_first_tl),
+                                       util::blasToCublasCast(&tau),
+                                       util::blasToCublasCast(tile_w.ptr({i_first_tl, j_el_tl})), 1);
+    }
+
+    T alpha = 0;
+    for (std::size_t i = i_first; i < w_tiles.size(); ++i) {
+      const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
+      auto&& tile_w = w_tiles[i];
+      auto&& tile_v = v_tiles[i].get();
+      T partial_result;
+      gpublas::internal::Dot<T>::call(handle, to_int(tile_w.size().rows() - i_first_tl),
+                                      util::blasToCublasCast(tile_w.ptr({i_first_tl, j_el_tl})), 1,
+                                      util::blasToCublasCast(tile_v.ptr({i_first_tl, j_el_tl})), 1,
+                                      util::blasToCublasCast(&partial_result));
+      alpha += partial_result;
+    }
+    alpha *= T(-0.5) * tau;
+
+    for (std::size_t i = i_first; i < w_tiles.size(); ++i) {
+      const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
+      auto&& tile_w = w_tiles[i];
+      auto&& tile_v = v_tiles[i].get();
+      gpublas::internal::Axpy<T>::call(handle, to_int(tile_w.size().rows() - i_first_tl),
+                                       util::blasToCublasCast(&alpha),
+                                       util::blasToCublasCast(tile_v.ptr({i_first_tl, j_el_tl})), 1,
+                                       util::blasToCublasCast(tile_w.ptr({i_first_tl, j_el_tl})), 1);
+    }
+  }
+};
+#endif
 
 template <Backend B, Device D, class T>
 struct Helper;
@@ -133,8 +358,7 @@ struct Helper<Backend::MC, Device::CPU, T> {
 
     ex::start_detached(di::whenAllLift(ex::when_all_vector(std::move(w_panel_ro)),
                                        ex::when_all_vector(std::move(v_panel_rw))) |
-                       ex::transfer(di::getBackendScheduler<B>()) | ex::bulk(nworkers, kernelUpdateV) |
-                       ex::drop_value());
+                       ex::transfer(di::getBackendScheduler<B>()) | ex::bulk(nworkers, kernelUpdateV));
   }
 
   template <class SenderTau, class SenderTrid, class MatrixLike>
@@ -204,9 +428,6 @@ struct Helper<Backend::MC, Device::CPU, T> {
     const SizeType i = ij.row();
     const SizeType j = ij.col();
 
-    const SizeType i_el_tl = ij_el_tl.row();
-    const SizeType j_el_tl = ij_el_tl.col();
-
     const std::size_t ntiles = to_sizet(std::distance(panel_uptonow.iteratorLocal().begin(),
                                                       panel_uptonow.iteratorLocal().end()));
 
@@ -222,97 +443,11 @@ struct Helper<Backend::MC, Device::CPU, T> {
       w_panel_rw.emplace_back(splitTile(W.readwrite(it), spec));
     }
 
-    ex::start_detached(
-        ex::when_all(ex::when_all_vector(std::move(w_panel_rw)),
-                     ex::when_all_vector(std::move(v_panel_ro)), std::forward<SenderTau>(tau)) |
-        di::transform(di::Policy<B>(), [i_first = to_sizet(i - j), i_el_tl,
-                                        j_el_tl](auto&& w_tiles, auto&& v_tiles, auto&& tau) {
-          // computeW mods
-          if (j_el_tl > 0) {
-            auto&& w_up = w_tiles[0].ptr({0, j_el_tl});
-
-            // w_up = W* . v
-            for (std::size_t i = i_first; i < v_tiles.size(); ++i) {
-              const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
-
-              auto&& tile_v = v_tiles[i].get();
-              auto&& tile_w = w_tiles[i];
-
-              auto&& w = tile_w.ptr({i_first_tl, 0});
-              auto&& v_col = tile_v.ptr({i_first_tl, j_el_tl});
-
-              // TODO this shouldn't be needed: probably w is computed outside of needed bounds
-              const T beta = (i == i_first) ? 0 : 1;
-              blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, tile_v.size().rows() - i_first_tl,
-                         j_el_tl, T(1), w, tile_w.ld(), v_col, 1, beta, w_up, 1);
-            }
-
-            // w = w - V . w_up
-            for (std::size_t i = i_first; i < v_tiles.size(); ++i) {
-              const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
-
-              auto&& tile_v = v_tiles[i].get();
-              auto&& tile_w = w_tiles[i];
-
-              auto&& v = tile_v.ptr({i_first_tl, 0});
-              auto&& w_col = tile_w.ptr({i_first_tl, j_el_tl});
-
-              blas::gemv(blas::Layout::ColMajor, blas::Op::NoTrans, tile_v.size().rows() - i_first_tl,
-                         j_el_tl, T(-1), v, tile_v.ld(), w_up, 1, T(1), w_col, 1);
-            }
-
-            // w_up = V* . v
-            for (std::size_t i = i_first; i < v_tiles.size(); ++i) {
-              const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
-
-              auto&& tile_v = v_tiles[i].get();
-
-              auto&& v = tile_v.ptr({i_first_tl, 0});
-              auto&& v_col = tile_v.ptr({i_first_tl, j_el_tl});
-
-              const T beta = (i == i_first) ? 0 : 1;
-              blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, tile_v.size().rows() - i_first_tl,
-                         j_el_tl, T(1), v, tile_v.ld(), v_col, 1, beta, w_up, 1);
-            }
-
-            // w = w - W* . w_up
-            for (std::size_t i = i_first; i < v_tiles.size(); ++i) {
-              const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
-
-              auto&& tile_w = w_tiles[i];
-
-              auto&& w = tile_w.ptr({i_first_tl, 0});
-              auto&& w_col = tile_w.ptr({i_first_tl, j_el_tl});
-
-              blas::gemv(blas::Layout::ColMajor, blas::Op::NoTrans, tile_w.size().rows() - i_first_tl,
-                         j_el_tl, T(-1), w, tile_w.ld(), w_up, 1, T(1), w_col, 1);
-            }
-          }
-
-          for (std::size_t i = i_first; i < w_tiles.size(); ++i) {
-            const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
-            auto&& tile_w = w_tiles[i];
-            blas::scal(tile_w.size().rows() - i_first_tl, tau, tile_w.ptr({i_first_tl, j_el_tl}), 1);
-          }
-
-          T alpha = 0;
-          for (std::size_t i = i_first; i < w_tiles.size(); ++i) {
-            const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
-            auto&& tile_w = w_tiles[i];
-            auto&& tile_v = v_tiles[i].get();
-            alpha += blas::dot(tile_w.size().rows() - i_first_tl, tile_w.ptr({i_first_tl, j_el_tl}), 1,
-                               tile_v.ptr({i_first_tl, j_el_tl}), 1);
-          }
-          alpha *= T(-0.5) * tau;
-
-          for (std::size_t i = i_first; i < w_tiles.size(); ++i) {
-            const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
-            auto&& tile_w = w_tiles[i];
-            auto&& tile_v = v_tiles[i].get();
-            blas::axpy(tile_w.size().rows() - i_first_tl, alpha, tile_v.ptr({i_first_tl, j_el_tl}), 1,
-                       tile_w.ptr({i_first_tl, j_el_tl}), 1);
-          }
-        }));
+    const std::size_t offset = to_sizet(i - j);
+    ex::start_detached(di::whenAllLift(offset, ij_el_tl, ex::when_all_vector(std::move(w_panel_rw)),
+                                       ex::when_all_vector(std::move(v_panel_ro)),
+                                       std::forward<SenderTau>(tau)) |
+                       di::transform(di::Policy<B>(), kernelSetupW<B, T>{}));
   }
 
   template <class SenderTau, class SenderTri, class SenderA>
@@ -390,8 +525,23 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
     auto& Vh = panels_v.currentResource();
     auto& Wh = panels_w.currentResource();
 
+    const bool has_left_panel = ij_el_tl.col() > 0;
+
     // Copy GPU to CPU
-    // Note: for both V and W just the last column (i.e. the only one that got updated)
+    if (has_left_panel) {
+      for (const auto& it : panel_uptonow.iteratorLocal()) {
+        const dlaf::matrix::SubTileSpec spec = panel_uptonow(it);
+        const dlaf::matrix::SubTileSpec spec_col{{spec.origin.row(),
+                                                  spec.origin.col() + spec.size.cols() - 2},
+                                                 {spec.size.rows(), 1}};
+
+        ex::start_detached(ex::when_all(splitTile(W.read(it), spec_col),
+                                        splitTile(Wh.readwrite(it), spec_col)) |
+                           matrix::copy(di::Policy<CopyBackend_v<Device::GPU, Device::CPU>>(
+                               thread_priority::high, thread_stacksize::nostack)));
+      }
+    }
+
     for (const auto& it : panel_uptonow.iteratorLocal()) {
       const dlaf::matrix::SubTileSpec spec = panel_uptonow(it);
       const dlaf::matrix::SubTileSpec spec_col{{spec.origin.row(),
@@ -400,10 +550,6 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
 
       ex::start_detached(
           ex::when_all(splitTile(mat_a.read(it), spec_col), splitTile(Vh.readwrite(it), spec_col)) |
-          matrix::copy(di::Policy<CopyBackend_v<Device::GPU, Device::CPU>>(thread_priority::high,
-                                                                           thread_stacksize::nostack)));
-      ex::start_detached(
-          ex::when_all(splitTile(W.read(it), spec_col), splitTile(Wh.readwrite(it), spec_col)) |
           matrix::copy(di::Policy<CopyBackend_v<Device::GPU, Device::CPU>>(thread_priority::high,
                                                                            thread_stacksize::nostack)));
     }
@@ -452,48 +598,30 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
               matrix::Panel<Coord::Col, T, D>& W, SenderTau&& tau) {
     namespace ex = pika::execution::experimental;
     namespace di = dlaf::internal;
-    using dlaf::matrix::internal::CopyBackend_v;
-    using pika::execution::thread_priority;
-    using pika::execution::thread_stacksize;
 
-    auto& Vh = panels_v.currentResource();
-    auto& Wh = panels_w.currentResource();
+    const SizeType i = ij.row();
+    const SizeType j = ij.col();
 
-    // Copy GPU to CPU
-    // Note: for both V and W just the last column (i.e. the only one that got updated)
+    const std::size_t ntiles = to_sizet(std::distance(panel_uptonow.iteratorLocal().begin(),
+                                                      panel_uptonow.iteratorLocal().end()));
+
+    std::vector<matrix::ReadOnlyTileSender<T, Device::GPU>> v_panel_ro;
+    v_panel_ro.reserve(ntiles);
+
+    std::vector<matrix::ReadWriteTileSender<T, Device::GPU>> w_panel_rw;
+    w_panel_rw.reserve(ntiles);
+
     for (const auto& it : panel_uptonow.iteratorLocal()) {
-      const dlaf::matrix::SubTileSpec spec = panel_uptonow(it);
-      // TODO probably we can
-      const dlaf::matrix::SubTileSpec spec_col{{spec.origin.row(),
-                                                spec.origin.col() + spec.size.cols() - 1},
-                                               {spec.size.rows(), 1}};
-
-      ex::start_detached(
-          ex::when_all(splitTile(mat_a.read(it), spec_col), splitTile(Vh.readwrite(it), spec_col)) |
-          matrix::copy(di::Policy<CopyBackend_v<Device::GPU, Device::CPU>>(thread_priority::high,
-                                                                           thread_stacksize::nostack)));
-      ex::start_detached(
-          ex::when_all(splitTile(W.read(it), spec_col), splitTile(Wh.readwrite(it), spec_col)) |
-          matrix::copy(di::Policy<CopyBackend_v<Device::GPU, Device::CPU>>(thread_priority::high,
-                                                                           thread_stacksize::nostack)));
+      const auto spec = panel_uptonow(it);
+      v_panel_ro.emplace_back(splitTile(mat_a.read(it), spec));
+      w_panel_rw.emplace_back(splitTile(W.readwrite(it), spec));
     }
 
-    Helper<Backend::MC, Device::CPU, T>::setupW(ij, ij_el_tl, panel_uptonow, Vh, Wh,
-                                                std::forward<SenderTau>(tau));
-
-    // Copy back from CPU to GPU
-    // Note: just W which was RW, and just the updated column
-    for (const auto& it : panel_uptonow.iteratorLocal()) {
-      const dlaf::matrix::SubTileSpec spec = panel_uptonow(it);
-      const dlaf::matrix::SubTileSpec spec_col{{spec.origin.row(),
-                                                spec.origin.col() + spec.size.cols() - 1},
-                                               {spec.size.rows(), 1}};
-
-      ex::start_detached(
-          ex::when_all(splitTile(Wh.read(it), spec_col), splitTile(W.readwrite(it), spec_col)) |
-          matrix::copy(di::Policy<CopyBackend_v<Device::CPU, Device::GPU>>(thread_priority::high,
-                                                                           thread_stacksize::nostack)));
-    }
+    const std::size_t offset = to_sizet(i - j);
+    ex::start_detached(
+        di::whenAllLift(offset, ij_el_tl, ex::when_all_vector(std::move(w_panel_rw)),
+                        ex::when_all_vector(std::move(v_panel_ro)), std::forward<SenderTau>(tau)) |
+        di::transform<di::TransformDispatchType::Blas>(di::Policy<B>(), kernelSetupW<B, T>{}));
   }
 
   template <class SenderTau, class SenderTri>

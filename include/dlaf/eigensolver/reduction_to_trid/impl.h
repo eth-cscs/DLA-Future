@@ -26,6 +26,7 @@
 #include <dlaf/matrix/views.h>
 #include <dlaf/sender/policy.h>
 #include <dlaf/sender/transform.h>
+#include <dlaf/sender/when_all_lift.h>
 #include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 
@@ -58,63 +59,86 @@ struct Helper<Backend::MC, Device::CPU, T> {
     const std::size_t ntiles = to_sizet(std::distance(panel_uptonow.iteratorLocal().begin(),
                                                       panel_uptonow.iteratorLocal().end()));
 
+    const bool has_left_panel = ij_el_tl.col() > 0;
+
     std::vector<matrix::ReadWriteTileSender<T, D>> v_panel_rw;
     v_panel_rw.reserve(ntiles);
+    for (const auto& it : panel_uptonow.iteratorLocal())
+      v_panel_rw.emplace_back(splitTile(mat_a.readwrite(it), panel_uptonow(it)));
 
     std::vector<matrix::ReadOnlyTileSender<T, D>> w_panel_ro;
-    w_panel_ro.reserve(ntiles);
-
-    for (const auto& it : panel_uptonow.iteratorLocal()) {
-      const auto spec = panel_uptonow(it);
-      v_panel_rw.emplace_back(splitTile(mat_a.readwrite(it), spec));
-      w_panel_ro.emplace_back(splitTile(W.read(it), spec));
+    if (has_left_panel) {
+      w_panel_ro.reserve(has_left_panel ? ntiles : 0);
+      for (const auto& it : panel_uptonow.iteratorLocal())
+        w_panel_ro.emplace_back(splitTile(W.read(it), panel_uptonow(it)));
     }
 
-    auto kernelUpdateV = [dist_a, offset = i - j, j, i_el, i_el_tl = ij_el_tl.row(),
-                          j_el_tl = ij_el_tl.col()](auto&& w_tiles, auto&& v_tiles) {
-      if (j_el_tl > 0) {
-        const std::size_t i_first =
-            to_sizet(dist_a.template global_tile_from_global_element<Coord::Row>(i_el - 1) - j);
-        const SizeType i_first_el_tl =
-            dist_a.template tile_element_from_global_element<Coord::Row>(i_el - 1);
-        for (std::size_t i = i_first; i < v_tiles.size(); ++i) {
-          // Note: this is needed because first tile has to align with mask without "diagonal"
-          const SizeType i_first_tl = (i == i_first) ? i_first_el_tl : 0;
+    const std::size_t i_first =
+        to_sizet(dist_a.template global_tile_from_global_element<Coord::Row>(i_el - 1) - j);
+    const std::size_t nworkers = [ntiles = v_panel_rw.size() - i_first, panel_width = ij_el_tl.col(),
+                                  ts = dist_a.tile_size().linear_size()]() {
+      const std::size_t workload = ntiles * to_sizet(panel_width);
+      const std::size_t workload_unit = 2 * to_sizet(ts);
 
-          // Note:
-          // Here we are going to do a matrix-vector multiplication with GEMM instead of GEMV.
-          // The reason is that we have to conjugate transpose the vector, and with the GEMV
-          // we can workaround the problem for real values using ld as gap between elements of
-          // the vector, but for complex type it does not allow to conjugate the value. So, we
-          // ended up using the more generic GEMM.
+      const std::size_t min_workers = 1;
+      const std::size_t available_workers = 6;  // TODO config parameter
+      const std::size_t ideal_workers = util::ceilDiv(to_sizet(workload), workload_unit);
+      return std::clamp(ideal_workers, min_workers, available_workers);
+    }();
 
-          {
-            auto&& tile_v = v_tiles[i];
-            auto&& tile_wt = w_tiles[0].get();
-            auto&& col_out = v_tiles[i];
+    auto kernelUpdateV = [nworkers, dist_a, i_first, i_el,
+                          ij_el_tl](const std::size_t index, auto&& w_tiles, auto&& v_tiles_ref) {
+      const auto& v_tiles = v_tiles_ref.get();
 
-            blas::gemm(blas::Layout::ColMajor, blas::Op::NoTrans, blas::Op::ConjTrans,
-                       tile_v.size().rows() - i_first_tl, 1, j_el_tl, T(-1), tile_v.ptr({i_first_tl, 0}),
-                       tile_v.ld(), tile_wt.ptr({j_el_tl, 0}), tile_wt.ld(), T(1),
-                       col_out.ptr({i_first_tl, j_el_tl}), col_out.ld());
-          }
+      const SizeType i_first_el_tl =
+          dist_a.template tile_element_from_global_element<Coord::Row>(i_el - 1);
 
-          {
-            auto&& tile_w = w_tiles[i].get();
-            auto&& tile_vt = v_tiles[0];
-            auto&& col_out = v_tiles[i];
+      const std::size_t workload = v_tiles.size() - i_first;
+      const std::size_t batch_size = util::ceilDiv(workload, nworkers);
+      const std::size_t begin = i_first + index * batch_size;
+      const std::size_t end = std::min(v_tiles.size(), i_first + (index + 1) * batch_size);
 
-            blas::gemm(blas::Layout::ColMajor, blas::Op::NoTrans, blas::Op::ConjTrans,
-                       tile_w.size().rows() - i_first_tl, 1, j_el_tl, T(-1), tile_w.ptr({i_first_tl, 0}),
-                       tile_w.ld(), tile_vt.ptr({j_el_tl, 0}), tile_vt.ld(), T(1),
-                       col_out.ptr({i_first_tl, j_el_tl}), col_out.ld());
-          }
+      for (std::size_t i = begin; i < end; ++i) {
+        // Note: this is needed because first tile has to align with mask without "diagonal"
+        const SizeType i_first_tl = (i == i_first) ? i_first_el_tl : 0;
+        const SizeType j_el_tl = ij_el_tl.col();
+
+        // Note:
+        // Here we are going to do a matrix-vector multiplication with GEMM instead of GEMV.
+        // The reason is that we have to conjugate transpose the vector, and with the GEMV
+        // we can workaround the problem for real values using ld as gap between elements of
+        // the vector, but for complex type it does not allow to conjugate the value. So, we
+        // ended up using the more generic GEMM.
+
+        {
+          auto&& tile_v = v_tiles[i];
+          auto&& tile_wt = w_tiles[0].get();
+          auto&& col_out = v_tiles[i];
+
+          blas::gemm(blas::Layout::ColMajor, blas::Op::NoTrans, blas::Op::ConjTrans,
+                     tile_v.size().rows() - i_first_tl, 1, j_el_tl, T(-1), tile_v.ptr({i_first_tl, 0}),
+                     tile_v.ld(), tile_wt.ptr({j_el_tl, 0}), tile_wt.ld(), T(1),
+                     col_out.ptr({i_first_tl, j_el_tl}), col_out.ld());
+        }
+
+        {
+          auto&& tile_w = w_tiles[i].get();
+          auto&& tile_vt = v_tiles[0];
+          auto&& col_out = v_tiles[i];
+
+          blas::gemm(blas::Layout::ColMajor, blas::Op::NoTrans, blas::Op::ConjTrans,
+                     tile_w.size().rows() - i_first_tl, 1, j_el_tl, T(-1), tile_w.ptr({i_first_tl, 0}),
+                     tile_w.ld(), tile_vt.ptr({j_el_tl, 0}), tile_vt.ld(), T(1),
+                     col_out.ptr({i_first_tl, j_el_tl}), col_out.ld());
         }
       }
     };
 
-    auto kernelComputeTau = [offset = i - j, i_el_tl = ij_el_tl.row(), j_el_tl = ij_el_tl.col()](
-                                auto&& panel_taus, auto&& panel_trid, auto&& v_tiles) -> T {
+    auto kernelComputeTau = [offset = i - j, ij_el_tl](auto&& panel_taus, auto&& panel_trid,
+                                                       auto&& v_tiles) -> T {
+      const SizeType i_el_tl = ij_el_tl.row();
+      const SizeType j_el_tl = ij_el_tl.col();
+
       // compute reflector
       constexpr bool has_head = true;
       const auto tau =
@@ -147,14 +171,20 @@ struct Helper<Backend::MC, Device::CPU, T> {
     return ex::ensure_started(
         ex::when_all_vector(std::move(v_panel_rw)) |
         ex::let_value([w_panel_ro = std::move(w_panel_ro), trid = std::forward<SenderTrid>(trid),
-                       taus = std::forward<SenderTau>(taus), kernelUpdateV,
+                       taus = std::forward<SenderTau>(taus), has_left_panel, nworkers, kernelUpdateV,
                        kernelComputeTau](auto&& v_tiles) mutable {
-          // TODO minor optimisation possible: skip kernelUpdateV at the first iteration
-          auto updated_panel =
-              ex::when_all(ex::when_all_vector(std::move(w_panel_ro)), ex::just(std::ref(v_tiles))) |
-              di::transform(di::Policy<B>(), kernelUpdateV);
-          return ex::when_all(std::move(updated_panel), std::forward<SenderTau>(taus),
-                              std::forward<SenderTrid>(trid), ex::just(std::ref(v_tiles))) |
+          // Note: if there is no panel, no reason to start the update panel task at all.
+          ex::unique_any_sender panel_updated;
+          if (has_left_panel)
+            panel_updated =
+                di::whenAllLift(ex::when_all_vector(std::move(w_panel_ro)), std::ref(v_tiles)) |
+                ex::transfer(di::getBackendScheduler<B>()) | ex::bulk(nworkers, kernelUpdateV) |
+                ex::drop_value();
+          else
+            panel_updated = ex::just();
+
+          return di::whenAllLift(std::move(panel_updated), std::move(taus), std::move(trid),
+                                 std::ref(v_tiles)) |
                  di::transform(di::Policy<B>(), kernelComputeTau);
         }));
   }

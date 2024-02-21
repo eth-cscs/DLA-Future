@@ -45,15 +45,13 @@ struct Helper<Backend::MC, Device::CPU, T> {
   void align(const GlobalTileIndex&) {}
   void reset() {}
 
-  template <class SenderTau, class SenderTrid, class MatrixLike>
-  auto call(const matrix::Distribution& dist_a, const GlobalTileIndex& ij, const SizeType i_el,
-            const TileElementIndex ij_el_tl, SenderTau&& taus, SenderTrid&& trid,
-            const matrix::SubPanelView& panel_uptonow, matrix::Panel<Coord::Col, const T, D>& W,
-            MatrixLike& mat_a) {
+  template <class MatrixLike>
+  void updateV(const matrix::Distribution& dist_a, const GlobalTileIndex& ij, const SizeType i_el,
+               const TileElementIndex ij_el_tl, const matrix::SubPanelView& panel_uptonow,
+               matrix::Panel<Coord::Col, const T, D>& W, MatrixLike& mat_a) {
     namespace ex = pika::execution::experimental;
     namespace di = dlaf::internal;
 
-    const auto i = ij.row();
     const auto j = ij.col();
 
     const std::size_t ntiles = to_sizet(std::distance(panel_uptonow.iteratorLocal().begin(),
@@ -61,17 +59,18 @@ struct Helper<Backend::MC, Device::CPU, T> {
 
     const bool has_left_panel = ij_el_tl.col() > 0;
 
+    if (!has_left_panel)
+      return;
+
     std::vector<matrix::ReadWriteTileSender<T, D>> v_panel_rw;
     v_panel_rw.reserve(ntiles);
     for (const auto& it : panel_uptonow.iteratorLocal())
       v_panel_rw.emplace_back(splitTile(mat_a.readwrite(it), panel_uptonow(it)));
 
     std::vector<matrix::ReadOnlyTileSender<T, D>> w_panel_ro;
-    if (has_left_panel) {
-      w_panel_ro.reserve(has_left_panel ? ntiles : 0);
-      for (const auto& it : panel_uptonow.iteratorLocal())
-        w_panel_ro.emplace_back(splitTile(W.read(it), panel_uptonow(it)));
-    }
+    w_panel_ro.reserve(ntiles);
+    for (const auto& it : panel_uptonow.iteratorLocal())
+      w_panel_ro.emplace_back(splitTile(W.read(it), panel_uptonow(it)));
 
     const std::size_t i_first =
         to_sizet(dist_a.template global_tile_from_global_element<Coord::Row>(i_el - 1) - j);
@@ -86,10 +85,8 @@ struct Helper<Backend::MC, Device::CPU, T> {
       return std::clamp(ideal_workers, min_workers, available_workers);
     }();
 
-    auto kernelUpdateV = [nworkers, dist_a, i_first, i_el,
-                          ij_el_tl](const std::size_t index, auto&& w_tiles, auto&& v_tiles_ref) {
-      const auto& v_tiles = v_tiles_ref.get();
-
+    auto kernelUpdateV = [nworkers, dist_a, i_first, i_el, ij_el_tl](const std::size_t index,
+                                                                     auto&& w_tiles, auto&& v_tiles) {
       const SizeType i_first_el_tl =
           dist_a.template tile_element_from_global_element<Coord::Row>(i_el - 1);
 
@@ -134,6 +131,30 @@ struct Helper<Backend::MC, Device::CPU, T> {
       }
     };
 
+    ex::start_detached(di::whenAllLift(ex::when_all_vector(std::move(w_panel_ro)),
+                                       ex::when_all_vector(std::move(v_panel_rw))) |
+                       ex::transfer(di::getBackendScheduler<B>()) | ex::bulk(nworkers, kernelUpdateV) |
+                       ex::drop_value());
+  }
+
+  template <class SenderTau, class SenderTrid, class MatrixLike>
+  auto computeReflector(const GlobalTileIndex& ij, const TileElementIndex ij_el_tl, SenderTau&& taus,
+                        SenderTrid&& trid, const matrix::SubPanelView& panel_uptonow,
+                        MatrixLike& mat_a) {
+    namespace ex = pika::execution::experimental;
+    namespace di = dlaf::internal;
+
+    const auto i = ij.row();
+    const auto j = ij.col();
+
+    const std::size_t ntiles = to_sizet(std::distance(panel_uptonow.iteratorLocal().begin(),
+                                                      panel_uptonow.iteratorLocal().end()));
+
+    std::vector<matrix::ReadWriteTileSender<T, D>> v_panel_rw;
+    v_panel_rw.reserve(ntiles);
+    for (const auto& it : panel_uptonow.iteratorLocal())
+      v_panel_rw.emplace_back(splitTile(mat_a.readwrite(it), panel_uptonow(it)));
+
     auto kernelComputeTau = [offset = i - j, ij_el_tl](auto&& panel_taus, auto&& panel_trid,
                                                        auto&& v_tiles) -> T {
       const SizeType i_el_tl = ij_el_tl.row();
@@ -168,25 +189,9 @@ struct Helper<Backend::MC, Device::CPU, T> {
       return tau;
     };
 
-    return ex::ensure_started(
-        ex::when_all_vector(std::move(v_panel_rw)) |
-        ex::let_value([w_panel_ro = std::move(w_panel_ro), trid = std::forward<SenderTrid>(trid),
-                       taus = std::forward<SenderTau>(taus), has_left_panel, nworkers, kernelUpdateV,
-                       kernelComputeTau](auto&& v_tiles) mutable {
-          // Note: if there is no panel, no reason to start the update panel task at all.
-          ex::unique_any_sender panel_updated;
-          if (has_left_panel)
-            panel_updated =
-                di::whenAllLift(ex::when_all_vector(std::move(w_panel_ro)), std::ref(v_tiles)) |
-                ex::transfer(di::getBackendScheduler<B>()) | ex::bulk(nworkers, kernelUpdateV) |
-                ex::drop_value();
-          else
-            panel_updated = ex::just();
-
-          return di::whenAllLift(std::move(panel_updated), std::move(taus), std::move(trid),
-                                 std::ref(v_tiles)) |
-                 di::transform(di::Policy<B>(), kernelComputeTau);
-        }));
+    return ex::ensure_started(ex::when_all(std::move(taus), std::move(trid),
+                                           ex::when_all_vector(std::move(v_panel_rw))) |
+                              di::transform(di::Policy<B>(), kernelComputeTau));
   }
 
   template <class SenderTau, class MatrixLike>
@@ -370,11 +375,10 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
     Wh.reset();
   }
 
-  template <class SenderTau, class SenderTrid>
-  auto call(const matrix::Distribution& dist_a, const GlobalTileIndex& ij, const SizeType i_el,
-            const TileElementIndex ij_el_tl, SenderTau&& taus, SenderTrid&& trid,
-            const matrix::SubPanelView& panel_uptonow, matrix::Panel<Coord::Col, const T, D>& W,
-            Matrix<T, D>& mat_a) {
+  template <class MatrixLike>
+  void updateV(const matrix::Distribution& dist_a, const GlobalTileIndex& ij, const SizeType i_el,
+               const TileElementIndex ij_el_tl, const matrix::SubPanelView& panel_uptonow,
+               matrix::Panel<Coord::Col, const T, D>& W, MatrixLike& mat_a) {
     namespace ex = pika::execution::experimental;
     namespace di = dlaf::internal;
 
@@ -404,10 +408,25 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
     }
 
     // Compute on CPU
-    auto&& tau =
-        Helper<Backend::MC, Device::CPU, T>::call(dist_a, ij, i_el, ij_el_tl,
-                                                  std::forward<SenderTau>(taus),
-                                                  std::forward<SenderTrid>(trid), panel_uptonow, Wh, Vh);
+    Helper<Backend::MC, Device::CPU, T>::updateV(dist_a, ij, i_el, ij_el_tl, panel_uptonow, Wh, Vh);
+  }
+
+  template <class SenderTau, class SenderTrid>
+  auto computeReflector(const GlobalTileIndex& ij, const TileElementIndex ij_el_tl, SenderTau&& taus,
+                        SenderTrid&& trid, const matrix::SubPanelView& panel_uptonow,
+                        Matrix<T, D>& mat_a) {
+    namespace ex = pika::execution::experimental;
+    namespace di = dlaf::internal;
+
+    using dlaf::matrix::internal::CopyBackend_v;
+    using pika::execution::thread_priority;
+    using pika::execution::thread_stacksize;
+
+    auto& Vh = panels_v.currentResource();
+
+    // Compute on CPU
+    auto&& tau = Helper<Backend::MC, Device::CPU, T>::computeReflector(
+        ij, ij_el_tl, std::forward<SenderTau>(taus), std::forward<SenderTrid>(trid), panel_uptonow, Vh);
 
     // Copy back from CPU to GPU
     // Note: just V which was RW, and just the updated column
@@ -705,9 +724,12 @@ TridiagResult1Stage<T> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
       const matrix::SubPanelView panel_uptonow(dist_a, dist_a.global_element_index({j, j}, {0, 0}),
                                                j_el_tl + 1);
 
-      auto tau = helper.call(dist_a, GlobalTileIndex{i, j}, i_el, TileElementIndex{i_el_tl, j_el_tl},
-                             mat_taus.readwrite(GlobalTileIndex{j, 0}),
-                             mat_trid.readwrite(GlobalTileIndex{j, 0}), panel_uptonow, W, mat_a);
+      helper.updateV(dist_a, GlobalTileIndex{i, j}, i_el, TileElementIndex{i_el_tl, j_el_tl},
+                     panel_uptonow, W, mat_a);
+      auto tau =
+          helper.computeReflector(GlobalTileIndex{i, j}, TileElementIndex{i_el_tl, j_el_tl},
+                                  mat_taus.readwrite(GlobalTileIndex{j, 0}),
+                                  mat_trid.readwrite(GlobalTileIndex{j, 0}), panel_uptonow, mat_a);
 
       // W = At @ v
       const SizeType mt = dist_a.size().rows() - i_el;

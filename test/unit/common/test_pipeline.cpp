@@ -810,7 +810,11 @@ TEST(SubPipeline, RandomAccess) {
       // of senders stored in accesses. No accesses should be done yet at this point since they depend
       // on the first access completing.
       ASSERT_GE(state.spawn_count, 1);
-      ASSERT_GE(state.spawn_count, state.accesses.size());
+      {
+        std::lock_guard l(state.accesses_mutex);
+        ASSERT_GE(state.spawn_count, state.accesses.size());
+      }
+
       EXPECT_EQ(state.access_count.load(), 0);
 
       // After the first access is done there can be one or more accesses done

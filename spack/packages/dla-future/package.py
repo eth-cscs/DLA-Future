@@ -51,6 +51,11 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         when="@master",
         description="Use MPI with GPU support for communication.",
     )
+    conflicts(
+        "+mpi-gpu-support",
+        when="~cuda ~rocm",
+        msg="MPI GPU support requires +cuda or +rocm",
+    )
 
     generator("ninja")
 

@@ -220,25 +220,21 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
 
   Helper(const std::size_t n_workspaces, const matrix::Distribution& panel_dist)
       : Helper<Backend::MC, Device::CPU, T>(n_workspaces, panel_dist),
-        panels_v(n_workspaces, panel_dist), panels_w(n_workspaces, panel_dist) {}
+        panels_v(n_workspaces, panel_dist) {}
 
   void align(const GlobalTileIndex& ij) {
     Helper<Backend::MC, Device::CPU, T>::align(ij);
     auto& Vh = panels_v.nextResource();
-    auto& Wh = panels_w.nextResource();
 
     Vh.setRangeStart(ij);
-    Wh.setRangeStart(ij);
   }
 
   // TODO we can think about having just align there probably
   void reset() {
     Helper<Backend::MC, Device::CPU, T>::reset();
     auto& Vh = panels_v.currentResource();
-    auto& Wh = panels_w.currentResource();
 
     Vh.reset();
-    Wh.reset();
   }
 
   template <class MatrixLike>
@@ -248,44 +244,81 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
     namespace ex = pika::execution::experimental;
     namespace di = dlaf::internal;
 
-    using dlaf::matrix::internal::CopyBackend_v;
-    using pika::execution::thread_priority;
-    using pika::execution::thread_stacksize;
-
-    auto& Vh = panels_v.currentResource();
-    auto& Wh = panels_w.currentResource();
+    const SizeType j = ij.col();
 
     const bool has_left_panel = ij_el_tl.col() > 0;
 
-    // Copy GPU to CPU
-    if (has_left_panel) {
-      for (const auto& it : panel_uptonow.iteratorLocal()) {
-        const dlaf::matrix::SubTileSpec spec = panel_uptonow(it);
-        const dlaf::matrix::SubTileSpec spec_col{{spec.origin.row(),
-                                                  spec.origin.col() + spec.size.cols() - 2},
-                                                 {spec.size.rows(), 1}};
+    if (!has_left_panel)
+      return;
 
-        ex::start_detached(ex::when_all(splitTile(W.read(it), spec_col),
-                                        splitTile(Wh.readwrite(it), spec_col)) |
-                           matrix::copy(di::Policy<CopyBackend_v<Device::GPU, Device::CPU>>(
-                               thread_priority::high, thread_stacksize::nostack)));
+    const std::size_t ntiles = to_sizet(std::distance(panel_uptonow.iteratorLocal().begin(),
+                                                      panel_uptonow.iteratorLocal().end()));
+
+    std::vector<matrix::ReadWriteTileSender<T, D>> v_panel_rw;
+    v_panel_rw.reserve(ntiles);
+    for (const auto& it : panel_uptonow.iteratorLocal())
+      v_panel_rw.emplace_back(splitTile(mat_a.readwrite(it), panel_uptonow(it)));
+
+    std::vector<matrix::ReadOnlyTileSender<T, D>> w_panel_ro;
+    w_panel_ro.reserve(ntiles);
+    for (const auto& it : panel_uptonow.iteratorLocal())
+      w_panel_ro.emplace_back(splitTile(W.read(it), panel_uptonow(it)));
+
+    const std::size_t i_first =
+        to_sizet(dist_a.template global_tile_from_global_element<Coord::Row>(i_el - 1) - j);
+
+    auto kernelUpdateV = [dist_a, i_first, i_el, ij_el_tl](cublasHandle_t handle, auto&& w_tiles,
+                                                           auto&& v_tiles) {
+      const SizeType i_first_el_tl =
+          dist_a.template tile_element_from_global_element<Coord::Row>(i_el - 1);
+
+      for (std::size_t i = i_first; i < v_tiles.size(); ++i) {
+        // Note: this is needed because first tile has to align with mask without "diagonal"
+        const SizeType i_first_tl = (i == i_first) ? i_first_el_tl : 0;
+        const SizeType j_el_tl = ij_el_tl.col();
+
+        // Note:
+        // Here we are going to do a matrix-vector multiplication with GEMM instead of GEMV.
+        // The reason is that we have to conjugate transpose the vector, and with the GEMV
+        // we can workaround the problem for real values using ld as gap between elements of
+        // the vector, but for complex type it does not allow to conjugate the value. So, we
+        // ended up using the more generic GEMM.
+
+        const T alpha = -1;
+        const T beta = 1;
+        {
+          auto&& tile_v = v_tiles[i];
+          auto&& tile_wt = w_tiles[0].get();
+          auto&& col_out = v_tiles[i];
+
+          gpublas::internal::Gemm<T>::call(
+              handle, util::blasToCublas(blas::Op::NoTrans), util::blasToCublas(blas::Op::ConjTrans),
+              to_int(tile_v.size().rows() - i_first_tl), 1, to_int(j_el_tl),
+              util::blasToCublasCast(&alpha), util::blasToCublasCast(tile_v.ptr({i_first_tl, 0})),
+              to_int(tile_v.ld()), util::blasToCublasCast(tile_wt.ptr({j_el_tl, 0})),
+              to_int(tile_wt.ld()), util::blasToCublasCast(&beta),
+              util::blasToCublasCast(col_out.ptr({i_first_tl, j_el_tl})), to_int(col_out.ld()));
+        }
+
+        {
+          auto&& tile_w = w_tiles[i].get();
+          auto&& tile_vt = v_tiles[0];
+          auto&& col_out = v_tiles[i];
+
+          gpublas::internal::Gemm<T>::call(
+              handle, util::blasToCublas(blas::Op::NoTrans), util::blasToCublas(blas::Op::ConjTrans),
+              to_int(tile_w.size().rows() - i_first_tl), 1, to_int(j_el_tl),
+              util::blasToCublasCast(&alpha), util::blasToCublasCast(tile_w.ptr({i_first_tl, 0})),
+              to_int(tile_w.ld()), util::blasToCublasCast(tile_vt.ptr({j_el_tl, 0})),
+              to_int(tile_vt.ld()), util::blasToCublasCast(&beta),
+              util::blasToCublasCast(col_out.ptr({i_first_tl, j_el_tl})), to_int(col_out.ld()));
+        }
       }
-    }
+    };
 
-    for (const auto& it : panel_uptonow.iteratorLocal()) {
-      const dlaf::matrix::SubTileSpec spec = panel_uptonow(it);
-      const dlaf::matrix::SubTileSpec spec_col{{spec.origin.row(),
-                                                spec.origin.col() + spec.size.cols() - 1},
-                                               {spec.size.rows(), 1}};
-
-      ex::start_detached(
-          ex::when_all(splitTile(mat_a.read(it), spec_col), splitTile(Vh.readwrite(it), spec_col)) |
-          matrix::copy(di::Policy<CopyBackend_v<Device::GPU, Device::CPU>>(thread_priority::high,
-                                                                           thread_stacksize::nostack)));
-    }
-
-    // Compute on CPU
-    Helper<Backend::MC, Device::CPU, T>::updateV(dist_a, ij, i_el, ij_el_tl, panel_uptonow, Wh, Vh);
+    ex::start_detached(di::whenAllLift(ex::when_all_vector(std::move(w_panel_ro)),
+                                       ex::when_all_vector(std::move(v_panel_rw))) |
+                       di::transform<di::TransformDispatchType::Blas>(di::Policy<B>(), kernelUpdateV));
   }
 
   template <class SenderTau, class SenderTrid>
@@ -300,6 +333,19 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
     using pika::execution::thread_stacksize;
 
     auto& Vh = panels_v.currentResource();
+
+    // Copy GPU to CPU
+    for (const auto& it : panel_uptonow.iteratorLocal()) {
+      const dlaf::matrix::SubTileSpec spec = panel_uptonow(it);
+      const dlaf::matrix::SubTileSpec spec_col{{spec.origin.row(),
+                                                spec.origin.col() + spec.size.cols() - 1},
+                                               {spec.size.rows(), 1}};
+
+      ex::start_detached(
+          ex::when_all(splitTile(mat_a.read(it), spec_col), splitTile(Vh.readwrite(it), spec_col)) |
+          matrix::copy(di::Policy<CopyBackend_v<Device::GPU, Device::CPU>>(thread_priority::high,
+                                                                           thread_stacksize::nostack)));
+    }
 
     // Compute on CPU
     auto&& tau = Helper<Backend::MC, Device::CPU, T>::computeReflector(
@@ -400,7 +446,6 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
 
 protected:
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panels_v;
-  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panels_w;
 };
 
 template <class T>

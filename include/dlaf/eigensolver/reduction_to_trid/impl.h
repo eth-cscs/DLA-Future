@@ -12,6 +12,9 @@
 
 #include <vector>
 
+#include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
+
 #include <pika/execution.hpp>
 
 #include <dlaf/blas/tile.h>
@@ -164,23 +167,74 @@ struct kernelSetupW<Backend::GPU, T> {
       }
 
       // w = w - V . w_up
-      for (std::size_t i = i_first; i < v_tiles.size(); ++i) {
-        const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
-
-        auto&& tile_v = v_tiles[i].get();
-        auto&& tile_w = w_tiles[i];
-
-        auto&& v = tile_v.ptr({i_first_tl, 0});
-        auto&& w_col = tile_w.ptr({i_first_tl, j_el_tl});
-
+      {
         const T alpha = -1;
         const T beta = 1;
-        gpublas::internal::Gemv<T>::call(handle, util::blasToCublas(blas::Op::NoTrans),
-                                         to_int(tile_v.size().rows() - i_first_tl), to_int(j_el_tl),
-                                         util::blasToCublasCast(&alpha), util::blasToCublasCast(v),
-                                         to_int(tile_v.ld()), util::blasToCublasCast(w_up), 1,
-                                         util::blasToCublasCast(&beta), util::blasToCublasCast(w_col),
-                                         1);
+
+        int nbatch = v_tiles.size() - i_first;
+
+        if (nbatch > 0) {
+          const SizeType i_first_tl = i_el_tl;
+
+          auto&& tile_v = v_tiles[i_first].get();
+          auto&& tile_w = w_tiles[i_first];
+
+          auto&& v = tile_v.ptr({i_first_tl, 0});
+          auto&& w_col = tile_w.ptr({i_first_tl, j_el_tl});
+
+          gpublas::internal::Gemv<T>::call(handle, util::blasToCublas(blas::Op::NoTrans),
+                                           to_int(tile_v.size().rows() - i_first_tl), to_int(j_el_tl),
+                                           util::blasToCublasCast(&alpha), util::blasToCublasCast(v),
+                                           to_int(tile_v.ld()), util::blasToCublasCast(w_up), 1,
+                                           util::blasToCublasCast(&beta), util::blasToCublasCast(w_col),
+                                           1);
+          --nbatch;
+        }
+        if (nbatch > 0) {
+          auto&& tile_v = v_tiles.back().get();
+          auto&& tile_w = w_tiles.back();
+
+          auto&& v = tile_v.ptr();
+          auto&& w_col = tile_w.ptr({0, j_el_tl});
+
+          gpublas::internal::Gemv<T>::call(handle, util::blasToCublas(blas::Op::NoTrans),
+                                           to_int(tile_v.size().rows()), to_int(j_el_tl),
+                                           util::blasToCublasCast(&alpha), util::blasToCublasCast(v),
+                                           to_int(tile_v.ld()), util::blasToCublasCast(w_up), 1,
+                                           util::blasToCublasCast(&beta), util::blasToCublasCast(w_col),
+                                           1);
+          --nbatch;
+        }
+
+        if (nbatch > 0) {
+          thrust::host_vector<const T*> A;
+          thrust::host_vector<const T*> x;
+          thrust::host_vector<T*> y;
+
+          A.reserve(to_sizet(nbatch));
+          x.reserve(to_sizet(nbatch));
+          y.reserve(to_sizet(nbatch));
+
+          for (std::size_t index = i_first + 1; index < v_tiles.size() - 1; ++index) {
+            A.push_back(v_tiles[index].get().ptr());
+            x.push_back(w_up);
+            y.push_back(w_tiles[index].ptr({0, j_el_tl}));
+          }
+
+          const SizeType m = v_tiles[i_first + 1].get().size().rows();
+          const SizeType ld = v_tiles[i_first + 1].get().ld();
+          thrust::device_vector<const T*> Ad = A;
+          thrust::device_vector<const T*> xd = x;
+          thrust::device_vector<T*> yd = y;
+
+          gpublas::internal::GemvBatched<T>::call(
+              handle, util::blasToCublas(blas::Op::NoTrans), to_int(m), to_int(j_el_tl),
+              util::blasToCublasCast(&alpha),
+              util::blasToCublasCast(thrust::raw_pointer_cast(Ad.data())), to_int(ld),
+              util::blasToCublasCast(thrust::raw_pointer_cast(xd.data())), 1,
+              util::blasToCublasCast(&beta), util::blasToCublasCast(thrust::raw_pointer_cast(yd.data())),
+              1, nbatch);
+        }
       }
 
       // w_up = V* . v

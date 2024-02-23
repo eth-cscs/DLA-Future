@@ -18,15 +18,16 @@ spack:
       true
 
   specs:
-    - dla-future@master cxxflags="-fsanitize=thread -fno-omit-frame-pointer" ldflags="-fsanitize=thread" +miniapps +ci-test
+    - dla-future@master build_type=RelWithDebInfo cxxflags="-fsanitize=thread -fno-omit-frame-pointer" ldflags="-fsanitize=thread" +miniapps +ci-test
 
   packages:
     all:
       variants:
-        - 'build_type=RelWithDebInfo'
+        - 'build_type=Release'
     pika:
       require:
         - '@main'
+        - 'build_type=RelWithDebInfo'
         - 'malloc=system'
         - '+sanitizers'
         - 'cxxflags="-fsanitize=thread -fno-omit-frame-pointer"'

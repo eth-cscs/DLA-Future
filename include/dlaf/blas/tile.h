@@ -72,6 +72,15 @@ inline void extendROCBlasWorkspace(cublasHandle_t handle,
 
 #elif defined(DLAF_WITH_CUDA)
 
+#define DLAF_DEFINE_GPUBLAS_OP_NOV2(Name, Type, f)                      \
+  template <>                                                           \
+  struct Name<Type> {                                                   \
+    template <typename... Args>                                         \
+    static void call(Args&&... args) {                                  \
+      DLAF_GPUBLAS_CHECK_ERROR(cublas##f(std::forward<Args>(args)...)); \
+    }                                                                   \
+  }
+
 #define DLAF_DEFINE_GPUBLAS_OP(Name, Type, f)                                \
   template <>                                                                \
   struct Name<Type> {                                                        \
@@ -123,13 +132,22 @@ inline void extendROCBlasWorkspace(cublasHandle_t handle,
   DLAF_DEFINE_GPUBLAS_OP(Name, double, D##f);                 \
   DLAF_DEFINE_GPUBLAS_OP(Name, std::complex<float>, C##f##c); \
   DLAF_DEFINE_GPUBLAS_OP(Name, std::complex<double>, Z##f##c)
+
+#define DLAF_MAKE_GPUBLAS_BATCHED_OP(Name, f)                                     \
+  DLAF_DECLARE_GPUBLAS_OP(Name##Batched);                                         \
+  DLAF_DEFINE_GPUBLAS_OP_NOV2(Name##Batched, float, S##f##Batched);               \
+  DLAF_DEFINE_GPUBLAS_OP_NOV2(Name##Batched, double, D##f##Batched);              \
+  DLAF_DEFINE_GPUBLAS_OP_NOV2(Name##Batched, std::complex<float>, C##f##Batched); \
+  DLAF_DEFINE_GPUBLAS_OP_NOV2(Name##Batched, std::complex<double>, Z##f##Batched)
 #endif
 
 namespace dlaf::gpublas::internal {
 
 // Level 1
 DLAF_MAKE_GPUBLAS_OP(Axpy, axpy);
+
 DLAF_MAKE_GPUBLAS_OP(Scal, scal);
+
 DLAF_MAKE_GPUBLAS_DOTC_OP(Dot, dot);
 
 // Level 2
@@ -138,6 +156,8 @@ DLAF_MAKE_GPUBLAS_OP(Gemv, gemv);
 DLAF_MAKE_GPUBLAS_SYHE_OP(Hemv, mv);
 
 DLAF_MAKE_GPUBLAS_OP(Trmv, trmv);
+
+DLAF_MAKE_GPUBLAS_BATCHED_OP(Gemv, gemv);
 
 // Level 3
 DLAF_MAKE_GPUBLAS_OP(Gemm, gemm);

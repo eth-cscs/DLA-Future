@@ -25,6 +25,7 @@
 #include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/communication/index.h>
 #include <dlaf/communication/kernels.h>
+#include <dlaf/communication/kernels/internal/broadcast.h>
 #include <dlaf/eigensolver/internal/get_tridiag_rank1_barrier_busy_wait.h>
 #include <dlaf/eigensolver/internal/get_tridiag_rank1_nworkers.h>
 #include <dlaf/eigensolver/tridiag_solver/coltype.h>

@@ -29,33 +29,6 @@
 #include <dlaf/types.h>
 
 namespace dlaf::comm {
-namespace internal {
-template <class T, Device D>
-void sendBcast(const Communicator& comm, const matrix::Tile<const T, D>& tile, MPI_Request* req) {
-#if !defined(DLAF_WITH_MPI_GPU_SUPPORT)
-  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_SUPPORT=off, MPI accepts only CPU memory.");
-#endif
-
-  auto msg = comm::make_message(common::make_data(tile));
-  DLAF_MPI_CHECK_ERROR(MPI_Ibcast(const_cast<T*>(msg.data()), msg.count(), msg.mpi_type(), comm.rank(),
-                                  comm, req));
-}
-
-DLAF_MAKE_CALLABLE_OBJECT(sendBcast);
-
-template <class T, Device D>
-void recvBcast(const Communicator& comm, comm::IndexT_MPI root_rank, const matrix::Tile<T, D>& tile,
-               MPI_Request* req) {
-#if !defined(DLAF_WITH_MPI_GPU_SUPPORT)
-  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_SUPPORT=off, MPI accepts only CPU memory.");
-#endif
-
-  auto msg = comm::make_message(common::make_data(tile));
-  DLAF_MPI_CHECK_ERROR(MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, comm, req));
-}
-
-DLAF_MAKE_CALLABLE_OBJECT(recvBcast);
-}
 
 /// Schedule a broadcast send.
 ///

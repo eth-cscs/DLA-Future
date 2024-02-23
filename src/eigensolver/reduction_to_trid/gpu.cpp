@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <dlaf/eigensolver/reduction_to_trid/impl.h>
+#include <dlaf/eigensolver/reduction_to_trid/gpu.h>
 
 namespace dlaf::eigensolver::internal {
 

@@ -57,7 +57,7 @@ moveNonConstTile(T&) -> moveNonConstTile<T>;
 /// runtime check will be performed on the input tile, and if it is not
 /// contiguous a new tile will also be allocated.
 ///
-/// In addition to requesting a destination device and contigous memory, the
+/// In addition to requesting a destination device and contiguous memory, the
 /// user may request additional operations that will be performed only when a
 /// new tile is allocated. If the input tile is used directly none of the
 /// following operations will be performed as they are unnecessary. If

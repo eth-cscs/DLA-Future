@@ -25,5 +25,5 @@ spack:
       variants:
         - 'build_type=Release'
     intel-oneapi-mkl:
-      require:
+      require::
         - 'threads=none'

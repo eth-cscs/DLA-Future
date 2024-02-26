@@ -23,7 +23,7 @@ spack:
   packages:
     all:
       variants:
-        - 'build_type=RelWithDebInfo'
+        - 'build_type=Release'
     pika:
       require:
         - 'malloc=system'

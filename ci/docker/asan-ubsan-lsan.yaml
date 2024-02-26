@@ -18,7 +18,7 @@ spack:
       true
 
   specs:
-    - dla-future@master cxxflags="-fsanitize=address -fsanitize-address-use-after-scope -fsanitize=undefined -fno-omit-frame-pointer" cflags="-fsanitize=address -fsanitize-address-use-after-scope -fsanitize=undefined -fno-omit-frame-pointer" ldflags="-fsanitize=address -fsanitize=undefined -shared-libsan" +miniapps +ci-test
+    - dla-future@master build_type=RelWithDebInfo cxxflags="-fsanitize=address -fsanitize-address-use-after-scope -fsanitize=undefined -fno-omit-frame-pointer" cflags="-fsanitize=address -fsanitize-address-use-after-scope -fsanitize=undefined -fno-omit-frame-pointer" ldflags="-fsanitize=address -fsanitize=undefined -shared-libsan" +miniapps +ci-test
 
   packages:
     all:
@@ -26,4 +26,5 @@ spack:
         - 'build_type=Release'
     pika:
       require:
+        - 'build_type=RelWithDebInfo'
         - 'malloc=system'

@@ -1,0 +1,36 @@
+include:
+  - local: 'ci/common-ci.yml'
+
+cpu asan ubsan lsan deps:
+  extends: .build_deps_common
+  variables:
+    EXTRA_APTGET: "clang-15 libomp-15-dev"
+    COMPILER: clang@15
+    USE_MKL: "ON"
+    SPACK_ENVIRONMENT: ci/docker/asan-ubsan-lsan.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cpu-asan-ubsan-lsan/build
+
+cpu asan ubsan lsan build:
+  extends:
+    - .build_common
+    - .build_for_daint-mc
+  needs:
+    - cpu asan ubsan lsan deps
+  variables:
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cpu-asan-ubsan-lsan/deploy:$CI_COMMIT_SHA
+    # For symbolizing stacktraces with llvm-symbolizer
+    EXTRA_APTGET_DEPLOY: "llvm-15"
+
+cpu asan ubsan lsan test:
+  extends: .run_common
+  needs:
+    - cpu asan ubsan lsan build
+  variables:
+    ASAN_OPTIONS: "fast_unwind_on_malloc=0:strict_string_checks=1:detect_leaks=1:detect_stack_use_after_return=0:check_initialization_order=1:strict_init_order=1"
+    UBSAN_OPTIONS: "halt_on_error=1:print_stacktrace=1"
+    # Override use of libSegFault, not necessary with sanitizers
+    LD_PRELOAD: ""
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cpu asan ubsan lsan build

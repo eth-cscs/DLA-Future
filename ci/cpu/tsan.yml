@@ -1,0 +1,34 @@
+include:
+  - local: 'ci/common-ci.yml'
+
+cpu tsan deps:
+  extends: .build_deps_common
+  variables:
+    EXTRA_APTGET: "clang-15 libomp-15-dev"
+    COMPILER: clang@15
+    USE_MKL: "ON"
+    SPACK_ENVIRONMENT: ci/docker/tsan.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cpu-tsan/build
+
+cpu tsan build:
+  extends:
+    - .build_common
+    - .build_for_daint-mc
+  needs:
+    - cpu tsan deps
+  variables:
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cpu-tsan/deploy:$CI_COMMIT_SHA
+    # For symbolizing stacktraces with llvm-symbolizer
+    EXTRA_APTGET_DEPLOY: "llvm-15"
+
+cpu tsan test:
+  extends: .run_common
+  needs:
+    - cpu tsan build
+  variables:
+    # Override use of libSegFault, not necessary with sanitizers
+    LD_PRELOAD: ""
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cpu tsan build

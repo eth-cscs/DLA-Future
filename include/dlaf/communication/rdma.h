@@ -20,15 +20,15 @@
 namespace dlaf::comm {
 /// Helper struct for determining the device to use for communication.
 ///
-/// Contains a static value member, which will always be D if MPI GPU support
-/// is enabled. If MPI GPU support is disabled, the value will always be
+/// Contains a static value member, which will always be D if GPU-aware MPI
+/// is enabled. If GPU-aware MPI is disabled, the value will always be
 /// Device::CPU.
 template <Device D>
 struct CommunicationDevice {
   static constexpr Device value = D;
 };
 
-#if defined(DLAF_WITH_GPU) && !defined(DLAF_WITH_MPI_GPU_SUPPORT)
+#if defined(DLAF_WITH_GPU) && !defined(DLAF_WITH_MPI_GPU_AWARE)
 template <>
 struct CommunicationDevice<Device::GPU> {
   static constexpr Device value = Device::CPU;

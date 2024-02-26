@@ -39,7 +39,7 @@ option(DLAF_WITH_MKL_LEGACY "Enable MKL as provider for BLAS and LAPACK" OFF)
 option(DLAF_WITH_CUDA "Enable CUDA support" OFF)
 option(DLAF_WITH_HIP "Enable HIP support" OFF)
 cmake_dependent_option(
-  DLAF_WITH_MPI_GPU_SUPPORT "Enable MPI GPU support" OFF "DLAF_WITH_CUDA OR DLAF_WITH_HIP" OFF
+  DLAF_WITH_MPI_GPU_AWARE "Enable GPU-aware MPI" OFF "DLAF_WITH_CUDA OR DLAF_WITH_HIP" OFF
 )
 cmake_dependent_option(
   DLAF_WITH_MPI_GPU_SUPPORT_FORCE_CONTIGUOUS "Force GPU buffers to be contiguous before communicating"

@@ -27,6 +27,8 @@
 #include <dlaf/communication/init.h>
 #include <dlaf/communication/kernels/broadcast.h>
 #include <dlaf/communication/kernels/internal/broadcast.h>
+#include <dlaf/communication/kernels/internal/p2p.h>
+#include <dlaf/communication/kernels/p2p.h>
 #include <dlaf/init.h>
 #include <dlaf/matrix/copy.h>
 #include <dlaf/matrix/matrix.h>
@@ -41,7 +43,7 @@ using pika::execution::experimental::start_detached;
 using dlaf::Backend;
 using dlaf::DefaultDevice_v;
 using dlaf::Device;
-using dlaf::GlobalElementSize;
+using dlaf::LocalElementSize;
 using dlaf::LocalTileIndex;
 using dlaf::Matrix;
 using dlaf::SizeType;
@@ -52,6 +54,7 @@ using dlaf::comm::Size2D;
 using dlaf::common::iterate_range2d;
 using dlaf::common::Ordering;
 using dlaf::internal::RequireContiguous;
+using dlaf::matrix::local_matrix;
 
 struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
@@ -69,6 +72,41 @@ struct Options
   Options& operator=(Options&&) = default;
   Options& operator=(const Options&) = default;
 };
+}
+
+template <Device D, class T>
+Matrix<T, D> get_matrix_on_device_sync(Matrix<const T, Device::CPU>& matrix_ref, Communicator& world) {
+  DLAF_ASSERT(local_matrix(matrix_ref), matrix_ref);
+  auto layout = colMajorLayout(matrix_ref.distribution().local_size(), matrix_ref.block_size(),
+                               matrix_ref.size().rows());
+  Matrix<T, D> matrix(matrix_ref.distribution(), layout);
+  copy(matrix_ref, matrix);
+  matrix.waitLocalTiles();
+  DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
+
+  return matrix;
+}
+
+std::string string_default(std::string name, Device D) {
+  std::stringstream s;
+  s << name << " " << D << " Default";
+  return s.str();
+}
+
+std::string string_full(std::string name, Device D, Device comm_device,
+                        RequireContiguous require_contiguous_send,
+                        RequireContiguous require_contiguous_recv) {
+  std::stringstream s;
+  s << name << " " << D << ":" << comm_device;
+  if (require_contiguous_send == RequireContiguous::Yes)
+    s << " contiguous-send    ";
+  else
+    s << " non-contiguous-send";
+  if (require_contiguous_recv == RequireContiguous::Yes)
+    s << " contiguous-recv    ";
+  else
+    s << " non-contiguous-recv";
+  return s.str();
 }
 
 void output(int64_t run_index, std::string name, double elapsed_time, int rank, const Options& opts,
@@ -99,10 +137,9 @@ void benchmark_broadcast(int64_t run_index, const Options& opts, Communicator& w
                          CommPipeline&& pcomm, Matrix<const T, Device::CPU>& matrix_ref) {
   using dlaf::comm::scheduleRecvBcast;
   using dlaf::comm::scheduleSendBcast;
-  Matrix<T, DefaultDevice_v<B>> matrix(matrix_ref.distribution());  // TODO Fix Scalapack layout.
-  copy(matrix_ref, matrix);
-  matrix.waitLocalTiles();
-  DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
+
+  constexpr Device D = DefaultDevice_v<B>;
+  Matrix<T, D> matrix = get_matrix_on_device_sync<D>(matrix_ref, world);
 
   dlaf::common::Timer<> timeit;
 
@@ -121,7 +158,8 @@ void benchmark_broadcast(int64_t run_index, const Options& opts, Communicator& w
   matrix.waitLocalTiles();
   DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
-  output(run_index, "Broadcast Default", timeit.elapsed(), world.rank(), opts, pcomm.size_2d());
+  std::string s = string_default("Broadcast", D);
+  output(run_index, std::move(s), timeit.elapsed(), world.rank(), opts, pcomm.size_2d());
 }
 
 template <Device comm_device, RequireContiguous require_contiguous_send,
@@ -130,10 +168,9 @@ void benchmark_internal_broadcast(int64_t run_index, const Options& opts, Commun
                                   CommPipeline&& pcomm, Matrix<const T, Device::CPU>& matrix_ref) {
   using dlaf::comm::internal::scheduleRecvBcast;
   using dlaf::comm::internal::scheduleSendBcast;
-  Matrix<T, DefaultDevice_v<B>> matrix(matrix_ref.distribution());  // TODO Fix Scalapack layout.
-  copy(matrix_ref, matrix);
-  matrix.waitLocalTiles();
-  DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
+
+  constexpr Device D = DefaultDevice_v<B>;
+  Matrix<T, D> matrix = get_matrix_on_device_sync<D>(matrix_ref, world);
 
   dlaf::common::Timer<> timeit;
 
@@ -154,18 +191,74 @@ void benchmark_internal_broadcast(int64_t run_index, const Options& opts, Commun
   matrix.waitLocalTiles();
   DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
-  std::stringstream s;
-  s << "Broadcast " << DefaultDevice_v<B> << ":" << comm_device;
-  if (require_contiguous_send == RequireContiguous::Yes)
-    s << " contiguous-send    ";
-  else
-    s << " non-contiguous-send";
-  if (require_contiguous_recv == RequireContiguous::Yes)
-    s << " contiguous-recv    ";
-  else
-    s << " non-contiguous-recv";
+  std::string s =
+      string_full("Broadcast", D, comm_device, require_contiguous_send, require_contiguous_recv);
 
-  output(run_index, s.str(), timeit.elapsed(), world.rank(), opts, pcomm.size_2d());
+  output(run_index, std::move(s), timeit.elapsed(), world.rank(), opts, pcomm.size_2d());
+}
+
+template <Backend B, class CommPipeline, class T>
+void benchmark_p2p(int64_t run_index, const Options& opts, Communicator& world, CommPipeline&& pcomm,
+                   Matrix<const T, Device::CPU>& matrix_ref) {
+  using dlaf::comm::scheduleRecv;
+  using dlaf::comm::scheduleSend;
+
+  constexpr Device D = DefaultDevice_v<B>;
+  Matrix<T, D> matrix = get_matrix_on_device_sync<D>(matrix_ref, world);
+
+  dlaf::common::Timer<> timeit;
+
+  if (world.rank() == 0) {
+    auto p2p = [](auto comm, auto ro_tile) {
+      return scheduleSend(std::move(comm), 1, 0, std::move(ro_tile));
+    };
+    benchmark_ro(pcomm, matrix, p2p);
+  }
+  else if (world.rank() == 1) {
+    auto p2p = [](auto comm, auto rw_tile) {
+      return scheduleRecv(std::move(comm), 0, 0, std::move(rw_tile));
+    };
+    benchmark_rw(pcomm, matrix, p2p);
+  }
+  matrix.waitLocalTiles();
+  DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
+
+  std::string s = string_default("P2P", D);
+  output(run_index, std::move(s), timeit.elapsed(), world.rank(), opts, pcomm.size_2d());
+}
+
+template <Device comm_device, RequireContiguous require_contiguous_send,
+          RequireContiguous require_contiguous_recv, Backend B, class CommPipeline, class T>
+void benchmark_internal_p2p(int64_t run_index, const Options& opts, Communicator& world,
+                            CommPipeline&& pcomm, Matrix<const T, Device::CPU>& matrix_ref) {
+  using dlaf::comm::internal::scheduleRecv;
+  using dlaf::comm::internal::scheduleSend;
+
+  constexpr Device D = DefaultDevice_v<B>;
+  Matrix<T, D> matrix = get_matrix_on_device_sync<D>(matrix_ref, world);
+
+  dlaf::common::Timer<> timeit;
+
+  if (world.rank() == 0) {
+    auto p2p = [](auto comm, auto ro_tile) {
+      return scheduleSend<comm_device, require_contiguous_send>(std::move(comm), 1, 0,
+                                                                std::move(ro_tile));
+    };
+    benchmark_ro(pcomm, matrix, p2p);
+  }
+  else if (world.rank() == 1) {
+    auto p2p = [](auto comm, auto rw_tile) {
+      return scheduleRecv<comm_device, require_contiguous_recv>(std::move(comm), 0, 0,
+                                                                std::move(rw_tile));
+    };
+    benchmark_rw(pcomm, matrix, p2p);
+  }
+  matrix.waitLocalTiles();
+  DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
+
+  std::string s = string_full("P2P", D, comm_device, require_contiguous_send, require_contiguous_recv);
+
+  output(run_index, std::move(s), timeit.elapsed(), world.rank(), opts, pcomm.size_2d());
 }
 
 struct communicationMiniapp {
@@ -183,13 +276,13 @@ struct communicationMiniapp {
     }
 
     // Allocate memory for the matrix
-    GlobalElementSize matrix_size(opts.m, opts.m);
+    LocalElementSize matrix_size(opts.m, opts.m);
     TileElementSize block_size(opts.mb, opts.mb);
 
-    ConstHostMatrixType matrix_ref = [matrix_size, block_size, &comm_grid]() {
+    ConstHostMatrixType matrix_ref = [matrix_size, block_size]() {
       using dlaf::matrix::util::set_random;
 
-      HostMatrixType random(matrix_size, block_size, comm_grid);  // TODO Fix Scalapack layout.
+      HostMatrixType random(matrix_size, block_size);
       set_random(random);
 
       return random;
@@ -216,6 +309,26 @@ struct communicationMiniapp {
       benchmark_internal_broadcast<Device::GPU, RequireContiguous::No, RequireContiguous::Yes, B>(
           run_index, opts, world, comm_grid.full_communicator_pipeline(), matrix_ref);
       benchmark_internal_broadcast<Device::GPU, RequireContiguous::Yes, RequireContiguous::Yes, B>(
+          run_index, opts, world, comm_grid.full_communicator_pipeline(), matrix_ref);
+#endif
+
+      benchmark_p2p<B>(run_index, opts, world, comm_grid.full_communicator_pipeline(), matrix_ref);
+      benchmark_internal_p2p<Device::CPU, RequireContiguous::No, RequireContiguous::No, B>(
+          run_index, opts, world, comm_grid.full_communicator_pipeline(), matrix_ref);
+      benchmark_internal_p2p<Device::CPU, RequireContiguous::Yes, RequireContiguous::No, B>(
+          run_index, opts, world, comm_grid.full_communicator_pipeline(), matrix_ref);
+      benchmark_internal_p2p<Device::CPU, RequireContiguous::No, RequireContiguous::Yes, B>(
+          run_index, opts, world, comm_grid.full_communicator_pipeline(), matrix_ref);
+      benchmark_internal_p2p<Device::CPU, RequireContiguous::Yes, RequireContiguous::Yes, B>(
+          run_index, opts, world, comm_grid.full_communicator_pipeline(), matrix_ref);
+#ifdef DLAF_WITH_MPI_GPU_SUPPORT
+      benchmark_internal_p2p<Device::GPU, RequireContiguous::No, RequireContiguous::No, B>(
+          run_index, opts, world, comm_grid.full_communicator_pipeline(), matrix_ref);
+      benchmark_internal_p2p<Device::GPU, RequireContiguous::Yes, RequireContiguous::No, B>(
+          run_index, opts, world, comm_grid.full_communicator_pipeline(), matrix_ref);
+      benchmark_internal_p2p<Device::GPU, RequireContiguous::No, RequireContiguous::Yes, B>(
+          run_index, opts, world, comm_grid.full_communicator_pipeline(), matrix_ref);
+      benchmark_internal_p2p<Device::GPU, RequireContiguous::Yes, RequireContiguous::Yes, B>(
           run_index, opts, world, comm_grid.full_communicator_pipeline(), matrix_ref);
 #endif
     }

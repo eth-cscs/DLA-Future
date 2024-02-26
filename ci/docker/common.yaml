@@ -27,7 +27,7 @@ packages:
       - '~openmp'
       - '~rocm'
   intel-oneapi-mkl:
-    variants:
+    require:
       - 'threads=openmp'
   openblas:
     variants:

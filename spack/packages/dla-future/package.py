@@ -46,13 +46,13 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     )
 
     variant(
-        "mpi-gpu-support",
+        "mpi-gpu-aware",
         default=False,
         when="@master",
         description="Use MPI with GPU support for communication.",
     )
     conflicts(
-        "+mpi-gpu-support",
+        "+mpi-gpu-aware",
         when="~cuda ~rocm",
         msg="MPI GPU support requires +cuda or +rocm",
     )
@@ -250,7 +250,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
         args.append(self.define_from_variant("DLAF_WITH_SCALAPACK", "scalapack"))
 
-        args.append(self.define_from_variant("DLAF_WITH_MPI_GPU_SUPPORT", "mpi-gpu-support"))
+        args.append(self.define_from_variant("DLAF_WITH_MPI_GPU_SUPPORT", "mpi-gpu-aware"))
         args.append(self.define("DLAF_WITH_MPI_GPU_SUPPORT_FORCE_CONTIGUOUS", True))
 
         # CUDA/HIP

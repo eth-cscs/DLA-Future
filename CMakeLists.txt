@@ -42,7 +42,7 @@ cmake_dependent_option(
   DLAF_WITH_MPI_GPU_AWARE "Enable GPU-aware MPI" OFF "DLAF_WITH_CUDA OR DLAF_WITH_HIP" OFF
 )
 cmake_dependent_option(
-  DLAF_WITH_MPI_GPU_SUPPORT_FORCE_CONTIGUOUS "Force GPU buffers to be contiguous before communicating"
+  DLAF_WITH_MPI_GPU_FORCE_CONTIGUOUS "Force GPU buffers to be contiguous before communicating"
   ON "DLAF_WITH_MPI_GPU_SUPPORT" OFF
 )
 option(DLAF_WITH_HDF5 "Enable HDF5 support" OFF)

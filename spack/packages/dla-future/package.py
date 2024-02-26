@@ -251,7 +251,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         args.append(self.define_from_variant("DLAF_WITH_SCALAPACK", "scalapack"))
 
         args.append(self.define_from_variant("DLAF_WITH_MPI_GPU_AWARE", "mpi-gpu-aware"))
-        args.append(self.define("DLAF_WITH_MPI_GPU_SUPPORT_FORCE_CONTIGUOUS", True))
+        args.append(self.define("DLAF_WITH_MPI_GPU_FORCE_CONTIGUOUS", True))
 
         # CUDA/HIP
         args.append(self.define_from_variant("DLAF_WITH_CUDA", "cuda"))

@@ -62,7 +62,7 @@ template <class CommSender, class Sender>
   constexpr Device comm_device_type = CommunicationDevice_v<in_device_type>;
 
   constexpr auto require_contiguous =
-#if defined(DLAF_WITH_MPI_GPU_AWARE) && defined(DLAF_WITH_MPI_GPU_SUPPORT_FORCE_CONTIGUOUS)
+#if defined(DLAF_WITH_MPI_GPU_AWARE) && defined(DLAF_WITH_MPI_GPU_FORCE_CONTIGUOUS)
       comm_device_type == Device::GPU ? RequireContiguous::Yes :
 #endif
                                       RequireContiguous::No;
@@ -118,7 +118,7 @@ template <class T, Device D, class CommSender>
   constexpr Device comm_device_type = CommunicationDevice_v<in_device_type>;
 
   constexpr auto require_contiguous =
-#if defined(DLAF_WITH_MPI_GPU_AWARE) && defined(DLAF_WITH_MPI_GPU_SUPPORT_FORCE_CONTIGUOUS)
+#if defined(DLAF_WITH_MPI_GPU_AWARE) && defined(DLAF_WITH_MPI_GPU_FORCE_CONTIGUOUS)
       comm_device_type == Device::GPU ? RequireContiguous::Yes :
 #endif
                                       RequireContiguous::No;

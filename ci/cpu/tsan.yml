@@ -26,6 +26,7 @@ cpu tsan test:
   needs:
     - cpu tsan build
   variables:
+    TSAN_OPTIONS: "halt_on_error=1"
     # Override use of libSegFault, not necessary with sanitizers
     LD_PRELOAD: ""
   trigger:

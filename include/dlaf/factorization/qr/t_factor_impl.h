@@ -159,7 +159,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 
         // This assumes that elements in taus are contiguous, i.e. that it is a column vector of size k
         whip::memcpy_2d_async(tile_t.ptr(), to_sizet(tile_t.ld() + 1) * sizeof(T), taus.ptr(), sizeof(T),
-                              sizeof(T), to_sizet(k), whip::memcpy_default, stream);
+                              sizeof(T), to_sizet(k), whip::memcpy_host_to_device, stream);
       }
 
       for (SizeType j = 0; j < k; ++j) {

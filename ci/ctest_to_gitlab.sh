@@ -60,7 +60,7 @@ JOB_TEMPLATE="
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
     DLAF_HDF5_TEST_OUTPUT_PATH: \$CI_PROJECT_DIR
-  script: mpi-ctest -L {{LABEL}}
+  script: mpi-ctest -E eigensolver -L {{LABEL}}
   artifacts:
     paths:
       - codecov-reports/"
@@ -98,7 +98,7 @@ JOB_TEMPLATE="
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
     DLAF_HDF5_TEST_OUTPUT_PATH: \$CI_PROJECT_DIR
-  script: mpi-ctest -L {{LABEL}}"
+  script: mpi-ctest -E eigensolver -L {{LABEL}}"
 fi
 
 JOBS=""

@@ -292,11 +292,11 @@ public:
             const auto index = std::max(SizeType{0}, source.size().cols() - band_size_);
             if (index > 0) {
               gpulapack::lacpy(General, band_size_ + 1, index, source.ptr(), source.ld() + 1, ptr(0, j),
-                               ld() + 1, whip::memcpy_device_to_host, stream);
+                               ld() + 1, stream);
             }
             const auto size = std::min(band_size_, source.size().cols());
             gpulapack::lacpy(Lower, size, size, source.ptr({index, index}), source.ld(),
-                             ptr(0, j + index), ld(), whip::memcpy_device_to_host, stream);
+                             ptr(0, j + index), ld(), stream);
           },
           std::move(source));
     }
@@ -367,13 +367,11 @@ public:
             const auto index = source.size().cols() - band_size_;
             const auto size = std::min(band_size_, source.size().rows());
             auto dest = ptr(band_size_, j + index);
-            gpulapack::lacpy(Upper, size, size, source.ptr({0, index}), source.ld(), dest, ld(),
-                             whip::memcpy_device_to_host, stream);
+            gpulapack::lacpy(Upper, size, size, source.ptr({0, index}), source.ld(), dest, ld(), stream);
             if (band_size_ > size) {
               const auto size2 = band_size_ - size;
               gpulapack::lacpy(General, source.size().rows(), size2, source.ptr({0, index + size}),
-                               source.ld(), dest + ld() * size, ld(), whip::memcpy_device_to_host,
-                               stream);
+                               source.ld(), dest + ld() * size, ld(), stream);
             }
           },
           std::move(source));

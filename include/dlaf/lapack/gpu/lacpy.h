@@ -22,12 +22,12 @@ namespace dlaf::gpulapack {
 
 template <class T>
 void lacpy(const blas::Uplo uplo, const SizeType m, const SizeType n, const T* a, const SizeType lda,
-           T* b, const SizeType ldb, const whip::memcpy_kind kind, const whip::stream_t stream);
+           T* b, const SizeType ldb, const whip::stream_t stream);
 
 #define DLAF_CUBLAS_LACPY_ETI(kword, Type)                                                            \
   kword template void lacpy(const blas::Uplo uplo, const SizeType m, const SizeType n, const Type* a, \
                             const SizeType lda, Type* b, const SizeType ldb,                          \
-                            const whip::memcpy_kind kind, const whip::stream_t stream)
+                            const whip::stream_t stream)
 
 DLAF_CUBLAS_LACPY_ETI(extern, float);
 DLAF_CUBLAS_LACPY_ETI(extern, double);

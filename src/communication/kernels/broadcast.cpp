@@ -51,7 +51,7 @@ template <class CommSender, class TileSender>
   // the temporary tile does not need to be copied back to the input since the
   // data is not changed by the send. A send does not require contiguous memory.
   constexpr auto require_contiguous =
-#if defined(DLAF_WITH_MPI_GPU_SUPPORT) && defined(DLAF_WITH_MPI_GPU_SUPPORT_FORCE_CONTIGUOUS)
+#if defined(DLAF_WITH_MPI_GPU_AWARE) && defined(DLAF_WITH_MPI_GPU_FORCE_CONTIGUOUS)
       comm_device_type == Device::GPU ? RequireContiguous::Yes :
 #endif
                                       RequireContiguous::No;
@@ -107,7 +107,7 @@ template <class T, Device D, class Comm>
   // back from the temporary tile to the input. A receive does not require
   // contiguous memory.
   constexpr auto require_contiguous =
-#if defined(DLAF_WITH_MPI_GPU_SUPPORT) && defined(DLAF_WITH_MPI_GPU_SUPPORT_FORCE_CONTIGUOUS)
+#if defined(DLAF_WITH_MPI_GPU_AWARE) && defined(DLAF_WITH_MPI_GPU_FORCE_CONTIGUOUS)
       comm_device_type == Device::GPU ? RequireContiguous::Yes :
 #endif
                                       RequireContiguous::No;

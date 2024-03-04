@@ -1334,7 +1334,7 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
     // * Why is it different between MC and GPU?
     // As said above, the problem is related to the communication. But the communication is not said
     // to be an atomic operation happening in a single task. It might have to create a copy to
-    // a buffer more suitable for the communication (e.g. GPU -> CPU if MPI GPU support is not
+    // a buffer more suitable for the communication (e.g. GPU -> CPU if GPU-aware MPI is not
     // available).
     //
     // And in order to not be blocked, it must be ensured that the actual communication task has

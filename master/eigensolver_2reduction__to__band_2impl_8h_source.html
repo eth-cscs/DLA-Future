@@ -1405,7 +1405,7 @@ $(function() {
 <div class="line"><a name="l01334"></a><span class="lineno"> 1334</span>&#160;    <span class="comment">// * Why is it different between MC and GPU?</span></div>
 <div class="line"><a name="l01335"></a><span class="lineno"> 1335</span>&#160;    <span class="comment">// As said above, the problem is related to the communication. But the communication is not said</span></div>
 <div class="line"><a name="l01336"></a><span class="lineno"> 1336</span>&#160;    <span class="comment">// to be an atomic operation happening in a single task. It might have to create a copy to</span></div>
-<div class="line"><a name="l01337"></a><span class="lineno"> 1337</span>&#160;    <span class="comment">// a buffer more suitable for the communication (e.g. GPU -&gt; CPU if MPI GPU support is not</span></div>
+<div class="line"><a name="l01337"></a><span class="lineno"> 1337</span>&#160;    <span class="comment">// a buffer more suitable for the communication (e.g. GPU -&gt; CPU if GPU-aware MPI is not</span></div>
 <div class="line"><a name="l01338"></a><span class="lineno"> 1338</span>&#160;    <span class="comment">// available).</span></div>
 <div class="line"><a name="l01339"></a><span class="lineno"> 1339</span>&#160;    <span class="comment">//</span></div>
 <div class="line"><a name="l01340"></a><span class="lineno"> 1340</span>&#160;    <span class="comment">// And in order to not be blocked, it must be ensured that the actual communication task has</span></div>

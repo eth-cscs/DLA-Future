@@ -39,6 +39,8 @@ RUN pushd ${SOURCE}/miniapp && \
 # Prune and bundle binaries
 RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
     export TEST_BINARIES=`PATH=${SOURCE}/ci:$PATH ctest --show-only=json-v1 | jq '.tests | map(.command | .[] | select(contains("check-threads") | not)) | .[]' | tr -d \"` && \
+    LIBASAN=$(find /usr/lib -name libclang_rt.asan-x86_64.so) && \
+    if [[ -n "${LIBASAN}" ]]; then export LD_LIBRARY_PATH=$(dirname ${LIBASAN}):${LD_LIBRARY_PATH}; fi && \
     echo "Binary sizes:" && \
     ls -lh ${TEST_BINARIES} && \
     ls -lh src/lib* && \

@@ -139,6 +139,7 @@ TYPED_TEST(MathUtilTest, ptrdiff_t_Arithmetic_Sum) {
   constexpr auto arithmetic_size = sizeof(SizeType);
 
   TypeParam a, b;
+  ArithmeticT c = std::numeric_limits<ArithmeticT>::max() / 2;
 
   if (type_size < arithmetic_size) {
     a = std::numeric_limits<TypeParam>::max();
@@ -155,8 +156,8 @@ TYPED_TEST(MathUtilTest, ptrdiff_t_Arithmetic_Sum) {
   }
 
   {
-    auto expected_result = static_cast<ArithmeticT>(a) + std::numeric_limits<ArithmeticT>::max();
-    EXPECT_EQ(expected_result, util::ptrdiff_t::sum(a, std::numeric_limits<ArithmeticT>::max()));
+    auto expected_result = static_cast<ArithmeticT>(a) + c;
+    EXPECT_EQ(expected_result, util::ptrdiff_t::sum(a, c));
   }
 }
 
@@ -168,7 +169,7 @@ TYPED_TEST(MathUtilTest, ptrdiff_t_Arithmetic_Mul) {
 
   TypeParam a, b;
 
-  if (type_size < arithmetic_size) {
+  if (type_size * 2 < arithmetic_size) {
     a = std::numeric_limits<TypeParam>::max();
     b = std::numeric_limits<TypeParam>::max();
   }

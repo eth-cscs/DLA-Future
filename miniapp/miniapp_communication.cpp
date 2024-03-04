@@ -208,13 +208,13 @@ void benchmark_p2p(int64_t run_index, const Options& opts, Communicator& world, 
 
   dlaf::common::Timer<> timeit;
 
-  if (world.rank() == 0) {
+  if (pcomm.rank() == 0) {
     auto p2p = [](auto comm, auto ro_tile) {
       return scheduleSend(std::move(comm), 1, 0, std::move(ro_tile));
     };
     benchmark_ro(pcomm, matrix, p2p);
   }
-  else if (world.rank() == 1) {
+  else if (pcomm.rank() == 1) {
     auto p2p = [](auto comm, auto rw_tile) {
       return scheduleRecv(std::move(comm), 0, 0, std::move(rw_tile));
     };
@@ -239,14 +239,14 @@ void benchmark_internal_p2p(int64_t run_index, const Options& opts, Communicator
 
   dlaf::common::Timer<> timeit;
 
-  if (world.rank() == 0) {
+  if (pcomm.rank() == 0) {
     auto p2p = [](auto comm, auto ro_tile) {
       return scheduleSend<comm_device, require_contiguous_send>(std::move(comm), 1, 0,
                                                                 std::move(ro_tile));
     };
     benchmark_ro(pcomm, matrix, p2p);
   }
-  else if (world.rank() == 1) {
+  else if (pcomm.rank() == 1) {
     auto p2p = [](auto comm, auto rw_tile) {
       return scheduleRecv<comm_device, require_contiguous_recv>(std::move(comm), 0, 0,
                                                                 std::move(rw_tile));

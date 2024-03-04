@@ -58,8 +58,9 @@ template <Device comm_device_type, dlaf::internal::RequireContiguous require_con
     return whenAllLift(std::move(pcomm), std::cref(tile_comm)) | transformMPI(sendBcast_o);
   };
 
-  static_assert(comm_device_type == CommunicationDevice_v<D> || comm_device_type == Device::CPU,
-                "comm_device_type can be CPU, or GPU (only if DLAF_WITH_MPI_GPU_SUPPORT is True)");
+#if !defined(DLAF_WITH_MPI_GPU_SUPPORT)
+  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_SUPPORT=off, MPI accepts only CPU memory.");
+#endif
 
   // The input tile must be copied to the temporary tile used for the send, but
   // the temporary tile does not need to be copied back to the input since the
@@ -104,8 +105,9 @@ template <Device comm_device_type, dlaf::internal::RequireContiguous require_con
 #pragma GCC diagnostic pop
 #endif
 
-  static_assert(comm_device_type == CommunicationDevice_v<D> || comm_device_type == Device::CPU,
-                "comm_device_type can be CPU, or GPU (only if DLAF_WITH_MPI_GPU_SUPPORT is True)");
+#if !defined(DLAF_WITH_MPI_GPU_SUPPORT)
+  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_SUPPORT=off, MPI accepts only CPU memory.");
+#endif
 
   // Since this is a receive we don't need to copy the input to the temporary
   // tile (the input tile may be uninitialized). The received data is copied

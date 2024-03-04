@@ -62,8 +62,9 @@ template <Device comm_device_type, dlaf::internal::RequireContiguous require_con
     return whenAllLift(std::move(pcomm), dest, tag, std::cref(tile_comm)) | transformMPI(send_o);
   };
 
-  static_assert(comm_device_type == CommunicationDevice_v<D> || comm_device_type == Device::CPU,
-                "comm_device_type can be CPU, or GPU (only if DLAF_WITH_MPI_GPU_SUPPORT is True)");
+#if !defined(DLAF_WITH_MPI_GPU_SUPPORT)
+  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_SUPPORT=off, MPI accepts only CPU memory.");
+#endif
 
   return withTemporaryTile<comm_device_type, CopyToDestination::Yes, CopyFromDestination::No,
                            require_contiguous>(std::move(tile), std::move(send));
@@ -98,8 +99,9 @@ template <Device comm_device_type, dlaf::internal::RequireContiguous require_con
     return whenAllLift(std::move(pcomm), source, tag, std::cref(tile_comm)) | transformMPI(recv_o);
   };
 
-  static_assert(comm_device_type == CommunicationDevice_v<D> || comm_device_type == Device::CPU,
-                "comm_device_type can be CPU, or GPU (only if DLAF_WITH_MPI_GPU_SUPPORT is True)");
+#if !defined(DLAF_WITH_MPI_GPU_SUPPORT)
+  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_SUPPORT=off, MPI accepts only CPU memory.");
+#endif
 
   return withTemporaryTile<comm_device_type, CopyToDestination::No, CopyFromDestination::Yes,
                            require_contiguous>(std::move(tile), std::move(recv));

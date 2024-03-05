@@ -30,7 +30,9 @@
 #include <dlaf/communication/kernels/internal/all_reduce.h>
 #include <dlaf/communication/kernels/internal/broadcast.h>
 #include <dlaf/communication/kernels/internal/p2p.h>
+#include <dlaf/communication/kernels/internal/reduce.h>
 #include <dlaf/communication/kernels/p2p.h>
+#include <dlaf/communication/kernels/reduce.h>
 #include <dlaf/init.h>
 #include <dlaf/matrix/copy.h>
 #include <dlaf/matrix/matrix.h>
@@ -405,6 +407,72 @@ void benchmark_internal_p2p(int64_t run_index, const Options& opts, Communicator
   output(run_index, std::move(s), t, world.rank(), opts, pcomm.size_2d());
 }
 
+template <Backend B, class CommPipeline, class T>
+void benchmark_reduce(int64_t run_index, const Options& opts, Communicator& world, CommPipeline&& pcomm,
+                      Matrix<const T, Device::CPU>& matrix_ref) {
+  using dlaf::comm::scheduleReduceRecvInPlace;
+  using dlaf::comm::scheduleReduceSend;
+
+  constexpr Device D = DefaultDevice_v<B>;
+  Matrix<T, D> matrix = get_matrix_on_device_sync<D>(matrix_ref);
+
+  DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
+  dlaf::common::Timer<> timeit;
+
+  if (world.rank() == 0) {
+    auto reduce = [](auto comm, auto rw_tile) {
+      return scheduleReduceRecvInPlace(std::move(comm), MPI_SUM, std::move(rw_tile));
+    };
+    benchmark_rw(pcomm, matrix, reduce);
+  }
+  else {
+    auto reduce = [](auto comm, auto ro_tile) {
+      return scheduleReduceSend(std::move(comm), 0, MPI_SUM, std::move(ro_tile));
+    };
+    benchmark_ro(pcomm, matrix, reduce);
+  }
+  matrix.waitLocalTiles();
+  DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
+  auto t = timeit.elapsed();
+
+  std::string s = string_default("Reduce", D);
+  output(run_index, std::move(s), t, world.rank(), opts, pcomm.size_2d());
+}
+
+template <Device D_comm, Backend B, class CommPipeline, class T>
+void benchmark_internal_reduce(int64_t run_index, const Options& opts, Communicator& world,
+                               CommPipeline&& pcomm, Matrix<const T, Device::CPU>& matrix_ref) {
+  using dlaf::comm::internal::scheduleReduceRecvInPlace;
+  using dlaf::comm::internal::scheduleReduceSend;
+
+  constexpr Device D = DefaultDevice_v<B>;
+
+  Matrix<T, D> matrix = get_matrix_on_device_sync<D>(matrix_ref);
+
+  DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
+  dlaf::common::Timer<> timeit;
+
+  if (world.rank() == 0) {
+    auto reduce = [](auto comm, auto rw_tile) {
+      return scheduleReduceRecvInPlace<D_comm>(std::move(comm), MPI_SUM, std::move(rw_tile));
+    };
+    benchmark_rw(pcomm, matrix, reduce);
+  }
+  else {
+    auto reduce = [](auto comm, auto ro_tile) {
+      return scheduleReduceSend<D_comm>(std::move(comm), 0, MPI_SUM, std::move(ro_tile));
+    };
+    benchmark_ro(pcomm, matrix, reduce);
+  }
+  matrix.waitLocalTiles();
+  DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
+  auto t = timeit.elapsed();
+
+  std::string s = string_full("Reduce", D, D_comm, RequireContiguous::Yes, RequireContiguous::Yes);
+
+  output(run_index, std::move(s), t, world.rank(), opts, pcomm.size_2d());
+}
+
 struct communicationMiniapp {
   template <Backend B, typename T>
   static void run(const Options& opts) {
@@ -494,6 +562,14 @@ struct communicationMiniapp {
           run_index, opts, world, comm_grid.full_communicator_pipeline(), matrix_ref);
       benchmark_internal_p2p<Device::GPU, RequireContiguous::Yes, RequireContiguous::Yes, B>(
           run_index, opts, world, comm_grid.full_communicator_pipeline(), matrix_ref);
+#endif
+
+      benchmark_reduce<B>(run_index, opts, world, comm_grid.full_communicator_pipeline(), matrix_ref);
+      benchmark_internal_reduce<Device::CPU, B>(run_index, opts, world,
+                                                comm_grid.full_communicator_pipeline(), matrix_ref);
+#ifdef DLAF_WITH_MPI_GPU_SUPPORT
+      benchmark_internal_reduce<Device::GPU, B>(run_index, opts, world,
+                                                comm_grid.full_communicator_pipeline(), matrix_ref);
 #endif
     }
   }

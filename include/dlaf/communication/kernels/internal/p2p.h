@@ -37,8 +37,8 @@ namespace dlaf::comm::internal {
 template <class T, Device D>
 void send(const Communicator& comm, IndexT_MPI dest, IndexT_MPI tag,
           const matrix::Tile<const T, D>& tile, MPI_Request* req) {
-#if !defined(DLAF_WITH_MPI_GPU_SUPPORT)
-  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_SUPPORT=off, MPI accepts only CPU memory.");
+#if !defined(DLAF_WITH_MPI_GPU_AWARE)
+  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
 #endif
 
   auto msg = comm::make_message(common::make_data(tile));
@@ -62,8 +62,8 @@ template <Device D_comm, dlaf::internal::RequireContiguous require_contiguous, c
     return whenAllLift(std::move(pcomm), dest, tag, std::cref(tile_comm)) | transformMPI(send_o);
   };
 
-#if !defined(DLAF_WITH_MPI_GPU_SUPPORT)
-  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_SUPPORT=off, MPI accepts only CPU memory.");
+#if !defined(DLAF_WITH_MPI_GPU_AWARE)
+  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
 #endif
 
   return withTemporaryTile<D_comm, CopyToDestination::Yes, CopyFromDestination::No, require_contiguous>(
@@ -74,8 +74,8 @@ template <Device D_comm, dlaf::internal::RequireContiguous require_contiguous, c
 template <class T, Device D>
 auto recv(const Communicator& comm, IndexT_MPI source, IndexT_MPI tag, const matrix::Tile<T, D>& tile,
           MPI_Request* req) {
-#if !defined(DLAF_WITH_MPI_GPU_SUPPORT)
-  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_SUPPORT=off, MPI accepts only CPU memory.");
+#if !defined(DLAF_WITH_MPI_GPU_AWARE)
+  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
 #endif
 
   auto msg = comm::make_message(common::make_data(tile));
@@ -99,8 +99,8 @@ template <Device D_comm, dlaf::internal::RequireContiguous require_contiguous, c
     return whenAllLift(std::move(pcomm), source, tag, std::cref(tile_comm)) | transformMPI(recv_o);
   };
 
-#if !defined(DLAF_WITH_MPI_GPU_SUPPORT)
-  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_SUPPORT=off, MPI accepts only CPU memory.");
+#if !defined(DLAF_WITH_MPI_GPU_AWARE)
+  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
 #endif
 
   return withTemporaryTile<D_comm, CopyToDestination::No, CopyFromDestination::Yes, require_contiguous>(

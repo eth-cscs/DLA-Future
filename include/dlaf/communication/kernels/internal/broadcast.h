@@ -33,8 +33,8 @@
 namespace dlaf::comm::internal {
 template <class T, Device D>
 void sendBcast(const Communicator& comm, const matrix::Tile<const T, D>& tile, MPI_Request* req) {
-#if !defined(DLAF_WITH_MPI_GPU_SUPPORT)
-  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_SUPPORT=off, MPI accepts only CPU memory.");
+#if !defined(DLAF_WITH_MPI_GPU_AWARE)
+  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
 #endif
 
   auto msg = comm::make_message(common::make_data(tile));
@@ -58,8 +58,8 @@ template <Device D_comm, dlaf::internal::RequireContiguous require_contiguous, c
     return whenAllLift(std::move(pcomm), std::cref(tile_comm)) | transformMPI(sendBcast_o);
   };
 
-#if !defined(DLAF_WITH_MPI_GPU_SUPPORT)
-  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_SUPPORT=off, MPI accepts only CPU memory.");
+#if !defined(DLAF_WITH_MPI_GPU_AWARE)
+  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
 #endif
 
   // The input tile must be copied to the temporary tile used for the send, but
@@ -72,8 +72,8 @@ template <Device D_comm, dlaf::internal::RequireContiguous require_contiguous, c
 template <class T, Device D>
 void recvBcast(const Communicator& comm, comm::IndexT_MPI root_rank, const matrix::Tile<T, D>& tile,
                MPI_Request* req) {
-#if !defined(DLAF_WITH_MPI_GPU_SUPPORT)
-  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_SUPPORT=off, MPI accepts only CPU memory.");
+#if !defined(DLAF_WITH_MPI_GPU_AWARE)
+  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
 #endif
 
   auto msg = comm::make_message(common::make_data(tile));
@@ -105,8 +105,8 @@ template <Device D_comm, dlaf::internal::RequireContiguous require_contiguous, c
 #pragma GCC diagnostic pop
 #endif
 
-#if !defined(DLAF_WITH_MPI_GPU_SUPPORT)
-  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_SUPPORT=off, MPI accepts only CPU memory.");
+#if !defined(DLAF_WITH_MPI_GPU_AWARE)
+  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
 #endif
 
   // Since this is a receive we don't need to copy the input to the temporary

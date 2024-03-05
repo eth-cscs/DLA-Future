@@ -39,7 +39,7 @@ template <class T, Device D, class Comm>
   using dlaf::internal::RequireContiguous;
   constexpr Device D_comm = CommunicationDevice_v<D>;
   constexpr auto require_contiguous =
-#if defined(DLAF_WITH_MPI_GPU_SUPPORT) && defined(DLAF_WITH_MPI_GPU_SUPPORT_FORCE_CONTIGUOUS)
+#if defined(DLAF_WITH_MPI_GPU_AWARE) && defined(DLAF_WITH_MPI_GPU_FORCE_CONTIGUOUS)
       D_comm == Device::GPU ? RequireContiguous::Yes :
 #endif
                             RequireContiguous::No;
@@ -63,7 +63,7 @@ template <class T, Device D, class Comm>
   using dlaf::internal::RequireContiguous;
   constexpr Device D_comm = CommunicationDevice_v<D>;
   constexpr auto require_contiguous =
-#if defined(DLAF_WITH_MPI_GPU_SUPPORT) && defined(DLAF_WITH_MPI_GPU_SUPPORT_FORCE_CONTIGUOUS)
+#if defined(DLAF_WITH_MPI_GPU_AWARE) && defined(DLAF_WITH_MPI_GPU_FORCE_CONTIGUOUS)
       D_comm == Device::GPU ? RequireContiguous::Yes :
 #endif
                             RequireContiguous::No;

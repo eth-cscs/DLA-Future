@@ -509,7 +509,7 @@ struct communicationMiniapp {
                               matrix_ref);
       benchmark_internal_all_reduce<Device::CPU, B>(run_index, opts, world,
                                                     comm_grid.full_communicator_pipeline(), matrix_ref);
-#ifdef DLAF_WITH_MPI_GPU_SUPPORT
+#ifdef DLAF_WITH_MPI_GPU_AWARE
       benchmark_internal_all_reduce<Device::GPU, B>(run_index, opts, world,
                                                     comm_grid.full_communicator_pipeline(), matrix_ref);
 #endif
@@ -519,7 +519,7 @@ struct communicationMiniapp {
       benchmark_internal_all_reduce_in_place<Device::CPU, B>(run_index, opts, world,
                                                              comm_grid.full_communicator_pipeline(),
                                                              matrix_ref);
-#ifdef DLAF_WITH_MPI_GPU_SUPPORT
+#ifdef DLAF_WITH_MPI_GPU_AWARE
       benchmark_internal_all_reduce_in_place<Device::GPU, B>(run_index, opts, world,
                                                              comm_grid.full_communicator_pipeline(),
                                                              matrix_ref);
@@ -534,7 +534,7 @@ struct communicationMiniapp {
           run_index, opts, world, comm_grid.full_communicator_pipeline(), matrix_ref);
       benchmark_internal_broadcast<Device::CPU, RequireContiguous::Yes, RequireContiguous::Yes, B>(
           run_index, opts, world, comm_grid.full_communicator_pipeline(), matrix_ref);
-#ifdef DLAF_WITH_MPI_GPU_SUPPORT
+#ifdef DLAF_WITH_MPI_GPU_AWARE
       benchmark_internal_broadcast<Device::GPU, RequireContiguous::No, RequireContiguous::No, B>(
           run_index, opts, world, comm_grid.full_communicator_pipeline(), matrix_ref);
       benchmark_internal_broadcast<Device::GPU, RequireContiguous::Yes, RequireContiguous::No, B>(
@@ -554,7 +554,7 @@ struct communicationMiniapp {
           run_index, opts, world, comm_grid.full_communicator_pipeline(), matrix_ref);
       benchmark_internal_p2p<Device::CPU, RequireContiguous::Yes, RequireContiguous::Yes, B>(
           run_index, opts, world, comm_grid.full_communicator_pipeline(), matrix_ref);
-#ifdef DLAF_WITH_MPI_GPU_SUPPORT
+#ifdef DLAF_WITH_MPI_GPU_AWARE
       benchmark_internal_p2p<Device::GPU, RequireContiguous::No, RequireContiguous::No, B>(
           run_index, opts, world, comm_grid.full_communicator_pipeline(), matrix_ref);
       benchmark_internal_p2p<Device::GPU, RequireContiguous::Yes, RequireContiguous::No, B>(
@@ -568,7 +568,7 @@ struct communicationMiniapp {
       benchmark_reduce<B>(run_index, opts, world, comm_grid.full_communicator_pipeline(), matrix_ref);
       benchmark_internal_reduce<Device::CPU, B>(run_index, opts, world,
                                                 comm_grid.full_communicator_pipeline(), matrix_ref);
-#ifdef DLAF_WITH_MPI_GPU_SUPPORT
+#ifdef DLAF_WITH_MPI_GPU_AWARE
       benchmark_internal_reduce<Device::GPU, B>(run_index, opts, world,
                                                 comm_grid.full_communicator_pipeline(), matrix_ref);
 #endif

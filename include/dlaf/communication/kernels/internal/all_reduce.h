@@ -101,7 +101,7 @@ auto allReduceInPlace(const Communicator& comm, MPI_Op reduce_op, const matrix::
 DLAF_MAKE_CALLABLE_OBJECT(allReduceInPlace);
 
 template <Device D_comm, class T, Device D>
-[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleAllReduceInPlace(
+[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> schedule_all_reduce_in_place(
     pika::execution::experimental::unique_any_sender<CommunicatorPipelineExclusiveWrapper> pcomm,
     MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender<T, D> tile) {
   using dlaf::comm::CommunicationDevice_v;

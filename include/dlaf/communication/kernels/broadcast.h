@@ -36,21 +36,21 @@ namespace dlaf::comm {
 /// tile is movable it will be sent by the returned sender. Otherwise a void
 /// sender is returned.
 template <class T, Device D, class Comm>
-[[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleSendBcast(
+[[nodiscard]] pika::execution::experimental::unique_any_sender<> schedule_bcast_send(
     pika::execution::experimental::unique_any_sender<Comm> pcomm,
     dlaf::matrix::ReadOnlyTileSender<T, D> tile);
 
-#define DLAF_SCHEDULE_SEND_BCAST_ETI(kword, Type, Device, Comm)                        \
-  kword template pika::execution::experimental::unique_any_sender<> scheduleSendBcast( \
-      pika::execution::experimental::unique_any_sender<Comm> pcomm,                    \
+#define DLAF_SCHEDULE_BCAST_SEND_ETI(kword, Type, Device, Comm)                          \
+  kword template pika::execution::experimental::unique_any_sender<> schedule_bcast_send( \
+      pika::execution::experimental::unique_any_sender<Comm> pcomm,                      \
       dlaf::matrix::ReadOnlyTileSender<Type, Device> tile)
 
 // clang-format off
-DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_BCAST_ETI, extern, CommunicatorPipelineExclusiveWrapper);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_BCAST_SEND_ETI, extern, CommunicatorPipelineExclusiveWrapper);
 
-DLAF_SCHEDULE_SEND_BCAST_ETI(extern, SizeType, Device::CPU, CommunicatorPipelineExclusiveWrapper);
+DLAF_SCHEDULE_BCAST_SEND_ETI(extern, SizeType, Device::CPU, CommunicatorPipelineExclusiveWrapper);
 #ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_SEND_BCAST_ETI(extern, SizeType, Device::GPU, CommunicatorPipelineExclusiveWrapper);
+DLAF_SCHEDULE_BCAST_SEND_ETI(extern, SizeType, Device::GPU, CommunicatorPipelineExclusiveWrapper);
 #endif
 // clang-format on
 
@@ -60,21 +60,21 @@ DLAF_SCHEDULE_SEND_BCAST_ETI(extern, SizeType, Device::GPU, CommunicatorPipeline
 /// sender tile must be writable so that the received data can be written to it.
 /// The input tile is sent by the returned sender.
 template <class T, Device D, class Comm>
-[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleRecvBcast(
+[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> schedule_bcast_recv(
     pika::execution::experimental::unique_any_sender<Comm> pcomm, comm::IndexT_MPI root_rank,
     dlaf::matrix::ReadWriteTileSender<T, D> tile);
 
-#define DLAF_SCHEDULE_RECV_BCAST_ETI(kword, Type, Device, Comm)                                 \
-  kword template dlaf::matrix::ReadWriteTileSender<Type, Device> scheduleRecvBcast(             \
+#define DLAF_SCHEDULE_BCAST_RECV_ETI(kword, Type, Device, Comm)                                 \
+  kword template dlaf::matrix::ReadWriteTileSender<Type, Device> schedule_bcast_recv(           \
       pika::execution::experimental::unique_any_sender<Comm> pcomm, comm::IndexT_MPI root_rank, \
       dlaf::matrix::ReadWriteTileSender<Type, Device> tile)
 
 // clang-format off
-DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_BCAST_ETI, extern, CommunicatorPipelineExclusiveWrapper);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_BCAST_RECV_ETI, extern, CommunicatorPipelineExclusiveWrapper);
 
-DLAF_SCHEDULE_RECV_BCAST_ETI(extern, SizeType, Device::CPU, CommunicatorPipelineExclusiveWrapper);
+DLAF_SCHEDULE_BCAST_RECV_ETI(extern, SizeType, Device::CPU, CommunicatorPipelineExclusiveWrapper);
 #ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_RECV_BCAST_ETI(extern, SizeType, Device::GPU, CommunicatorPipelineExclusiveWrapper);
+DLAF_SCHEDULE_BCAST_RECV_ETI(extern, SizeType, Device::GPU, CommunicatorPipelineExclusiveWrapper);
 #endif
 // clang-format on
 }

@@ -218,7 +218,7 @@ void benchmark_all_reduce_in_place(int64_t run_index, const Options& opts, Commu
   dlaf::common::Timer<> timeit;
 
   auto allred = [](auto comm, auto rw_tile) {
-    return scheduleAllReduceInPlace(std::move(comm), MPI_SUM, std::move(rw_tile));
+    return schedule_all_reduce_in_place(std::move(comm), MPI_SUM, std::move(rw_tile));
   };
   benchmark_rw(pcomm, matrix, allred);
 
@@ -261,8 +261,8 @@ void benchmark_internal_all_reduce_in_place(int64_t run_index, const Options& op
 template <Backend B, class CommPipeline, class T>
 void benchmark_broadcast(int64_t run_index, const Options& opts, Communicator& world,
                          CommPipeline&& pcomm, Matrix<const T, Device::CPU>& matrix_ref) {
-  using dlaf::comm::scheduleRecvBcast;
-  using dlaf::comm::scheduleSendBcast;
+  using dlaf::comm::schedule_bcast_recv;
+  using dlaf::comm::schedule_bcast_send;
 
   constexpr Device D = DefaultDevice_v<B>;
   Matrix<T, D> matrix = get_matrix_on_device_sync<D>(matrix_ref);
@@ -272,13 +272,13 @@ void benchmark_broadcast(int64_t run_index, const Options& opts, Communicator& w
 
   if (world.rank() == 0) {
     auto bcast = [](auto comm, auto ro_tile) {
-      return scheduleSendBcast(std::move(comm), std::move(ro_tile));
+      return schedule_bcast_send(std::move(comm), std::move(ro_tile));
     };
     benchmark_ro(pcomm, matrix, bcast);
   }
   else {
     auto bcast = [](auto comm, auto rw_tile) {
-      return scheduleRecvBcast(std::move(comm), 0, std::move(rw_tile));
+      return schedule_bcast_recv(std::move(comm), 0, std::move(rw_tile));
     };
     benchmark_rw(pcomm, matrix, bcast);
   }
@@ -294,8 +294,8 @@ template <Device D_comm, RequireContiguous require_contiguous_send,
           RequireContiguous require_contiguous_recv, Backend B, class CommPipeline, class T>
 void benchmark_internal_broadcast(int64_t run_index, const Options& opts, Communicator& world,
                                   CommPipeline&& pcomm, Matrix<const T, Device::CPU>& matrix_ref) {
-  using dlaf::comm::internal::scheduleRecvBcast;
-  using dlaf::comm::internal::scheduleSendBcast;
+  using dlaf::comm::internal::schedule_bcast_recv;
+  using dlaf::comm::internal::schedule_bcast_send;
 
   constexpr Device D = DefaultDevice_v<B>;
   if constexpr (D_comm != D && require_contiguous_send != RequireContiguous::Yes &&
@@ -311,13 +311,14 @@ void benchmark_internal_broadcast(int64_t run_index, const Options& opts, Commun
 
   if (world.rank() == 0) {
     auto bcast = [](auto comm, auto ro_tile) {
-      return scheduleSendBcast<D_comm, require_contiguous_send>(std::move(comm), std::move(ro_tile));
+      return schedule_bcast_send<D_comm, require_contiguous_send>(std::move(comm), std::move(ro_tile));
     };
     benchmark_ro(pcomm, matrix, bcast);
   }
   else {
     auto bcast = [](auto comm, auto rw_tile) {
-      return scheduleRecvBcast<D_comm, require_contiguous_recv>(std::move(comm), 0, std::move(rw_tile));
+      return schedule_bcast_recv<D_comm, require_contiguous_recv>(std::move(comm), 0,
+                                                                  std::move(rw_tile));
     };
     benchmark_rw(pcomm, matrix, bcast);
   }
@@ -333,8 +334,8 @@ void benchmark_internal_broadcast(int64_t run_index, const Options& opts, Commun
 template <Backend B, class CommPipeline, class T>
 void benchmark_p2p(int64_t run_index, const Options& opts, Communicator& world, CommPipeline&& pcomm,
                    Matrix<const T, Device::CPU>& matrix_ref) {
-  using dlaf::comm::scheduleRecv;
-  using dlaf::comm::scheduleSend;
+  using dlaf::comm::schedule_recv;
+  using dlaf::comm::schedule_send;
 
   constexpr Device D = DefaultDevice_v<B>;
   Matrix<T, D> matrix = get_matrix_on_device_sync<D>(matrix_ref);
@@ -346,13 +347,13 @@ void benchmark_p2p(int64_t run_index, const Options& opts, Communicator& world, 
 
   if (pcomm.rank() == 0) {
     auto p2p = [rank_recv](auto comm, auto ro_tile) {
-      return scheduleSend(std::move(comm), rank_recv, 0, std::move(ro_tile));
+      return schedule_send(std::move(comm), rank_recv, 0, std::move(ro_tile));
     };
     benchmark_ro(pcomm, matrix, p2p);
   }
   else if (pcomm.rank() == rank_recv) {
     auto p2p = [](auto comm, auto rw_tile) {
-      return scheduleRecv(std::move(comm), 0, 0, std::move(rw_tile));
+      return schedule_recv(std::move(comm), 0, 0, std::move(rw_tile));
     };
     benchmark_rw(pcomm, matrix, p2p);
   }
@@ -368,8 +369,8 @@ template <Device D_comm, RequireContiguous require_contiguous_send,
           RequireContiguous require_contiguous_recv, Backend B, class CommPipeline, class T>
 void benchmark_internal_p2p(int64_t run_index, const Options& opts, Communicator& world,
                             CommPipeline&& pcomm, Matrix<const T, Device::CPU>& matrix_ref) {
-  using dlaf::comm::internal::scheduleRecv;
-  using dlaf::comm::internal::scheduleSend;
+  using dlaf::comm::internal::schedule_recv;
+  using dlaf::comm::internal::schedule_send;
 
   constexpr Device D = DefaultDevice_v<B>;
   if constexpr (D_comm != D && require_contiguous_send != RequireContiguous::Yes &&
@@ -387,14 +388,14 @@ void benchmark_internal_p2p(int64_t run_index, const Options& opts, Communicator
 
   if (pcomm.rank() == 0) {
     auto p2p = [rank_recv](auto comm, auto ro_tile) {
-      return scheduleSend<D_comm, require_contiguous_send>(std::move(comm), rank_recv, 0,
-                                                           std::move(ro_tile));
+      return schedule_send<D_comm, require_contiguous_send>(std::move(comm), rank_recv, 0,
+                                                            std::move(ro_tile));
     };
     benchmark_ro(pcomm, matrix, p2p);
   }
   else if (pcomm.rank() == rank_recv) {
     auto p2p = [](auto comm, auto rw_tile) {
-      return scheduleRecv<D_comm, require_contiguous_recv>(std::move(comm), 0, 0, std::move(rw_tile));
+      return schedule_recv<D_comm, require_contiguous_recv>(std::move(comm), 0, 0, std::move(rw_tile));
     };
     benchmark_rw(pcomm, matrix, p2p);
   }
@@ -410,8 +411,8 @@ void benchmark_internal_p2p(int64_t run_index, const Options& opts, Communicator
 template <Backend B, class CommPipeline, class T>
 void benchmark_reduce(int64_t run_index, const Options& opts, Communicator& world, CommPipeline&& pcomm,
                       Matrix<const T, Device::CPU>& matrix_ref) {
-  using dlaf::comm::scheduleReduceRecvInPlace;
-  using dlaf::comm::scheduleReduceSend;
+  using dlaf::comm::schedule_reduce_recv_in_place;
+  using dlaf::comm::schedule_reduce_send;
 
   constexpr Device D = DefaultDevice_v<B>;
   Matrix<T, D> matrix = get_matrix_on_device_sync<D>(matrix_ref);
@@ -421,13 +422,13 @@ void benchmark_reduce(int64_t run_index, const Options& opts, Communicator& worl
 
   if (world.rank() == 0) {
     auto reduce = [](auto comm, auto rw_tile) {
-      return scheduleReduceRecvInPlace(std::move(comm), MPI_SUM, std::move(rw_tile));
+      return schedule_reduce_recv_in_place(std::move(comm), MPI_SUM, std::move(rw_tile));
     };
     benchmark_rw(pcomm, matrix, reduce);
   }
   else {
     auto reduce = [](auto comm, auto ro_tile) {
-      return scheduleReduceSend(std::move(comm), 0, MPI_SUM, std::move(ro_tile));
+      return schedule_reduce_send(std::move(comm), 0, MPI_SUM, std::move(ro_tile));
     };
     benchmark_ro(pcomm, matrix, reduce);
   }
@@ -442,8 +443,8 @@ void benchmark_reduce(int64_t run_index, const Options& opts, Communicator& worl
 template <Device D_comm, Backend B, class CommPipeline, class T>
 void benchmark_internal_reduce(int64_t run_index, const Options& opts, Communicator& world,
                                CommPipeline&& pcomm, Matrix<const T, Device::CPU>& matrix_ref) {
-  using dlaf::comm::internal::scheduleReduceRecvInPlace;
-  using dlaf::comm::internal::scheduleReduceSend;
+  using dlaf::comm::internal::schedule_reduce_recv_in_place;
+  using dlaf::comm::internal::schedule_reduce_send;
 
   constexpr Device D = DefaultDevice_v<B>;
 
@@ -454,13 +455,13 @@ void benchmark_internal_reduce(int64_t run_index, const Options& opts, Communica
 
   if (world.rank() == 0) {
     auto reduce = [](auto comm, auto rw_tile) {
-      return scheduleReduceRecvInPlace<D_comm>(std::move(comm), MPI_SUM, std::move(rw_tile));
+      return schedule_reduce_recv_in_place<D_comm>(std::move(comm), MPI_SUM, std::move(rw_tile));
     };
     benchmark_rw(pcomm, matrix, reduce);
   }
   else {
     auto reduce = [](auto comm, auto ro_tile) {
-      return scheduleReduceSend<D_comm>(std::move(comm), 0, MPI_SUM, std::move(ro_tile));
+      return schedule_reduce_send<D_comm>(std::move(comm), 0, MPI_SUM, std::move(ro_tile));
     };
     benchmark_ro(pcomm, matrix, reduce);
   }

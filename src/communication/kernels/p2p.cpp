@@ -31,7 +31,7 @@
 namespace dlaf::comm {
 
 template <class T, Device D, class CommSender>
-[[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleSend(
+[[nodiscard]] pika::execution::experimental::unique_any_sender<> schedule_send(
     CommSender pcomm, IndexT_MPI dest, IndexT_MPI tag, dlaf::matrix::ReadOnlyTileSender<T, D> tile) {
   using dlaf::internal::RequireContiguous;
   constexpr Device D_comm = CommunicationDevice_v<D>;
@@ -40,8 +40,8 @@ template <class T, Device D, class CommSender>
       D_comm == Device::GPU ? RequireContiguous::Yes :
 #endif
                             RequireContiguous::No;
-  return internal::scheduleSend<D_comm, require_contiguous>(std::move(pcomm), dest, tag,
-                                                            std::move(tile));
+  return internal::schedule_send<D_comm, require_contiguous>(std::move(pcomm), dest, tag,
+                                                             std::move(tile));
 }
 
 // clang-format off
@@ -52,7 +52,7 @@ DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_ETI, , CommunicatorPipeli
 // clang-format on
 
 template <class T, Device D, class CommSender>
-[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleRecv(
+[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> schedule_recv(
     CommSender pcomm, IndexT_MPI source, IndexT_MPI tag, dlaf::matrix::ReadWriteTileSender<T, D> tile) {
   using dlaf::internal::RequireContiguous;
   constexpr Device D_comm = CommunicationDevice_v<D>;
@@ -62,8 +62,8 @@ template <class T, Device D, class CommSender>
 #endif
                             RequireContiguous::No;
 
-  return internal::scheduleRecv<D_comm, require_contiguous>(std::move(pcomm), source, tag,
-                                                            std::move(tile));
+  return internal::schedule_recv<D_comm, require_contiguous>(std::move(pcomm), source, tag,
+                                                             std::move(tile));
 }
 
 // clang-format off

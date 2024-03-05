@@ -55,7 +55,7 @@ void reduceSend(const Communicator& comm, comm::IndexT_MPI rank_root, MPI_Op red
 DLAF_MAKE_CALLABLE_OBJECT(reduceSend);
 
 template <Device D_comm, class T, Device D>
-[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleReduceRecvInPlace(
+[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> schedule_reduce_recv_in_place(
     pika::execution::experimental::unique_any_sender<CommunicatorPipelineExclusiveWrapper> pcomm,
     MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender<T, D> tile) {
   using dlaf::comm::internal::reduceRecvInPlace_o;
@@ -88,7 +88,7 @@ template <Device D_comm, class T, Device D>
 }
 
 template <Device D_comm, class T, Device D>
-[[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleReduceSend(
+[[nodiscard]] pika::execution::experimental::unique_any_sender<> schedule_reduce_send(
     pika::execution::experimental::unique_any_sender<CommunicatorPipelineExclusiveWrapper> pcomm,
     comm::IndexT_MPI rank_root, MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender<T, D> tile) {
   using dlaf::comm::internal::reduceSend_o;

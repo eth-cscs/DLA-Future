@@ -32,24 +32,24 @@
 namespace dlaf::comm {
 
 template <class T, Device D>
-[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleReduceRecvInPlace(
+[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> schedule_reduce_recv_in_place(
     pika::execution::experimental::unique_any_sender<CommunicatorPipelineExclusiveWrapper> pcomm,
     MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender<T, D> tile) {
   constexpr Device D_comm = CommunicationDevice_v<D>;
 
-  return internal::scheduleReduceRecvInPlace<D_comm>(std::move(pcomm), reduce_op, std::move(tile));
+  return internal::schedule_reduce_recv_in_place<D_comm>(std::move(pcomm), reduce_op, std::move(tile));
 }
 
 DLAF_EXPAND_ETI_SDCZ_DEVICE(DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI, );
 DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(, int, Device::CPU);
 
 template <class T, Device D>
-[[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleReduceSend(
+[[nodiscard]] pika::execution::experimental::unique_any_sender<> schedule_reduce_send(
     pika::execution::experimental::unique_any_sender<CommunicatorPipelineExclusiveWrapper> pcomm,
     comm::IndexT_MPI rank_root, MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender<T, D> tile) {
   constexpr Device D_comm = CommunicationDevice_v<D>;
 
-  return internal::scheduleReduceSend<D_comm>(std::move(pcomm), rank_root, reduce_op, std::move(tile));
+  return internal::schedule_reduce_send<D_comm>(std::move(pcomm), rank_root, reduce_op, std::move(tile));
 }
 
 DLAF_EXPAND_ETI_SDCZ_DEVICE(DLAF_SCHEDULE_REDUCE_SEND_ETI, );

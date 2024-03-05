@@ -33,7 +33,7 @@
 namespace dlaf::comm {
 
 template <class T, Device D, class Comm>
-[[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleSendBcast(
+[[nodiscard]] pika::execution::experimental::unique_any_sender<> schedule_bcast_send(
     pika::execution::experimental::unique_any_sender<Comm> pcomm,
     dlaf::matrix::ReadOnlyTileSender<T, D> tile) {
   using dlaf::internal::RequireContiguous;
@@ -44,20 +44,20 @@ template <class T, Device D, class Comm>
 #endif
                             RequireContiguous::No;
 
-  return internal::scheduleSendBcast<D_comm, require_contiguous>(std::move(pcomm), std::move(tile));
+  return internal::schedule_bcast_send<D_comm, require_contiguous>(std::move(pcomm), std::move(tile));
 }
 
 // clang-format off
-DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_BCAST_ETI, , CommunicatorPipelineExclusiveWrapper);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_BCAST_SEND_ETI, , CommunicatorPipelineExclusiveWrapper);
 
-DLAF_SCHEDULE_SEND_BCAST_ETI(, SizeType, Device::CPU, CommunicatorPipelineExclusiveWrapper);
+DLAF_SCHEDULE_BCAST_SEND_ETI(, SizeType, Device::CPU, CommunicatorPipelineExclusiveWrapper);
 #ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_SEND_BCAST_ETI(, SizeType, Device::GPU, CommunicatorPipelineExclusiveWrapper);
+DLAF_SCHEDULE_BCAST_SEND_ETI(, SizeType, Device::GPU, CommunicatorPipelineExclusiveWrapper);
 #endif
 // clang-format on
 
 template <class T, Device D, class Comm>
-[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleRecvBcast(
+[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> schedule_bcast_recv(
     pika::execution::experimental::unique_any_sender<Comm> pcomm, comm::IndexT_MPI root_rank,
     dlaf::matrix::ReadWriteTileSender<T, D> tile) {
   using dlaf::internal::RequireContiguous;
@@ -67,16 +67,16 @@ template <class T, Device D, class Comm>
       D_comm == Device::GPU ? RequireContiguous::Yes :
 #endif
                             RequireContiguous::No;
-  return internal::scheduleRecvBcast<D_comm, require_contiguous>(std::move(pcomm), root_rank,
-                                                                 std::move(tile));
+  return internal::schedule_bcast_recv<D_comm, require_contiguous>(std::move(pcomm), root_rank,
+                                                                   std::move(tile));
 }
 
 // clang-format off
-DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_BCAST_ETI, , CommunicatorPipelineExclusiveWrapper);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_BCAST_RECV_ETI, , CommunicatorPipelineExclusiveWrapper);
 
-DLAF_SCHEDULE_RECV_BCAST_ETI(, SizeType, Device::CPU, CommunicatorPipelineExclusiveWrapper);
+DLAF_SCHEDULE_BCAST_RECV_ETI(, SizeType, Device::CPU, CommunicatorPipelineExclusiveWrapper);
 #ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_RECV_BCAST_ETI(, SizeType, Device::GPU, CommunicatorPipelineExclusiveWrapper);
+DLAF_SCHEDULE_BCAST_RECV_ETI(, SizeType, Device::GPU, CommunicatorPipelineExclusiveWrapper);
 #endif
 // clang-format on
 }

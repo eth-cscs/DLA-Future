@@ -49,8 +49,8 @@ DLAF_MAKE_CALLABLE_OBJECT(send);
 
 template <Device D_comm, dlaf::internal::RequireContiguous require_contiguous, class T, Device D,
           class CommSender>
-[[nodiscard]] auto scheduleSend(CommSender pcomm, IndexT_MPI dest, IndexT_MPI tag,
-                                dlaf::matrix::ReadOnlyTileSender<T, D> tile) {
+[[nodiscard]] auto schedule_send(CommSender pcomm, IndexT_MPI dest, IndexT_MPI tag,
+                                 dlaf::matrix::ReadOnlyTileSender<T, D> tile) {
   using dlaf::comm::internal::send_o;
   using dlaf::internal::CopyFromDestination;
   using dlaf::internal::CopyToDestination;
@@ -86,7 +86,7 @@ DLAF_MAKE_CALLABLE_OBJECT(recv);
 
 template <Device D_comm, dlaf::internal::RequireContiguous require_contiguous, class T, Device D,
           class CommSender>
-[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleRecv(
+[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> schedule_recv(
     CommSender pcomm, IndexT_MPI source, IndexT_MPI tag, dlaf::matrix::ReadWriteTileSender<T, D> tile) {
   using dlaf::comm::internal::recv_o;
   using dlaf::internal::CopyFromDestination;

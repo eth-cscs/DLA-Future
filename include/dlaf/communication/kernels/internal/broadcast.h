@@ -46,8 +46,8 @@ DLAF_MAKE_CALLABLE_OBJECT(sendBcast);
 
 template <Device D_comm, dlaf::internal::RequireContiguous require_contiguous, class T, Device D,
           class Comm>
-[[nodiscard]] auto scheduleSendBcast(pika::execution::experimental::unique_any_sender<Comm> pcomm,
-                                     dlaf::matrix::ReadOnlyTileSender<T, D> tile) {
+[[nodiscard]] auto schedule_bcast_send(pika::execution::experimental::unique_any_sender<Comm> pcomm,
+                                       dlaf::matrix::ReadOnlyTileSender<T, D> tile) {
   using dlaf::internal::CopyFromDestination;
   using dlaf::internal::CopyToDestination;
   using dlaf::internal::SenderSingleValueType;
@@ -84,7 +84,7 @@ DLAF_MAKE_CALLABLE_OBJECT(recvBcast);
 
 template <Device D_comm, dlaf::internal::RequireContiguous require_contiguous, class T, Device D,
           class Comm>
-[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleRecvBcast(
+[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> schedule_bcast_recv(
     pika::execution::experimental::unique_any_sender<Comm> pcomm, comm::IndexT_MPI root_rank,
     dlaf::matrix::ReadWriteTileSender<T, D> tile) {
   using dlaf::comm::internal::recvBcast_o;

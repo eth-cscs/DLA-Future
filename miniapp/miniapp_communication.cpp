@@ -298,8 +298,8 @@ void benchmark_internal_broadcast(int64_t run_index, const Options& opts, Commun
   using dlaf::comm::internal::schedule_bcast_send;
 
   constexpr Device D = DefaultDevice_v<B>;
-  if constexpr (D_comm != D && require_contiguous_send != RequireContiguous::Yes &&
-                require_contiguous_recv != RequireContiguous::Yes) {
+  if constexpr (D_comm != D && (require_contiguous_send != RequireContiguous::Yes ||
+                require_contiguous_recv != RequireContiguous::Yes)) {
     // Skip benchmark, as copy to a different device forces contiguous buffers.
     return;
   }
@@ -373,8 +373,8 @@ void benchmark_internal_p2p(int64_t run_index, const Options& opts, Communicator
   using dlaf::comm::internal::schedule_send;
 
   constexpr Device D = DefaultDevice_v<B>;
-  if constexpr (D_comm != D && require_contiguous_send != RequireContiguous::Yes &&
-                require_contiguous_recv != RequireContiguous::Yes) {
+  if constexpr (D_comm != D && (require_contiguous_send != RequireContiguous::Yes ||
+                require_contiguous_recv != RequireContiguous::Yes)) {
     // Skip benchmark, as copy to a different device forces contiguous buffers.
     return;
   }

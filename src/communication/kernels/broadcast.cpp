@@ -37,15 +37,14 @@ template <class T, Device D, class Comm>
     pika::execution::experimental::unique_any_sender<Comm> pcomm,
     dlaf::matrix::ReadOnlyTileSender<T, D> tile) {
   using dlaf::internal::RequireContiguous;
-  constexpr Device comm_device_type = CommunicationDevice_v<D>;
+  constexpr Device D_comm = CommunicationDevice_v<D>;
   constexpr auto require_contiguous =
 #if defined(DLAF_WITH_MPI_GPU_SUPPORT) && defined(DLAF_WITH_MPI_GPU_SUPPORT_FORCE_CONTIGUOUS)
-      comm_device_type == Device::GPU ? RequireContiguous::Yes :
+      D_comm == Device::GPU ? RequireContiguous::Yes :
 #endif
-                                      RequireContiguous::No;
+                            RequireContiguous::No;
 
-  return internal::scheduleSendBcast<comm_device_type, require_contiguous>(std::move(pcomm),
-                                                                           std::move(tile));
+  return internal::scheduleSendBcast<D_comm, require_contiguous>(std::move(pcomm), std::move(tile));
 }
 
 // clang-format off
@@ -62,14 +61,14 @@ template <class T, Device D, class Comm>
     pika::execution::experimental::unique_any_sender<Comm> pcomm, comm::IndexT_MPI root_rank,
     dlaf::matrix::ReadWriteTileSender<T, D> tile) {
   using dlaf::internal::RequireContiguous;
-  constexpr Device comm_device_type = CommunicationDevice_v<D>;
+  constexpr Device D_comm = CommunicationDevice_v<D>;
   constexpr auto require_contiguous =
 #if defined(DLAF_WITH_MPI_GPU_SUPPORT) && defined(DLAF_WITH_MPI_GPU_SUPPORT_FORCE_CONTIGUOUS)
-      comm_device_type == Device::GPU ? RequireContiguous::Yes :
+      D_comm == Device::GPU ? RequireContiguous::Yes :
 #endif
-                                      RequireContiguous::No;
-  return internal::scheduleRecvBcast<comm_device_type, require_contiguous>(std::move(pcomm), root_rank,
-                                                                           std::move(tile));
+                            RequireContiguous::No;
+  return internal::scheduleRecvBcast<D_comm, require_contiguous>(std::move(pcomm), root_rank,
+                                                                 std::move(tile));
 }
 
 // clang-format off

@@ -44,8 +44,8 @@ void sendBcast(const Communicator& comm, const matrix::Tile<const T, D>& tile, M
 
 DLAF_MAKE_CALLABLE_OBJECT(sendBcast);
 
-template <Device comm_device_type, dlaf::internal::RequireContiguous require_contiguous, class T,
-          Device D, class Comm>
+template <Device D_comm, dlaf::internal::RequireContiguous require_contiguous, class T, Device D,
+          class Comm>
 [[nodiscard]] auto scheduleSendBcast(pika::execution::experimental::unique_any_sender<Comm> pcomm,
                                      dlaf::matrix::ReadOnlyTileSender<T, D> tile) {
   using dlaf::internal::CopyFromDestination;
@@ -65,8 +65,8 @@ template <Device comm_device_type, dlaf::internal::RequireContiguous require_con
   // The input tile must be copied to the temporary tile used for the send, but
   // the temporary tile does not need to be copied back to the input since the
   // data is not changed by the send. A send does not require contiguous memory.
-  return withTemporaryTile<comm_device_type, CopyToDestination::Yes, CopyFromDestination::No,
-                           require_contiguous>(std::move(tile), std::move(send));
+  return withTemporaryTile<D_comm, CopyToDestination::Yes, CopyFromDestination::No, require_contiguous>(
+      std::move(tile), std::move(send));
 }
 
 template <class T, Device D>
@@ -82,8 +82,8 @@ void recvBcast(const Communicator& comm, comm::IndexT_MPI root_rank, const matri
 
 DLAF_MAKE_CALLABLE_OBJECT(recvBcast);
 
-template <Device comm_device_type, dlaf::internal::RequireContiguous require_contiguous, class T,
-          Device D, class Comm>
+template <Device D_comm, dlaf::internal::RequireContiguous require_contiguous, class T, Device D,
+          class Comm>
 [[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleRecvBcast(
     pika::execution::experimental::unique_any_sender<Comm> pcomm, comm::IndexT_MPI root_rank,
     dlaf::matrix::ReadWriteTileSender<T, D> tile) {
@@ -113,7 +113,7 @@ template <Device comm_device_type, dlaf::internal::RequireContiguous require_con
   // tile (the input tile may be uninitialized). The received data is copied
   // back from the temporary tile to the input. A receive does not require
   // contiguous memory.
-  return withTemporaryTile<comm_device_type, CopyToDestination::No, CopyFromDestination::Yes,
-                           require_contiguous>(std::move(tile), std::move(recv));
+  return withTemporaryTile<D_comm, CopyToDestination::No, CopyFromDestination::Yes, require_contiguous>(
+      std::move(tile), std::move(recv));
 }
 }

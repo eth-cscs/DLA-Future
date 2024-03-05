@@ -47,8 +47,8 @@ void send(const Communicator& comm, IndexT_MPI dest, IndexT_MPI tag,
 
 DLAF_MAKE_CALLABLE_OBJECT(send);
 
-template <Device comm_device_type, dlaf::internal::RequireContiguous require_contiguous, class T,
-          Device D, class CommSender>
+template <Device D_comm, dlaf::internal::RequireContiguous require_contiguous, class T, Device D,
+          class CommSender>
 [[nodiscard]] auto scheduleSend(CommSender pcomm, IndexT_MPI dest, IndexT_MPI tag,
                                 dlaf::matrix::ReadOnlyTileSender<T, D> tile) {
   using dlaf::comm::internal::send_o;
@@ -66,8 +66,8 @@ template <Device comm_device_type, dlaf::internal::RequireContiguous require_con
   static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_SUPPORT=off, MPI accepts only CPU memory.");
 #endif
 
-  return withTemporaryTile<comm_device_type, CopyToDestination::Yes, CopyFromDestination::No,
-                           require_contiguous>(std::move(tile), std::move(send));
+  return withTemporaryTile<D_comm, CopyToDestination::Yes, CopyFromDestination::No, require_contiguous>(
+      std::move(tile), std::move(send));
 }
 
 // Non-blocking point to point receive
@@ -84,8 +84,8 @@ auto recv(const Communicator& comm, IndexT_MPI source, IndexT_MPI tag, const mat
 
 DLAF_MAKE_CALLABLE_OBJECT(recv);
 
-template <Device comm_device_type, dlaf::internal::RequireContiguous require_contiguous, class T,
-          Device D, class CommSender>
+template <Device D_comm, dlaf::internal::RequireContiguous require_contiguous, class T, Device D,
+          class CommSender>
 [[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleRecv(
     CommSender pcomm, IndexT_MPI source, IndexT_MPI tag, dlaf::matrix::ReadWriteTileSender<T, D> tile) {
   using dlaf::comm::internal::recv_o;
@@ -103,8 +103,8 @@ template <Device comm_device_type, dlaf::internal::RequireContiguous require_con
   static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_SUPPORT=off, MPI accepts only CPU memory.");
 #endif
 
-  return withTemporaryTile<comm_device_type, CopyToDestination::No, CopyFromDestination::Yes,
-                           require_contiguous>(std::move(tile), std::move(recv));
+  return withTemporaryTile<D_comm, CopyToDestination::No, CopyFromDestination::Yes, require_contiguous>(
+      std::move(tile), std::move(recv));
 }
 
 }

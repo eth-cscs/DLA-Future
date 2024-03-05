@@ -34,14 +34,14 @@ template <class T, Device D, class CommSender>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleSend(
     CommSender pcomm, IndexT_MPI dest, IndexT_MPI tag, dlaf::matrix::ReadOnlyTileSender<T, D> tile) {
   using dlaf::internal::RequireContiguous;
-  constexpr Device comm_device_type = CommunicationDevice_v<D>;
+  constexpr Device D_comm = CommunicationDevice_v<D>;
   constexpr auto require_contiguous =
 #if defined(DLAF_WITH_MPI_GPU_SUPPORT) && defined(DLAF_WITH_MPI_GPU_SUPPORT_FORCE_CONTIGUOUS)
-      comm_device_type == Device::GPU ? RequireContiguous::Yes :
+      D_comm == Device::GPU ? RequireContiguous::Yes :
 #endif
-                                      RequireContiguous::No;
-  return internal::scheduleSend<comm_device_type, require_contiguous>(std::move(pcomm), dest, tag,
-                                                                      std::move(tile));
+                            RequireContiguous::No;
+  return internal::scheduleSend<D_comm, require_contiguous>(std::move(pcomm), dest, tag,
+                                                            std::move(tile));
 }
 
 // clang-format off
@@ -55,15 +55,15 @@ template <class T, Device D, class CommSender>
 [[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleRecv(
     CommSender pcomm, IndexT_MPI source, IndexT_MPI tag, dlaf::matrix::ReadWriteTileSender<T, D> tile) {
   using dlaf::internal::RequireContiguous;
-  constexpr Device comm_device_type = CommunicationDevice_v<D>;
+  constexpr Device D_comm = CommunicationDevice_v<D>;
   constexpr auto require_contiguous =
 #if defined(DLAF_WITH_MPI_GPU_SUPPORT) && defined(DLAF_WITH_MPI_GPU_SUPPORT_FORCE_CONTIGUOUS)
-      comm_device_type == Device::GPU ? RequireContiguous::Yes :
+      D_comm == Device::GPU ? RequireContiguous::Yes :
 #endif
-                                      RequireContiguous::No;
+                            RequireContiguous::No;
 
-  return internal::scheduleRecv<comm_device_type, require_contiguous>(std::move(pcomm), source, tag,
-                                                                      std::move(tile));
+  return internal::scheduleRecv<D_comm, require_contiguous>(std::move(pcomm), source, tag,
+                                                            std::move(tile));
 }
 
 // clang-format off

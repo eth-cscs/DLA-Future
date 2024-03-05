@@ -229,6 +229,7 @@ DLAF_addSublibrary(
           $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/reduction_to_band/gpu.cpp>
           eigensolver/reduction_to_trid/mc.cpp
           $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/reduction_to_trid/gpu.cpp>
+          GPU_SOURCES eigensolver/reduction_to_trid/gpu/kernels.cu
   LIBRARIES dlaf.tridiagonal_eigensolver dlaf.solver dlaf.factorization dlaf.core
 )
 

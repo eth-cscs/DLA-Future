@@ -22,11 +22,13 @@
 #include <dlaf/common/range2d.h>
 #include <dlaf/common/round_robin.h>
 #include <dlaf/eigensolver/reduction_to_trid/api.h>
+#include <dlaf/eigensolver/reduction_to_trid/gpu/kernels.h>
 #include <dlaf/eigensolver/reduction_to_trid/impl.h>
 #include <dlaf/eigensolver/reduction_utils/misc.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_ref.h>
 #include <dlaf/matrix/panel.h>
+#include <dlaf/matrix/tile.h>
 #include <dlaf/matrix/views.h>
 #include <dlaf/sender/policy.h>
 #include <dlaf/sender/transform.h>
@@ -40,11 +42,17 @@ namespace dlaf::eigensolver::internal {
 
 template <class T>
 struct kernelSetupW<Backend::GPU, T> {
-  template <class SenderW, class SenderV, class SenderTau>
+  template <class SenderW, class SenderV, class SenderTau, class PtrV, class PtrWup, class PtrW>
   void operator()(cublasHandle_t handle, const std::size_t i_first, const TileElementIndex ij_el_tl,
-                  SenderW&& w_tiles, SenderV&& v_tiles, SenderTau&& tau) {
+                  SenderW&& w_tiles, SenderV&& v_tiles, SenderTau&& tau, PtrV&& ptrs_v_snd,
+                  PtrWup&& ptrs_wup_snd, PtrW&& ptrs_w_snd) {
+    T* const* ptrs_v = ptrs_v_snd.ptr();
+    T* const* ptrs_wup = ptrs_wup_snd.ptr();
+    T* const* ptrs_w = ptrs_w_snd.ptr();
+
     const SizeType i_el_tl = ij_el_tl.row();
     const SizeType j_el_tl = ij_el_tl.col();
+
     // computeW mods
     if (j_el_tl > 0) {
       auto&& w_up = w_tiles[0].ptr({0, j_el_tl});
@@ -74,13 +82,15 @@ struct kernelSetupW<Backend::GPU, T> {
         const T alpha = -1;
         const T beta = 1;
 
-        int nbatch = v_tiles.size() - i_first;
-
-        if (nbatch > 0) {
-          const SizeType i_first_tl = i_el_tl;
-
-          auto&& tile_v = v_tiles[i_first].get();
-          auto&& tile_w = w_tiles[i_first];
+        // Manage differently the first and the last tile, because they might have different shapes
+        std::vector<std::size_t> different_shape;
+        different_shape.push_back(i_first);
+        if (v_tiles.size() - 1 > i_first)
+          different_shape.push_back(v_tiles.size() - 1);
+        for (std::size_t batch_index : different_shape) {
+          const SizeType i_first_tl = batch_index == i_first ? i_el_tl : 0;
+          auto&& tile_v = v_tiles[batch_index].get();
+          auto&& tile_w = w_tiles[batch_index];
 
           auto&& v = tile_v.ptr({i_first_tl, 0});
           auto&& w_col = tile_w.ptr({i_first_tl, j_el_tl});
@@ -91,52 +101,18 @@ struct kernelSetupW<Backend::GPU, T> {
                                            to_int(tile_v.ld()), util::blasToCublasCast(w_up), 1,
                                            util::blasToCublasCast(&beta), util::blasToCublasCast(w_col),
                                            1);
-          --nbatch;
-        }
-        if (nbatch > 0) {
-          auto&& tile_v = v_tiles.back().get();
-          auto&& tile_w = w_tiles.back();
-
-          auto&& v = tile_v.ptr();
-          auto&& w_col = tile_w.ptr({0, j_el_tl});
-
-          gpublas::internal::Gemv<T>::call(handle, util::blasToCublas(blas::Op::NoTrans),
-                                           to_int(tile_v.size().rows()), to_int(j_el_tl),
-                                           util::blasToCublasCast(&alpha), util::blasToCublasCast(v),
-                                           to_int(tile_v.ld()), util::blasToCublasCast(w_up), 1,
-                                           util::blasToCublasCast(&beta), util::blasToCublasCast(w_col),
-                                           1);
-          --nbatch;
         }
 
-        if (nbatch > 0) {
-          thrust::host_vector<const T*> A;
-          thrust::host_vector<const T*> x;
-          thrust::host_vector<T*> y;
-
-          A.reserve(to_sizet(nbatch));
-          x.reserve(to_sizet(nbatch));
-          y.reserve(to_sizet(nbatch));
-
-          for (std::size_t index = i_first + 1; index < v_tiles.size() - 1; ++index) {
-            A.push_back(v_tiles[index].get().ptr());
-            x.push_back(w_up);
-            y.push_back(w_tiles[index].ptr({0, j_el_tl}));
-          }
-
+        // Manage the remaining "internal" part of the batch
+        if (int nbatch = v_tiles.size() - i_first - 2; nbatch > 0) {
           const SizeType m = v_tiles[i_first + 1].get().size().rows();
           const SizeType ld = v_tiles[i_first + 1].get().ld();
-          thrust::device_vector<const T*> Ad = A;
-          thrust::device_vector<const T*> xd = x;
-          thrust::device_vector<T*> yd = y;
 
           gpublas::internal::GemvBatched<T>::call(
               handle, util::blasToCublas(blas::Op::NoTrans), to_int(m), to_int(j_el_tl),
-              util::blasToCublasCast(&alpha),
-              util::blasToCublasCast(thrust::raw_pointer_cast(Ad.data())), to_int(ld),
-              util::blasToCublasCast(thrust::raw_pointer_cast(xd.data())), 1,
-              util::blasToCublasCast(&beta), util::blasToCublasCast(thrust::raw_pointer_cast(yd.data())),
-              1, nbatch);
+              util::blasToCublasCast(&alpha), util::blasToCublasCast(&ptrs_v[i_first + 1]), to_int(ld),
+              util::blasToCublasCast(&ptrs_wup[i_first + 1]), 1, util::blasToCublasCast(&beta),
+              util::blasToCublasCast(&ptrs_w[i_first + 1]), 1, nbatch);
         }
       }
 
@@ -214,13 +190,30 @@ struct kernelSetupW<Backend::GPU, T> {
 };
 
 template <class T>
+struct batch_t {
+  batch_t(const SizeType size) : pointers_({size, 1}, {size, 1}) {}
+
+  matrix::ReadWriteTileSender<T*, Device::GPU> readwrite() {
+    return pointers_.readwrite(LocalTileIndex{0, 0});
+  }
+
+  matrix::ReadOnlyTileSender<T*, Device::GPU> read() {
+    return pointers_.read(LocalTileIndex{0, 0});
+  }
+
+private:
+  Matrix<T*, Device::GPU> pointers_;
+};
+
+template <class T>
 struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T> {
   static constexpr Backend B = Backend::GPU;
   static constexpr Device D = Device::GPU;
 
   Helper(const std::size_t n_workspaces, const matrix::Distribution& panel_dist)
       : Helper<Backend::MC, Device::CPU, T>(n_workspaces, panel_dist),
-        panels_v(n_workspaces, panel_dist) {}
+        panels_v(n_workspaces, panel_dist), batch_v_panel(panel_dist.nrTiles().rows()),
+        batch_w_col(panel_dist.nrTiles().rows()), batch_w_up(panel_dist.nrTiles().rows()) {}
 
   void align(const GlobalTileIndex& ij) {
     Helper<Backend::MC, Device::CPU, T>::align(ij);
@@ -229,11 +222,70 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
     Vh.setRangeStart(ij);
   }
 
+  void init(const SizeType j_loc, Matrix<T, D>& mat_a, matrix::Panel<Coord::Col, T, D>& W) {
+    namespace di = dlaf::internal;
+    namespace ex = pika::execution::experimental;
+
+    auto& Vh = panels_v.currentResource();
+
+    ntiles = to_sizet(Vh.rangeEndLocal() - Vh.rangeStartLocal());
+
+    std::vector<matrix::ReadWriteTileSender<T, D>> v_panel_rw;
+    v_panel_rw.reserve(ntiles);
+    for (const auto& it : Vh.iteratorLocal())
+      v_panel_rw.emplace_back(mat_a.readwrite(LocalTileIndex{it.row(), j_loc}));
+
+    std::vector<matrix::ReadWriteTileSender<T, D>> w_panel_rw;
+    w_panel_rw.reserve(ntiles);
+    for (const auto& it : W.iteratorLocal())
+      w_panel_rw.emplace_back(W.readwrite(it));
+
+    lds_snd = ex::split(ex::ensure_started(
+        di::whenAllLift(ex::when_all_vector(std::move(v_panel_rw)),
+                        ex::when_all_vector(std::move(w_panel_rw)), batch_v_panel.readwrite(),
+                        batch_w_up.readwrite(), batch_w_col.readwrite()) |
+        di::transform(di::Policy<Backend::MC>(), [ntiles = this->ntiles](auto&& v_tiles, auto&& w_tiles,
+                                                                         auto&& ptrs_v, auto&& ptrs_wup,
+                                                                         auto&& ptrs_w) {
+          std::vector<T*> ptrs_v_h, ptrs_wup_h, ptrs_w_h;
+          ptrs_v_h.reserve(ntiles);
+          ptrs_wup_h.reserve(ntiles);
+          ptrs_w_h.reserve(ntiles);
+
+          for (std::size_t index = 0; index < ntiles; ++index) {
+            ptrs_v_h.push_back(v_tiles[index].ptr());
+            ptrs_wup_h.push_back(w_tiles[0].ptr());
+            ptrs_w_h.push_back(w_tiles[index].ptr());
+          }
+
+          cudaMemcpy(ptrs_v.ptr(), ptrs_v_h.data(), ntiles * sizeof(T*), cudaMemcpyHostToDevice);
+          cudaMemcpy(ptrs_wup.ptr(), ptrs_wup_h.data(), ntiles * sizeof(T*), cudaMemcpyHostToDevice);
+          cudaMemcpy(ptrs_w.ptr(), ptrs_w_h.data(), ntiles * sizeof(T*), cudaMemcpyHostToDevice);
+
+          return std::make_tuple(v_tiles[0].ld(), w_tiles[0].ld());
+        })));
+  }
+
+  void step() {
+    namespace di = dlaf::internal;
+    namespace ex = pika::execution::experimental;
+    ex::start_detached(di::whenAllLift(lds_snd, batch_w_up.readwrite(), batch_w_col.readwrite()) |
+                       di::transform(di::Policy<Backend::GPU>(),
+                                     [ntiles = this->ntiles](auto&& lds, auto&& ptrs_wup_snd,
+                                                             auto&& ptrs_w_snd, whip::stream_t stream) {
+                                       // Note:
+                                       // v does not get updated because it does not refer to current
+                                       // col, but to where the already calculated reflectors start
+                                       const SizeType ld_w = std::get<1>(lds);
+                                       gpu::updatePointers(ntiles, ptrs_wup_snd.ptr(), ld_w, stream);
+                                       gpu::updatePointers(ntiles, ptrs_w_snd.ptr(), ld_w, stream);
+                                     }));
+  }
+
   // TODO we can think about having just align there probably
   void reset() {
     Helper<Backend::MC, Device::CPU, T>::reset();
     auto& Vh = panels_v.currentResource();
-
     Vh.reset();
   }
 
@@ -396,7 +448,8 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
     const std::size_t offset = to_sizet(i - j);
     ex::start_detached(
         di::whenAllLift(offset, ij_el_tl, ex::when_all_vector(std::move(w_panel_rw)),
-                        ex::when_all_vector(std::move(v_panel_ro)), std::forward<SenderTau>(tau)) |
+                        ex::when_all_vector(std::move(v_panel_ro)), std::forward<SenderTau>(tau),
+                        batch_v_panel.read(), batch_w_up.read(), batch_w_col.read()) |
         di::transform<di::TransformDispatchType::Blas>(di::Policy<B>(), kernelSetupW<B, T>{}));
   }
 
@@ -445,7 +498,16 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
   }
 
 protected:
+  std::size_t ntiles = 0;
+  pika::execution::experimental::any_sender<std::tuple<SizeType, SizeType>> lds_snd;
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panels_v;
+
+  // no update
+  batch_t<T> batch_v_panel;
+
+  // to be updated
+  batch_t<T> batch_w_col;
+  batch_t<T> batch_w_up;
 };
 
 template <class T>

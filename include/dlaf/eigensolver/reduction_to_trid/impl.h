@@ -142,6 +142,8 @@ struct Helper<Backend::MC, Device::CPU, T> {
   Helper(const std::size_t, const matrix::Distribution&) {}
 
   void align(const GlobalTileIndex&) {}
+  void init(const SizeType, Matrix<T, D>&, matrix::Panel<Coord::Col, T, D>&) {}
+  void step() {}
   void reset() {}
 
   template <class MatrixLike>
@@ -471,6 +473,7 @@ TridiagResult1Stage<T> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
 
     W.setRangeStart(GlobalTileIndex{j, 0});
     helper.align(GlobalTileIndex{j, 0});
+    helper.init(j, mat_a, W);  // TODO use loc
 
     // TODO probably not needed
     matrix::util::set0<B>(pika::execution::thread_priority::high, W);
@@ -510,6 +513,8 @@ TridiagResult1Stage<T> ReductionToTrid<B, D, T>::call(Matrix<T, D>& mat_a) {
       // compute W
       helper.setupW(GlobalTileIndex{i, j}, TileElementIndex{i_el_tl, j_el_tl}, panel_uptonow, mat_a, W,
                     std::move(tau));
+
+      helper.step();
     }
     if (is_last_tile) {
       if (dist_a.template tile_size_of<Coord::Col>(j) > 1) {

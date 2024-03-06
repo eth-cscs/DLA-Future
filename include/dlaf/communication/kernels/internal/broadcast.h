@@ -59,7 +59,7 @@ template <Device D_comm, dlaf::internal::RequireContiguous require_contiguous, c
   };
 
 #if !defined(DLAF_WITH_MPI_GPU_AWARE)
-  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
+  static_assert(D_comm == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
 #endif
 
   // The input tile must be copied to the temporary tile used for the send, but
@@ -106,7 +106,7 @@ template <Device D_comm, dlaf::internal::RequireContiguous require_contiguous, c
 #endif
 
 #if !defined(DLAF_WITH_MPI_GPU_AWARE)
-  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
+  static_assert(D_comm == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
 #endif
 
   // Since this is a receive we don't need to copy the input to the temporary

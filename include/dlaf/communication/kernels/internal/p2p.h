@@ -63,7 +63,7 @@ template <Device D_comm, dlaf::internal::RequireContiguous require_contiguous, c
   };
 
 #if !defined(DLAF_WITH_MPI_GPU_AWARE)
-  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
+  static_assert(D_comm == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
 #endif
 
   return withTemporaryTile<D_comm, CopyToDestination::Yes, CopyFromDestination::No, require_contiguous>(
@@ -100,7 +100,7 @@ template <Device D_comm, dlaf::internal::RequireContiguous require_contiguous, c
   };
 
 #if !defined(DLAF_WITH_MPI_GPU_AWARE)
-  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
+  static_assert(D_comm == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
 #endif
 
   return withTemporaryTile<D_comm, CopyToDestination::No, CopyFromDestination::Yes, require_contiguous>(

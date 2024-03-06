@@ -33,6 +33,9 @@ namespace dlaf::comm::internal {
 template <class T, Device D>
 void reduceRecvInPlace(const Communicator& comm, MPI_Op reduce_op, const matrix::Tile<T, D>& tile,
                        MPI_Request* req) {
+#if !defined(DLAF_WITH_MPI_GPU_AWARE)
+  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
+#endif
   DLAF_ASSERT(tile.is_contiguous(), "");
 
   auto msg = comm::make_message(common::make_data(tile));
@@ -45,6 +48,9 @@ DLAF_MAKE_CALLABLE_OBJECT(reduceRecvInPlace);
 template <class T, Device D>
 void reduceSend(const Communicator& comm, comm::IndexT_MPI rank_root, MPI_Op reduce_op,
                 const matrix::Tile<const T, D>& tile, MPI_Request* req) {
+#if !defined(DLAF_WITH_MPI_GPU_AWARE)
+  static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
+#endif
   DLAF_ASSERT(tile.is_contiguous(), "");
 
   auto msg = comm::make_message(common::make_data(tile));
@@ -78,6 +84,10 @@ template <Device D_comm, class T, Device D>
 #pragma GCC diagnostic pop
 #endif
 
+#if !defined(DLAF_WITH_MPI_GPU_AWARE)
+  static_assert(D_comm == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
+#endif
+
   // The input tile must be copied to the temporary tile to participate in the
   // reduction. The temporary tile is also copied back so that the reduced
   // result can be used. The reduction is explicitly done on CPU memory so that
@@ -103,6 +113,10 @@ template <Device D_comm, class T, Device D>
     return whenAllLift(std::move(pcomm), rank_root, reduce_op, std::cref(tile_comm)) |
            transformMPI(reduceSend_o);
   };
+
+#if !defined(DLAF_WITH_MPI_GPU_AWARE)
+  static_assert(D_comm == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
+#endif
 
   // The input tile must be copied to the temporary tile used for the send, but
   // the temporary tile does not need to be copied back to the input since the

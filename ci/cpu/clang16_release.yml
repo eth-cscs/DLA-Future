@@ -1,0 +1,31 @@
+include:
+  - local: 'ci/common-ci.yml'
+
+cpu clang16 release deps:
+  extends: .build_deps_common
+  variables:
+    EXTRA_APTGET: "clang-16 libomp-16-dev"
+    COMPILER: clang@16
+    USE_MKL: "ON"
+    SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
+    BASE_IMAGE: docker.io/ubuntu:23.10
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cpu-clang16-release/build
+
+cpu clang16 release build:
+  extends:
+    - .build_common
+    - .build_for_daint-mc
+  needs:
+    - cpu clang16 release deps
+  variables:
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cpu-clang16-release/deploy:$CI_COMMIT_SHA
+    DEPLOY_BASE_IMAGE: docker.io/ubuntu:23.10
+
+cpu clang16 release test:
+  extends: .run_common
+  needs:
+    - cpu clang16 release build
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cpu clang16 release build

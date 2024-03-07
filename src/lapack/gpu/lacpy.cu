@@ -10,6 +10,7 @@
 
 #include <whip.hpp>
 
+#include <dlaf/common/assert.h>
 #include <dlaf/gpu/assert.cu.h>
 #include <dlaf/gpu/blas/api.h>
 #include <dlaf/lapack/gpu/lacpy.h>
@@ -174,6 +175,8 @@ static whip::memcpy_kind get_lacpy_memcpy_kind(const void* src, const void* dst)
                 "Attempting to do a HIP lacpy with unsupported source and destination memory type",
                 src_type, dst_type);
   }
+#else
+  dlaf::internal::silenceUnusedWarningFor(src, dst);
 #endif
 
   return whip::memcpy_default;

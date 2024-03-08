@@ -44,9 +44,10 @@ template <class T>
 struct kernelSetupW<Backend::GPU, T> {
   template <class SenderW, class SenderV, class SenderTau, class PtrV, class PtrWup, class PtrW>
   void operator()(cublasHandle_t handle, const std::size_t i_first, const TileElementIndex ij_el_tl,
-                  SenderW&& w_tiles, SenderV&& v_tiles, SenderTau&& tau, PtrV&& ptrs_v_snd,
-                  PtrWup&& ptrs_wup_snd, PtrW&& ptrs_w_snd) {
-    T* const* ptrs_v = ptrs_v_snd.ptr();
+                  SenderW&& w_tiles, SenderV&& v_tiles, SenderTau&& tau, PtrV&& ptrs_v_panel_snd,
+                  PtrV&& ptrs_w_panel_snd, PtrWup&& ptrs_wup_snd, PtrW&& ptrs_w_snd) {
+    T* const* ptrs_v_panel = ptrs_v_panel_snd.ptr();
+    T* const* ptrs_w_panel = ptrs_w_panel_snd.ptr();
     T* const* ptrs_wup = ptrs_wup_snd.ptr();
     T* const* ptrs_w = ptrs_w_snd.ptr();
 
@@ -87,6 +88,7 @@ struct kernelSetupW<Backend::GPU, T> {
         different_shape.push_back(i_first);
         if (v_tiles.size() - 1 > i_first)
           different_shape.push_back(v_tiles.size() - 1);
+
         for (std::size_t batch_index : different_shape) {
           const SizeType i_first_tl = batch_index == i_first ? i_el_tl : 0;
           auto&& tile_v = v_tiles[batch_index].get();
@@ -110,9 +112,9 @@ struct kernelSetupW<Backend::GPU, T> {
 
           gpublas::internal::GemvBatched<T>::call(
               handle, util::blasToCublas(blas::Op::NoTrans), to_int(m), to_int(j_el_tl),
-              util::blasToCublasCast(&alpha), util::blasToCublasCast(&ptrs_v[i_first + 1]), to_int(ld),
-              util::blasToCublasCast(&ptrs_wup[i_first + 1]), 1, util::blasToCublasCast(&beta),
-              util::blasToCublasCast(&ptrs_w[i_first + 1]), 1, nbatch);
+              util::blasToCublasCast(&alpha), util::blasToCublasCast(&ptrs_v_panel[i_first + 1]),
+              to_int(ld), util::blasToCublasCast(&ptrs_wup[i_first + 1]), 1,
+              util::blasToCublasCast(&beta), util::blasToCublasCast(&ptrs_w[i_first + 1]), 1, nbatch);
         }
       }
 
@@ -135,23 +137,42 @@ struct kernelSetupW<Backend::GPU, T> {
       }
 
       // w = w - W . w_up
-      for (std::size_t i = i_first; i < v_tiles.size(); ++i) {
-        const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
-
-        auto&& tile_w = w_tiles[i];
-
-        auto&& w = tile_w.ptr({i_first_tl, 0});
-        auto&& w_col = tile_w.ptr({i_first_tl, j_el_tl});
-
+      {
         const T alpha = -1;
         const T beta = 1;
 
-        gpublas::internal::Gemv<T>::call(handle, util::blasToCublas(blas::Op::NoTrans),
-                                         to_int(tile_w.size().rows() - i_first_tl), to_int(j_el_tl),
-                                         util::blasToCublasCast(&alpha), util::blasToCublasCast(w),
-                                         to_int(tile_w.ld()), util::blasToCublasCast(w_up), 1,
-                                         util::blasToCublasCast(&beta), util::blasToCublasCast(w_col),
-                                         1);
+        // Manage differently the first and the last tile, because they might have different shapes
+        std::vector<std::size_t> different_shape;
+        different_shape.push_back(i_first);
+        if (w_tiles.size() - 1 > i_first)
+          different_shape.push_back(v_tiles.size() - 1);
+
+        for (std::size_t batch_index : different_shape) {
+          const SizeType i_first_tl = batch_index == i_first ? i_el_tl : 0;
+          auto&& tile_w = w_tiles[batch_index];
+
+          auto&& w = tile_w.ptr({i_first_tl, 0});
+          auto&& w_col = tile_w.ptr({i_first_tl, j_el_tl});
+
+          gpublas::internal::Gemv<T>::call(handle, util::blasToCublas(blas::Op::NoTrans),
+                                           to_int(tile_w.size().rows() - i_first_tl), to_int(j_el_tl),
+                                           util::blasToCublasCast(&alpha), util::blasToCublasCast(w),
+                                           to_int(tile_w.ld()), util::blasToCublasCast(w_up), 1,
+                                           util::blasToCublasCast(&beta), util::blasToCublasCast(w_col),
+                                           1);
+        }
+
+        // Manage the remaining "internal" part of the batch
+        if (int nbatch = w_tiles.size() - i_first - 2; nbatch > 0) {
+          const SizeType m = w_tiles[i_first + 1].size().rows();
+          const SizeType ld = w_tiles[i_first + 1].ld();
+
+          gpublas::internal::GemvBatched<T>::call(
+              handle, util::blasToCublas(blas::Op::NoTrans), to_int(m), to_int(j_el_tl),
+              util::blasToCublasCast(&alpha), util::blasToCublasCast(&ptrs_w_panel[i_first + 1]),
+              to_int(ld), util::blasToCublasCast(&ptrs_wup[i_first + 1]), 1,
+              util::blasToCublasCast(&beta), util::blasToCublasCast(&ptrs_w[i_first + 1]), 1, nbatch);
+        }
       }
     }
 
@@ -213,7 +234,8 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
   Helper(const std::size_t n_workspaces, const matrix::Distribution& panel_dist)
       : Helper<Backend::MC, Device::CPU, T>(n_workspaces, panel_dist),
         panels_v(n_workspaces, panel_dist), batch_v_panel(panel_dist.nrTiles().rows()),
-        batch_w_col(panel_dist.nrTiles().rows()), batch_w_up(panel_dist.nrTiles().rows()) {}
+        batch_w_panel(panel_dist.nrTiles().rows()), batch_w_col(panel_dist.nrTiles().rows()),
+        batch_w_up(panel_dist.nrTiles().rows()) {}
 
   void align(const GlobalTileIndex& ij) {
     Helper<Backend::MC, Device::CPU, T>::align(ij);
@@ -243,27 +265,34 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
     lds_snd = ex::split(ex::ensure_started(
         di::whenAllLift(ex::when_all_vector(std::move(v_panel_rw)),
                         ex::when_all_vector(std::move(w_panel_rw)), batch_v_panel.readwrite(),
-                        batch_w_up.readwrite(), batch_w_col.readwrite()) |
-        di::transform(di::Policy<Backend::MC>(), [ntiles = this->ntiles](auto&& v_tiles, auto&& w_tiles,
-                                                                         auto&& ptrs_v, auto&& ptrs_wup,
-                                                                         auto&& ptrs_w) {
-          std::vector<T*> ptrs_v_h, ptrs_wup_h, ptrs_w_h;
-          ptrs_v_h.reserve(ntiles);
-          ptrs_wup_h.reserve(ntiles);
-          ptrs_w_h.reserve(ntiles);
+                        batch_w_panel.readwrite(), batch_w_up.readwrite(), batch_w_col.readwrite()) |
+        di::transform(di::Policy<Backend::MC>(),
+                      [ntiles = this->ntiles](auto&& v_tiles, auto&& w_tiles, auto&& ptrs_v_panel,
+                                              auto&& ptrs_w_panel, auto&& ptrs_wup, auto&& ptrs_w) {
+                        std::vector<T*> ptrs_v_panel_h, ptrs_w_panel_h, ptrs_wup_h, ptrs_w_h;
+                        ptrs_v_panel_h.reserve(ntiles);
+                        ptrs_w_panel_h.reserve(ntiles);
+                        ptrs_wup_h.reserve(ntiles);
+                        ptrs_w_h.reserve(ntiles);
 
-          for (std::size_t index = 0; index < ntiles; ++index) {
-            ptrs_v_h.push_back(v_tiles[index].ptr());
-            ptrs_wup_h.push_back(w_tiles[0].ptr());
-            ptrs_w_h.push_back(w_tiles[index].ptr());
-          }
+                        for (std::size_t index = 0; index < ntiles; ++index) {
+                          ptrs_v_panel_h.push_back(v_tiles[index].ptr());
+                          ptrs_w_panel_h.push_back(w_tiles[index].ptr());
+                          ptrs_wup_h.push_back(w_tiles[0].ptr());
+                          ptrs_w_h.push_back(w_tiles[index].ptr());
+                        }
 
-          cudaMemcpy(ptrs_v.ptr(), ptrs_v_h.data(), ntiles * sizeof(T*), cudaMemcpyHostToDevice);
-          cudaMemcpy(ptrs_wup.ptr(), ptrs_wup_h.data(), ntiles * sizeof(T*), cudaMemcpyHostToDevice);
-          cudaMemcpy(ptrs_w.ptr(), ptrs_w_h.data(), ntiles * sizeof(T*), cudaMemcpyHostToDevice);
+                        cudaMemcpy(ptrs_v_panel.ptr(), ptrs_v_panel_h.data(), ntiles * sizeof(T*),
+                                   cudaMemcpyHostToDevice);
+                        cudaMemcpy(ptrs_w_panel.ptr(), ptrs_w_panel_h.data(), ntiles * sizeof(T*),
+                                   cudaMemcpyHostToDevice);
+                        cudaMemcpy(ptrs_wup.ptr(), ptrs_wup_h.data(), ntiles * sizeof(T*),
+                                   cudaMemcpyHostToDevice);
+                        cudaMemcpy(ptrs_w.ptr(), ptrs_w_h.data(), ntiles * sizeof(T*),
+                                   cudaMemcpyHostToDevice);
 
-          return std::make_tuple(v_tiles[0].ld(), w_tiles[0].ld());
-        })));
+                        return std::make_tuple(v_tiles[0].ld(), w_tiles[0].ld());
+                      })));
   }
 
   void step() {
@@ -446,11 +475,12 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
     }
 
     const std::size_t offset = to_sizet(i - j);
-    ex::start_detached(
-        di::whenAllLift(offset, ij_el_tl, ex::when_all_vector(std::move(w_panel_rw)),
-                        ex::when_all_vector(std::move(v_panel_ro)), std::forward<SenderTau>(tau),
-                        batch_v_panel.read(), batch_w_up.read(), batch_w_col.read()) |
-        di::transform<di::TransformDispatchType::Blas>(di::Policy<B>(), kernelSetupW<B, T>{}));
+    ex::start_detached(di::whenAllLift(offset, ij_el_tl, ex::when_all_vector(std::move(w_panel_rw)),
+                                       ex::when_all_vector(std::move(v_panel_ro)),
+                                       std::forward<SenderTau>(tau), batch_v_panel.read(),
+                                       batch_w_panel.read(), batch_w_up.read(), batch_w_col.read()) |
+                       di::transform<di::TransformDispatchType::Blas>(di::Policy<B>(),
+                                                                      kernelSetupW<B, T>{}));
   }
 
   template <class SenderTau, class SenderTri>
@@ -504,6 +534,7 @@ protected:
 
   // no update
   batch_t<T> batch_v_panel;
+  batch_t<T> batch_w_panel;
 
   // to be updated
   batch_t<T> batch_w_col;

@@ -487,7 +487,6 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid& grid, Matrix<T
     if (kk_rank.col() == this_rank.col()) {
       // panel partial update
       for (SizeType i_local = at_offset.rows(); i_local < distr.localNrTiles().rows(); ++i_local) {
-        const LocalTileIndex local_idx(Coord::Row, i_local);
         const LocalTileIndex ik(i_local, distr.localTileFromGlobalTile<Coord::Col>(k));
 
         hemmPanelTile<backend>(thread_priority::high, a_diag, mat_l.read(ik), mat_a.readwrite(ik));
@@ -759,7 +758,6 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid& grid, Matrix<T
     if (kk_rank.row() == this_rank.row()) {
       // panel partial update
       for (SizeType j_local = at_offset.cols(); j_local < distr.localNrTiles().cols(); ++j_local) {
-        const LocalTileIndex local_idx(Coord::Col, j_local);
         const LocalTileIndex ki(distr.localTileFromGlobalTile<Coord::Row>(k), j_local);
 
         hemmPanelTile<backend>(thread_priority::high, a_diag, mat_u.read(ki), mat_a.readwrite(ki));

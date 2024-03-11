@@ -37,6 +37,9 @@
 #include <dlaf/util_cublas.h>
 #include <dlaf/util_matrix.h>
 
+//
+#include <nvToolsExt.h>
+
 #ifdef DLAF_WITH_GPU
 namespace dlaf::eigensolver::internal {
 
@@ -46,6 +49,8 @@ struct kernelSetupW<Backend::GPU, T> {
   void operator()(cublasHandle_t handle, const std::size_t i_first, const TileElementIndex ij_el_tl,
                   SenderW&& w_tiles, SenderV&& v_tiles, SenderTau&& tau, PtrV&& ptrs_v_panel_snd,
                   PtrV&& ptrs_w_panel_snd, PtrWup&& ptrs_wup_snd, PtrW&& ptrs_w_snd) {
+    nvtxRangePush("setupW");
+
     T* const* ptrs_v_panel = ptrs_v_panel_snd.ptr();
     T* const* ptrs_w_panel = ptrs_w_panel_snd.ptr();
     T* const* ptrs_wup = ptrs_wup_snd.ptr();
@@ -58,6 +63,7 @@ struct kernelSetupW<Backend::GPU, T> {
     if (j_el_tl > 0) {
       auto&& w_up = w_tiles[0].ptr({0, j_el_tl});
 
+      nvtxRangePush("GEMV-1");
       // w_up = W* . v
       for (std::size_t i = i_first; i < v_tiles.size(); ++i) {
         const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
@@ -77,8 +83,10 @@ struct kernelSetupW<Backend::GPU, T> {
                                          to_int(tile_w.ld()), util::blasToCublasCast(v_col), 1,
                                          util::blasToCublasCast(&beta), util::blasToCublasCast(w_up), 1);
       }
+      nvtxRangePop();
 
       // w = w - V . w_up
+      nvtxRangePush("GEMV-2");
       {
         const T alpha = -1;
         const T beta = 1;
@@ -117,8 +125,10 @@ struct kernelSetupW<Backend::GPU, T> {
               util::blasToCublasCast(&beta), util::blasToCublasCast(&ptrs_w[i_first + 1]), 1, nbatch);
         }
       }
+      nvtxRangePop();
 
       // w_up = V* . v
+      nvtxRangePush("GEMV-3");
       for (std::size_t i = i_first; i < v_tiles.size(); ++i) {
         const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
 
@@ -135,8 +145,10 @@ struct kernelSetupW<Backend::GPU, T> {
                                          to_int(tile_v.ld()), util::blasToCublasCast(v_col), 1,
                                          util::blasToCublasCast(&beta), util::blasToCublasCast(w_up), 1);
       }
+      nvtxRangePop();
 
       // w = w - W . w_up
+      nvtxRangePush("GEMV-4");
       {
         const T alpha = -1;
         const T beta = 1;
@@ -174,6 +186,7 @@ struct kernelSetupW<Backend::GPU, T> {
               util::blasToCublasCast(&beta), util::blasToCublasCast(&ptrs_w[i_first + 1]), 1, nbatch);
         }
       }
+      nvtxRangePop();
     }
 
     for (std::size_t i = i_first; i < w_tiles.size(); ++i) {
@@ -207,6 +220,8 @@ struct kernelSetupW<Backend::GPU, T> {
                                        util::blasToCublasCast(tile_v.ptr({i_first_tl, j_el_tl})), 1,
                                        util::blasToCublasCast(tile_w.ptr({i_first_tl, j_el_tl})), 1);
     }
+
+    nvtxRangePop();
   }
 };
 

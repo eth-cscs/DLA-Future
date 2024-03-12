@@ -217,7 +217,7 @@ def chol(
     if lib.startswith("dlaf"):
         _check_type(dtype)
         env += " OMP_NUM_THREADS=1"
-        app = f"{build_dir}/miniapp/miniapp_cholesky"
+        app = f"{build_dir}/miniapp_cholesky"
         opts = f"--type {dtype} --matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
     elif lib == "slate":
         _only_type_d(dtype)
@@ -275,7 +275,7 @@ def trsm(
     if lib.startswith("dlaf"):
         _check_type(dtype)
         env += " OMP_NUM_THREADS=1"
-        app = f"{build_dir}/miniapp/miniapp_triangular_solver"
+        app = f"{build_dir}/miniapp_triangular_solver"
         opts = f"--type {dtype} --m {m_sz} --n {n_sz} --mb {mb_sz} --nb {mb_sz} --grid-rows {gr} --grid-cols {gc} --nruns {nruns} {extra_flags}"
     elif lib == "slate":
         _only_type_d(dtype)
@@ -324,7 +324,7 @@ def trmm(
     if lib.startswith("dlaf"):
         _check_type(dtype)
         env += " OMP_NUM_THREADS=1"
-        app = f"{build_dir}/miniapp/miniapp_triangular_multiplication"
+        app = f"{build_dir}/miniapp_triangular_multiplication"
         opts = f"--type {dtype} --m {m_sz} --n {n_sz} --mb {mb_sz} --nb {mb_sz} --grid-rows {gr} --grid-cols {gc} --nruns {nruns} {extra_flags}"
     else:
         raise ValueError(_err_msg(lib))
@@ -360,7 +360,7 @@ def gen2std(
     if lib.startswith("dlaf"):
         _check_type(dtype)
         env += " OMP_NUM_THREADS=1"
-        app = f"{build_dir}/miniapp/miniapp_gen_to_std"
+        app = f"{build_dir}/miniapp_gen_to_std"
         opts = f"--type {dtype} --matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
     elif lib == "slate":
         _only_type_d(dtype)
@@ -409,7 +409,7 @@ def red2band(
     if lib.startswith("dlaf"):
         _check_type(dtype)
         env += " OMP_NUM_THREADS=1"
-        app = f"{build_dir}/miniapp/miniapp_reduction_to_band"
+        app = f"{build_dir}/miniapp_reduction_to_band"
         opts = f"--type {dtype} --matrix-size {m_sz} --block-size {mb_sz} --band-size {band} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
     else:
         raise ValueError(_err_msg(lib))
@@ -451,7 +451,7 @@ def band2trid(
     if lib.startswith("dlaf"):
         _check_type(dtype)
         env += " OMP_NUM_THREADS=1"
-        app = f"{build_dir}/miniapp/miniapp_band_to_tridiag"
+        app = f"{build_dir}/miniapp_band_to_tridiag"
         opts = f"--type {dtype} --matrix-size {m_sz} --block-size {mb_sz} --band-size {band} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
     else:
         raise ValueError(_err_msg(lib))
@@ -487,7 +487,7 @@ def trid_evp(
     if lib.startswith("dlaf"):
         _check_type(dtype)
         env += " OMP_NUM_THREADS=1"
-        app = f"{build_dir}/miniapp/miniapp_tridiag_solver"
+        app = f"{build_dir}/miniapp_tridiag_solver"
         opts = f"--type {dtype} --matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
     else:
         raise ValueError(_err_msg(lib))
@@ -534,7 +534,7 @@ def bt_band2trid(
     if lib.startswith("dlaf"):
         _check_type(dtype)
         env += " OMP_NUM_THREADS=1"
-        app = f"{build_dir}/miniapp/miniapp_bt_band_to_tridiag"
+        app = f"{build_dir}/miniapp_bt_band_to_tridiag"
         opts = f"--type {dtype} --m {m_sz} --n {n_sz} --mb {mb_sz} --nb {mb_sz} --b {band} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
     else:
         raise ValueError(_err_msg(lib))
@@ -580,7 +580,7 @@ def bt_red2band(
     if lib.startswith("dlaf"):
         _check_type(dtype)
         env += " OMP_NUM_THREADS=1"
-        app = f"{build_dir}/miniapp/miniapp_bt_reduction_to_band"
+        app = f"{build_dir}/miniapp_bt_reduction_to_band"
         opts = f"--type {dtype} --m {m_sz} --n {n_sz} --mb {mb_sz} --nb {mb_sz} --b {band} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
     else:
         raise ValueError(_err_msg(lib))
@@ -625,7 +625,7 @@ def evp(
             raise RuntimeError(f"Invalid lower bound for min_band {min_band} specified! (evp)")
 
         env += " OMP_NUM_THREADS=1"
-        app = f"{build_dir}/miniapp/miniapp_eigensolver"
+        app = f"{build_dir}/miniapp_eigensolver"
         opts = f"--type {dtype} --matrix-size {m_sz} --block-size {mb_sz} {band_flag} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
     elif lib == "slate":
         _check_type(dtype)
@@ -696,7 +696,7 @@ def gevp(
             raise RuntimeError(f"Invalid lower bound for min_band {min_band} specified! (gevp)")
 
         env += " OMP_NUM_THREADS=1"
-        app = f"{build_dir}/miniapp/miniapp_gen_eigensolver"
+        app = f"{build_dir}/miniapp_gen_eigensolver"
         opts = f"--type {dtype} --matrix-size {m_sz} --block-size {mb_sz} {band_flag} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
     else:
         raise ValueError(_err_msg(lib))

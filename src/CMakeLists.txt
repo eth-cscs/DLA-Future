@@ -145,6 +145,33 @@ if(DLAF_WITH_PRECOMPILED_HEADERS)
   target_precompile_headers(dlaf.pch_exe PRIVATE ${precompiled_headers})
 endif()
 
+# Helper function for generating ETI files for algorithms.
+function(DLAF_generateETI)
+  set(options "")
+  set(oneValueArgs NAMESPACE MACRO BACKEND DEVICE TARGET)
+  set(multiValueArgs INCLUDES TYPES)
+  cmake_parse_arguments(DLAF_GETI "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+  set(eti_file_template "${PROJECT_SOURCE_DIR}/cmake/template/eti.cpp.in")
+  set(eti_file_base "${DLAF_GETI_MACRO}_${DLAF_GETI_BACKEND}_${DLAF_GETI_DEVICE}")
+  foreach(type ${DLAF_GETI_TYPES})
+      set(eti_file "${eti_file_base}_${type}.cpp")
+      string(REGEX REPLACE "[^A-Za-z0-9.]" "_" eti_file "${eti_file}")
+      string(TOLOWER "${eti_file}" eti_file)
+      set(eti_file_full "${CMAKE_CURRENT_BINARY_DIR}/${eti_file}")
+      set(eti_includes "")
+      foreach(include ${DLAF_GETI_INCLUDES})
+        set(eti_includes "${eti_includes}\n#include <${include}>")
+      endforeach()
+      set(eti_namespace "${DLAF_GETI_NAMESPACE}")
+      set(eti_instantiations "${DLAF_GETI_MACRO}(, ${DLAF_GETI_BACKEND}, ${DLAF_GETI_DEVICE}, ${type})")
+
+      configure_file("${eti_file_template}" "${eti_file_full}" @ONLY)
+
+      target_sources(${DLAF_GETI_TARGET} PUBLIC "${eti_file_full}")
+  endforeach()
+endfunction()
+
 # Helper function for creating sub-libraries that libDLAF consists of. It
 # creates two variants of the library: one object library with the name
 # dlaf.${name}_object and one static/shared library with the name dlaf.${name}.
@@ -214,61 +241,325 @@ DLAF_addSublibrary(auxiliary SOURCES auxiliary/norm/mc.cpp LIBRARIES dlaf.core)
 # Define DLAF's eigensolver library
 DLAF_addSublibrary(
   eigensolver
-  SOURCES eigensolver/band_to_tridiag/mc.cpp
-          eigensolver/bt_band_to_tridiag/mc.cpp
-          $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/bt_band_to_tridiag/gpu.cpp>
-          eigensolver/bt_reduction_to_band/mc.cpp
-          $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/bt_reduction_to_band/gpu.cpp>
-          eigensolver/eigensolver/mc.cpp
-          $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/eigensolver/gpu.cpp>
-          eigensolver/gen_eigensolver/mc.cpp
-          $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/gen_eigensolver/gpu.cpp>
-          eigensolver/gen_to_std/mc.cpp
-          $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/gen_to_std/gpu.cpp>
-          eigensolver/reduction_to_band/mc.cpp
-          $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/reduction_to_band/gpu.cpp>
   LIBRARIES dlaf.tridiagonal_eigensolver dlaf.solver dlaf.factorization dlaf.core
 )
+DLAF_generateETI(
+    TARGET dlaf.eigensolver_object
+    NAMESPACE "dlaf::eigensolver::internal"
+    MACRO "DLAF_EIGENSOLVER_B2T_ETI"
+    BACKEND "Backend::MC"
+    DEVICE "Device::CPU"
+    TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+    INCLUDES "dlaf/eigensolver/band_to_tridiag/mc.h"
+)
+DLAF_generateETI(
+    TARGET dlaf.eigensolver_object
+    NAMESPACE "dlaf::eigensolver::internal"
+    MACRO "DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_ETI"
+    BACKEND "Backend::MC"
+    DEVICE "Device::CPU"
+    TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+    INCLUDES "dlaf/eigensolver/bt_band_to_tridiag/impl.h"
+)
+DLAF_generateETI(
+    TARGET dlaf.eigensolver_object
+    NAMESPACE "dlaf::eigensolver::internal"
+    MACRO "DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_ETI"
+    BACKEND "Backend::MC"
+    DEVICE "Device::CPU"
+    TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+    INCLUDES "dlaf/eigensolver/bt_reduction_to_band/impl.h"
+)
+DLAF_generateETI(
+    TARGET dlaf.eigensolver_object
+    NAMESPACE "dlaf::eigensolver::internal"
+    MACRO "DLAF_EIGENSOLVER_ETI"
+    BACKEND "Backend::MC"
+    DEVICE "Device::CPU"
+    TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+    INCLUDES "dlaf/eigensolver/eigensolver/impl.h"
+)
+DLAF_generateETI(
+    TARGET dlaf.eigensolver_object
+    NAMESPACE "dlaf::eigensolver::internal"
+    MACRO "DLAF_EIGENSOLVER_GEN_ETI"
+    BACKEND "Backend::MC"
+    DEVICE "Device::CPU"
+    TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+    INCLUDES "dlaf/eigensolver/gen_eigensolver/impl.h"
+)
+DLAF_generateETI(
+    TARGET dlaf.eigensolver_object
+    NAMESPACE "dlaf::eigensolver::internal"
+    MACRO "DLAF_GENTOSTD_ETI"
+    BACKEND "Backend::MC"
+    DEVICE "Device::CPU"
+    TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+    INCLUDES "dlaf/eigensolver/gen_to_std/impl.h"
+)
+DLAF_generateETI(
+    TARGET dlaf.eigensolver_object
+    NAMESPACE "dlaf::eigensolver::internal"
+    MACRO "DLAF_GENTOSTD_ETI"
+    BACKEND "Backend::MC"
+    DEVICE "Device::CPU"
+    TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+    INCLUDES "dlaf/eigensolver/gen_to_std/impl.h"
+)
+DLAF_generateETI(
+    TARGET dlaf.eigensolver_object
+    NAMESPACE "dlaf::eigensolver::internal"
+    MACRO "DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI"
+    BACKEND "Backend::MC"
+    DEVICE "Device::CPU"
+    TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+    INCLUDES "dlaf/eigensolver/reduction_to_band/impl.h"
+)
+if(DLAF_WITH_GPU)
+  DLAF_generateETI(
+      TARGET dlaf.eigensolver_object
+      NAMESPACE "dlaf::eigensolver::internal"
+      MACRO "DLAF_EIGENSOLVER_B2T_ETI"
+      BACKEND "Backend::MC"
+      DEVICE "Device::GPU"
+      TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+      INCLUDES "dlaf/eigensolver/band_to_tridiag/mc.h"
+  )
+  DLAF_generateETI(
+      TARGET dlaf.eigensolver_object
+      NAMESPACE "dlaf::eigensolver::internal"
+      MACRO "DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_ETI"
+      BACKEND "Backend::GPU"
+      DEVICE "Device::GPU"
+      TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+      INCLUDES "dlaf/eigensolver/bt_band_to_tridiag/impl.h"
+  )
+  DLAF_generateETI(
+      TARGET dlaf.eigensolver_object
+      NAMESPACE "dlaf::eigensolver::internal"
+      MACRO "DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_ETI"
+      BACKEND "Backend::GPU"
+      DEVICE "Device::GPU"
+      TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+      INCLUDES "dlaf/eigensolver/bt_reduction_to_band/impl.h"
+  )
+  DLAF_generateETI(
+      TARGET dlaf.eigensolver_object
+      NAMESPACE "dlaf::eigensolver::internal"
+      MACRO "DLAF_EIGENSOLVER_ETI"
+      BACKEND "Backend::GPU"
+      DEVICE "Device::GPU"
+      TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+      INCLUDES "dlaf/eigensolver/eigensolver/impl.h"
+  )
+  DLAF_generateETI(
+      TARGET dlaf.eigensolver_object
+      NAMESPACE "dlaf::eigensolver::internal"
+      MACRO "DLAF_EIGENSOLVER_GEN_ETI"
+      BACKEND "Backend::GPU"
+      DEVICE "Device::GPU"
+      TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+      INCLUDES "dlaf/eigensolver/gen_eigensolver/impl.h"
+  )
+  DLAF_generateETI(
+      TARGET dlaf.eigensolver_object
+      NAMESPACE "dlaf::eigensolver::internal"
+      MACRO "DLAF_GENTOSTD_ETI"
+      BACKEND "Backend::GPU"
+      DEVICE "Device::GPU"
+      TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+      INCLUDES "dlaf/eigensolver/gen_to_std/impl.h"
+  )
+  DLAF_generateETI(
+      TARGET dlaf.eigensolver_object
+      NAMESPACE "dlaf::eigensolver::internal"
+      MACRO "DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI"
+      BACKEND "Backend::GPU"
+      DEVICE "Device::GPU"
+      TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+      INCLUDES "dlaf/eigensolver/reduction_to_band/impl.h"
+  )
+endif()
 
 # Define DLAF's tridiagonal eigensolver library
 DLAF_addSublibrary(
   tridiagonal_eigensolver
-  SOURCES eigensolver/tridiag_solver/mc.cpp
-          $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/tridiag_solver/gpu.cpp>
   GPU_SOURCES eigensolver/tridiag_solver/gpu/kernels.cu
   LIBRARIES dlaf.factorization dlaf.multiplication dlaf.permutations dlaf.core
 )
+DLAF_generateETI(
+    TARGET dlaf.tridiagonal_eigensolver_object
+    NAMESPACE "dlaf::eigensolver::internal"
+    MACRO "DLAF_TRIDIAGONAL_EIGENSOLVER_ETI"
+    BACKEND "Backend::MC"
+    DEVICE "Device::CPU"
+    TYPES "float" "double"
+    INCLUDES "dlaf/eigensolver/tridiag_solver/impl.h"
+)
+if(DLAF_WITH_GPU)
+  DLAF_generateETI(
+      TARGET dlaf.tridiagonal_eigensolver_object
+      NAMESPACE "dlaf::eigensolver::internal"
+      MACRO "DLAF_TRIDIAGONAL_EIGENSOLVER_ETI"
+      BACKEND "Backend::GPU"
+      DEVICE "Device::GPU"
+      TYPES "float" "double"
+      INCLUDES "dlaf/eigensolver/tridiag_solver/impl.h"
+  )
+endif()
 
 # Define DLAF's factorization library
-DLAF_addSublibrary(
-  factorization
-  SOURCES factorization/cholesky/mc.cpp $<$<BOOL:${DLAF_WITH_GPU}>:factorization/cholesky/gpu.cpp>
-          factorization/qr/mc.cpp $<$<BOOL:${DLAF_WITH_GPU}>:factorization/qr/gpu.cpp>
-  LIBRARIES dlaf.core
+DLAF_addSublibrary(factorization LIBRARIES dlaf.core)
+DLAF_generateETI(
+    TARGET dlaf.factorization_object
+    NAMESPACE "dlaf::factorization::internal"
+    MACRO "DLAF_FACTORIZATION_CHOLESKY_ETI"
+    BACKEND "Backend::MC"
+    DEVICE "Device::CPU"
+    TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+    INCLUDES "dlaf/factorization/cholesky/impl.h"
 )
+DLAF_generateETI(
+    TARGET dlaf.factorization_object
+    NAMESPACE "dlaf::factorization::internal"
+    MACRO "DLAF_FACTORIZATION_QR_TFACTOR_ETI"
+    BACKEND "Backend::MC"
+    DEVICE "Device::CPU"
+    TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+    INCLUDES "dlaf/factorization/qr/t_factor_impl.h"
+)
+if(DLAF_WITH_GPU)
+  DLAF_generateETI(
+      TARGET dlaf.factorization_object
+      NAMESPACE "dlaf::factorization::internal"
+      MACRO "DLAF_FACTORIZATION_CHOLESKY_ETI"
+      BACKEND "Backend::GPU"
+      DEVICE "Device::GPU"
+      TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+      INCLUDES "dlaf/factorization/cholesky/impl.h"
+  )
+  DLAF_generateETI(
+      TARGET dlaf.factorization_object
+      NAMESPACE "dlaf::factorization::internal"
+      MACRO "DLAF_FACTORIZATION_QR_TFACTOR_ETI"
+      BACKEND "Backend::GPU"
+      DEVICE "Device::GPU"
+      TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+      INCLUDES "dlaf/factorization/qr/t_factor_impl.h"
+  )
+endif()
 
 # Define DLAF's multiplication library
 DLAF_addSublibrary(
   multiplication
-  SOURCES multiplication/general/mc.cpp $<$<BOOL:${DLAF_WITH_GPU}>:multiplication/general/gpu.cpp>
-          multiplication/hermitian/mc.cpp $<$<BOOL:${DLAF_WITH_GPU}>:multiplication/hermitian/gpu.cpp>
-          multiplication/triangular/mc.cpp $<$<BOOL:${DLAF_WITH_GPU}>:multiplication/triangular/gpu.cpp>
   LIBRARIES dlaf.core
 )
+DLAF_generateETI(
+    TARGET dlaf.multiplication_object
+    NAMESPACE "dlaf::multiplication::internal"
+    MACRO "DLAF_MULTIPLICATION_GENERAL_ETI"
+    BACKEND "Backend::MC"
+    DEVICE "Device::CPU"
+      TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+    INCLUDES "dlaf/multiplication/general/impl.h"
+)
+DLAF_generateETI(
+    TARGET dlaf.multiplication_object
+    NAMESPACE "dlaf::multiplication::internal"
+    MACRO "DLAF_MULTIPLICATION_HERMITIAN_ETI"
+    BACKEND "Backend::MC"
+    DEVICE "Device::CPU"
+    TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+    INCLUDES "dlaf/multiplication/hermitian/impl.h"
+)
+DLAF_generateETI(
+    TARGET dlaf.multiplication_object
+    NAMESPACE "dlaf::multiplication::internal"
+    MACRO "DLAF_MULTIPLICATION_TRIANGULAR_ETI"
+    BACKEND "Backend::MC"
+    DEVICE "Device::CPU"
+    TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+    INCLUDES "dlaf/multiplication/triangular/impl.h"
+)
+if(DLAF_WITH_GPU)
+  DLAF_generateETI(
+      TARGET dlaf.multiplication_object
+      NAMESPACE "dlaf::multiplication::internal"
+      MACRO "DLAF_MULTIPLICATION_GENERAL_ETI"
+      BACKEND "Backend::GPU"
+      DEVICE "Device::GPU"
+      TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+      INCLUDES "dlaf/multiplication/general/impl.h"
+  )
+  DLAF_generateETI(
+      TARGET dlaf.multiplication_object
+      NAMESPACE "dlaf::multiplication::internal"
+      MACRO "DLAF_MULTIPLICATION_HERMITIAN_ETI"
+      BACKEND "Backend::GPU"
+      DEVICE "Device::GPU"
+      TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+      INCLUDES "dlaf/multiplication/hermitian/impl.h"
+  )
+  DLAF_generateETI(
+      TARGET dlaf.multiplication_object
+      NAMESPACE "dlaf::multiplication::internal"
+      MACRO "DLAF_MULTIPLICATION_TRIANGULAR_ETI"
+      BACKEND "Backend::GPU"
+      DEVICE "Device::GPU"
+      TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+      INCLUDES "dlaf/multiplication/triangular/impl.h"
+  )
+endif()
 
 # Define DLAF's permutations library
 DLAF_addSublibrary(
   permutations
-  SOURCES permutations/general/mc.cpp $<$<BOOL:${DLAF_WITH_GPU}>:permutations/general/gpu.cpp>
   GPU_SOURCES permutations/general/perms.cu
   LIBRARIES dlaf.core
 )
+DLAF_generateETI(
+    TARGET dlaf.permutations_object
+    NAMESPACE "dlaf::permutations::internal"
+    MACRO "DLAF_PERMUTATIONS_GENERAL_ETI"
+    BACKEND "Backend::MC"
+    DEVICE "Device::CPU"
+    TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+    INCLUDES "dlaf/permutations/general/impl.h"
+)
+if(DLAF_WITH_GPU)
+  DLAF_generateETI(
+      TARGET dlaf.permutations_object
+      NAMESPACE "dlaf::permutations::internal"
+      MACRO "DLAF_PERMUTATIONS_GENERAL_ETI"
+      BACKEND "Backend::GPU"
+      DEVICE "Device::GPU"
+      TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+      INCLUDES "dlaf/permutations/general/impl.h"
+  )
+endif()
 
 # Define DLAF's solver library
-DLAF_addSublibrary(
-  solver SOURCES solver/triangular/mc.cpp $<$<BOOL:${DLAF_WITH_GPU}>:solver/triangular/gpu.cpp>
-  LIBRARIES dlaf.core
+DLAF_addSublibrary(solver LIBRARIES dlaf.core)
+DLAF_generateETI(
+    TARGET dlaf.solver_object
+    NAMESPACE "dlaf::solver::internal"
+    MACRO "DLAF_SOLVER_TRIANGULAR_ETI"
+    BACKEND "Backend::MC"
+    DEVICE "Device::CPU"
+    TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+    INCLUDES "dlaf/solver/triangular/impl.h"
 )
+if(DLAF_WITH_GPU)
+  DLAF_generateETI(
+      TARGET dlaf.solver_object
+      NAMESPACE "dlaf::solver::internal"
+      MACRO "DLAF_SOLVER_TRIANGULAR_ETI"
+      BACKEND "Backend::GPU"
+      DEVICE "Device::GPU"
+      TYPES "float" "double" "std::complex<float>" "std::complex<double>"
+      INCLUDES "dlaf/solver/triangular/impl.h"
+  )
+endif()
 
 # Define DLAF's C API library
 DLAF_addSublibrary(

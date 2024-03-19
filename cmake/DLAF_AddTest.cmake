@@ -57,72 +57,68 @@ function(_set_element_to_fallback_value LIST_NAME ELEMENT_REGEX FALLBACK)
   endif()
 endfunction()
 
-function(DLAF_addTest test_target_name)
+function(DLAF_addTargetTest test_target_name)
   set(options "")
   set(oneValueArgs MPIRANKS USE_MAIN)
-  set(multiValueArgs SOURCES COMPILE_DEFINITIONS INCLUDE_DIRS LIBRARIES ARGUMENTS)
-  cmake_parse_arguments(DLAF_AT "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+  set(multiValueArgs ARGUMENTS)
+  cmake_parse_arguments(DLAF_ATT "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
   ### Checks
-  if(DLAF_AT_UNPARSED_ARGUMENTS)
-    message(FATAL_ERROR "Unknown arguments ${DLAF_AT_UNPARSED_ARGUMENTS}")
-  endif()
-
-  if(NOT DLAF_AT_SOURCES)
-    message(FATAL_ERROR "No sources specified for this test")
+  if(DLAF_ATT_UNPARSED_ARGUMENTS)
+    message(FATAL_ERROR "Unknown arguments ${DLAF_ATT_UNPARSED_ARGUMENTS}")
   endif()
 
   set(IS_AN_MPI_TEST FALSE)
   set(IS_AN_PIKA_TEST FALSE)
-  if(NOT DLAF_AT_USE_MAIN)
+  if(NOT DLAF_ATT_USE_MAIN)
     set(_gtest_tgt gtest)
-  elseif(DLAF_AT_USE_MAIN STREQUAL PLAIN)
+  elseif(DLAF_ATT_USE_MAIN STREQUAL PLAIN)
     set(_gtest_tgt gtest_main)
-  elseif(DLAF_AT_USE_MAIN STREQUAL PIKA)
+  elseif(DLAF_ATT_USE_MAIN STREQUAL PIKA)
     set(_gtest_tgt DLAF_gtest_pika_main)
     set(IS_AN_PIKA_TEST TRUE)
-  elseif(DLAF_AT_USE_MAIN STREQUAL MPI)
+  elseif(DLAF_ATT_USE_MAIN STREQUAL MPI)
     set(_gtest_tgt DLAF_gtest_mpi_main)
     set(IS_AN_MPI_TEST TRUE)
-  elseif(DLAF_AT_USE_MAIN STREQUAL MPIPIKA)
+  elseif(DLAF_ATT_USE_MAIN STREQUAL MPIPIKA)
     set(_gtest_tgt DLAF_gtest_mpipika_main)
     set(IS_AN_MPI_TEST TRUE)
     set(IS_AN_PIKA_TEST TRUE)
-  elseif(DLAF_AT_USE_MAIN STREQUAL CAPI)
+  elseif(DLAF_ATT_USE_MAIN STREQUAL CAPI)
     set(_gtest_tgt DLAF_gtest_mpi_main)
     set(IS_AN_MPI_TEST TRUE)
   else()
-    message(FATAL_ERROR "USE_MAIN=${DLAF_AT_USE_MAIN} is not a supported option")
+    message(FATAL_ERROR "USE_MAIN=${DLAF_ATT_USE_MAIN} is not a supported option")
   endif()
 
   if(IS_AN_MPI_TEST)
-    if(NOT DLAF_AT_MPIRANKS)
+    if(NOT DLAF_ATT_MPIRANKS)
       message(FATAL_ERROR "You are asking for an MPI external main without specifying MPIRANKS")
     endif()
-    if(NOT DLAF_AT_MPIRANKS GREATER 0)
-      message(FATAL_ERROR "Wrong MPIRANKS number ${DLAF_AT_MPIRANKS}")
+    if(NOT DLAF_ATT_MPIRANKS GREATER 0)
+      message(FATAL_ERROR "Wrong MPIRANKS number ${DLAF_ATT_MPIRANKS}")
     endif()
-    if(DLAF_AT_MPIRANKS GREATER MPIEXEC_MAX_NUMPROCS)
+    if(DLAF_ATT_MPIRANKS GREATER MPIEXEC_MAX_NUMPROCS)
       message(
         WARNING
           "\
-      YOU ARE ASKING FOR ${DLAF_AT_MPIRANKS} RANKS, BUT THERE ARE JUST ${MPIEXEC_MAX_NUMPROCS} CORES.
+          YOU ARE ASKING FOR ${DLAF_ATT_MPIRANKS} RANKS, BUT THERE ARE JUST ${MPIEXEC_MAX_NUMPROCS} CORES.
       You can adjust MPIEXEC_MAX_NUMPROCS value to suppress this warning.
       Using OpenMPI may require to set the environment variable OMPI_MCA_rmaps_base_oversubscribe=1."
       )
     endif()
   else()
-    if(DLAF_AT_MPIRANKS)
+    if(DLAF_ATT_MPIRANKS)
       message(FATAL_ERROR "You specified MPIRANKS and asked for an external main without MPI")
     else()
-      set(DLAF_AT_MPIRANKS 1)
+      set(DLAF_ATT_MPIRANKS 1)
     endif()
   endif()
 
   ### Test target
   set(DLAF_TEST_RUNALL_WITH_MPIEXEC OFF CACHE BOOL "Run all tests using the workload manager.")
 
-  set(_TEST_ARGUMENTS ${DLAF_AT_ARGUMENTS})
+  set(_TEST_ARGUMENTS ${DLAF_ATT_ARGUMENTS})
 
   if(DLAF_TEST_RUNALL_WITH_MPIEXEC OR IS_AN_MPI_TEST)
     if(MPIEXEC_NUMCORE_FLAG)
@@ -132,7 +128,7 @@ function(DLAF_addTest test_target_name)
         set(_CORES_PER_RANK 1)
       endif()
 
-      math(EXPR DLAF_CORE_PER_RANK "${_CORES_PER_RANK}/${DLAF_AT_MPIRANKS}")
+      math(EXPR DLAF_CORE_PER_RANK "${_CORES_PER_RANK}/${DLAF_ATT_MPIRANKS}")
 
       if(NOT DLAF_CORE_PER_RANK)
         set(DLAF_CORE_PER_RANK 1)
@@ -148,12 +144,12 @@ function(DLAF_addTest test_target_name)
     else()
       separate_arguments(MPIEXEC_PREFLAGS)
       set(_TEST_COMMAND
-          ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${DLAF_AT_MPIRANKS} ${_MPI_CORE_ARGS}
+          ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${DLAF_ATT_MPIRANKS} ${_MPI_CORE_ARGS}
           ${MPIEXEC_PREFLAGS} ${DLAF_TEST_PREFLAGS} $<TARGET_FILE:${test_target_name}>
           ${DLAF_TEST_POSTFLAGS} ${MPIEXEC_POSTFLAGS}
       )
     endif()
-    set(_TEST_LABEL "RANK_${DLAF_AT_MPIRANKS}")
+    set(_TEST_LABEL "RANK_${DLAF_ATT_MPIRANKS}")
 
   else()
     # ----- Classic test
@@ -165,12 +161,12 @@ function(DLAF_addTest test_target_name)
     separate_arguments(_PIKA_EXTRA_ARGS_LIST UNIX_COMMAND ${DLAF_PIKATEST_EXTRA_ARGS})
 
     # --pika:bind=none is useful just in case more ranks are going to be allocated on the same node.
-    if(IS_AN_MPI_TEST AND (DLAF_AT_MPIRANKS GREATER 1) AND (NOT DLAF_TEST_THREAD_BINDING_ENABLED))
+    if(IS_AN_MPI_TEST AND (DLAF_ATT_MPIRANKS GREATER 1) AND (NOT DLAF_TEST_THREAD_BINDING_ENABLED))
       _set_element_to_fallback_value(_PIKA_EXTRA_ARGS_LIST "--pika:bind" "--pika:bind=none")
     endif()
 
     if(IS_AN_MPI_TEST AND DLAF_MPI_PRESET STREQUAL "plain-mpi")
-      math(EXPR _DLAF_PIKA_THREADS "${MPIEXEC_MAX_NUMPROCS}/${DLAF_AT_MPIRANKS}")
+      math(EXPR _DLAF_PIKA_THREADS "${MPIEXEC_MAX_NUMPROCS}/${DLAF_ATT_MPIRANKS}")
 
       if(_DLAF_PIKA_THREADS LESS 2)
         set(_DLAF_PIKA_THREADS 2)
@@ -186,16 +182,16 @@ function(DLAF_addTest test_target_name)
 
   # Special treatment for C API tests
   # C API tests require pika arguments to be hard-coded in the test file
-  if(DLAF_AT_USE_MAIN STREQUAL CAPI)
+  if(DLAF_ATT_USE_MAIN STREQUAL CAPI)
     separate_arguments(_PIKA_EXTRA_ARGS_LIST_CAPI UNIX_COMMAND ${DLAF_PIKATEST_EXTRA_ARGS})
 
     # --pika:bind=none is useful just in case more ranks are going to be allocated on the same node.
-    if((DLAF_AT_MPIRANKS GREATER 1) AND (NOT DLAF_TEST_THREAD_BINDING_ENABLED))
+    if((DLAF_ATT_MPIRANKS GREATER 1) AND (NOT DLAF_TEST_THREAD_BINDING_ENABLED))
       _set_element_to_fallback_value(_PIKA_EXTRA_ARGS_LIST_CAPI "--pika:bind" "--pika:bind=none")
     endif()
 
     if(IS_AN_MPI_TEST AND DLAF_MPI_PRESET STREQUAL "plain-mpi")
-      math(EXPR _DLAF_PIKA_THREADS "${MPIEXEC_MAX_NUMPROCS}/${DLAF_AT_MPIRANKS}")
+      math(EXPR _DLAF_PIKA_THREADS "${MPIEXEC_MAX_NUMPROCS}/${DLAF_ATT_MPIRANKS}")
 
       if(_DLAF_PIKA_THREADS LESS 2)
         set(_DLAF_PIKA_THREADS 2)
@@ -215,11 +211,34 @@ function(DLAF_addTest test_target_name)
 
   endif()
 
+  add_test(NAME ${test_target_name} COMMAND ${_TEST_COMMAND} ${_TEST_ARGUMENTS})
+  set_tests_properties(${test_target_name} PROPERTIES LABELS "${_TEST_LABEL}")
+endfunction()
+
+function(DLAF_addTest test_target_name)
+  set(options "")
+  set(oneValueArgs MPIRANKS USE_MAIN)
+  set(multiValueArgs SOURCES COMPILE_DEFINITIONS INCLUDE_DIRS LIBRARIES ARGUMENTS)
+  cmake_parse_arguments(DLAF_AT "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+  ### Checks
+  if(DLAF_AT_UNPARSED_ARGUMENTS)
+    message(FATAL_ERROR "Unknown arguments ${DLAF_AT_UNPARSED_ARGUMENTS}")
+  endif()
+
+  if(NOT DLAF_AT_SOURCES)
+    message(FATAL_ERROR "No sources specified for this test")
+  endif()
+
   ### Test executable target
   add_executable(${test_target_name} ${DLAF_AT_SOURCES})
   target_link_libraries(
     ${test_target_name} PRIVATE ${_gtest_tgt} DLAF_test ${DLAF_AT_LIBRARIES} dlaf.prop_private
   )
+  set(IS_AN_MPI_TEST FALSE)
+  if(DLAF_AT_USE_MAIN MATCHES MPI OR DLAF_AT_USE_MAIN STREQUAL CAPI)
+    set(IS_AN_MPI_TEST TRUE)
+  endif()
   target_compile_definitions(
     ${test_target_name} PRIVATE ${DLAF_AT_COMPILE_DEFINITIONS} $<$<BOOL:${IS_AN_MPI_TEST}>:
                                 NUM_MPI_RANKS=${DLAF_AT_MPIRANKS}>
@@ -229,8 +248,6 @@ function(DLAF_addTest test_target_name)
   )
   target_add_warnings(${test_target_name})
   DLAF_addPrecompiledHeaders(${test_target_name})
-  add_test(NAME ${test_target_name} COMMAND ${_TEST_COMMAND} ${_TEST_ARGUMENTS})
-  set_tests_properties(${test_target_name} PROPERTIES LABELS "${_TEST_LABEL}")
 
   ### DEPLOY
   include(GNUInstallDirs)
@@ -242,4 +259,12 @@ function(DLAF_addTest test_target_name)
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
   endif()
+
+  ### Test
+  DLAF_addTargetTest(
+    ${test_target_name}
+    MPIRANKS ${DLAF_AT_MPIRANKS}
+    USE_MAIN ${DLAF_AT_USE_MAIN}
+    ARGUMENTS ${DLAF_AT_ARGUMENTS}
+  )
 endfunction()

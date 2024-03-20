@@ -8,25 +8,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-set(DLAF_PRESET_OPTIONS "plain-mpi" "slurm" "custom")
-set(DLAF_MPI_PRESET "plain-mpi" CACHE STRING "Select a preset to use")
-set_property(CACHE DLAF_MPI_PRESET PROPERTY STRINGS ${DLAF_PRESET_OPTIONS})
-option(
-  DLAF_CI_RUNNER_USES_MPIRUN
-  "Remove mpiexec command for tests executed by ctest. This option is to be used if the CI runner executes the tests with <mpiexec + options> ctest -L RANK_<spawned MPI ranks>"
-  OFF
-)
-
-# On some machines, tests using multiple ranks + oversubscribing run
-# significantly faster when threads are not pinned.
-option(DLAF_TEST_THREAD_BINDING_ENABLED "If OFF disables pika thread binding." ON)
-
-# If DLAF_CI_RUNNER_USES_MPIRUN=on we don't want to use any preset, so we just go for the custom one
-# without setting any variable.
-if(DLAF_CI_RUNNER_USES_MPIRUN)
-  set(DLAF_MPI_PRESET "custom" CACHE STRING "" FORCE)
-endif()
-
 # if a preset has been selected and it has been changed from previous configurations
 if(NOT DLAF_MPI_PRESET STREQUAL _DLAF_MPI_PRESET)
 

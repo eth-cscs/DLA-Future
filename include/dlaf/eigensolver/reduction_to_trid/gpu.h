@@ -266,9 +266,10 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
         di::whenAllLift(ex::when_all_vector(std::move(v_panel_rw)),
                         ex::when_all_vector(std::move(w_panel_rw)), batch_v_panel.readwrite(),
                         batch_w_panel.readwrite(), batch_w_up.readwrite(), batch_w_col.readwrite()) |
-        di::transform(di::Policy<Backend::MC>(),
+        di::transform(di::Policy<Backend::GPU>(),
                       [ntiles = this->ntiles](auto&& v_tiles, auto&& w_tiles, auto&& ptrs_v_panel,
-                                              auto&& ptrs_w_panel, auto&& ptrs_wup, auto&& ptrs_w) {
+                                              auto&& ptrs_w_panel, auto&& ptrs_wup, auto&& ptrs_w,
+                                              whip::stream_t stream) {
                         std::vector<T*> ptrs_v_panel_h, ptrs_w_panel_h, ptrs_wup_h, ptrs_w_h;
                         ptrs_v_panel_h.reserve(ntiles);
                         ptrs_w_panel_h.reserve(ntiles);
@@ -282,14 +283,14 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
                           ptrs_w_h.push_back(w_tiles[index].ptr());
                         }
 
-                        cudaMemcpy(ptrs_v_panel.ptr(), ptrs_v_panel_h.data(), ntiles * sizeof(T*),
-                                   cudaMemcpyHostToDevice);
-                        cudaMemcpy(ptrs_w_panel.ptr(), ptrs_w_panel_h.data(), ntiles * sizeof(T*),
-                                   cudaMemcpyHostToDevice);
-                        cudaMemcpy(ptrs_wup.ptr(), ptrs_wup_h.data(), ntiles * sizeof(T*),
-                                   cudaMemcpyHostToDevice);
-                        cudaMemcpy(ptrs_w.ptr(), ptrs_w_h.data(), ntiles * sizeof(T*),
-                                   cudaMemcpyHostToDevice);
+                        cudaMemcpyAsync(ptrs_v_panel.ptr(), ptrs_v_panel_h.data(), ntiles * sizeof(T*),
+                                        cudaMemcpyHostToDevice, stream);
+                        cudaMemcpyAsync(ptrs_w_panel.ptr(), ptrs_w_panel_h.data(), ntiles * sizeof(T*),
+                                        cudaMemcpyHostToDevice, stream);
+                        cudaMemcpyAsync(ptrs_wup.ptr(), ptrs_wup_h.data(), ntiles * sizeof(T*),
+                                        cudaMemcpyHostToDevice, stream);
+                        cudaMemcpyAsync(ptrs_w.ptr(), ptrs_w_h.data(), ntiles * sizeof(T*),
+                                        cudaMemcpyHostToDevice, stream);
 
                         return std::make_tuple(v_tiles[0].ld(), w_tiles[0].ld());
                       })));

@@ -45,6 +45,8 @@
 #       include/
 # )
 
+set(DLAF_PIKATEST_EXTRA_ARGS "" CACHE STRING "Extra arguments for tests with pika")
+
 # Check if LIST_NAME contains at least an element that matches ELEMENT_REGEX. If not, add FALLBACK
 # to the list.
 function(_set_element_to_fallback_value LIST_NAME ELEMENT_REGEX FALLBACK)

@@ -21,8 +21,6 @@ option(
 # significantly faster when threads are not pinned.
 option(DLAF_TEST_THREAD_BINDING_ENABLED "If OFF disables pika thread binding." ON)
 
-set(DLAF_PIKATEST_EXTRA_ARGS "" CACHE STRING "Extra arguments for tests with pika")
-
 # If DLAF_CI_RUNNER_USES_MPIRUN=on we don't want to use any preset, so we just go for the custom one
 # without setting any variable.
 if(DLAF_CI_RUNNER_USES_MPIRUN)

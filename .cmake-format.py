@@ -19,6 +19,15 @@ with section("parse"):
         "MPIRANKS": '1',
       }
     },
+    "DLAF_addTargetTest": {
+      "pargs": 1,
+      "flags": [],
+      "kwargs": {
+        "ARGUMENTS": '*',
+        "USE_MAIN": '1',
+        "MPIRANKS": '1',
+      }
+    },
     "DLAF_addMiniapp": {
       "pargs": 1,
       "flags": [],

@@ -364,6 +364,17 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device
   if (evecs.size().isEmpty())
     return;
 
+#ifdef DLAF_WITH_HDF5
+  static size_t num_tridiag_solver_calls = 0;
+  std::string fname = "tridiag_solver-" + std::to_string(num_tridiag_solver_calls) + ".h5";
+  std::optional<matrix::internal::FileHDF5> file;
+
+  if (getTuneParameters().debug_dump_tridiag_solver_data) {
+    file = matrix::internal::FileHDF5(grid.fullCommunicator(), fname);
+    file->write(tridiag, "/input");
+  }
+#endif
+
   // If the matrix is composed by a single tile simply call stedc.
   if (evecs.nrTiles().linear_size() == 1) {
     if constexpr (D == Device::CPU) {
@@ -442,35 +453,6 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device
   dlaf::permutations::permute<Backend::MC, Device::CPU, T, Coord::Col>(row_task_chain, 0, n, ws_h.i1,
                                                                        ws_hm.e0, ws_hm.e2);
   copy(ws_hm.e2, evecs);
-}
-
-// \overload TridiagSolver<B, D, T>::call()
-//
-// This overload of the distributed tridiagonal version of the algorithm provides the eigenvector matrix
-// as complex values where the imaginery part is set to zero.
-//
-template <Backend B, Device D, class T>
-void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device::CPU>& tridiag,
-                                  Matrix<T, D>& evals, Matrix<std::complex<T>, D>& evecs) {
-#ifdef DLAF_WITH_HDF5
-  static size_t num_tridiag_solver_calls = 0;
-  std::string fname = "tridiag_solver-" + std::to_string(num_tridiag_solver_calls) + ".h5";
-  std::optional<matrix::internal::FileHDF5> file;
-
-  if (getTuneParameters().debug_dump_tridiag_solver_data) {
-    file = matrix::internal::FileHDF5(grid.fullCommunicator(), fname);
-    file->write(tridiag, "/input");
-  }
-#endif
-
-  Matrix<T, D> real_evecs(evecs.distribution());
-  TridiagSolver<B, D, T>::call(grid, tridiag, evals, real_evecs);
-
-  // Convert real to complex numbers
-  const matrix::Distribution& dist = evecs.distribution();
-  for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
-    castToComplexAsync<D>(real_evecs.read(tile_wrt_local), evecs.readwrite(tile_wrt_local));
-  }
 
 #ifdef DLAF_WITH_HDF5
   if (getTuneParameters().debug_dump_tridiag_solver_data) {
@@ -480,6 +462,24 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device
 
   num_tridiag_solver_calls++;
 #endif
+}
+
+// \overload TridiagSolver<B, D, T>::call()
+//
+// This overload of the distributed tridiagonal version of the algorithm provides the eigenvector matrix
+// as complex values where the imaginery part is set to zero.
+//
+template <Backend B, Device D, class T>
+void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tridiag,
+                                  Matrix<T, D>& evals, Matrix<std::complex<T>, D>& evecs) {
+  Matrix<T, D> real_evecs(evecs.distribution());
+  TridiagSolver<B, D, T>::call(grid, tridiag, evals, real_evecs);
+
+  // Convert real to complex numbers
+  const matrix::Distribution& dist = evecs.distribution();
+  for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
+    castToComplexAsync<D>(real_evecs.read(tile_wrt_local), evecs.readwrite(tile_wrt_local));
+  }
 }
 
 }

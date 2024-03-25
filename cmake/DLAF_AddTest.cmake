@@ -209,7 +209,7 @@ function(DLAF_addTest test_target_name)
     string(REPLACE ";" "\", \"" PIKA_EXTRA_ARGS_LIST_CAPI "${_PIKA_EXTRA_ARGS_LIST_CAPI}")
 
     configure_file(
-      ${PROJECT_SOURCE_DIR}/test/include/dlaf_c_test/config.h.in 
+      ${PROJECT_SOURCE_DIR}/test/include/dlaf_c_test/config.h.in
       ${CMAKE_CURRENT_BINARY_DIR}/${test_target_name}_config.h
     )
 

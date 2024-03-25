@@ -19,6 +19,7 @@
 #include <dlaf/matrix/matrix.h>
 #include <dlaf_c_test/c_api_helpers.h>
 
+#include "test_cholesky_c_api_config.h"
 #include "test_cholesky_c_api_wrapper.h"
 
 #include <dlaf_test/comm_grids/grids_6_ranks.h>
@@ -58,7 +59,7 @@ const std::vector<std::tuple<SizeType, SizeType>> sizes = {
 template <class T, Backend B, Device D, API api>
 void testCholesky(comm::CommunicatorGrid& grid, const blas::Uplo uplo, const SizeType m,
                   const SizeType mb) {
-  auto dlaf_context = c_api_test_inititialize<api>(grid);
+  auto dlaf_context = c_api_test_inititialize<api>(pika_argc, pika_argv, dlaf_argc, dlaf_argv, grid);
 
   // In normal use the runtime is resumed by the C API call
   // The pika runtime is suspended by dlaf_initialize

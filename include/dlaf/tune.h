@@ -100,7 +100,7 @@ struct TuneParameters {
   bool debug_dump_eigensolver_data = false;
   bool debug_dump_reduction_to_band_data = false;
   bool debug_dump_band_to_tridiagonal_data = false;
-  bool debug_dump_trisolver_data = false;
+  bool debug_dump_tridiag_solver_data = false;
   std::size_t red2band_panel_nworkers = 1;
   std::size_t red2band_barrier_busy_wait_us = 1000;
   std::size_t tridiag_rank1_nworkers = 1;

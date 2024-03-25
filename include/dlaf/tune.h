@@ -22,8 +22,24 @@ namespace dlaf {
 /// DLA-Future tuning parameters.
 ///
 /// Holds the value of the parameters that can be used to tune DLA-Future.
+/// - debug_dump_eigensolver_data:
+///     Enable dump of eigensolver input/output data to "eigensolver.h5" file that will be created in the
+///     working folder (it should not exist before the execution).
+///     WARNING: just a single execution can be dumped on disk, and any subsequent call fails.
+///     Set with environment variable DLAF_DEBUG_DUMP_EIGENSOLVER_DATA.
+/// - debug_dump_reduction_to_band_data:
+///     Enable dump of reduction_to_band input/output data to "reduction_to_band.h5" file that will be
+///     created in the working folder (it should not exist before the execution).
+///     WARNING: just a single execution can be dumped on disk, and any subsequent call fails. Set with
+///    environment variable
+///     DLAF_DEBUG_DUMP_EIGENSOLVER_DATA.
+/// - debug_dump_band_to_tridiagonal_data:
+///     Enable dump of band_to_trigiagonal input/output data to "band_to_tridiagonal.h5" file that will
+///     be created in the working folder (it should not exist before the execution).
+///     WARNING: just a single execution can be dumped on disk, and any subsequent call fails. Set with
+///     environment variable DLAF_DEBUG_DUMP_BAND_TO_TRIDIAGONAL_DATA.
 /// - debug_dump_trisolver_data:
-///     Enable dump of trisolver input/output data to "trid-ref.h5" file that will be created in the
+///     Enable dump of trisolver input/output data to "tridiagonal.h5" file that will be created in the
 ///     working folder (it should not exist before the execution).
 ///     WARNING: just a single execution can be dumped on disk, and any subsequent call fails.
 ///     Set with environment variable DLAF_DEBUG_DUMP_TRISOLVER_DATA.
@@ -81,6 +97,9 @@ struct TuneParameters {
     red2band_panel_nworkers = std::max<std::size_t>(1, default_pool_thread_count / 2);
     tridiag_rank1_nworkers = default_pool_thread_count;
   }
+  bool debug_dump_eigensolver_data = false;
+  bool debug_dump_reduction_to_band_data = false;
+  bool debug_dump_band_to_tridiagonal_data = false;
   bool debug_dump_trisolver_data = false;
   std::size_t red2band_panel_nworkers = 1;
   std::size_t red2band_barrier_busy_wait_us = 1000;

@@ -29,12 +29,12 @@
 #include <dlaf/sender/with_temporary_tile.h>
 
 namespace dlaf::comm::internal {
-template <class T, Device D_in, Device D_out>
-auto allReduce(const Communicator& comm, MPI_Op reduce_op, const matrix::Tile<const T, D_in>& tile_in,
-               const matrix::Tile<T, D_out>& tile_out, MPI_Request* req) {
+template <class T, Device DIn, Device DOut>
+auto allReduce(const Communicator& comm, MPI_Op reduce_op, const matrix::Tile<const T, DIn>& tile_in,
+               const matrix::Tile<T, DOut>& tile_out, MPI_Request* req) {
 #if !defined(DLAF_WITH_MPI_GPU_AWARE)
-  static_assert(D_in == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
-  static_assert(D_out == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
+  static_assert(DIn == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
+  static_assert(DOut == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
 #endif
   DLAF_ASSERT(tile_in.is_contiguous(), "");
   DLAF_ASSERT(tile_out.is_contiguous(), "");
@@ -47,11 +47,11 @@ auto allReduce(const Communicator& comm, MPI_Op reduce_op, const matrix::Tile<co
 
 DLAF_MAKE_CALLABLE_OBJECT(allReduce);
 
-template <Device D_comm_in, Device D_comm_out, class T, Device D_in, Device D_out>
+template <Device DCommIn, Device DCommOut, class T, Device DIn, Device DOut>
 [[nodiscard]] auto scheduleAllReduce(
     pika::execution::experimental::unique_any_sender<CommunicatorPipelineExclusiveWrapper> pcomm,
-    MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender<T, D_in> tile_in,
-    dlaf::matrix::ReadWriteTileSender<T, D_out> tile_out) {
+    MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender<T, DIn> tile_in,
+    dlaf::matrix::ReadWriteTileSender<T, DOut> tile_out) {
   using dlaf::comm::CommunicationDevice_v;
   using dlaf::comm::internal::allReduce_o;
   using dlaf::comm::internal::transformMPI;
@@ -79,13 +79,13 @@ template <Device D_comm_in, Device D_comm_out, class T, Device D_in, Device D_ou
     // written into the output tile instead).  The reduction is explicitly done
     // on CPU memory so that we can manage potential asynchronous copies between
     // CPU and GPU. A reduction requires contiguous memory.
-    return withTemporaryTile<D_comm_in, CopyToDestination::Yes, CopyFromDestination::No,
+    return withTemporaryTile<DCommIn, CopyToDestination::Yes, CopyFromDestination::No,
                              RequireContiguous::Yes>(std::move(tile_in), std::move(all_reduce));
   };
 
 #if !defined(DLAF_WITH_MPI_GPU_AWARE)
-  static_assert(D_comm_in == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
-  static_assert(D_comm_out == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
+  static_assert(DCommIn == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
+  static_assert(DCommOut == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
 #endif
 
   // The output tile does not need to be copied to the temporary tile since it
@@ -93,7 +93,7 @@ template <Device D_comm_in, Device D_comm_out, class T, Device D_in, Device D_ou
   // to the output tile. The reduction is explicitly done on CPU memory so that
   // we can manage potential asynchronous copies between CPU and GPU. A
   // reduction requires contiguous memory.
-  return withTemporaryTile<D_comm_out, CopyToDestination::No, CopyFromDestination::Yes,
+  return withTemporaryTile<DCommOut, CopyToDestination::No, CopyFromDestination::Yes,
                            RequireContiguous::Yes>(std::move(tile_out), std::move(all_reduce_final));
 }
 
@@ -112,7 +112,7 @@ auto allReduceInPlace(const Communicator& comm, MPI_Op reduce_op, const matrix::
 
 DLAF_MAKE_CALLABLE_OBJECT(allReduceInPlace);
 
-template <Device D_comm, class T, Device D>
+template <Device DComm, class T, Device D>
 [[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> schedule_all_reduce_in_place(
     pika::execution::experimental::unique_any_sender<CommunicatorPipelineExclusiveWrapper> pcomm,
     MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender<T, D> tile) {
@@ -138,14 +138,14 @@ template <Device D_comm, class T, Device D>
 #endif
 
 #if !defined(DLAF_WITH_MPI_GPU_AWARE)
-  static_assert(D_comm == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
+  static_assert(DComm == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
 #endif
 
   // The tile has to be copied both to and from the temporary tile since the
   // reduction is done in-place. The reduction is explicitly done on CPU memory
   // so that we can manage potential asynchronous copies between CPU and GPU. A
   // reduction requires contiguous memory.
-  return withTemporaryTile<D_comm, CopyToDestination::Yes, CopyFromDestination::Yes,
+  return withTemporaryTile<DComm, CopyToDestination::Yes, CopyFromDestination::Yes,
                            RequireContiguous::Yes>(std::move(tile), std::move(all_reduce_in_place));
 }
 

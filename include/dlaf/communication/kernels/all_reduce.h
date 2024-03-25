@@ -32,11 +32,11 @@ namespace dlaf::comm {
 /// signals completion when the reduction is done. The output sender tile must
 /// be writable so that the received and reduced data can be written to it. The
 /// output tile is sent by the returned sender.
-template <class T, Device D_in, Device D_out>
-[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D_out> scheduleAllReduce(
+template <class T, Device DIn, Device DOut>
+[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, DOut> scheduleAllReduce(
     pika::execution::experimental::unique_any_sender<CommunicatorPipelineExclusiveWrapper> pcomm,
-    MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender<T, D_in> tile_in,
-    dlaf::matrix::ReadWriteTileSender<T, D_out> tile_out);
+    MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender<T, DIn> tile_in,
+    dlaf::matrix::ReadWriteTileSender<T, DOut> tile_out);
 
 #define DLAF_SCHEDULE_ALL_REDUCE_ETI(kword, Type, Device)                                           \
   kword template dlaf::matrix::ReadWriteTileSender<Type, Device> scheduleAllReduce(                 \

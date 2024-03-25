@@ -37,14 +37,14 @@ template <class T, Device D, class Comm>
     pika::execution::experimental::unique_any_sender<Comm> pcomm,
     dlaf::matrix::ReadOnlyTileSender<T, D> tile) {
   using dlaf::internal::RequireContiguous;
-  constexpr Device D_comm = CommunicationDevice_v<D>;
+  constexpr Device DComm = CommunicationDevice_v<D>;
   constexpr auto require_contiguous =
 #if defined(DLAF_WITH_MPI_GPU_AWARE) && defined(DLAF_WITH_MPI_GPU_FORCE_CONTIGUOUS)
-      D_comm == Device::GPU ? RequireContiguous::Yes :
+      DComm == Device::GPU ? RequireContiguous::Yes :
 #endif
-                            RequireContiguous::No;
+                           RequireContiguous::No;
 
-  return internal::schedule_bcast_send<D_comm, require_contiguous>(std::move(pcomm), std::move(tile));
+  return internal::schedule_bcast_send<DComm, require_contiguous>(std::move(pcomm), std::move(tile));
 }
 
 // clang-format off
@@ -61,14 +61,14 @@ template <class T, Device D, class Comm>
     pika::execution::experimental::unique_any_sender<Comm> pcomm, comm::IndexT_MPI root_rank,
     dlaf::matrix::ReadWriteTileSender<T, D> tile) {
   using dlaf::internal::RequireContiguous;
-  constexpr Device D_comm = CommunicationDevice_v<D>;
+  constexpr Device DComm = CommunicationDevice_v<D>;
   constexpr auto require_contiguous =
 #if defined(DLAF_WITH_MPI_GPU_AWARE) && defined(DLAF_WITH_MPI_GPU_FORCE_CONTIGUOUS)
-      D_comm == Device::GPU ? RequireContiguous::Yes :
+      DComm == Device::GPU ? RequireContiguous::Yes :
 #endif
-                            RequireContiguous::No;
-  return internal::schedule_bcast_recv<D_comm, require_contiguous>(std::move(pcomm), root_rank,
-                                                                   std::move(tile));
+                           RequireContiguous::No;
+  return internal::schedule_bcast_recv<DComm, require_contiguous>(std::move(pcomm), root_rank,
+                                                                  std::move(tile));
 }
 
 // clang-format off

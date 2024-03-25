@@ -96,10 +96,9 @@ std::string string_default(std::string name, Device D) {
   return s.str();
 }
 
-std::string string_full(std::string name, Device D, Device D_comm,
-                        RequireContiguous require_contiguous) {
+std::string string_full(std::string name, Device D, Device DComm, RequireContiguous require_contiguous) {
   std::stringstream s;
-  s << name << " " << D << ":" << D_comm;
+  s << name << " " << D << ":" << DComm;
   if (require_contiguous == RequireContiguous::Yes)
     s << " contiguous    ";
   else
@@ -107,11 +106,11 @@ std::string string_full(std::string name, Device D, Device D_comm,
   return s.str();
 }
 
-std::string string_full(std::string name, Device D, Device D_comm,
+std::string string_full(std::string name, Device D, Device DComm,
                         RequireContiguous require_contiguous_send,
                         RequireContiguous require_contiguous_recv) {
   std::stringstream s;
-  s << name << " " << D << ":" << D_comm;
+  s << name << " " << D << ":" << DComm;
   if (require_contiguous_send == RequireContiguous::Yes)
     s << " contiguous-send    ";
   else
@@ -145,8 +144,8 @@ void benchmark_ro(CommPipeline& pcomm, Matrix<T, D>& matrix, F&& schedule_comm_f
     start_detached(schedule_comm_function(pcomm.exclusive(), matrix.read(index)));
   }
 }
-template <class CommPipeline, class T, Device D_in, Device D_out, class F>
-void benchmark_ro_rw(CommPipeline& pcomm, Matrix<T, D_in>& matrix_in, Matrix<T, D_out>& matrix_out,
+template <class CommPipeline, class T, Device DIn, Device DOut, class F>
+void benchmark_ro_rw(CommPipeline& pcomm, Matrix<T, DIn>& matrix_in, Matrix<T, DOut>& matrix_out,
                      F&& schedule_comm_function) {
   for (auto& index : iterate_range2d(matrix_out.distribution().local_nr_tiles())) {
     start_detached(schedule_comm_function(pcomm.exclusive(), matrix_in.read(index),
@@ -179,7 +178,7 @@ void benchmark_all_reduce(int64_t run_index, const Options& opts, Communicator& 
   output(run_index, std::move(s), t, world.rank(), opts, pcomm.size_2d());
 }
 
-template <Device D_comm, Backend B, class CommPipeline, class T>
+template <Device DComm, Backend B, class CommPipeline, class T>
 void benchmark_internal_all_reduce(int64_t run_index, const Options& opts, Communicator& world,
                                    CommPipeline&& pcomm, Matrix<const T, Device::CPU>& matrix_ref) {
   using dlaf::comm::internal::scheduleAllReduce;
@@ -192,8 +191,8 @@ void benchmark_internal_all_reduce(int64_t run_index, const Options& opts, Commu
   dlaf::common::Timer<> timeit;
 
   auto allred = [](auto comm, auto ro_tile, auto rw_tile) {
-    return scheduleAllReduce<D_comm, D_comm>(std::move(comm), MPI_SUM, std::move(ro_tile),
-                                             std::move(rw_tile));
+    return scheduleAllReduce<DComm, DComm>(std::move(comm), MPI_SUM, std::move(ro_tile),
+                                           std::move(rw_tile));
   };
   benchmark_ro_rw(pcomm, matrix, matrix_out, allred);
 
@@ -201,7 +200,7 @@ void benchmark_internal_all_reduce(int64_t run_index, const Options& opts, Commu
   DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
   auto t = timeit.elapsed();
 
-  std::string s = string_full("All reduce", D, D_comm, RequireContiguous::Yes);
+  std::string s = string_full("All reduce", D, DComm, RequireContiguous::Yes);
 
   output(run_index, std::move(s), t, world.rank(), opts, pcomm.size_2d());
 }
@@ -230,7 +229,7 @@ void benchmark_all_reduce_in_place(int64_t run_index, const Options& opts, Commu
   output(run_index, std::move(s), t, world.rank(), opts, pcomm.size_2d());
 }
 
-template <Device D_comm, Backend B, class CommPipeline, class T>
+template <Device DComm, Backend B, class CommPipeline, class T>
 void benchmark_internal_all_reduce_in_place(int64_t run_index, const Options& opts, Communicator& world,
                                             CommPipeline&& pcomm,
                                             Matrix<const T, Device::CPU>& matrix_ref) {
@@ -244,8 +243,8 @@ void benchmark_internal_all_reduce_in_place(int64_t run_index, const Options& op
   dlaf::common::Timer<> timeit;
 
   auto allred = [](auto comm, auto ro_tile, auto rw_tile) {
-    return scheduleAllReduce<D_comm, D_comm>(std::move(comm), MPI_SUM, std::move(ro_tile),
-                                             std::move(rw_tile));
+    return scheduleAllReduce<DComm, DComm>(std::move(comm), MPI_SUM, std::move(ro_tile),
+                                           std::move(rw_tile));
   };
   benchmark_ro_rw(pcomm, matrix, matrix_out, allred);
 
@@ -253,7 +252,7 @@ void benchmark_internal_all_reduce_in_place(int64_t run_index, const Options& op
   DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
   auto t = timeit.elapsed();
 
-  std::string s = string_full("All reduce (in place)", D, D_comm, RequireContiguous::Yes);
+  std::string s = string_full("All reduce (in place)", D, DComm, RequireContiguous::Yes);
 
   output(run_index, std::move(s), t, world.rank(), opts, pcomm.size_2d());
 }
@@ -290,7 +289,7 @@ void benchmark_broadcast(int64_t run_index, const Options& opts, Communicator& w
   output(run_index, std::move(s), t, world.rank(), opts, pcomm.size_2d());
 }
 
-template <Device D_comm, RequireContiguous require_contiguous_send,
+template <Device DComm, RequireContiguous require_contiguous_send,
           RequireContiguous require_contiguous_recv, Backend B, class CommPipeline, class T>
 void benchmark_internal_broadcast(int64_t run_index, const Options& opts, Communicator& world,
                                   CommPipeline&& pcomm, Matrix<const T, Device::CPU>& matrix_ref) {
@@ -298,8 +297,8 @@ void benchmark_internal_broadcast(int64_t run_index, const Options& opts, Commun
   using dlaf::comm::internal::schedule_bcast_send;
 
   constexpr Device D = DefaultDevice_v<B>;
-  if constexpr (D_comm != D && (require_contiguous_send != RequireContiguous::Yes ||
-                                require_contiguous_recv != RequireContiguous::Yes)) {
+  if constexpr (DComm != D && (require_contiguous_send != RequireContiguous::Yes ||
+                               require_contiguous_recv != RequireContiguous::Yes)) {
     // Skip benchmark, as copy to a different device forces contiguous buffers.
     return;
   }
@@ -311,14 +310,13 @@ void benchmark_internal_broadcast(int64_t run_index, const Options& opts, Commun
 
   if (world.rank() == 0) {
     auto bcast = [](auto comm, auto ro_tile) {
-      return schedule_bcast_send<D_comm, require_contiguous_send>(std::move(comm), std::move(ro_tile));
+      return schedule_bcast_send<DComm, require_contiguous_send>(std::move(comm), std::move(ro_tile));
     };
     benchmark_ro(pcomm, matrix, bcast);
   }
   else {
     auto bcast = [](auto comm, auto rw_tile) {
-      return schedule_bcast_recv<D_comm, require_contiguous_recv>(std::move(comm), 0,
-                                                                  std::move(rw_tile));
+      return schedule_bcast_recv<DComm, require_contiguous_recv>(std::move(comm), 0, std::move(rw_tile));
     };
     benchmark_rw(pcomm, matrix, bcast);
   }
@@ -326,7 +324,7 @@ void benchmark_internal_broadcast(int64_t run_index, const Options& opts, Commun
   DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
   auto t = timeit.elapsed();
 
-  std::string s = string_full("Broadcast", D, D_comm, require_contiguous_send, require_contiguous_recv);
+  std::string s = string_full("Broadcast", D, DComm, require_contiguous_send, require_contiguous_recv);
 
   output(run_index, std::move(s), t, world.rank(), opts, pcomm.size_2d());
 }
@@ -365,7 +363,7 @@ void benchmark_p2p(int64_t run_index, const Options& opts, Communicator& world, 
   output(run_index, std::move(s), t, world.rank(), opts, pcomm.size_2d());
 }
 
-template <Device D_comm, RequireContiguous require_contiguous_send,
+template <Device DComm, RequireContiguous require_contiguous_send,
           RequireContiguous require_contiguous_recv, Backend B, class CommPipeline, class T>
 void benchmark_internal_p2p(int64_t run_index, const Options& opts, Communicator& world,
                             CommPipeline&& pcomm, Matrix<const T, Device::CPU>& matrix_ref) {
@@ -373,8 +371,8 @@ void benchmark_internal_p2p(int64_t run_index, const Options& opts, Communicator
   using dlaf::comm::internal::schedule_send;
 
   constexpr Device D = DefaultDevice_v<B>;
-  if constexpr (D_comm != D && (require_contiguous_send != RequireContiguous::Yes ||
-                                require_contiguous_recv != RequireContiguous::Yes)) {
+  if constexpr (DComm != D && (require_contiguous_send != RequireContiguous::Yes ||
+                               require_contiguous_recv != RequireContiguous::Yes)) {
     // Skip benchmark, as copy to a different device forces contiguous buffers.
     return;
   }
@@ -388,14 +386,14 @@ void benchmark_internal_p2p(int64_t run_index, const Options& opts, Communicator
 
   if (pcomm.rank() == 0) {
     auto p2p = [rank_recv](auto comm, auto ro_tile) {
-      return schedule_send<D_comm, require_contiguous_send>(std::move(comm), rank_recv, 0,
-                                                            std::move(ro_tile));
+      return schedule_send<DComm, require_contiguous_send>(std::move(comm), rank_recv, 0,
+                                                           std::move(ro_tile));
     };
     benchmark_ro(pcomm, matrix, p2p);
   }
   else if (pcomm.rank() == rank_recv) {
     auto p2p = [](auto comm, auto rw_tile) {
-      return schedule_recv<D_comm, require_contiguous_recv>(std::move(comm), 0, 0, std::move(rw_tile));
+      return schedule_recv<DComm, require_contiguous_recv>(std::move(comm), 0, 0, std::move(rw_tile));
     };
     benchmark_rw(pcomm, matrix, p2p);
   }
@@ -403,7 +401,7 @@ void benchmark_internal_p2p(int64_t run_index, const Options& opts, Communicator
   DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
   auto t = timeit.elapsed();
 
-  std::string s = string_full("P2P", D, D_comm, require_contiguous_send, require_contiguous_recv);
+  std::string s = string_full("P2P", D, DComm, require_contiguous_send, require_contiguous_recv);
 
   output(run_index, std::move(s), t, world.rank(), opts, pcomm.size_2d());
 }
@@ -440,7 +438,7 @@ void benchmark_reduce(int64_t run_index, const Options& opts, Communicator& worl
   output(run_index, std::move(s), t, world.rank(), opts, pcomm.size_2d());
 }
 
-template <Device D_comm, Backend B, class CommPipeline, class T>
+template <Device DComm, Backend B, class CommPipeline, class T>
 void benchmark_internal_reduce(int64_t run_index, const Options& opts, Communicator& world,
                                CommPipeline&& pcomm, Matrix<const T, Device::CPU>& matrix_ref) {
   using dlaf::comm::internal::schedule_reduce_recv_in_place;
@@ -455,13 +453,13 @@ void benchmark_internal_reduce(int64_t run_index, const Options& opts, Communica
 
   if (world.rank() == 0) {
     auto reduce = [](auto comm, auto rw_tile) {
-      return schedule_reduce_recv_in_place<D_comm>(std::move(comm), MPI_SUM, std::move(rw_tile));
+      return schedule_reduce_recv_in_place<DComm>(std::move(comm), MPI_SUM, std::move(rw_tile));
     };
     benchmark_rw(pcomm, matrix, reduce);
   }
   else {
     auto reduce = [](auto comm, auto ro_tile) {
-      return schedule_reduce_send<D_comm>(std::move(comm), 0, MPI_SUM, std::move(ro_tile));
+      return schedule_reduce_send<DComm>(std::move(comm), 0, MPI_SUM, std::move(ro_tile));
     };
     benchmark_ro(pcomm, matrix, reduce);
   }
@@ -469,7 +467,7 @@ void benchmark_internal_reduce(int64_t run_index, const Options& opts, Communica
   DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
   auto t = timeit.elapsed();
 
-  std::string s = string_full("Reduce", D, D_comm, RequireContiguous::Yes, RequireContiguous::Yes);
+  std::string s = string_full("Reduce", D, DComm, RequireContiguous::Yes, RequireContiguous::Yes);
 
   output(run_index, std::move(s), t, world.rank(), opts, pcomm.size_2d());
 }

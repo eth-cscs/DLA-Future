@@ -60,7 +60,7 @@ void reduceSend(const Communicator& comm, comm::IndexT_MPI rank_root, MPI_Op red
 
 DLAF_MAKE_CALLABLE_OBJECT(reduceSend);
 
-template <Device D_comm, class T, Device D>
+template <Device DComm, class T, Device D>
 [[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> schedule_reduce_recv_in_place(
     pika::execution::experimental::unique_any_sender<CommunicatorPipelineExclusiveWrapper> pcomm,
     MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender<T, D> tile) {
@@ -85,7 +85,7 @@ template <Device D_comm, class T, Device D>
 #endif
 
 #if !defined(DLAF_WITH_MPI_GPU_AWARE)
-  static_assert(D_comm == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
+  static_assert(DComm == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
 #endif
 
   // The input tile must be copied to the temporary tile to participate in the
@@ -93,11 +93,11 @@ template <Device D_comm, class T, Device D>
   // result can be used. The reduction is explicitly done on CPU memory so that
   // we can manage potential asynchronous copies between CPU and GPU. A
   // reduction requires contiguous memory.
-  return withTemporaryTile<D_comm, CopyToDestination::Yes, CopyFromDestination::Yes,
+  return withTemporaryTile<DComm, CopyToDestination::Yes, CopyFromDestination::Yes,
                            RequireContiguous::Yes>(std::move(tile), std::move(reduce_recv_in_place));
 }
 
-template <Device D_comm, class T, Device D>
+template <Device DComm, class T, Device D>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<> schedule_reduce_send(
     pika::execution::experimental::unique_any_sender<CommunicatorPipelineExclusiveWrapper> pcomm,
     comm::IndexT_MPI rank_root, MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender<T, D> tile) {
@@ -115,7 +115,7 @@ template <Device D_comm, class T, Device D>
   };
 
 #if !defined(DLAF_WITH_MPI_GPU_AWARE)
-  static_assert(D_comm == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
+  static_assert(DComm == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
 #endif
 
   // The input tile must be copied to the temporary tile used for the send, but
@@ -123,7 +123,7 @@ template <Device D_comm, class T, Device D>
   // data is not changed by the send. The reduction is explicitly done on CPU
   // memory so that we can manage potential asynchronous copies between CPU and
   // GPU. A reduction requires contiguous memory.
-  return withTemporaryTile<D_comm, CopyToDestination::Yes, CopyFromDestination::No,
+  return withTemporaryTile<DComm, CopyToDestination::Yes, CopyFromDestination::No,
                            RequireContiguous::Yes>(std::move(tile), std::move(reduce_send));
 }
 }

@@ -94,6 +94,11 @@ Variable names should contain only lowercase characters and underscores (`_`).
 The underscore is used to separate words and is not allowed as first or last character.
 Two consecutive underscores (`__`) are not allowed.
 
+#### Template Variable Names
+
+Type and class names should start with a capital letter and have a capital letter for each new word.
+Underscores (`_`) are not allowed.
+
 ### Lambda Expressions
 
 Named lambda expressions follow the naming convention for variables:

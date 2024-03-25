@@ -38,11 +38,11 @@ namespace dlaf {
 ///     be created in the working folder (it should not exist before the execution).
 ///     WARNING: just a single execution can be dumped on disk, and any subsequent call fails. Set with
 ///     environment variable DLAF_DEBUG_DUMP_BAND_TO_TRIDIAGONAL_DATA.
-/// - debug_dump_trisolver_data:
-///     Enable dump of trisolver input/output data to "tridiagonal.h5" file that will be created in the
-///     working folder (it should not exist before the execution).
+/// - debug_dump_tridiag_solver_data:
+///     Enable dump of tridiagonal solver input/output data to "tridiagonal.h5" file that will before
+///     created in the working folder (it should not exist before the execution).
 ///     WARNING: just a single execution can be dumped on disk, and any subsequent call fails.
-///     Set with environment variable DLAF_DEBUG_DUMP_TRISOLVER_DATA.
+///     Set with environment variable DLAF_DEBUG_DUMP_TRIDIAG_SOLVER_DATA.
 /// - red2band_panel_nworkers:
 ///     The maximum number of threads to use for computing the panel in the reduction to band algorithm.
 ///     Set with --dlaf:red2band-panel-nworkers or env variable DLAF_RED2BAND_PANEL_NWORKERS.

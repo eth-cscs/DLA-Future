@@ -27,6 +27,7 @@
 #include <dlaf/eigensolver/tridiag_solver/merge.h>
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/hdf5.h>
 #include <dlaf/permutations/general.h>
 #include <dlaf/permutations/general/impl.h>
 #include <dlaf/sender/make_sender_algorithm_overloads.h>
@@ -451,6 +452,17 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device
 template <Backend B, Device D, class T>
 void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device::CPU>& tridiag,
                                   Matrix<T, D>& evals, Matrix<std::complex<T>, D>& evecs) {
+#ifdef DLAF_WITH_HDF5
+  static size_t num_tridiag_solver_calls = 0;
+  std::string fname = "tridiag_solver-" + std::to_string(num_tridiag_solver_calls) + ".h5";
+  std::optional<matrix::internal::FileHDF5> file;
+
+  if (getTuneParameters().debug_dump_tridiag_solver_data) {
+    file = matrix::internal::FileHDF5(grid.fullCommunicator(), fname);
+    file->write(tridiag, "/input");
+  }
+#endif
+
   Matrix<T, D> real_evecs(evecs.distribution());
   TridiagSolver<B, D, T>::call(grid, tridiag, evals, real_evecs);
 
@@ -459,6 +471,16 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device
   for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
     castToComplexAsync<D>(real_evecs.read(tile_wrt_local), evecs.readwrite(tile_wrt_local));
   }
+
+#ifdef DLAF_WITH_HDF5
+  if (getTuneParameters().debug_dump_tridiag_solver_data) {
+    file = matrix::internal::FileHDF5(grid.fullCommunicator(), fname);
+    file->write(evecs, "/evecs");
+    file->write(evals, "/evals");
+  }
+
+  num_tridiag_solver_calls++;
+#endif
 }
 
 }

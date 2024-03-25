@@ -287,7 +287,7 @@ for nodes in nodes_arr:
             job_text.addCommand(
                 mp.chol,
                 lib="dlaf",
-                build_dir=libpaths["dlaf"],
+                miniapp_dir=libpaths["dlaf"],
                 rpn=2,
                 m_sz=m_sz,
                 mb_sz=mb_sz,
@@ -305,7 +305,7 @@ for nodes in nodes_arr:
             job_text.addCommand(
                 mp.chol,
                 lib="dplasma",
-                build_dir=libpaths["dplasma"],
+                miniapp_dir=libpaths["dplasma"],
                 rpn=1,
                 m_sz=m_sz,
                 mb_sz=mb_sz,
@@ -323,7 +323,7 @@ for nodes in nodes_arr:
             job_text.addCommand(
                 mp.chol,
                 lib="scalapack",
-                build_dir=libpaths["scalapack-mkl"],
+                miniapp_dir=libpaths["scalapack-mkl"],
                 rpn=36,
                 m_sz=m_sz,
                 mb_sz=mb_sz,

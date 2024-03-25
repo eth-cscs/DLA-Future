@@ -39,8 +39,8 @@ namespace dlaf::comm {
 /// `in` is a sender of a read-only tile that, together with the one received from `rank_mate`, will be
 /// summed in `out` (on both ranks)
 template <Backend B, class CommSender, class SenderIn, class SenderOut>
-[[nodiscard]] auto scheduleAllSumP2P(CommSender&& comm, IndexT_MPI rank_mate, IndexT_MPI tag,
-                                     SenderIn&& in, SenderOut&& out) {
+[[nodiscard]] auto schedule_sum_p2p(CommSender&& comm, IndexT_MPI rank_mate, IndexT_MPI tag,
+                                    SenderIn&& in, SenderOut&& out) {
   namespace ex = pika::execution::experimental;
 
   using T = dlaf::internal::SenderElementType<SenderIn>;
@@ -56,10 +56,10 @@ template <Backend B, class CommSender, class SenderIn, class SenderOut>
   // comm must be a copyable sender or already an any_sender (also copyable) since we use it in two
   // algorithms. In the latter case the original any_sender is returned unchanged.
   auto any_comm = ex::make_any_sender(std::forward<CommSender>(comm));
-  ex::start_detached(comm::scheduleSend(any_comm, rank_mate, tag, in));
+  ex::start_detached(comm::schedule_send(any_comm, rank_mate, tag, in));
 
-  auto tile_out = comm::scheduleRecv(std::move(any_comm), rank_mate, tag,
-                                     ex::make_unique_any_sender(std::forward<SenderOut>(out)));
+  auto tile_out = comm::schedule_recv(std::move(any_comm), rank_mate, tag,
+                                      ex::make_unique_any_sender(std::forward<SenderOut>(out)));
   return dlaf::internal::whenAllLift(T(1), std::forward<SenderIn>(in), std::move(tile_out)) |
          tile::add(dlaf::internal::Policy<B>());
 }

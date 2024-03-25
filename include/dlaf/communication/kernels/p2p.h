@@ -26,12 +26,12 @@
 
 namespace dlaf::comm {
 template <class T, Device D, class CommSender>
-[[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleSend(
+[[nodiscard]] pika::execution::experimental::unique_any_sender<> schedule_send(
     CommSender pcomm, IndexT_MPI dest, IndexT_MPI tag, dlaf::matrix::ReadOnlyTileSender<T, D> tile);
 
-#define DLAF_SCHEDULE_SEND_ETI(kword, Type, Device, CommSender)                   \
-  kword template pika::execution::experimental::unique_any_sender<> scheduleSend( \
-      CommSender pcomm, IndexT_MPI dest, IndexT_MPI tag,                          \
+#define DLAF_SCHEDULE_SEND_ETI(kword, Type, Device, CommSender)                    \
+  kword template pika::execution::experimental::unique_any_sender<> schedule_send( \
+      CommSender pcomm, IndexT_MPI dest, IndexT_MPI tag,                           \
       dlaf::matrix::ReadOnlyTileSender<Type, Device> tile)
 
 // clang-format off
@@ -42,12 +42,12 @@ DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_ETI, extern, Communicator
 // clang-format on
 
 template <class T, Device D, class CommSender>
-[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleRecv(
+[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> schedule_recv(
     CommSender pcomm, IndexT_MPI source, IndexT_MPI tag, dlaf::matrix::ReadWriteTileSender<T, D> tile);
 
-#define DLAF_SCHEDULE_RECV_ETI(kword, Type, Device, CommSender)                \
-  kword template dlaf::matrix::ReadWriteTileSender<Type, Device> scheduleRecv( \
-      CommSender pcomm, IndexT_MPI source, IndexT_MPI tag,                     \
+#define DLAF_SCHEDULE_RECV_ETI(kword, Type, Device, CommSender)                 \
+  kword template dlaf::matrix::ReadWriteTileSender<Type, Device> schedule_recv( \
+      CommSender pcomm, IndexT_MPI source, IndexT_MPI tag,                      \
       dlaf::matrix::ReadWriteTileSender<Type, Device> tile)
 
 // clang-format off

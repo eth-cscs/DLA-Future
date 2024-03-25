@@ -25,6 +25,7 @@
 #include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/communication/index.h>
 #include <dlaf/communication/kernels.h>
+#include <dlaf/communication/kernels/internal/broadcast.h>
 #include <dlaf/eigensolver/internal/get_tridiag_rank1_barrier_busy_wait.h>
 #include <dlaf/eigensolver/internal/get_tridiag_rank1_nworkers.h>
 #include <dlaf/eigensolver/tridiag_solver/coltype.h>
@@ -1210,13 +1211,13 @@ void assembleDistZVec(comm::CommunicatorPipeline<comm::CommunicatorType::Full>& 
       // Copy the row into the column vector `z`
       assembleRank1UpdateVectorTileAsync<T, D>(top_tile, rho, evecs.read(idx_evecs), z.readwrite(z_idx));
       if (full_task_chain.size() > 1) {
-        ex::start_detached(comm::scheduleSendBcast(full_task_chain.exclusive(), z.read(z_idx)));
+        ex::start_detached(comm::schedule_bcast_send(full_task_chain.exclusive(), z.read(z_idx)));
       }
     }
     else {
       const comm::IndexT_MPI root_rank = full_task_chain.rank_full_communicator(evecs_tile_rank);
-      ex::start_detached(comm::scheduleRecvBcast(full_task_chain.exclusive(), root_rank,
-                                                 z.readwrite(z_idx)));
+      ex::start_detached(comm::schedule_bcast_recv(full_task_chain.exclusive(), root_rank,
+                                                   z.readwrite(z_idx)));
     }
   }
 }

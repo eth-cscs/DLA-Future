@@ -45,4 +45,6 @@ DLAF_addMiniapp(miniapp_eigensolver SOURCES miniapp_eigensolver.cpp)
 
 DLAF_addMiniapp(miniapp_gen_eigensolver SOURCES miniapp_gen_eigensolver.cpp)
 
+DLAF_addMiniapp(miniapp_communication SOURCES miniapp_communication.cpp)
+
 add_subdirectory(kernel)

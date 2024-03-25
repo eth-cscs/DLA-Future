@@ -188,8 +188,8 @@ void copy(Matrix<const T, Source>& src, Matrix<T, Destination>& dst, comm::Commu
     const bool dst_is_mine = rank == dst_rank;
 
     if (src_is_mine != dst_is_mine) {
-      ex::start_detached(comm::scheduleSend(mpi_chain.shared(), grid.rankFullCommunicator(dst_rank),
-                                            tag(ij), src_retiled.read(ij_lc)));
+      ex::start_detached(comm::schedule_send(mpi_chain.shared(), grid.rankFullCommunicator(dst_rank),
+                                             tag(ij), src_retiled.read(ij_lc)));
     }
   }
 
@@ -207,8 +207,8 @@ void copy(Matrix<const T, Source>& src, Matrix<T, Destination>& dst, comm::Commu
                          matrix::copy(policy));
     }
     else {
-      ex::start_detached(comm::scheduleRecv(mpi_chain.shared(), grid.rankFullCommunicator(src_rank),
-                                            tag(ij), dst_retiled.readwrite(ij_lc)));
+      ex::start_detached(comm::schedule_recv(mpi_chain.shared(), grid.rankFullCommunicator(src_rank),
+                                             tag(ij), dst_retiled.readwrite(ij_lc)));
     }
   }
 }

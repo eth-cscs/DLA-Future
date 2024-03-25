@@ -470,7 +470,7 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device
 // as complex values where the imaginery part is set to zero.
 //
 template <Backend B, Device D, class T>
-void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tridiag,
+void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device::CPU>& tridiag,
                                   Matrix<T, D>& evals, Matrix<std::complex<T>, D>& evecs) {
   Matrix<T, D> real_evecs(evecs.distribution());
   TridiagSolver<B, D, T>::call(grid, tridiag, evals, real_evecs);

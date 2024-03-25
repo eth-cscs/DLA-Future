@@ -56,82 +56,34 @@ void Eigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo, M
                                 Matrix<BaseType<T>, D>& evals, Matrix<T, D>& mat_e) {
   const SizeType band_size = getBandSize(mat_a.blockSize().rows());
 
-#ifdef DLAF_WITH_HDF5
-  static size_t num_eigensolver_calls = 0;
-
-  auto fname = [](std::string name){
-    std::stringstream fn;
-    fn << name << num_eigensolver_calls << ".h5";
-    return fn.str();
-  };
-#endif
-
   // need uplo check as reduction to band doesn't have the uplo argument yet.
   if (uplo != blas::Uplo::Lower)
     DLAF_UNIMPLEMENTED(uplo);
 
 #ifdef DLAF_WITH_HDF5
-  std::optional<matrix::internal::FileHDF5> file_eigensolver;
+  static size_t num_eigensolver_calls = 0;
+  std::string fname = "eigensolver-" + std::to_string(num_eigensolver_calls) + ".h5";
+  std::optional<matrix::internal::FileHDF5> file;
 
   if (getTuneParameters().debug_dump_eigensolver_data) {
-    file_eigensolver = matrix::internal::FileHDF5(grid.fullCommunicator(), fname("eigensolver"));
-    file_eigensolver->write(mat_a, "/input");
-  }
-
-  std::optional<matrix::internal::FileHDF5> file_reduction_to_band;
-
-  if (getTuneParameters().debug_dump_reduction_to_band_data) {
-    file_reduction_to_band = matrix::internal::FileHDF5(grid.fullCommunicator(), fname("red_to_band"));
-    file_reduction_to_band->write(mat_a, "/input");
+    file = matrix::internal::FileHDF5(grid.fullCommunicator(), fname);
+    file->write(mat_a, "/input");
   }
 #endif
 
   auto mat_taus = reduction_to_band<B>(grid, mat_a, band_size);
 
-#ifdef DLAF_WITH_HDF5
-  if (getTuneParameters().debug_dump_reduction_to_band_data) {
-    file_reduction_to_band->write(mat_a, "/band");
-  }
-
-  std::optional<matrix::internal::FileHDF5> file_band_to_tridiagonal;
-
-  if (getTuneParameters().debug_dump_band_to_tridiagonal_data) {
-    file_band_to_tridiagonal = matrix::internal::FileHDF5(grid.fullCommunicator(), fname("band_to_tridiag"));
-    file_band_to_tridiagonal->write(mat_a, "/band");
-  }
-#endif
-
   auto ret = band_to_tridiagonal<Backend::MC>(grid, uplo, band_size, mat_a);
 
-#ifdef DLAF_WITH_HDF5
-  if (getTuneParameters().debug_dump_band_to_tridiagonal_data) {
-    file_band_to_tridiagonal->write(ret.tridiagonal, "/tridiag");
-  }
-
-  std::optional<matrix::internal::FileHDF5> file_tridiag;
-
-  if (getTuneParameters().debug_dump_trisolver_data) {
-    file_tridiag = matrix::internal::FileHDF5(grid.fullCommunicator(), fname("tridiag"));
-    file_tridiag->write(ret.tridiagonal, "/tridiag");
-  }
-#endif
-
   tridiagonal_eigensolver<B>(grid, ret.tridiagonal, evals, mat_e);
-
-#ifdef DLAF_WITH_HDF5
-  if (getTuneParameters().debug_dump_trisolver_data) {
-    file_tridiag->write(evals, "/evals");
-    file_tridiag->write(mat_e, "/evecs");
-  }
-#endif
 
   bt_band_to_tridiagonal<B>(grid, band_size, mat_e, ret.hh_reflectors);
   bt_reduction_to_band<B>(grid, band_size, mat_e, mat_a, mat_taus);
 
 #ifdef DLAF_WITH_HDF5
   if (getTuneParameters().debug_dump_eigensolver_data) {
-    file_eigensolver->write(evals, "/evals");
-    file_eigensolver->write(mat_e, "/evecs");
+    file->write(evals, "/evals");
+    file->write(mat_e, "/evecs");
   }
 
   num_eigensolver_calls++;

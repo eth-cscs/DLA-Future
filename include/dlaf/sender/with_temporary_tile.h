@@ -137,11 +137,12 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                       // directly.
                       auto copy_sender = [&]() {
                         if constexpr (bool(copy_from_destination)) {
-                          return whenAllLift(std::move(f_sender), std::cref(temp), std::cref(in)) |
-                                 copy(Policy<copy_backend>(thread_priority::high));
+                          return ex::make_unique_any_sender(
+                              whenAllLift(std::move(f_sender), std::cref(temp), std::cref(in)) |
+                              copy(Policy<copy_backend>(thread_priority::high)));
                         }
                         else {
-                          return std::move(f_sender);
+                          return ex::make_unique_any_sender(std::move(f_sender));
                         }
                       }();
                       // Send the input tile to continuations if the tile is

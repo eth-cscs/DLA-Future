@@ -384,7 +384,7 @@ protected:
           LocalElementSize(CT, panel_size.get<CT>() + dist.offset().get<CT>(), panel_size.get<axis>());
 
     Distribution dist_internal{panel_size, dist.blockSize()};
-    auto layout = tileLayout(dist_internal);
+    auto layout = colMajorLayout(dist_internal, panel_size.rows());
     return {std::move(dist_internal), layout};
   }
 

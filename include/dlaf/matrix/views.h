@@ -171,6 +171,11 @@ struct SubPanelView : public internal::View {
     return {offset_sub, size_sub};
   }
 
+  /// Return the number of rows of elements part of this panel view
+  SizeType rows() const noexcept {
+    return dist_.size().rows() - View::offsetElement().row();
+  }
+
   /// Return the number of columns of elements part of this panel view
   SizeType cols() const noexcept {
     return cols_;

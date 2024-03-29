@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['p2p_2eh_386',['p2p.h',['../p2p_8h.html',1,'']]],
+  ['p2p_2eh_386',['p2p.h',['../p2p_8h.html',1,'(Global Namespace)'],['../internal_2p2p_8h.html',1,'(Global Namespace)']]],
   ['p2p_5fallsum_2eh_387',['p2p_allsum.h',['../p2p__allsum_8h.html',1,'']]],
   ['panel_388',['Panel',['../structdlaf_1_1matrix_1_1_panel.html',1,'dlaf::matrix::Panel&lt; axis, T, D, Storage &gt;'],['../structdlaf_1_1matrix_1_1_panel_3_01axis_00_01const_01_t_00_01_d_00_01_store_transposed_1_1_no_01_4.html#ad63a4d555cea1fdf2f6d5745125fe3cb',1,'dlaf::matrix::Panel&lt; axis, const T, D, StoreTransposed::No &gt;::Panel()']]],
   ['panel_2eh_389',['panel.h',['../panel_8h.html',1,'']]],
@@ -24,7 +24,7 @@ var searchData=
   ['potrfinfo_407',['potrfInfo',['../lapack_2tile_8h.html#aa917a1efbd53213821776d7d632ee41c',1,'dlaf::tile']]],
   ['prependpack_408',['PrependPack',['../structdlaf_1_1internal_1_1_prepend_pack.html',1,'dlaf::internal']]],
   ['prependpack_3c_20pack_3c_20ts_2e_2e_2e_20_3e_2c_20t_20_3e_409',['PrependPack&lt; Pack&lt; Ts... &gt;, T &gt;',['../structdlaf_1_1internal_1_1_prepend_pack_3_01_pack_3_01_ts_8_8_8_01_4_00_01_t_01_4.html',1,'dlaf::internal']]],
-  ['print_410',['print',['../print__csv_8h.html#ace48c87b6c1d3dc59bf005fb943c0629',1,'dlaf::matrix::print(format::csv, const Tile&lt; const T, Device::CPU &gt; &amp;tile, std::ostream &amp;os=std::cout)'],['../print__numpy_8h.html#ab467c4a97112f7b1d2cffe3acbb41643',1,'dlaf::matrix::print(format::numpy, const Tile&lt; const T, Device::CPU &gt; &amp;tile, std::ostream &amp;os=std::cout)'],['../print__csv_8h.html#ae6a4db345c18954cc7d83022a1a848d6',1,'dlaf::matrix::print(format::csv, std::string sym, Matrix&lt; const T, Device::CPU &gt; &amp;mat, std::ostream &amp;os=std::cout)'],['../print__gpu_8h.html#aa0268964c774b355f5513ae93a23b258',1,'dlaf::matrix::print(Format format, const Tile&lt; const T, Device::GPU &gt; &amp;tile, std::ostream &amp;os, whip::stream_t stream)']]],
+  ['print_410',['print',['../print__gpu_8h.html#aa0268964c774b355f5513ae93a23b258',1,'dlaf::matrix::print(Format format, const Tile&lt; const T, Device::GPU &gt; &amp;tile, std::ostream &amp;os, whip::stream_t stream)'],['../print__csv_8h.html#ae6a4db345c18954cc7d83022a1a848d6',1,'dlaf::matrix::print(format::csv, std::string sym, Matrix&lt; const T, Device::CPU &gt; &amp;mat, std::ostream &amp;os=std::cout)'],['../print__numpy_8h.html#ab467c4a97112f7b1d2cffe3acbb41643',1,'dlaf::matrix::print(format::numpy, const Tile&lt; const T, Device::CPU &gt; &amp;tile, std::ostream &amp;os=std::cout)'],['../print__csv_8h.html#ace48c87b6c1d3dc59bf005fb943c0629',1,'dlaf::matrix::print(format::csv, const Tile&lt; const T, Device::CPU &gt; &amp;tile, std::ostream &amp;os=std::cout)']]],
   ['print_5fcsv_2eh_411',['print_csv.h',['../print__csv_8h.html',1,'']]],
   ['print_5fgpu_2eh_412',['print_gpu.h',['../print__gpu_8h.html',1,'']]],
   ['print_5fnumpy_2eh_413',['print_numpy.h',['../print__numpy_8h.html',1,'']]],

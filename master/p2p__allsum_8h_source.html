@@ -102,8 +102,8 @@ $(function() {
 <div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;<span class="keyword">namespace </span>dlaf::comm {</div>
 <div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160; </div>
 <div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;<span class="keyword">template</span> &lt;Backend B, <span class="keyword">class</span> CommSender, <span class="keyword">class</span> SenderIn, <span class="keyword">class</span> SenderOut&gt;</div>
-<div class="line"><a name="l00042"></a><span class="lineno"><a class="line" href="p2p__allsum_8h.html#ac786ec776d72b61529c8a79c5baffff4">   42</a></span>&#160;[[nodiscard]] <span class="keyword">auto</span> <a class="code" href="p2p__allsum_8h.html#ac786ec776d72b61529c8a79c5baffff4">scheduleAllSumP2P</a>(CommSender&amp;&amp; comm, <a class="code" href="communication_2index_8h.html#a2b48f62607e5e128dff19ceac22093e9">IndexT_MPI</a> rank_mate, <a class="code" href="communication_2index_8h.html#a2b48f62607e5e128dff19ceac22093e9">IndexT_MPI</a> tag,</div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;                                     SenderIn&amp;&amp; in, SenderOut&amp;&amp; out) {</div>
+<div class="line"><a name="l00042"></a><span class="lineno"><a class="line" href="p2p__allsum_8h.html#a55019801f01a0383bd68123f14680d01">   42</a></span>&#160;[[nodiscard]] <span class="keyword">auto</span> <a class="code" href="p2p__allsum_8h.html#a55019801f01a0383bd68123f14680d01">schedule_sum_p2p</a>(CommSender&amp;&amp; comm, <a class="code" href="communication_2index_8h.html#a2b48f62607e5e128dff19ceac22093e9">IndexT_MPI</a> rank_mate, <a class="code" href="communication_2index_8h.html#a2b48f62607e5e128dff19ceac22093e9">IndexT_MPI</a> tag,</div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;                                    SenderIn&amp;&amp; in, SenderOut&amp;&amp; out) {</div>
 <div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;  <span class="keyword">namespace </span>ex = pika::execution::experimental;</div>
 <div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160; </div>
 <div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;  <span class="keyword">using</span> T = dlaf::internal::SenderElementType&lt;SenderIn&gt;;</div>
@@ -119,10 +119,10 @@ $(function() {
 <div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;  <span class="comment">// comm must be a copyable sender or already an any_sender (also copyable) since we use it in two</span></div>
 <div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;  <span class="comment">// algorithms. In the latter case the original any_sender is returned unchanged.</span></div>
 <div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;  <span class="keyword">auto</span> any_comm = ex::make_any_sender(std::forward&lt;CommSender&gt;(comm));</div>
-<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;  ex::start_detached(comm::scheduleSend(any_comm, rank_mate, tag, in));</div>
+<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;  ex::start_detached(comm::schedule_send(any_comm, rank_mate, tag, in));</div>
 <div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160; </div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;  <span class="keyword">auto</span> tile_out = comm::scheduleRecv(std::move(any_comm), rank_mate, tag,</div>
-<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;                                     ex::make_unique_any_sender(std::forward&lt;SenderOut&gt;(out)));</div>
+<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;  <span class="keyword">auto</span> tile_out = comm::schedule_recv(std::move(any_comm), rank_mate, tag,</div>
+<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;                                      ex::make_unique_any_sender(std::forward&lt;SenderOut&gt;(out)));</div>
 <div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;  <span class="keywordflow">return</span> dlaf::internal::whenAllLift(T(1), std::forward&lt;SenderIn&gt;(in), std::move(tile_out)) |</div>
 <div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;         tile::add(<a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy&lt;B&gt;</a>());</div>
 <div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;}</div>
@@ -135,7 +135,7 @@ $(function() {
 <div class="ttc" id="acommunicator_8h_html"><div class="ttname"><a href="communicator_8h.html">communicator.h</a></div></div>
 <div class="ttc" id="amatrix_2tile_8h_html"><div class="ttname"><a href="matrix_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="ap2p_8h_html"><div class="ttname"><a href="p2p_8h.html">p2p.h</a></div></div>
-<div class="ttc" id="ap2p__allsum_8h_html_ac786ec776d72b61529c8a79c5baffff4"><div class="ttname"><a href="p2p__allsum_8h.html#ac786ec776d72b61529c8a79c5baffff4">dlaf::comm::scheduleAllSumP2P</a></div><div class="ttdeci">auto scheduleAllSumP2P(CommSender &amp;&amp;comm, IndexT_MPI rank_mate, IndexT_MPI tag, SenderIn &amp;&amp;in, SenderOut &amp;&amp;out)</div><div class="ttdef"><b>Definition:</b> p2p_allsum.h:42</div></div>
+<div class="ttc" id="ap2p__allsum_8h_html_a55019801f01a0383bd68123f14680d01"><div class="ttname"><a href="p2p__allsum_8h.html#a55019801f01a0383bd68123f14680d01">dlaf::comm::schedule_sum_p2p</a></div><div class="ttdeci">auto schedule_sum_p2p(CommSender &amp;&amp;comm, IndexT_MPI rank_mate, IndexT_MPI tag, SenderIn &amp;&amp;in, SenderOut &amp;&amp;out)</div><div class="ttdef"><b>Definition:</b> p2p_allsum.h:42</div></div>
 <div class="ttc" id="atile__extensions_8h_html"><div class="ttname"><a href="tile__extensions_8h.html">tile_extensions.h</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->

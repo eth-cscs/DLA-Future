@@ -93,18 +93,18 @@ Macros</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ac098d76ba0bad739b0ac73fcbfc4eb97"><td class="memTemplParams" colspan="2">template&lt;class T , Device D&gt; </td></tr>
-<tr class="memitem:ac098d76ba0bad739b0ac73fcbfc4eb97"><td class="memTemplItemLeft" align="right" valign="top">dlaf::matrix::ReadWriteTileSender&lt; T, D &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="kernels_2all__reduce_8h.html#ac098d76ba0bad739b0ac73fcbfc4eb97">dlaf::comm::scheduleAllReduce</a> (pika::execution::experimental::unique_any_sender&lt; CommunicatorPipelineExclusiveWrapper &gt; pcomm, MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender&lt; T, D &gt; tile_in, dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; tile_out)</td></tr>
-<tr class="separator:ac098d76ba0bad739b0ac73fcbfc4eb97"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a25672a8facd0033321e3edf05ae86219"><td class="memTemplParams" colspan="2">template&lt;class T , Device DIn, Device DOut&gt; </td></tr>
+<tr class="memitem:a25672a8facd0033321e3edf05ae86219"><td class="memTemplItemLeft" align="right" valign="top">dlaf::matrix::ReadWriteTileSender&lt; T, DOut &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="kernels_2all__reduce_8h.html#a25672a8facd0033321e3edf05ae86219">dlaf::comm::scheduleAllReduce</a> (pika::execution::experimental::unique_any_sender&lt; CommunicatorPipelineExclusiveWrapper &gt; pcomm, MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender&lt; T, DIn &gt; tile_in, dlaf::matrix::ReadWriteTileSender&lt; T, DOut &gt; tile_out)</td></tr>
+<tr class="separator:a25672a8facd0033321e3edf05ae86219"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a37d27624ff7b1a195e30aceafa6baf1c"><td class="memItemLeft" align="right" valign="top"><a id="a37d27624ff7b1a195e30aceafa6baf1c"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_EXPAND_ETI_SDCZ_DEVICE</b> (DLAF_SCHEDULE_ALL_REDUCE_ETI, extern)</td></tr>
 <tr class="separator:a37d27624ff7b1a195e30aceafa6baf1c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af3e3c6a0adce16c226fb3feaaf111f71"><td class="memItemLeft" align="right" valign="top"><a id="af3e3c6a0adce16c226fb3feaaf111f71"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_ALL_REDUCE_ETI</b> (extern, int, Device::CPU)</td></tr>
 <tr class="separator:af3e3c6a0adce16c226fb3feaaf111f71"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac30df4f4b62f3c3ceb5e8079977001d9"><td class="memTemplParams" colspan="2">template&lt;class T , Device D&gt; </td></tr>
-<tr class="memitem:ac30df4f4b62f3c3ceb5e8079977001d9"><td class="memTemplItemLeft" align="right" valign="top">dlaf::matrix::ReadWriteTileSender&lt; T, D &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="kernels_2all__reduce_8h.html#ac30df4f4b62f3c3ceb5e8079977001d9">dlaf::comm::scheduleAllReduceInPlace</a> (pika::execution::experimental::unique_any_sender&lt; CommunicatorPipelineExclusiveWrapper &gt; pcomm, MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; tile)</td></tr>
-<tr class="separator:ac30df4f4b62f3c3ceb5e8079977001d9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7e85e06fdb88cf7342cd3c63b759316c"><td class="memTemplParams" colspan="2">template&lt;class T , Device D&gt; </td></tr>
+<tr class="memitem:a7e85e06fdb88cf7342cd3c63b759316c"><td class="memTemplItemLeft" align="right" valign="top">dlaf::matrix::ReadWriteTileSender&lt; T, D &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="kernels_2all__reduce_8h.html#a7e85e06fdb88cf7342cd3c63b759316c">dlaf::comm::schedule_all_reduce_in_place</a> (pika::execution::experimental::unique_any_sender&lt; CommunicatorPipelineExclusiveWrapper &gt; pcomm, MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; tile)</td></tr>
+<tr class="separator:a7e85e06fdb88cf7342cd3c63b759316c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a751dad9b0fcaee6cfa7231d29bf5ee15"><td class="memItemLeft" align="right" valign="top"><a id="a751dad9b0fcaee6cfa7231d29bf5ee15"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_EXPAND_ETI_SDCZ_DEVICE</b> (DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI, extern)</td></tr>
 <tr class="separator:a751dad9b0fcaee6cfa7231d29bf5ee15"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -144,11 +144,11 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line">  kword <span class="keyword">template</span> dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; <a class="code" href="kernels_2all__reduce_8h.html#ac098d76ba0bad739b0ac73fcbfc4eb97">scheduleAllReduce</a>(                 \</div>
+<b>Value:</b><div class="fragment"><div class="line">  kword <span class="keyword">template</span> dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; <a class="code" href="kernels_2all__reduce_8h.html#a25672a8facd0033321e3edf05ae86219">scheduleAllReduce</a>(                 \</div>
 <div class="line">      pika::execution::experimental::unique_any_sender&lt;CommunicatorPipelineExclusiveWrapper&gt; pcomm, \</div>
 <div class="line">      MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender&lt;Type, Device&gt; tile_in,                     \</div>
 <div class="line">      dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; tile_out)</div>
-<div class="ttc" id="akernels_2all__reduce_8h_html_ac098d76ba0bad739b0ac73fcbfc4eb97"><div class="ttname"><a href="kernels_2all__reduce_8h.html#ac098d76ba0bad739b0ac73fcbfc4eb97">dlaf::comm::scheduleAllReduce</a></div><div class="ttdeci">dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; scheduleAllReduce(pika::execution::experimental::unique_any_sender&lt; CommunicatorPipelineExclusiveWrapper &gt; pcomm, MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender&lt; T, D &gt; tile_in, dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; tile_out)</div></div>
+<div class="ttc" id="akernels_2all__reduce_8h_html_a25672a8facd0033321e3edf05ae86219"><div class="ttname"><a href="kernels_2all__reduce_8h.html#a25672a8facd0033321e3edf05ae86219">dlaf::comm::scheduleAllReduce</a></div><div class="ttdeci">dlaf::matrix::ReadWriteTileSender&lt; T, DOut &gt; scheduleAllReduce(pika::execution::experimental::unique_any_sender&lt; CommunicatorPipelineExclusiveWrapper &gt; pcomm, MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender&lt; T, DIn &gt; tile_in, dlaf::matrix::ReadWriteTileSender&lt; T, DOut &gt; tile_out)</div></div>
 </div><!-- fragment -->
 </div>
 </div>
@@ -183,16 +183,16 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line">  kword <span class="keyword">template</span> dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; <a class="code" href="kernels_2all__reduce_8h.html#ac30df4f4b62f3c3ceb5e8079977001d9">scheduleAllReduceInPlace</a>(          \</div>
+<b>Value:</b><div class="fragment"><div class="line">  kword <span class="keyword">template</span> dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; <a class="code" href="kernels_2all__reduce_8h.html#a7e85e06fdb88cf7342cd3c63b759316c">schedule_all_reduce_in_place</a>(      \</div>
 <div class="line">      pika::execution::experimental::unique_any_sender&lt;CommunicatorPipelineExclusiveWrapper&gt; pcomm, \</div>
 <div class="line">      MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; tile)</div>
-<div class="ttc" id="akernels_2all__reduce_8h_html_ac30df4f4b62f3c3ceb5e8079977001d9"><div class="ttname"><a href="kernels_2all__reduce_8h.html#ac30df4f4b62f3c3ceb5e8079977001d9">dlaf::comm::scheduleAllReduceInPlace</a></div><div class="ttdeci">dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; scheduleAllReduceInPlace(pika::execution::experimental::unique_any_sender&lt; CommunicatorPipelineExclusiveWrapper &gt; pcomm, MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; tile)</div></div>
+<div class="ttc" id="akernels_2all__reduce_8h_html_a7e85e06fdb88cf7342cd3c63b759316c"><div class="ttname"><a href="kernels_2all__reduce_8h.html#a7e85e06fdb88cf7342cd3c63b759316c">dlaf::comm::schedule_all_reduce_in_place</a></div><div class="ttdeci">dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; schedule_all_reduce_in_place(pika::execution::experimental::unique_any_sender&lt; CommunicatorPipelineExclusiveWrapper &gt; pcomm, MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; tile)</div></div>
 </div><!-- fragment -->
 </div>
 </div>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="ac098d76ba0bad739b0ac73fcbfc4eb97"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac098d76ba0bad739b0ac73fcbfc4eb97">&#9670;&nbsp;</a></span>scheduleAllReduce()</h2>
+<a id="a7e85e06fdb88cf7342cd3c63b759316c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7e85e06fdb88cf7342cd3c63b759316c">&#9670;&nbsp;</a></span>schedule_all_reduce_in_place()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -200,51 +200,7 @@ Functions</h2></td></tr>
 template&lt;class T , Device D&gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">dlaf::matrix::ReadWriteTileSender&lt;T, D&gt; dlaf::comm::scheduleAllReduce </td>
-          <td>(</td>
-          <td class="paramtype">pika::execution::experimental::unique_any_sender&lt; CommunicatorPipelineExclusiveWrapper &gt;&#160;</td>
-          <td class="paramname"><em>pcomm</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">MPI_Op&#160;</td>
-          <td class="paramname"><em>reduce_op</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">dlaf::matrix::ReadOnlyTileSender&lt; T, D &gt;&#160;</td>
-          <td class="paramname"><em>tile_in</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">dlaf::matrix::ReadWriteTileSender&lt; T, D &gt;&#160;</td>
-          <td class="paramname"><em>tile_out</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Schedule an all reduce.</p>
-<p>An input and output tile is required for the reduction. The returned sender signals completion when the reduction is done. The output sender tile must be writable so that the received and reduced data can be written to it. The output tile is sent by the returned sender. </p>
-
-</div>
-</div>
-<a id="ac30df4f4b62f3c3ceb5e8079977001d9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac30df4f4b62f3c3ceb5e8079977001d9">&#9670;&nbsp;</a></span>scheduleAllReduceInPlace()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;class T , Device D&gt; </div>
-      <table class="memname">
-        <tr>
-          <td class="memname">dlaf::matrix::ReadWriteTileSender&lt;T, D&gt; dlaf::comm::scheduleAllReduceInPlace </td>
+          <td class="memname">dlaf::matrix::ReadWriteTileSender&lt;T, D&gt; dlaf::comm::schedule_all_reduce_in_place </td>
           <td>(</td>
           <td class="paramtype">pika::execution::experimental::unique_any_sender&lt; CommunicatorPipelineExclusiveWrapper &gt;&#160;</td>
           <td class="paramname"><em>pcomm</em>, </td>
@@ -270,6 +226,50 @@ template&lt;class T , Device D&gt; </div>
 </div><div class="memdoc">
 <p>Schedule an in-place all reduce.</p>
 <p>The returned sender signals completion when the reduction is done. The sender tile must be writable so that the received and reduced data can be written to it. The tile is sent by the returned sender. </p>
+
+</div>
+</div>
+<a id="a25672a8facd0033321e3edf05ae86219"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a25672a8facd0033321e3edf05ae86219">&#9670;&nbsp;</a></span>scheduleAllReduce()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class T , Device DIn, Device DOut&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">dlaf::matrix::ReadWriteTileSender&lt;T, DOut&gt; dlaf::comm::scheduleAllReduce </td>
+          <td>(</td>
+          <td class="paramtype">pika::execution::experimental::unique_any_sender&lt; CommunicatorPipelineExclusiveWrapper &gt;&#160;</td>
+          <td class="paramname"><em>pcomm</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">MPI_Op&#160;</td>
+          <td class="paramname"><em>reduce_op</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">dlaf::matrix::ReadOnlyTileSender&lt; T, DIn &gt;&#160;</td>
+          <td class="paramname"><em>tile_in</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">dlaf::matrix::ReadWriteTileSender&lt; T, DOut &gt;&#160;</td>
+          <td class="paramname"><em>tile_out</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Schedule an all reduce.</p>
+<p>An input and output tile is required for the reduction. The returned sender signals completion when the reduction is done. The output sender tile must be writable so that the received and reduced data can be written to it. The output tile is sent by the returned sender. </p>
 
 </div>
 </div>

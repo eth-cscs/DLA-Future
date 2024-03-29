@@ -949,13 +949,13 @@ $(function() {
 <div class="line"><a name="l00890"></a><span class="lineno">  890</span>&#160;      <span class="comment">// Broadcast on ROW</span></div>
 <div class="line"><a name="l00891"></a><span class="lineno">  891</span>&#160;      <span class="keywordflow">if</span> (grid.size().cols() &gt; 1 &amp;&amp; rank.row() == rankHH.row()) {</div>
 <div class="line"><a name="l00892"></a><span class="lineno">  892</span>&#160;        <span class="keywordflow">if</span> (rank.col() == rankHH.col()) {</div>
-<div class="line"><a name="l00893"></a><span class="lineno">  893</span>&#160;          ex::start_detached(comm::scheduleSendBcast(</div>
+<div class="line"><a name="l00893"></a><span class="lineno">  893</span>&#160;          ex::start_detached(comm::schedule_bcast_send(</div>
 <div class="line"><a name="l00894"></a><span class="lineno">  894</span>&#160;              mpi_chain_row.exclusive(), <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_hh.read(ij_g), helper.specHHCompact())));</div>
 <div class="line"><a name="l00895"></a><span class="lineno">  895</span>&#160;        }</div>
 <div class="line"><a name="l00896"></a><span class="lineno">  896</span>&#160;        <span class="keywordflow">else</span> {</div>
-<div class="line"><a name="l00897"></a><span class="lineno">  897</span>&#160;          ex::start_detached(comm::scheduleRecvBcast(mpi_chain_row.exclusive(), rankHH.col(),</div>
-<div class="line"><a name="l00898"></a><span class="lineno">  898</span>&#160;                                                     <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(panel_hh.readwrite(ij_hh_panel),</div>
-<div class="line"><a name="l00899"></a><span class="lineno">  899</span>&#160;                                                               helper.specHHCompact(<span class="keyword">true</span>))));</div>
+<div class="line"><a name="l00897"></a><span class="lineno">  897</span>&#160;          ex::start_detached(comm::schedule_bcast_recv(mpi_chain_row.exclusive(), rankHH.col(),</div>
+<div class="line"><a name="l00898"></a><span class="lineno">  898</span>&#160;                                                       <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(panel_hh.readwrite(ij_hh_panel),</div>
+<div class="line"><a name="l00899"></a><span class="lineno">  899</span>&#160;                                                                 helper.specHHCompact(<span class="keyword">true</span>))));</div>
 <div class="line"><a name="l00900"></a><span class="lineno">  900</span>&#160;        }</div>
 <div class="line"><a name="l00901"></a><span class="lineno">  901</span>&#160;      }</div>
 <div class="line"><a name="l00902"></a><span class="lineno">  902</span>&#160; </div>
@@ -973,12 +973,12 @@ $(function() {
 <div class="line"><a name="l00914"></a><span class="lineno">  914</span>&#160;          <span class="keyword">auto</span> tile_hh = rank.col() == rankHH.col()</div>
 <div class="line"><a name="l00915"></a><span class="lineno">  915</span>&#160;                             ? <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_hh.read(ij_g), helper.specHHCompact())</div>
 <div class="line"><a name="l00916"></a><span class="lineno">  916</span>&#160;                             : <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(panel_hh.read(ij_hh_panel), helper.specHHCompact(true));</div>
-<div class="line"><a name="l00917"></a><span class="lineno">  917</span>&#160;          ex::start_detached(comm::scheduleSend(mpi_chain_col.exclusive(), rank_dst, 0,</div>
-<div class="line"><a name="l00918"></a><span class="lineno">  918</span>&#160;                                                std::move(tile_hh)));</div>
+<div class="line"><a name="l00917"></a><span class="lineno">  917</span>&#160;          ex::start_detached(comm::schedule_send(mpi_chain_col.exclusive(), rank_dst, 0,</div>
+<div class="line"><a name="l00918"></a><span class="lineno">  918</span>&#160;                                                 std::move(tile_hh)));</div>
 <div class="line"><a name="l00919"></a><span class="lineno">  919</span>&#160;        }</div>
 <div class="line"><a name="l00920"></a><span class="lineno">  920</span>&#160;        <span class="keywordflow">else</span> <span class="keywordflow">if</span> (rank.row() == rank_dst) {</div>
-<div class="line"><a name="l00921"></a><span class="lineno">  921</span>&#160;          ex::start_detached(comm::scheduleRecv(mpi_chain_col.exclusive(), rank_src, 0,</div>
-<div class="line"><a name="l00922"></a><span class="lineno">  922</span>&#160;                                                panel_hh.readwrite(ij_hh_panel)));</div>
+<div class="line"><a name="l00921"></a><span class="lineno">  921</span>&#160;          ex::start_detached(comm::schedule_recv(mpi_chain_col.exclusive(), rank_src, 0,</div>
+<div class="line"><a name="l00922"></a><span class="lineno">  922</span>&#160;                                                 panel_hh.readwrite(ij_hh_panel)));</div>
 <div class="line"><a name="l00923"></a><span class="lineno">  923</span>&#160;        }</div>
 <div class="line"><a name="l00924"></a><span class="lineno">  924</span>&#160;      }</div>
 <div class="line"><a name="l00925"></a><span class="lineno">  925</span>&#160; </div>
@@ -1057,9 +1057,9 @@ $(function() {
 <div class="line"><a name="l00998"></a><span class="lineno">  998</span>&#160; </div>
 <div class="line"><a name="l00999"></a><span class="lineno">  999</span>&#160;            <span class="comment">// Compute final W2 by adding the contribution from the partner rank</span></div>
 <div class="line"><a name="l01000"></a><span class="lineno"> 1000</span>&#160;            ex::start_detached(  <span class="comment">//</span></div>
-<div class="line"><a name="l01001"></a><span class="lineno"> 1001</span>&#160;                comm::scheduleAllSumP2P&lt;B&gt;(mpi_chain_col_p2p.shared(), rank_partner, tag,</div>
-<div class="line"><a name="l01002"></a><span class="lineno"> 1002</span>&#160;                                           <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_w2tmp.read(idx_w2), helper.specW2(nb)),</div>
-<div class="line"><a name="l01003"></a><span class="lineno"> 1003</span>&#160;                                           <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_w2.readwrite(idx_w2), helper.specW2(nb))));</div>
+<div class="line"><a name="l01001"></a><span class="lineno"> 1001</span>&#160;                comm::schedule_sum_p2p&lt;B&gt;(mpi_chain_col_p2p.shared(), rank_partner, tag,</div>
+<div class="line"><a name="l01002"></a><span class="lineno"> 1002</span>&#160;                                          <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_w2tmp.read(idx_w2), helper.specW2(nb)),</div>
+<div class="line"><a name="l01003"></a><span class="lineno"> 1003</span>&#160;                                          <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_w2.readwrite(idx_w2), helper.specW2(nb))));</div>
 <div class="line"><a name="l01004"></a><span class="lineno"> 1004</span>&#160; </div>
 <div class="line"><a name="l01005"></a><span class="lineno"> 1005</span>&#160;            <span class="keyword">auto</span> subtile_e = <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_e_rt.readwrite(idx_e), spec_e);</div>
 <div class="line"><a name="l01006"></a><span class="lineno"> 1006</span>&#160;            <span class="comment">// E -= W . W2</span></div>

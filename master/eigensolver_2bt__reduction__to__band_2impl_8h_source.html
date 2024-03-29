@@ -417,8 +417,8 @@ $(function() {
 <div class="line"><a name="l00346"></a><span class="lineno">  346</span>&#160; </div>
 <div class="line"><a name="l00347"></a><span class="lineno">  347</span>&#160;    <span class="keywordflow">if</span> (mpi_col_task_chain.size() &gt; 1) {</div>
 <div class="line"><a name="l00348"></a><span class="lineno">  348</span>&#160;      <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; kj_panel : panelW2.iteratorLocal())</div>
-<div class="line"><a name="l00349"></a><span class="lineno">  349</span>&#160;        ex::start_detached(dlaf::comm::scheduleAllReduceInPlace(mpi_col_task_chain.exclusive(), MPI_SUM,</div>
-<div class="line"><a name="l00350"></a><span class="lineno">  350</span>&#160;                                                                panelW2.readwrite(kj_panel)));</div>
+<div class="line"><a name="l00349"></a><span class="lineno">  349</span>&#160;        ex::start_detached(dlaf::comm::schedule_all_reduce_in_place(</div>
+<div class="line"><a name="l00350"></a><span class="lineno">  350</span>&#160;            mpi_col_task_chain.exclusive(), MPI_SUM, panelW2.readwrite(kj_panel)));</div>
 <div class="line"><a name="l00351"></a><span class="lineno">  351</span>&#160;    }</div>
 <div class="line"><a name="l00352"></a><span class="lineno">  352</span>&#160; </div>
 <div class="line"><a name="l00353"></a><span class="lineno">  353</span>&#160;    <a class="code" href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">broadcast</a>(k_rank_col, panelV, mpi_row_task_chain);</div>

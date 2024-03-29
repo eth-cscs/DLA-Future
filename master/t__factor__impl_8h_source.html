@@ -396,8 +396,8 @@ $(function() {
 <div class="line"><a name="l00325"></a><span class="lineno">  325</span>&#160;  <span class="comment">// at this point each rank has its partial result for each column</span></div>
 <div class="line"><a name="l00326"></a><span class="lineno">  326</span>&#160;  <span class="comment">// so, let&#39;s reduce the results (on all ranks, so that everyone can independently compute T factor)</span></div>
 <div class="line"><a name="l00327"></a><span class="lineno">  327</span>&#160;  <span class="keywordflow">if</span> (mpi_col_task_chain.<a class="code" href="classdlaf_1_1comm_1_1_communicator_pipeline.html#ab6f7286ad04f18c869f41812be9322b1">size</a>() &gt; 1)</div>
-<div class="line"><a name="l00328"></a><span class="lineno">  328</span>&#160;    t_local = dlaf::comm::scheduleAllReduceInPlace(mpi_col_task_chain.<a class="code" href="classdlaf_1_1comm_1_1_communicator_pipeline.html#abb18e80e82791ce564b7257988f0245c">exclusive</a>(), MPI_SUM,</div>
-<div class="line"><a name="l00329"></a><span class="lineno">  329</span>&#160;                                                   std::move(t_local));</div>
+<div class="line"><a name="l00328"></a><span class="lineno">  328</span>&#160;    t_local = dlaf::comm::schedule_all_reduce_in_place(mpi_col_task_chain.<a class="code" href="classdlaf_1_1comm_1_1_communicator_pipeline.html#abb18e80e82791ce564b7257988f0245c">exclusive</a>(), MPI_SUM,</div>
+<div class="line"><a name="l00329"></a><span class="lineno">  329</span>&#160;                                                       std::move(t_local));</div>
 <div class="line"><a name="l00330"></a><span class="lineno">  330</span>&#160; </div>
 <div class="line"><a name="l00331"></a><span class="lineno">  331</span>&#160;  <span class="comment">// 2nd step: compute the T factor, by performing the last step on each column</span></div>
 <div class="line"><a name="l00332"></a><span class="lineno">  332</span>&#160;  <span class="comment">// each column depends on the previous part (all reflectors that comes before)</span></div>

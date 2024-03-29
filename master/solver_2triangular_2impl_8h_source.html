@@ -692,12 +692,12 @@ $(function() {
 <div class="line"><a name="l00621"></a><span class="lineno">  621</span>&#160;    <span class="keywordflow">if</span> (grid.colCommunicator().size() != 1) {</div>
 <div class="line"><a name="l00622"></a><span class="lineno">  622</span>&#160;      <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; idx : b_panel.iteratorLocal()) {</div>
 <div class="line"><a name="l00623"></a><span class="lineno">  623</span>&#160;        <span class="keywordflow">if</span> (this_rank.row() == rank_kk.row()) {</div>
-<div class="line"><a name="l00624"></a><span class="lineno">  624</span>&#160;          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain.exclusive(), MPI_SUM,</div>
-<div class="line"><a name="l00625"></a><span class="lineno">  625</span>&#160;                                                             b_panel.readwrite(idx)));</div>
+<div class="line"><a name="l00624"></a><span class="lineno">  624</span>&#160;          ex::start_detached(comm::schedule_reduce_recv_in_place(mpi_col_task_chain.exclusive(), MPI_SUM,</div>
+<div class="line"><a name="l00625"></a><span class="lineno">  625</span>&#160;                                                                 b_panel.readwrite(idx)));</div>
 <div class="line"><a name="l00626"></a><span class="lineno">  626</span>&#160;        }</div>
 <div class="line"><a name="l00627"></a><span class="lineno">  627</span>&#160;        <span class="keywordflow">else</span> {</div>
-<div class="line"><a name="l00628"></a><span class="lineno">  628</span>&#160;          ex::start_detached(comm::scheduleReduceSend(mpi_col_task_chain.exclusive(), rank_kk.row(),</div>
-<div class="line"><a name="l00629"></a><span class="lineno">  629</span>&#160;                                                      MPI_SUM, b_panel.read(idx)));</div>
+<div class="line"><a name="l00628"></a><span class="lineno">  628</span>&#160;          ex::start_detached(comm::schedule_reduce_send(mpi_col_task_chain.exclusive(), rank_kk.row(),</div>
+<div class="line"><a name="l00629"></a><span class="lineno">  629</span>&#160;                                                        MPI_SUM, b_panel.read(idx)));</div>
 <div class="line"><a name="l00630"></a><span class="lineno">  630</span>&#160;        }</div>
 <div class="line"><a name="l00631"></a><span class="lineno">  631</span>&#160;      }</div>
 <div class="line"><a name="l00632"></a><span class="lineno">  632</span>&#160;    }</div>
@@ -870,12 +870,12 @@ $(function() {
 <div class="line"><a name="l00799"></a><span class="lineno">  799</span>&#160;    <span class="keywordflow">if</span> (grid.colCommunicator().size() != 1) {</div>
 <div class="line"><a name="l00800"></a><span class="lineno">  800</span>&#160;      <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; idx : b_panel.iteratorLocal()) {</div>
 <div class="line"><a name="l00801"></a><span class="lineno">  801</span>&#160;        <span class="keywordflow">if</span> (this_rank.row() == rank_kk.row()) {</div>
-<div class="line"><a name="l00802"></a><span class="lineno">  802</span>&#160;          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain.exclusive(), MPI_SUM,</div>
-<div class="line"><a name="l00803"></a><span class="lineno">  803</span>&#160;                                                             b_panel.readwrite(idx)));</div>
+<div class="line"><a name="l00802"></a><span class="lineno">  802</span>&#160;          ex::start_detached(comm::schedule_reduce_recv_in_place(mpi_col_task_chain.exclusive(), MPI_SUM,</div>
+<div class="line"><a name="l00803"></a><span class="lineno">  803</span>&#160;                                                                 b_panel.readwrite(idx)));</div>
 <div class="line"><a name="l00804"></a><span class="lineno">  804</span>&#160;        }</div>
 <div class="line"><a name="l00805"></a><span class="lineno">  805</span>&#160;        <span class="keywordflow">else</span> {</div>
-<div class="line"><a name="l00806"></a><span class="lineno">  806</span>&#160;          ex::start_detached(comm::scheduleReduceSend(mpi_col_task_chain.exclusive(), rank_kk.row(),</div>
-<div class="line"><a name="l00807"></a><span class="lineno">  807</span>&#160;                                                      MPI_SUM, b_panel.read(idx)));</div>
+<div class="line"><a name="l00806"></a><span class="lineno">  806</span>&#160;          ex::start_detached(comm::schedule_reduce_send(mpi_col_task_chain.exclusive(), rank_kk.row(),</div>
+<div class="line"><a name="l00807"></a><span class="lineno">  807</span>&#160;                                                        MPI_SUM, b_panel.read(idx)));</div>
 <div class="line"><a name="l00808"></a><span class="lineno">  808</span>&#160;        }</div>
 <div class="line"><a name="l00809"></a><span class="lineno">  809</span>&#160;      }</div>
 <div class="line"><a name="l00810"></a><span class="lineno">  810</span>&#160;    }</div>
@@ -1050,12 +1050,12 @@ $(function() {
 <div class="line"><a name="l00979"></a><span class="lineno">  979</span>&#160;    <span class="keywordflow">if</span> (grid.rowCommunicator().size() != 1) {</div>
 <div class="line"><a name="l00980"></a><span class="lineno">  980</span>&#160;      <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; idx : b_panel.iteratorLocal()) {</div>
 <div class="line"><a name="l00981"></a><span class="lineno">  981</span>&#160;        <span class="keywordflow">if</span> (this_rank.col() == rank_kk.col()) {</div>
-<div class="line"><a name="l00982"></a><span class="lineno">  982</span>&#160;          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_task_chain.exclusive(), MPI_SUM,</div>
-<div class="line"><a name="l00983"></a><span class="lineno">  983</span>&#160;                                                             b_panel.readwrite(idx)));</div>
+<div class="line"><a name="l00982"></a><span class="lineno">  982</span>&#160;          ex::start_detached(comm::schedule_reduce_recv_in_place(mpi_row_task_chain.exclusive(), MPI_SUM,</div>
+<div class="line"><a name="l00983"></a><span class="lineno">  983</span>&#160;                                                                 b_panel.readwrite(idx)));</div>
 <div class="line"><a name="l00984"></a><span class="lineno">  984</span>&#160;        }</div>
 <div class="line"><a name="l00985"></a><span class="lineno">  985</span>&#160;        <span class="keywordflow">else</span> {</div>
-<div class="line"><a name="l00986"></a><span class="lineno">  986</span>&#160;          ex::start_detached(comm::scheduleReduceSend(mpi_row_task_chain.exclusive(), rank_kk.col(),</div>
-<div class="line"><a name="l00987"></a><span class="lineno">  987</span>&#160;                                                      MPI_SUM, b_panel.read(idx)));</div>
+<div class="line"><a name="l00986"></a><span class="lineno">  986</span>&#160;          ex::start_detached(comm::schedule_reduce_send(mpi_row_task_chain.exclusive(), rank_kk.col(),</div>
+<div class="line"><a name="l00987"></a><span class="lineno">  987</span>&#160;                                                        MPI_SUM, b_panel.read(idx)));</div>
 <div class="line"><a name="l00988"></a><span class="lineno">  988</span>&#160;        }</div>
 <div class="line"><a name="l00989"></a><span class="lineno">  989</span>&#160;      }</div>
 <div class="line"><a name="l00990"></a><span class="lineno">  990</span>&#160;    }</div>
@@ -1231,12 +1231,12 @@ $(function() {
 <div class="line"><a name="l01160"></a><span class="lineno"> 1160</span>&#160;    <span class="keywordflow">if</span> (grid.rowCommunicator().size() != 1) {</div>
 <div class="line"><a name="l01161"></a><span class="lineno"> 1161</span>&#160;      <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; idx : b_panel.iteratorLocal()) {</div>
 <div class="line"><a name="l01162"></a><span class="lineno"> 1162</span>&#160;        <span class="keywordflow">if</span> (this_rank.col() == rank_kk.col()) {</div>
-<div class="line"><a name="l01163"></a><span class="lineno"> 1163</span>&#160;          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_task_chain.exclusive(), MPI_SUM,</div>
-<div class="line"><a name="l01164"></a><span class="lineno"> 1164</span>&#160;                                                             b_panel.readwrite(idx)));</div>
+<div class="line"><a name="l01163"></a><span class="lineno"> 1163</span>&#160;          ex::start_detached(comm::schedule_reduce_recv_in_place(mpi_row_task_chain.exclusive(), MPI_SUM,</div>
+<div class="line"><a name="l01164"></a><span class="lineno"> 1164</span>&#160;                                                                 b_panel.readwrite(idx)));</div>
 <div class="line"><a name="l01165"></a><span class="lineno"> 1165</span>&#160;        }</div>
 <div class="line"><a name="l01166"></a><span class="lineno"> 1166</span>&#160;        <span class="keywordflow">else</span> {</div>
-<div class="line"><a name="l01167"></a><span class="lineno"> 1167</span>&#160;          ex::start_detached(comm::scheduleReduceSend(mpi_row_task_chain.exclusive(), rank_kk.col(),</div>
-<div class="line"><a name="l01168"></a><span class="lineno"> 1168</span>&#160;                                                      MPI_SUM, b_panel.read(idx)));</div>
+<div class="line"><a name="l01167"></a><span class="lineno"> 1167</span>&#160;          ex::start_detached(comm::schedule_reduce_send(mpi_row_task_chain.exclusive(), rank_kk.col(),</div>
+<div class="line"><a name="l01168"></a><span class="lineno"> 1168</span>&#160;                                                        MPI_SUM, b_panel.read(idx)));</div>
 <div class="line"><a name="l01169"></a><span class="lineno"> 1169</span>&#160;        }</div>
 <div class="line"><a name="l01170"></a><span class="lineno"> 1170</span>&#160;      }</div>
 <div class="line"><a name="l01171"></a><span class="lineno"> 1171</span>&#160;    }</div>

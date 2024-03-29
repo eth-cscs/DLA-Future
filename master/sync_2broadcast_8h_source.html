@@ -98,7 +98,7 @@ $(function() {
 <div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="keyword">namespace </span><a class="code" href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">broadcast</a> {</div>
 <div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160; </div>
 <div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> DataIn&gt;</div>
-<div class="line"><a name="l00034"></a><span class="lineno"><a class="line" href="sync_2broadcast_8h.html#a313a9dc3d212f70d7af273fa0c681aee">   34</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="sync_2broadcast_8h.html#a313a9dc3d212f70d7af273fa0c681aee">send</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a>&amp; communicator, DataIn&amp;&amp; message_to_send) {</div>
+<div class="line"><a name="l00034"></a><span class="lineno"><a class="line" href="sync_2broadcast_8h.html#a313a9dc3d212f70d7af273fa0c681aee">   34</a></span>&#160;<span class="keywordtype">void</span> send(<a class="code" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a>&amp; communicator, DataIn&amp;&amp; message_to_send) {</div>
 <div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;  <span class="keyword">auto</span> data = common::make_data(message_to_send);</div>
 <div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;  <span class="keyword">using</span> DataT = std::remove_const_t&lt;<span class="keyword">typename</span> <a class="code" href="structdlaf_1_1common_1_1data__traits.html">common::data_traits</a>&lt;decltype(data)&gt;::element_t&gt;;</div>
 <div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160; </div>
@@ -131,7 +131,6 @@ $(function() {
 <div class="ttc" id="amessage_8h_html"><div class="ttname"><a href="message_8h.html">message.h</a></div></div>
 <div class="ttc" id="apipeline_8h_html"><div class="ttname"><a href="pipeline_8h.html">pipeline.h</a></div></div>
 <div class="ttc" id="astructdlaf_1_1common_1_1data__traits_html"><div class="ttname"><a href="structdlaf_1_1common_1_1data__traits.html">dlaf::common::data_traits</a></div><div class="ttdef"><b>Definition:</b> data.h:57</div></div>
-<div class="ttc" id="async_2broadcast_8h_html_a313a9dc3d212f70d7af273fa0c681aee"><div class="ttname"><a href="sync_2broadcast_8h.html#a313a9dc3d212f70d7af273fa0c681aee">dlaf::comm::sync::broadcast::send</a></div><div class="ttdeci">void send(Communicator &amp;communicator, DataIn &amp;&amp;message_to_send)</div><div class="ttdef"><b>Definition:</b> broadcast.h:34</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

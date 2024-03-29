@@ -92,10 +92,10 @@ Macros</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a41b246f801361165a99d354b43657c3f"><td class="memTemplParams" colspan="2"><a id="a41b246f801361165a99d354b43657c3f"></a>
+<tr class="memitem:a0a2a2ae0b2a73027025a5ff42f217f7e"><td class="memTemplParams" colspan="2"><a id="a0a2a2ae0b2a73027025a5ff42f217f7e"></a>
 template&lt;class T , Device D, class CommSender &gt; </td></tr>
-<tr class="memitem:a41b246f801361165a99d354b43657c3f"><td class="memTemplItemLeft" align="right" valign="top">pika::execution::experimental::unique_any_sender&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::comm::scheduleSend</b> (CommSender pcomm, IndexT_MPI dest, IndexT_MPI tag, dlaf::matrix::ReadOnlyTileSender&lt; T, D &gt; tile)</td></tr>
-<tr class="separator:a41b246f801361165a99d354b43657c3f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0a2a2ae0b2a73027025a5ff42f217f7e"><td class="memTemplItemLeft" align="right" valign="top">pika::execution::experimental::unique_any_sender&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::comm::schedule_send</b> (CommSender pcomm, IndexT_MPI dest, IndexT_MPI tag, dlaf::matrix::ReadOnlyTileSender&lt; T, D &gt; tile)</td></tr>
+<tr class="separator:a0a2a2ae0b2a73027025a5ff42f217f7e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2c8b3d4904aabafb7f1e74c5d6e485ad"><td class="memItemLeft" align="right" valign="top"><a id="a2c8b3d4904aabafb7f1e74c5d6e485ad"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS</b> (DLAF_SCHEDULE_SEND_ETI, extern, pika::execution::experimental::unique_any_sender&lt; Communicator &gt;)</td></tr>
 <tr class="separator:a2c8b3d4904aabafb7f1e74c5d6e485ad"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -108,10 +108,10 @@ template&lt;class T , Device D, class CommSender &gt; </td></tr>
 <tr class="memitem:ab00cdabe833e9409d8e50a666020deaf"><td class="memItemLeft" align="right" valign="top"><a id="ab00cdabe833e9409d8e50a666020deaf"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS</b> (DLAF_SCHEDULE_SEND_ETI, extern, CommunicatorPipelineExclusiveSender)</td></tr>
 <tr class="separator:ab00cdabe833e9409d8e50a666020deaf"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adcf6417cab23a6546467974789117b0e"><td class="memTemplParams" colspan="2"><a id="adcf6417cab23a6546467974789117b0e"></a>
+<tr class="memitem:affcf615492d9ba295c9acc1bcb8d49c9"><td class="memTemplParams" colspan="2"><a id="affcf615492d9ba295c9acc1bcb8d49c9"></a>
 template&lt;class T , Device D, class CommSender &gt; </td></tr>
-<tr class="memitem:adcf6417cab23a6546467974789117b0e"><td class="memTemplItemLeft" align="right" valign="top">dlaf::matrix::ReadWriteTileSender&lt; T, D &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::comm::scheduleRecv</b> (CommSender pcomm, IndexT_MPI source, IndexT_MPI tag, dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; tile)</td></tr>
-<tr class="separator:adcf6417cab23a6546467974789117b0e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:affcf615492d9ba295c9acc1bcb8d49c9"><td class="memTemplItemLeft" align="right" valign="top">dlaf::matrix::ReadWriteTileSender&lt; T, D &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::comm::schedule_recv</b> (CommSender pcomm, IndexT_MPI source, IndexT_MPI tag, dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; tile)</td></tr>
+<tr class="separator:affcf615492d9ba295c9acc1bcb8d49c9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a964c957ae9e0d28af99607f079bf08b5"><td class="memItemLeft" align="right" valign="top"><a id="a964c957ae9e0d28af99607f079bf08b5"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS</b> (DLAF_SCHEDULE_RECV_ETI, extern, pika::execution::experimental::unique_any_sender&lt; Communicator &gt;)</td></tr>
 <tr class="separator:a964c957ae9e0d28af99607f079bf08b5"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -163,8 +163,8 @@ template&lt;class T , Device D, class CommSender &gt; </td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line">  kword <span class="keyword">template</span> dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; scheduleRecv( \</div>
-<div class="line">      CommSender pcomm, IndexT_MPI source, IndexT_MPI tag,                     \</div>
+<b>Value:</b><div class="fragment"><div class="line">  kword <span class="keyword">template</span> dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; schedule_recv( \</div>
+<div class="line">      CommSender pcomm, IndexT_MPI source, IndexT_MPI tag,                      \</div>
 <div class="line">      dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; tile)</div>
 </div><!-- fragment -->
 </div>
@@ -206,8 +206,8 @@ template&lt;class T , Device D, class CommSender &gt; </td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line">  kword <span class="keyword">template</span> pika::execution::experimental::unique_any_sender&lt;&gt; scheduleSend( \</div>
-<div class="line">      CommSender pcomm, IndexT_MPI dest, IndexT_MPI tag,                          \</div>
+<b>Value:</b><div class="fragment"><div class="line">  kword <span class="keyword">template</span> pika::execution::experimental::unique_any_sender&lt;&gt; schedule_send( \</div>
+<div class="line">      CommSender pcomm, IndexT_MPI dest, IndexT_MPI tag,                           \</div>
 <div class="line">      dlaf::matrix::ReadOnlyTileSender&lt;Type, Device&gt; tile)</div>
 </div><!-- fragment -->
 </div>

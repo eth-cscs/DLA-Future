@@ -1260,9 +1260,9 @@ $(function() {
 <div class="line"><a name="l01189"></a><span class="lineno"> 1189</span>&#160;          }</div>
 <div class="line"><a name="l01190"></a><span class="lineno"> 1190</span>&#160;          <span class="keywordflow">else</span> {</div>
 <div class="line"><a name="l01191"></a><span class="lineno"> 1191</span>&#160;            <span class="keyword">auto</span>&amp; temp = temps.nextResource();</div>
-<div class="line"><a name="l01192"></a><span class="lineno"> 1192</span>&#160;            <span class="keyword">auto</span> diag_tile = comm::scheduleRecv(mpi_chain.shared(), rank_diag, tag_diag,</div>
-<div class="line"><a name="l01193"></a><span class="lineno"> 1193</span>&#160;                                                <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(temp.readwrite(LocalTileIndex{0, 0}),</div>
-<div class="line"><a name="l01194"></a><span class="lineno"> 1194</span>&#160;                                                          {{0, 0}, dist_a.tileSize(index_diag)}));</div>
+<div class="line"><a name="l01192"></a><span class="lineno"> 1192</span>&#160;            <span class="keyword">auto</span> diag_tile = comm::schedule_recv(mpi_chain.shared(), rank_diag, tag_diag,</div>
+<div class="line"><a name="l01193"></a><span class="lineno"> 1193</span>&#160;                                                 <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(temp.readwrite(LocalTileIndex{0, 0}),</div>
+<div class="line"><a name="l01194"></a><span class="lineno"> 1194</span>&#160;                                                           {{0, 0}, dist_a.tileSize(index_diag)}));</div>
 <div class="line"><a name="l01195"></a><span class="lineno"> 1195</span>&#160;            dep = ex::ensure_started(copy_diag(a_ws[k_block_local], k * nb, std::move(diag_tile)));</div>
 <div class="line"><a name="l01196"></a><span class="lineno"> 1196</span>&#160;          }</div>
 <div class="line"><a name="l01197"></a><span class="lineno"> 1197</span>&#160; </div>
@@ -1274,9 +1274,9 @@ $(function() {
 <div class="line"><a name="l01203"></a><span class="lineno"> 1203</span>&#160;            <span class="keywordflow">else</span> {</div>
 <div class="line"><a name="l01204"></a><span class="lineno"> 1204</span>&#160;              <span class="keyword">auto</span>&amp; temp = temps.nextResource();</div>
 <div class="line"><a name="l01205"></a><span class="lineno"> 1205</span>&#160;              <span class="keyword">auto</span> offdiag_tile =</div>
-<div class="line"><a name="l01206"></a><span class="lineno"> 1206</span>&#160;                  comm::scheduleRecv(mpi_chain.shared(), rank_offdiag, tag_offdiag,</div>
-<div class="line"><a name="l01207"></a><span class="lineno"> 1207</span>&#160;                                     <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(temp.readwrite(LocalTileIndex{0, 0}),</div>
-<div class="line"><a name="l01208"></a><span class="lineno"> 1208</span>&#160;                                               {{0, 0}, dist_a.tileSize(index_offdiag)}));</div>
+<div class="line"><a name="l01206"></a><span class="lineno"> 1206</span>&#160;                  comm::schedule_recv(mpi_chain.shared(), rank_offdiag, tag_offdiag,</div>
+<div class="line"><a name="l01207"></a><span class="lineno"> 1207</span>&#160;                                      <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(temp.readwrite(LocalTileIndex{0, 0}),</div>
+<div class="line"><a name="l01208"></a><span class="lineno"> 1208</span>&#160;                                                {{0, 0}, dist_a.tileSize(index_offdiag)}));</div>
 <div class="line"><a name="l01209"></a><span class="lineno"> 1209</span>&#160;              dep = ex::ensure_started(copy_offdiag(</div>
 <div class="line"><a name="l01210"></a><span class="lineno"> 1210</span>&#160;                  a_ws[k_block_local], k * nb, ex::when_all(std::move(dep), std::move(offdiag_tile))));</div>
 <div class="line"><a name="l01211"></a><span class="lineno"> 1211</span>&#160;            }</div>
@@ -1293,13 +1293,13 @@ $(function() {
 <div class="line"><a name="l01222"></a><span class="lineno"> 1222</span>&#160;        }</div>
 <div class="line"><a name="l01223"></a><span class="lineno"> 1223</span>&#160;        <span class="keywordflow">else</span> {</div>
 <div class="line"><a name="l01224"></a><span class="lineno"> 1224</span>&#160;          <span class="keywordflow">if</span> (rank == rank_diag) {</div>
-<div class="line"><a name="l01225"></a><span class="lineno"> 1225</span>&#160;            ex::start_detached(comm::scheduleSend(mpi_chain.shared(), rank_block, tag_diag,</div>
-<div class="line"><a name="l01226"></a><span class="lineno"> 1226</span>&#160;                                                  mat_a.read(index_diag)));</div>
+<div class="line"><a name="l01225"></a><span class="lineno"> 1225</span>&#160;            ex::start_detached(comm::schedule_send(mpi_chain.shared(), rank_block, tag_diag,</div>
+<div class="line"><a name="l01226"></a><span class="lineno"> 1226</span>&#160;                                                   mat_a.read(index_diag)));</div>
 <div class="line"><a name="l01227"></a><span class="lineno"> 1227</span>&#160;          }</div>
 <div class="line"><a name="l01228"></a><span class="lineno"> 1228</span>&#160;          <span class="keywordflow">if</span> (k &lt; n - 1) {</div>
 <div class="line"><a name="l01229"></a><span class="lineno"> 1229</span>&#160;            <span class="keywordflow">if</span> (rank == rank_offdiag) {</div>
-<div class="line"><a name="l01230"></a><span class="lineno"> 1230</span>&#160;              ex::start_detached(comm::scheduleSend(mpi_chain.shared(), rank_block, tag_offdiag,</div>
-<div class="line"><a name="l01231"></a><span class="lineno"> 1231</span>&#160;                                                    mat_a.read(index_offdiag)));</div>
+<div class="line"><a name="l01230"></a><span class="lineno"> 1230</span>&#160;              ex::start_detached(comm::schedule_send(mpi_chain.shared(), rank_block, tag_offdiag,</div>
+<div class="line"><a name="l01231"></a><span class="lineno"> 1231</span>&#160;                                                     mat_a.read(index_offdiag)));</div>
 <div class="line"><a name="l01232"></a><span class="lineno"> 1232</span>&#160;            }</div>
 <div class="line"><a name="l01233"></a><span class="lineno"> 1233</span>&#160;          }</div>
 <div class="line"><a name="l01234"></a><span class="lineno"> 1234</span>&#160;        }</div>
@@ -1518,9 +1518,9 @@ $(function() {
 <div class="line"><a name="l01447"></a><span class="lineno"> 1447</span>&#160;                                 <a class="code" href="data_8h.html#a7f6919f56260399a905af9e869afba10">copy</a>(Policy&lt;CopyBackend_v&lt;Device::CPU, Device::CPU&gt;&gt;{}));</div>
 <div class="line"><a name="l01448"></a><span class="lineno"> 1448</span>&#160;            }</div>
 <div class="line"><a name="l01449"></a><span class="lineno"> 1449</span>&#160;            <span class="keywordflow">else</span> {</div>
-<div class="line"><a name="l01450"></a><span class="lineno"> 1450</span>&#160;              ex::start_detached(comm::scheduleSend(mpi_chain.shared(), rank_v,</div>
-<div class="line"><a name="l01451"></a><span class="lineno"> 1451</span>&#160;                                                    compute_v_tag(index_v, spec_v_origin.col(), bottom),</div>
-<div class="line"><a name="l01452"></a><span class="lineno"> 1452</span>&#160;                                                    std::move(tile_v_panel)));</div>
+<div class="line"><a name="l01450"></a><span class="lineno"> 1450</span>&#160;              ex::start_detached(comm::schedule_send(mpi_chain.shared(), rank_v,</div>
+<div class="line"><a name="l01451"></a><span class="lineno"> 1451</span>&#160;                                                     compute_v_tag(index_v, spec_v_origin.col(), bottom),</div>
+<div class="line"><a name="l01452"></a><span class="lineno"> 1452</span>&#160;                                                     std::move(tile_v_panel)));</div>
 <div class="line"><a name="l01453"></a><span class="lineno"> 1453</span>&#160;            }</div>
 <div class="line"><a name="l01454"></a><span class="lineno"> 1454</span>&#160;          };</div>
 <div class="line"><a name="l01455"></a><span class="lineno"> 1455</span>&#160; </div>
@@ -1545,7 +1545,7 @@ $(function() {
 <div class="line"><a name="l01474"></a><span class="lineno"> 1474</span>&#160;              <span class="keywordflow">else</span></div>
 <div class="line"><a name="l01475"></a><span class="lineno"> 1475</span>&#160;                dep = ex::drop_value(mat_v.read(local_index_v - LocalTileSize{0, 1}));</div>
 <div class="line"><a name="l01476"></a><span class="lineno"> 1476</span>&#160; </div>
-<div class="line"><a name="l01477"></a><span class="lineno"> 1477</span>&#160;              ex::start_detached(comm::scheduleRecv(</div>
+<div class="line"><a name="l01477"></a><span class="lineno"> 1477</span>&#160;              ex::start_detached(comm::schedule_recv(</div>
 <div class="line"><a name="l01478"></a><span class="lineno"> 1478</span>&#160;                  mpi_chain.shared(), rank_panel, compute_v_tag(index_v, spec_v_origin.col(), bottom),</div>
 <div class="line"><a name="l01479"></a><span class="lineno"> 1479</span>&#160;                  matrix::ReadWriteTileSender&lt;T, Device::CPU&gt;(ex::when_all(std::move(tile_v),</div>
 <div class="line"><a name="l01480"></a><span class="lineno"> 1480</span>&#160;                                                                           std::move(dep)))));</div>
@@ -1589,10 +1589,10 @@ $(function() {
 <div class="line"><a name="l01518"></a><span class="lineno"> 1518</span>&#160;  <span class="comment">// only Rank 0 has mat_trid -&gt; bcast to everyone.</span></div>
 <div class="line"><a name="l01519"></a><span class="lineno"> 1519</span>&#160;  <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; index : <a class="code" href="range2d_8h.html#adcdcf40345b7f03cf52e871a2420057b">iterate_range2d</a>(mat_trid.nrTiles())) {</div>
 <div class="line"><a name="l01520"></a><span class="lineno"> 1520</span>&#160;    <span class="keywordflow">if</span> (rank == 0)</div>
-<div class="line"><a name="l01521"></a><span class="lineno"> 1521</span>&#160;      ex::start_detached(comm::scheduleSendBcast(mpi_chain_bcast.exclusive(), mat_trid.read(index)));</div>
+<div class="line"><a name="l01521"></a><span class="lineno"> 1521</span>&#160;      ex::start_detached(comm::schedule_bcast_send(mpi_chain_bcast.exclusive(), mat_trid.read(index)));</div>
 <div class="line"><a name="l01522"></a><span class="lineno"> 1522</span>&#160;    <span class="keywordflow">else</span></div>
-<div class="line"><a name="l01523"></a><span class="lineno"> 1523</span>&#160;      ex::start_detached(comm::scheduleRecvBcast(mpi_chain_bcast.exclusive(), 0,</div>
-<div class="line"><a name="l01524"></a><span class="lineno"> 1524</span>&#160;                                                 mat_trid.readwrite(index)));</div>
+<div class="line"><a name="l01523"></a><span class="lineno"> 1523</span>&#160;      ex::start_detached(comm::schedule_bcast_recv(mpi_chain_bcast.exclusive(), 0,</div>
+<div class="line"><a name="l01524"></a><span class="lineno"> 1524</span>&#160;                                                   mat_trid.readwrite(index)));</div>
 <div class="line"><a name="l01525"></a><span class="lineno"> 1525</span>&#160;  }</div>
 <div class="line"><a name="l01526"></a><span class="lineno"> 1526</span>&#160; </div>
 <div class="line"><a name="l01527"></a><span class="lineno"> 1527</span>&#160;  <span class="keywordflow">return</span> {std::move(mat_trid), std::move(mat_v)};</div>

@@ -95,7 +95,7 @@ $(function() {
 <div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="keyword">namespace </span>sync {</div>
 <div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160; </div>
 <div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> DataIn, <span class="keyword">class</span> DataOut&gt;</div>
-<div class="line"><a name="l00032"></a><span class="lineno"><a class="line" href="sync_2all__reduce_8h.html#ab2ce05dba76e64025b65287f83331332">   32</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="sync_2all__reduce_8h.html#ab2ce05dba76e64025b65287f83331332">allReduce</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a>&amp; communicator, MPI_Op reduce_operation, <span class="keyword">const</span> DataIn input,</div>
+<div class="line"><a name="l00032"></a><span class="lineno"><a class="line" href="sync_2all__reduce_8h.html#ab2ce05dba76e64025b65287f83331332">   32</a></span>&#160;<span class="keywordtype">void</span> allReduce(<a class="code" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a>&amp; communicator, MPI_Op reduce_operation, <span class="keyword">const</span> DataIn input,</div>
 <div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;               <span class="keyword">const</span> DataOut output) {</div>
 <div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;  <span class="keyword">using</span> common::make_contiguous;</div>
 <div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160; </div>
@@ -130,7 +130,7 @@ $(function() {
 <div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;}</div>
 <div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160; </div>
 <div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> DataInOut&gt;</div>
-<div class="line"><a name="l00071"></a><span class="lineno"><a class="line" href="sync_2all__reduce_8h.html#ac31a941ab370f1930ce5ed0f0717b00b">   71</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="sync_2all__reduce_8h.html#ac31a941ab370f1930ce5ed0f0717b00b">allReduceInPlace</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a>&amp; communicator, MPI_Op reduce_operation, <span class="keyword">const</span> DataInOut inout) {</div>
+<div class="line"><a name="l00071"></a><span class="lineno"><a class="line" href="sync_2all__reduce_8h.html#ac31a941ab370f1930ce5ed0f0717b00b">   71</a></span>&#160;<span class="keywordtype">void</span> allReduceInPlace(<a class="code" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a>&amp; communicator, MPI_Op reduce_operation, <span class="keyword">const</span> DataInOut inout) {</div>
 <div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;  <span class="keyword">using</span> common::make_contiguous;</div>
 <div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160; </div>
 <div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;  <span class="keyword">using</span> T = std::remove_const_t&lt;typename common::data_traits&lt;DataInOut&gt;::element_t&gt;;</div>
@@ -164,8 +164,6 @@ $(function() {
 <div class="ttc" id="adata__descriptor_8h_html"><div class="ttname"><a href="data__descriptor_8h.html">data_descriptor.h</a></div></div>
 <div class="ttc" id="amessage_8h_html"><div class="ttname"><a href="message_8h.html">message.h</a></div></div>
 <div class="ttc" id="astructdlaf_1_1common_1_1_buffer_html"><div class="ttname"><a href="structdlaf_1_1common_1_1_buffer.html">dlaf::common::Buffer</a></div><div class="ttdef"><b>Definition:</b> data_descriptor.h:153</div></div>
-<div class="ttc" id="async_2all__reduce_8h_html_ab2ce05dba76e64025b65287f83331332"><div class="ttname"><a href="sync_2all__reduce_8h.html#ab2ce05dba76e64025b65287f83331332">dlaf::comm::sync::allReduce</a></div><div class="ttdeci">void allReduce(Communicator &amp;communicator, MPI_Op reduce_operation, const DataIn input, const DataOut output)</div><div class="ttdef"><b>Definition:</b> all_reduce.h:32</div></div>
-<div class="ttc" id="async_2all__reduce_8h_html_ac31a941ab370f1930ce5ed0f0717b00b"><div class="ttname"><a href="sync_2all__reduce_8h.html#ac31a941ab370f1930ce5ed0f0717b00b">dlaf::comm::sync::allReduceInPlace</a></div><div class="ttdeci">void allReduceInPlace(Communicator &amp;communicator, MPI_Op reduce_operation, const DataInOut inout)</div><div class="ttdef"><b>Definition:</b> all_reduce.h:71</div></div>
 <div class="ttc" id="async_2reduce_8h_html"><div class="ttname"><a href="sync_2reduce_8h.html">reduce.h</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->

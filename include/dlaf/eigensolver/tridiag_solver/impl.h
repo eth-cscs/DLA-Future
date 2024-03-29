@@ -303,13 +303,13 @@ void solveDistLeaf(comm::CommunicatorPipeline<comm::CommunicatorType::Full>& ful
     if (ii_rank == this_rank) {
       stedcAsync(tridiag.readwrite(id_tr), evecs.readwrite(ii_tile));
       if (full_task_chain.size() > 1) {
-        ex::start_detached(comm::scheduleSendBcast(full_task_chain.exclusive(), tridiag.read(id_tr)));
+        ex::start_detached(comm::schedule_bcast_send(full_task_chain.exclusive(), tridiag.read(id_tr)));
       }
     }
     else {
       const comm::IndexT_MPI root_rank = full_task_chain.rank_full_communicator(ii_rank);
-      ex::start_detached(comm::scheduleRecvBcast(full_task_chain.exclusive(), root_rank,
-                                                 tridiag.readwrite(id_tr)));
+      ex::start_detached(comm::schedule_bcast_recv(full_task_chain.exclusive(), root_rank,
+                                                   tridiag.readwrite(id_tr)));
     }
   }
 }
@@ -338,13 +338,13 @@ void solveDistLeaf(comm::CommunicatorPipeline<comm::CommunicatorType::Full>& ful
       ex::start_detached(ex::when_all(h_evecs.read(ii_tile), evecs.readwrite(ii_tile)) |
                          copy(cp_policy));
       if (full_task_chain.size() > 1) {
-        ex::start_detached(comm::scheduleSendBcast(full_task_chain.exclusive(), tridiag.read(id_tr)));
+        ex::start_detached(comm::schedule_bcast_send(full_task_chain.exclusive(), tridiag.read(id_tr)));
       }
     }
     else {
       const comm::IndexT_MPI root_rank = full_task_chain.rank_full_communicator(ii_rank);
-      ex::start_detached(comm::scheduleRecvBcast(full_task_chain.exclusive(), root_rank,
-                                                 tridiag.readwrite(id_tr)));
+      ex::start_detached(comm::schedule_bcast_recv(full_task_chain.exclusive(), root_rank,
+                                                   tridiag.readwrite(id_tr)));
     }
   }
 }

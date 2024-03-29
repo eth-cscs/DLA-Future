@@ -180,12 +180,12 @@ void Hermitian<B, D, T>::call_LL(comm::CommunicatorGrid& grid, const T alpha, Ma
       if (grid.colCommunicator().size() != 1) {
         for (const auto& idx : c_panel.iteratorLocal()) {
           if (this_rank.row() == rank_ll.row()) {
-            ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain.exclusive(), MPI_SUM,
-                                                               c_panel.readwrite(idx)));
+            ex::start_detached(comm::schedule_reduce_recv_in_place(mpi_col_task_chain.exclusive(),
+                                                                   MPI_SUM, c_panel.readwrite(idx)));
           }
           else {
-            ex::start_detached(comm::scheduleReduceSend(mpi_col_task_chain.exclusive(), rank_ll.row(),
-                                                        MPI_SUM, c_panel.read(idx)));
+            ex::start_detached(comm::schedule_reduce_send(mpi_col_task_chain.exclusive(), rank_ll.row(),
+                                                          MPI_SUM, c_panel.read(idx)));
           }
         }
       }

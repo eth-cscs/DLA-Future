@@ -77,15 +77,15 @@ void testReduceInPlace(comm::Communicator world, matrix::Matrix<T, D> matrix, st
   std::function<T(TileElementIndex)> exp_tile;
   if (root_rank == world.rank()) {
     // use -> read
-    ex::start_detached(dlaf::comm::scheduleReduceRecvInPlace(chain.exclusive(), MPI_SUM,
-                                                             matrix.readwrite(idx)));
+    ex::start_detached(dlaf::comm::schedule_reduce_recv_in_place(chain.exclusive(), MPI_SUM,
+                                                                 matrix.readwrite(idx)));
 
     exp_tile = fixedValueTile(world.size() * (world.size() + 1) / 2);
   }
   else {
     // use -> read -> set -> read
-    ex::start_detached(dlaf::comm::scheduleReduceSend(chain.exclusive(), root_rank, MPI_SUM,
-                                                      matrix.read(idx)));
+    ex::start_detached(dlaf::comm::schedule_reduce_send(chain.exclusive(), root_rank, MPI_SUM,
+                                                        matrix.read(idx)));
 
     CHECK_TILE_EQ(input_tile, tt::sync_wait(matrix.read(idx)).get());
 
@@ -115,7 +115,8 @@ void testAllReduceInPlace(comm::Communicator world, matrix::Matrix<T, D> matrix,
   auto input_tile = fixedValueTile(world.rank() + 1);
   matrix::test::set(tt::sync_wait(matrix.readwrite(idx)), input_tile);
 
-  auto after = dlaf::comm::scheduleAllReduceInPlace(chain.exclusive(), MPI_SUM, matrix.readwrite(idx));
+  auto after =
+      dlaf::comm::schedule_all_reduce_in_place(chain.exclusive(), MPI_SUM, matrix.readwrite(idx));
 
   // Note:
   // The call `sync_wait(after)` waits for any scheduled task with the aim to ensure that no other task

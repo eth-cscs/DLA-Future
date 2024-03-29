@@ -151,13 +151,13 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid& grid, SizeType n, SizeTyp
         sign_tile(transposed(idx_el)) = (dlaf::util::sameSign(act_val, exp_val)) ? 1 : -1;
       }
 
-      ex::start_detached(comm::scheduleSendBcast(col_task_chain.exclusive(),
-                                                 sign_mat.read(idx_sign_tile)));
+      ex::start_detached(comm::schedule_bcast_send(col_task_chain.exclusive(),
+                                                   sign_mat.read(idx_sign_tile)));
     }
     else if (rank_evecs_0row.col() == this_rank.col()) {
       // Receive signs from top column rank
-      ex::start_detached(comm::scheduleRecvBcast(col_task_chain.exclusive(), rank_evecs_0row.row(),
-                                                 sign_mat.readwrite(idx_sign_tile)));
+      ex::start_detached(comm::schedule_bcast_recv(col_task_chain.exclusive(), rank_evecs_0row.row(),
+                                                   sign_mat.readwrite(idx_sign_tile)));
     }
   }
 

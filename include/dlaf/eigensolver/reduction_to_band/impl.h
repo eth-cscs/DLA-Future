@@ -775,12 +775,12 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
         // Moreover, it reduces in place because the owner of the diagonal stores the partial result
         // directly in x (without using xt)
         const auto i = dist.template localTileFromGlobalTile<Coord::Row>(index_k);
-        ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_chain.exclusive(), MPI_SUM,
-                                                           x.readwrite({i, 0})));
+        ex::start_detached(comm::schedule_reduce_recv_in_place(mpi_col_chain.exclusive(), MPI_SUM,
+                                                               x.readwrite({i, 0})));
       }
       else {
-        ex::start_detached(comm::scheduleReduceSend(mpi_col_chain.exclusive(), rank_owner_row, MPI_SUM,
-                                                    xt.read(index_xt)));
+        ex::start_detached(comm::schedule_reduce_send(mpi_col_chain.exclusive(), rank_owner_row, MPI_SUM,
+                                                      xt.read(index_xt)));
       }
     }
   }
@@ -792,11 +792,11 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
   if (mpi_row_chain.size() > 1) {
     for (const auto& index_x : x.iteratorLocal()) {
       if (reducer_col == rank.col())
-        ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_chain.exclusive(), MPI_SUM,
-                                                           x.readwrite(index_x)));
+        ex::start_detached(comm::schedule_reduce_recv_in_place(mpi_row_chain.exclusive(), MPI_SUM,
+                                                               x.readwrite(index_x)));
       else
-        ex::start_detached(comm::scheduleReduceSend(mpi_row_chain.exclusive(), reducer_col, MPI_SUM,
-                                                    x.read(index_x)));
+        ex::start_detached(comm::schedule_reduce_send(mpi_row_chain.exclusive(), reducer_col, MPI_SUM,
+                                                      x.read(index_x)));
     }
   }
 }
@@ -1280,8 +1280,8 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
 
       red2band::local::gemmComputeW2<B, D>(w2, w, x);
       if (mpi_col_chain.size() > 1) {
-        ex::start_detached(comm::scheduleAllReduceInPlace(mpi_col_chain.exclusive(), MPI_SUM,
-                                                          w2.readwrite(LocalTileIndex(0, 0))));
+        ex::start_detached(comm::schedule_all_reduce_in_place(mpi_col_chain.exclusive(), MPI_SUM,
+                                                              w2.readwrite(LocalTileIndex(0, 0))));
       }
 
       red2band::local::gemmUpdateX<B, D>(x, w2, v);
@@ -1366,12 +1366,12 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
           xt.setTile(at, x.read(at));
 
           if (dist.commGridSize().rows() > 1)
-            ex::start_detached(comm::scheduleSendBcast(mpi_col_chain.exclusive(), xt.read(at)));
+            ex::start_detached(comm::schedule_bcast_send(mpi_col_chain.exclusive(), xt.read(at)));
         }
         else {
           if (dist.commGridSize().rows() > 1)
-            ex::start_detached(comm::scheduleRecvBcast(mpi_col_chain.exclusive(), owner,
-                                                       xt.readwrite(at)));
+            ex::start_detached(comm::schedule_bcast_recv(mpi_col_chain.exclusive(), owner,
+                                                         xt.readwrite(at)));
         }
       }
 

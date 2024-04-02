@@ -306,18 +306,28 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
 
     auto& Vh = panels_v.currentResource();
 
-    // Copy GPU to CPU
+    std::vector<matrix::ReadOnlyTileSender<T, Device::GPU>> all_tiles_in;
+    std::vector<matrix::ReadWriteTileSender<T, Device::CPU>> all_tiles_out;
+
     for (const auto& it : panel_uptonow.iteratorLocal()) {
       const dlaf::matrix::SubTileSpec spec = panel_uptonow(it);
       const dlaf::matrix::SubTileSpec spec_col{{spec.origin.row(),
                                                 spec.origin.col() + spec.size.cols() - 1},
                                                {spec.size.rows(), 1}};
 
-      ex::start_detached(
-          ex::when_all(splitTile(mat_a.read(it), spec_col), splitTile(Vh.readwrite(it), spec_col)) |
-          matrix::copy(di::Policy<CopyBackend_v<Device::GPU, Device::CPU>>(thread_priority::high,
-                                                                           thread_stacksize::nostack)));
+      all_tiles_in.emplace_back(splitTile(mat_a.read(it), spec_col));
+      all_tiles_out.emplace_back(splitTile(Vh.readwrite(it), spec_col));
     }
+
+    // Copy GPU to CPU
+    ex::start_detached(
+        di::whenAllLift(ex::when_all_vector(std::move(all_tiles_in)),
+                        ex::when_all_vector(std::move(all_tiles_out)), panel_uptonow.rows()) |
+        di::transform(di::Policy<Backend::GPU>(),
+                      [](auto&& tile_ins, auto&& tile_out, SizeType rows, whip::stream_t stream) {
+                        cudaMemcpyAsync(tile_out[0].ptr({0, 0}), tile_ins[0].get().ptr({0, 0}),
+                                        sizeof(T) * to_sizet(rows), cudaMemcpyDeviceToHost, stream);
+                      }));
 
     // Compute on CPU
     auto&& tau = Helper<Backend::MC, Device::CPU, T>::computeReflector(

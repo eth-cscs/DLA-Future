@@ -193,14 +193,9 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
     Vh.setRangeStart(ij);
   }
 
-  void init(const SizeType j_loc, Matrix<T, D>& mat_a, matrix::Panel<Coord::Col, T, D>& W) {
-    namespace di = dlaf::internal;
-    namespace ex = pika::execution::experimental;
+  void init(const SizeType, Matrix<T, D>&, matrix::Panel<Coord::Col, T, D>&) {}
 
-  }
-
-  void step() {
-  }
+  void step() {}
 
   // TODO we can think about having just align there probably
   void reset() {
@@ -241,50 +236,41 @@ struct Helper<Backend::GPU, Device::GPU, T> : Helper<Backend::MC, Device::CPU, T
 
     auto kernelUpdateV = [dist_a, i_first, i_el, ij_el_tl](cublasHandle_t handle, auto&& w_tiles,
                                                            auto&& v_tiles) {
-      const SizeType i_first_el_tl =
-          dist_a.template tile_element_from_global_element<Coord::Row>(i_el - 1);
+      const SizeType i_el_tl = dist_a.template tile_element_from_global_element<Coord::Row>(i_el - 1);
+      const SizeType j_el_tl = ij_el_tl.col();
 
-      for (std::size_t i = i_first; i < v_tiles.size(); ++i) {
-        // Note: this is needed because first tile has to align with mask without "diagonal"
-        const SizeType i_first_tl = (i == i_first) ? i_first_el_tl : 0;
-        const SizeType j_el_tl = ij_el_tl.col();
+      SizeType m = 0;
+      for (std::size_t i = i_first; i < v_tiles.size(); ++i)
+        m += v_tiles[i].size().rows();
 
-        // Note:
-        // Here we are going to do a matrix-vector multiplication with GEMM instead of GEMV.
-        // The reason is that we have to conjugate transpose the vector, and with the GEMV
-        // we can workaround the problem for real values using ld as gap between elements of
-        // the vector, but for complex type it does not allow to conjugate the value. So, we
-        // ended up using the more generic GEMM.
+      const T alpha = -1;
+      const T beta = 1;
 
-        const T alpha = -1;
-        const T beta = 1;
-        {
-          auto&& tile_v = v_tiles[i];
-          auto&& tile_wt = w_tiles[0].get();
-          auto&& col_out = v_tiles[i];
+      {
+        auto&& tile_v = v_tiles[i_first];
+        auto&& tile_wt = w_tiles[0].get();
+        auto&& col_out = v_tiles[i_first];
 
-          gpublas::internal::Gemm<T>::call(
-              handle, util::blasToCublas(blas::Op::NoTrans), util::blasToCublas(blas::Op::ConjTrans),
-              to_int(tile_v.size().rows() - i_first_tl), 1, to_int(j_el_tl),
-              util::blasToCublasCast(&alpha), util::blasToCublasCast(tile_v.ptr({i_first_tl, 0})),
-              to_int(tile_v.ld()), util::blasToCublasCast(tile_wt.ptr({j_el_tl, 0})),
-              to_int(tile_wt.ld()), util::blasToCublasCast(&beta),
-              util::blasToCublasCast(col_out.ptr({i_first_tl, j_el_tl})), to_int(col_out.ld()));
-        }
+        gpublas::internal::Gemm<T>::call(
+            handle, util::blasToCublas(blas::Op::NoTrans), util::blasToCublas(blas::Op::ConjTrans),
+            to_int(m), 1, to_int(j_el_tl), util::blasToCublasCast(&alpha),
+            util::blasToCublasCast(tile_v.ptr({i_el_tl, 0})), to_int(tile_v.ld()),
+            util::blasToCublasCast(tile_wt.ptr({j_el_tl, 0})), to_int(tile_wt.ld()),
+            util::blasToCublasCast(&beta), util::blasToCublasCast(col_out.ptr({i_el_tl, j_el_tl})),
+            to_int(col_out.ld()));
+      }
+      {
+        auto&& tile_w = w_tiles[i_first].get();
+        auto&& tile_vt = v_tiles[0];
+        auto&& col_out = v_tiles[i_first];
 
-        {
-          auto&& tile_w = w_tiles[i].get();
-          auto&& tile_vt = v_tiles[0];
-          auto&& col_out = v_tiles[i];
-
-          gpublas::internal::Gemm<T>::call(
-              handle, util::blasToCublas(blas::Op::NoTrans), util::blasToCublas(blas::Op::ConjTrans),
-              to_int(tile_w.size().rows() - i_first_tl), 1, to_int(j_el_tl),
-              util::blasToCublasCast(&alpha), util::blasToCublasCast(tile_w.ptr({i_first_tl, 0})),
-              to_int(tile_w.ld()), util::blasToCublasCast(tile_vt.ptr({j_el_tl, 0})),
-              to_int(tile_vt.ld()), util::blasToCublasCast(&beta),
-              util::blasToCublasCast(col_out.ptr({i_first_tl, j_el_tl})), to_int(col_out.ld()));
-        }
+        gpublas::internal::Gemm<T>::call(
+            handle, util::blasToCublas(blas::Op::NoTrans), util::blasToCublas(blas::Op::ConjTrans),
+            to_int(m), 1, to_int(j_el_tl), util::blasToCublasCast(&alpha),
+            util::blasToCublasCast(tile_w.ptr({i_el_tl, 0})), to_int(tile_w.ld()),
+            util::blasToCublasCast(tile_vt.ptr({j_el_tl, 0})), to_int(tile_vt.ld()),
+            util::blasToCublasCast(&beta), util::blasToCublasCast(col_out.ptr({i_el_tl, j_el_tl})),
+            to_int(col_out.ld()));
       }
     };
 
@@ -482,6 +468,5 @@ struct kernelHEMV<Backend::GPU, T> {
     }
   }
 };
-
 }
 #endif

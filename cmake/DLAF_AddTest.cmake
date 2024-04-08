@@ -15,6 +15,7 @@
 #   [LIBRARIES <arguments for target_link_libraries>]
 #   [MPIRANKS <number of rank>]
 #   [USE_MAIN {PLAIN | PIKA | MPI | MPIPIKA}]
+#   [CATEGORY <category>]
 # )
 #
 # At least one source file has to be specified, while other parameters are optional.
@@ -61,7 +62,7 @@ endfunction()
 
 function(DLAF_addTargetTest test_target_name)
   set(options "")
-  set(oneValueArgs MPIRANKS USE_MAIN)
+  set(oneValueArgs CATEGORY MPIRANKS USE_MAIN)
   set(multiValueArgs ARGUMENTS)
   cmake_parse_arguments(DLAF_ATT "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
@@ -92,6 +93,14 @@ function(DLAF_addTargetTest test_target_name)
   else()
     message(FATAL_ERROR "USE_MAIN=${DLAF_ATT_USE_MAIN} is not a supported option")
   endif()
+
+  set(_TEST_LABELS)
+
+  if(NOT DLAF_ATT_CATEGORY)
+    set(DLAF_ATT_CATEGORY "UNIT")
+  endif()
+
+  list(APPEND _TEST_LABELS "CATEGORY_${DLAF_ATT_CATEGORY}")
 
   if(IS_AN_MPI_TEST)
     if(NOT DLAF_ATT_MPIRANKS)
@@ -151,12 +160,12 @@ function(DLAF_addTargetTest test_target_name)
           ${DLAF_TEST_POSTFLAGS} ${MPIEXEC_POSTFLAGS}
       )
     endif()
-    set(_TEST_LABEL "RANK_${DLAF_ATT_MPIRANKS}")
+    list(APPEND _TEST_LABELS "RANK_${DLAF_ATT_MPIRANKS}")
 
   else()
     # ----- Classic test
     set(_TEST_COMMAND ${DLAF_TEST_PREFLAGS} $<TARGET_FILE:${test_target_name}> ${DLAF_TEST_POSTFLAGS})
-    set(_TEST_LABEL "RANK_1")
+    list(APPEND _TEST_LABELS "RANK_1")
   endif()
 
   if(IS_AN_PIKA_TEST)
@@ -214,7 +223,7 @@ function(DLAF_addTargetTest test_target_name)
   endif()
 
   add_test(NAME ${test_target_name} COMMAND ${_TEST_COMMAND} ${_TEST_ARGUMENTS})
-  set_tests_properties(${test_target_name} PROPERTIES LABELS "${_TEST_LABEL}")
+  set_tests_properties(${test_target_name} PROPERTIES LABELS "${_TEST_LABELS}")
 endfunction()
 
 function(DLAF_addTest test_target_name)

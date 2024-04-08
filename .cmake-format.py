@@ -17,6 +17,7 @@ with section("parse"):
         "ARGUMENTS": '*',
         "USE_MAIN": '1',
         "MPIRANKS": '1',
+        "CATEGORY": '1',
       }
     },
     "DLAF_addTargetTest": {
@@ -26,6 +27,7 @@ with section("parse"):
         "ARGUMENTS": '*',
         "USE_MAIN": '1',
         "MPIRANKS": '1',
+        "CATEGORY": '1',
       }
     },
     "DLAF_addMiniapp": {

@@ -47,7 +47,7 @@ upload_reports:
 "
 JOB_TEMPLATE="
 
-{{LABEL}}:
+{{CATEGORY_LABEL}}_{{RANK_LABEL}}:
   stage: test
   extends: .daint
   variables:
@@ -60,7 +60,7 @@ JOB_TEMPLATE="
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
     DLAF_HDF5_TEST_OUTPUT_PATH: \$CI_PROJECT_DIR
-  script: mpi-ctest -L {{LABEL}}
+  script: mpi-ctest -L {{CATEGORY_LABEL}} -L {{RANK_LABEL}}
   artifacts:
     paths:
       - codecov-reports/"
@@ -85,7 +85,7 @@ variables:
 "
 
 JOB_TEMPLATE="
-{{LABEL}}:
+{{CATEGORY_LABEL}}_{{RANK_LABEL}}:
   stage: test
   extends: .daint
   variables:
@@ -98,20 +98,28 @@ JOB_TEMPLATE="
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
     DLAF_HDF5_TEST_OUTPUT_PATH: \$CI_PROJECT_DIR
-  script: mpi-ctest -L {{LABEL}}"
+  script: mpi-ctest -L {{CATEGORY_LABEL}} -L {{RANK_LABEL}}"
 fi
 
 JOBS=""
 
-for label in `ctest --print-labels | egrep -o "RANK_[1-9][0-9]?"`; do
-    N=`echo "$label" | sed "s/RANK_//"`
-    C=$(( THREADS_PER_NODE / N ))
+for rank_label in `ctest --print-labels | egrep -o "RANK_[1-9][0-9]?"`; do
+    for category_label in `ctest --print-labels | egrep -o "CATEGORY_[A-Z]+"`; do
+        N=`echo "$rank_label" | sed "s/RANK_//"`
+        C=$(( THREADS_PER_NODE / N ))
 
-    JOB=`echo "$JOB_TEMPLATE" | sed "s|{{LABEL}}|$label|g" \
-                              | sed "s|{{NTASKS}}|$N|g" \
-                              | sed "s|{{CPUS_PER_TASK}}|$C|g"`
+        # Skip label combinations that match no tests
+        if ! ctest -N -L $category_label -L $rank_label | egrep --quiet "^Total Tests: [1-9][0-9]?$"; then
+            continue
+        fi
 
-    JOBS="$JOBS$JOB"
+        JOB=`echo "$JOB_TEMPLATE" | sed "s|{{CATEGORY_LABEL}}|$category_label|g" \
+                                  | sed "s|{{RANK_LABEL}}|$rank_label|g" \
+                                  | sed "s|{{NTASKS}}|$N|g" \
+                                  | sed "s|{{CPUS_PER_TASK}}|$C|g"`
+
+        JOBS="$JOBS$JOB"
+    done
 done
 
 echo "${BASE_TEMPLATE/'{{JOBS}}'/$JOBS}"

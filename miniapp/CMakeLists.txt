@@ -46,6 +46,8 @@ if(DLAF_BUILD_TESTING)
       --grid-rows=3
       --grid-cols=2
       --check=all
+      CATEGORY
+      MINIAPP
   )
   DLAF_addTargetTest(miniapp_cholesky ${miniapp_test_args})
   DLAF_addTargetTest(miniapp_gen_to_std ${miniapp_test_args})

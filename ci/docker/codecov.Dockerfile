@@ -32,7 +32,7 @@ RUN spack repo rm --scope site dlaf && \
 
 # Prune and bundle binaries
 RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
-    export TEST_BINARIES=`PATH=${SOURCE}/ci:$PATH ctest --show-only=json-v1 | jq '.tests | map(.command | .[] | select(contains("check-threads") | not)) | .[]' | tr -d \"` && \
+    export TEST_BINARIES=`PATH=${SOURCE}/ci:$PATH ctest --show-only=json-v1 | jq --raw-output '.tests | map(.command | .[] | select(startswith("/"))) | .[]' | tr -d \"` && \
     echo "Binary sizes:" && \
     ls -lh ${TEST_BINARIES} && \
     ls -lh src/lib* && \

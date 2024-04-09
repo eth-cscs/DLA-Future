@@ -47,7 +47,7 @@ jobs:
       - name: Check include guards
         if: always()
         run: |
-          find . test -type f '(' -name "*.h" -o -name "*.h.in" ')'             \
+          find . test -type f '(' -name "*.h" -o -name "*.h.in" ')'                   \
             | xargs -I{} sh -c                                                        \
                 "egrep -sq '^#pragma once' {} || echo {}"                             \
             > pragma-once.check

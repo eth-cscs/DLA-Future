@@ -131,22 +131,32 @@ void Permutations<B, D, T, C>::call(const SizeType i_begin, const SizeType i_end
                                     Matrix<const SizeType, D>& perms, Matrix<const T, D>& mat_in,
                                     Matrix<T, D>& mat_out) {
   namespace ex = pika::execution::experimental;
+  namespace dist_extra = dlaf::matrix::internal::distribution;
+  using dist_extra::local_element_distance_from_global_tile;
 
   if (i_begin == i_end)
     return;
 
-  const matrix::Distribution& distr = mat_in.distribution();
-  const SizeType m = distr.globalTileElementDistance<Coord::Row>(i_begin, i_end);
-  const SizeType n = distr.globalTileElementDistance<Coord::Col>(i_begin, i_end);
-  matrix::Distribution subm_dist(LocalElementSize(m, n), distr.blockSize());
-  const SizeType ntiles = i_end - i_begin;
+  const matrix::Distribution& dist = mat_in.distribution();
+  const SizeType m = local_element_distance_from_global_tile<Coord::Row>(dist, i_begin, i_end);
+  const SizeType n = local_element_distance_from_global_tile<Coord::Col>(dist, i_begin, i_end);
+  const matrix::Distribution subm_dist(LocalElementSize(m, n), dist.tile_size());
 
-  auto perms_range = common::iterate_range2d(LocalTileIndex(i_begin, 0), LocalTileSize(ntiles, 1));
-  auto mat_range =
-      common::iterate_range2d(LocalTileIndex(i_begin, i_begin), LocalTileSize(ntiles, ntiles));
+  if (subm_dist.size().isEmpty())
+    return;
+
+  auto next_local_from_global = [&dist](const SizeType i) -> LocalTileIndex {
+    return {dist.next_local_tile_from_global_tile<Coord::Row>(i),
+            dist.next_local_tile_from_global_tile<Coord::Col>(i)};
+  };
+  const LocalTileIndex idx_begin_lc = next_local_from_global(i_begin);
+  const LocalTileIndex idx_end_lc = next_local_from_global(i_end);
+  auto perms_range = common::iterate_range2d(LocalTileIndex(0, idx_begin_lc.col()),
+                                                   LocalTileIndex(1, idx_end_lc.col()));
+  auto mat_range = common::iterate_range2d(idx_begin_lc, idx_end_lc);
   auto sender = ex::when_all(ex::when_all_vector(matrix::selectRead(perms, std::move(perms_range))),
                              ex::when_all_vector(matrix::selectRead(mat_in, mat_range)),
-                             ex::when_all_vector(matrix::select(mat_out, mat_range)));
+                             ex::when_all_vector(matrix::select(mat_out, std::move(mat_range))));
 
   if constexpr (D == Device::CPU) {
     auto setup_permute_fn = [subm_dist](auto index_tile_futs, auto mat_in_tiles, auto mat_out_tiles) {
@@ -155,7 +165,7 @@ void Permutations<B, D, T, C>::call(const SizeType i_begin, const SizeType i_end
       constexpr Coord orth_coord = orthogonal(C);
 
       std::vector<SizeType> splits = util::interleaveSplits(
-          subm_dist.size().get<orth_coord>(), subm_dist.blockSize().get<orth_coord>(),
+          subm_dist.size().get<orth_coord>(), subm_dist.tile_size().get<orth_coord>(),
           subm_dist.distanceToAdjacentTile<orth_coord>(in_offset),
           subm_dist.distanceToAdjacentTile<orth_coord>(out_begin.get<orth_coord>()));
 

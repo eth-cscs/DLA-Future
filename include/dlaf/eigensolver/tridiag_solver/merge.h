@@ -650,7 +650,7 @@ auto stablePartitionIndexForDeflation(
   const SizeType i_begin_lc = dist_evecs.next_local_tile_from_global_tile<Coord::Col>(i_begin);
   const SizeType i_end_lc = dist_evecs.next_local_tile_from_global_tile<Coord::Col>(i_end);
   auto i5_lc_snd =
-      select(i5_lc, common::iterate_range2d(LocalTileIndex(0, i_begin_lc), LocalTileIndex(1, i_end_lc)));
+      select(i5_lc, common::iterate_range2d(LocalTileIndex(i_begin_lc, 0), LocalTileIndex(i_end_lc, 1)));
 
   TileCollector tc{i_begin, i_end};
   return ex::when_all(ex::when_all_vector(tc.read(c)), ex::when_all_vector(tc.read(evals)),

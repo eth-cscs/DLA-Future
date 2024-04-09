@@ -399,7 +399,7 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device
   // Auxiliary matrix used for the D&C algorithm
   const matrix::Distribution& dist_evecs = evecs.distribution();
   const matrix::Distribution& dist_evals = evals.distribution();
-  const matrix::Distribution dist_local({1, dist_evecs.local_size().cols()}, dist_evecs.tile_size());
+  const matrix::Distribution dist_local({dist_evecs.local_size().cols(), 1}, dist_evecs.tile_size());
 
   WorkSpace<T, D> ws{Matrix<T, D>(dist_evecs),          // e0
                      Matrix<T, D>(dist_evecs),          // e1

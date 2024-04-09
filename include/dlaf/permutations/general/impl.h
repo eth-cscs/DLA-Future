@@ -151,8 +151,8 @@ void Permutations<B, D, T, C>::call(const SizeType i_begin, const SizeType i_end
   };
   const LocalTileIndex idx_begin_lc = next_local_from_global(i_begin);
   const LocalTileIndex idx_end_lc = next_local_from_global(i_end);
-  auto perms_range = common::iterate_range2d(LocalTileIndex(0, idx_begin_lc.col()),
-                                                   LocalTileIndex(1, idx_end_lc.col()));
+  auto perms_range = common::iterate_range2d(LocalTileIndex(idx_begin_lc.col(), 0),
+                                             LocalTileIndex(idx_end_lc.col(), 1));
   auto mat_range = common::iterate_range2d(idx_begin_lc, idx_end_lc);
   auto sender = ex::when_all(ex::when_all_vector(matrix::selectRead(perms, std::move(perms_range))),
                              ex::when_all_vector(matrix::selectRead(mat_in, mat_range)),

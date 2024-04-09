@@ -1903,17 +1903,10 @@ void mergeDistSubproblems(comm::CommunicatorPipeline<comm::CommunicatorType::Ful
   auto k_lc = ex::split(std::move(k_lc_unique));
 
   // Reorder Eigenvectors
-  if constexpr (Backend::MC == B) {
-    using dlaf::permutations::internal::Permutations;
-    // copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i5, ws.i5); // TODO copy i5b
-    Permutations<B, D, T, Coord::Col>::call(i_begin, i_end, ws.i5b, ws.e0, ws.e1);
-  }
-  else {
-    using dlaf::permutations::internal::permuteJustLocal;
-    copy(idx_loc_begin, sz_loc_tiles, ws.e0, ws_hm.e0);
-    permuteJustLocal<T, Coord::Col>(i_begin, i_end, ws_hm.i5, ws_hm.e0, ws_hm.e2);
-    copy(idx_loc_begin, sz_loc_tiles, ws_hm.e2, ws.e1);
-  }
+  using dlaf::permutations::internal::Permutations;
+  copy(LocalTileIndex(idx_loc_begin.col(), 0), LocalTileSize(idx_loc_end.col() - idx_loc_begin.col(), 1),
+       ws_hm.i5b, ws.i5b);
+  Permutations<B, D, T, Coord::Col>::call(i_begin, i_end, ws.i5b, ws.e0, ws.e1);
 
   // Reorder Eigenvalues
   applyIndex(i_begin, i_end, ws_h.i3, ws_h.d0, ws_hm.d1);

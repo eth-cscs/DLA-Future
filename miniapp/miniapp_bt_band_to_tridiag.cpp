@@ -137,7 +137,7 @@ struct BacktransformBandToTridiagMiniapp {
               comm_grid, opts.b, mat_e.get(), mat_hh);
 
         // wait and barrier for all ranks
-        mat_e.get().waitLocalTiles();
+        pika::wait();
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         elapsed_time = timeit.elapsed();

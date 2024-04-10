@@ -109,8 +109,7 @@ struct triangularSolverMiniapp {
     dlaf::matrix::MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU> b(bh);
 
     auto sync_barrier = [&]() {
-      a.get().waitLocalTiles();
-      b.get().waitLocalTiles();
+      pika::wait();
       DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
     };
 

@@ -432,40 +432,27 @@ protected:
 template <class T>
 struct kernelHEMV<Backend::GPU, T> {
   template <class SenderAt, class SenderV, class SenderW>
-  void operator()(cublasHandle_t handle, const SizeType chunk_id, const TileElementIndex& ij_el_tl,
-                  SenderAt&& at_tiles, SenderV&& v_tiles, SenderW&& tile_w) {
-    const SizeType it = chunk_id;
-    const SizeType i_el_tl = ij_el_tl.row();
-    const SizeType j_el_tl = ij_el_tl.col();
+  void operator()(cublasHandle_t handle, const LocalElementSize size, const TileElementIndex& ij_el_tl,
+                  SenderAt&& at_tiles, SenderV&& v_tiles, SenderW&& w_tiles) {
+    cublasSetAtomicsMode(handle, CUBLAS_ATOMICS_ALLOWED);
 
-    DLAF_ASSERT_HEAVY(at_tiles.size() = v_tiles.size(), at_tiles.size(), v_tiles.size());
-    for (std::size_t index = 0; index < at_tiles.size(); ++index) {
-      auto&& tile_a = at_tiles[index].get();
-      auto&& tile_v = v_tiles[index].get();
+    DLAF_ASSERT_HEAVY(at_tiles.size() == v_tiles.size(), at_tiles.size(), v_tiles.size());
+    DLAF_ASSERT_HEAVY(w_tiles.size() == v_tiles.size(), w_tiles.size(), v_tiles.size());
 
-      const SizeType i_first_tl = it == 0 ? i_el_tl : 0;
+    auto&& a_ptr = at_tiles[0].get().ptr();
+    auto&& v_ptr = v_tiles[0].get().ptr();
+    auto&& w_ptr = w_tiles[0].ptr(ij_el_tl);
 
-      using namespace dlaf::util;
-      if (to_SizeType(index) == it) {
-        const T alpha = 1;
-        const T beta = 1;
-        gpublas::internal::Hemv<T>::call(handle, blasToCublas(blas::Uplo::Lower),
-                                         to_int(tile_a.size().rows()), blasToCublasCast(&alpha),
-                                         blasToCublasCast(tile_a.ptr()), to_int(tile_a.ld()),
-                                         blasToCublasCast(tile_v.ptr()), 1, blasToCublasCast(&beta),
-                                         blasToCublasCast(tile_w.ptr({i_first_tl, j_el_tl})), to_int(1));
-      }
-      else {
-        const blas::Op op = (to_SizeType(index) < it) ? blas::Op::NoTrans : blas::Op::ConjTrans;
-        const T alpha = 1;
-        const T beta = 1;
-        gpublas::internal::Gemv<T>::call(handle, blasToCublas(op), to_int(tile_a.size().rows()),
-                                         to_int(tile_a.size().cols()), blasToCublasCast(&alpha),
-                                         blasToCublasCast(tile_a.ptr()), to_int(tile_a.ld()),
-                                         blasToCublasCast(tile_v.ptr()), 1, blasToCublasCast(&beta),
-                                         blasToCublasCast(tile_w.ptr({i_first_tl, j_el_tl})), to_int(1));
-      }
-    }
+    const SizeType ld = at_tiles[0].get().ld();
+
+    using namespace dlaf::util;
+
+    const T alpha = 1;
+    const T beta = 1;
+    gpublas::internal::Hemv<T>::call(handle, blasToCublas(blas::Uplo::Lower), to_int(size.rows()),
+                                     blasToCublasCast(&alpha), blasToCublasCast(a_ptr), to_int(ld),
+                                     blasToCublasCast(v_ptr), to_int(1), blasToCublasCast(&beta),
+                                     blasToCublasCast(w_ptr), to_int(1));
   }
 };
 }

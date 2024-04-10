@@ -403,39 +403,62 @@ void hemvPanelColumn(const GlobalTileIndex& ij, const TileElementIndex& ij_el_tl
   const SizeType i_el_tl = ij_el_tl.row();
   const SizeType j_el_tl = ij_el_tl.col();
 
-  for (SizeType it = 0; it < At.nr_tiles().rows(); ++it) {
-    const SizeType i_lc = At.distribution().template local_tile_from_global_tile<Coord::Row>(it);
+  if constexpr (B == Backend::MC) {
+    for (SizeType it = 0; it < At.nr_tiles().rows(); ++it) {
+      const SizeType i_lc = At.distribution().template local_tile_from_global_tile<Coord::Row>(it);
 
+      // Note: this is for W which starts from the beginning
+      // TODO fix for last reflector of the panel
+      auto&& tile_w = W.readwrite({to_SizeType(i) + i_lc, 0});  // TODO workaround to align At and W
+
+      auto row_ij =
+          common::iterate_range2d(GlobalTileIndex{it, 0}, GlobalTileSize{1, At.nr_tiles().cols()});
+
+      // Note: V is aligned with At, but it must be accessed with the col due to mul from right
+      std::vector<matrix::ReadOnlyTileSender<T, D>> v_chunk;
+      v_chunk.reserve(to_sizet(At.nr_tiles().cols()));
+      for (const auto& ij : row_ij)
+        v_chunk.emplace_back(V.read(GlobalTileIndex{ij.col(), 0}));
+
+      std::vector<GlobalTileIndex> row_ij_lower;
+      std::transform(row_ij.begin(), row_ij.end(), std::back_inserter(row_ij_lower), [](auto&& ij) {
+        const bool is_lower = ij.row() > ij.col();
+        return is_lower ? ij : transposed(ij);
+      });
+
+      // Note: At has to be accessed just in the lower part
+      std::vector<matrix::ReadOnlyTileSender<T, D>> at_chunk;
+      at_chunk.reserve(to_sizet(At.nr_tiles().cols()));
+      for (const auto& ij_lower : row_ij_lower)
+        at_chunk.emplace_back(At.read(ij_lower));
+
+      ex::start_detached(ex::when_all(ex::just(it), ex::just(TileElementIndex{i_el_tl, j_el_tl}),
+                                      ex::when_all_vector(std::move(at_chunk)),
+                                      ex::when_all_vector(std::move(v_chunk)), std::move(tile_w)) |
+                         di::transform<di::TransformDispatchType::Blas>(di::Policy<B>(),
+                                                                        kernelHEMV<B, T>{}));
+    }
+  }
+  else if constexpr (B == Backend::GPU) {
+    auto at_tiles =
+        selectRead(At, common::iterate_range2d(LocalTileIndex{0, 0},
+                                               LocalTileSize(At.distribution().local_nr_tiles())));
+    auto v_tiles =
+        selectRead(V,
+                   common::iterate_range2d(LocalTileIndex{0, 0},
+                                           LocalTileSize(At.distribution().local_nr_tiles().cols(), 1)));
     // Note: this is for W which starts from the beginning
     // TODO fix for last reflector of the panel
-    auto&& tile_w = W.readwrite({to_SizeType(i) + i_lc, 0});  // TODO workaround to align At and W
+    auto w_tiles =
+        select(W, common::iterate_range2d(LocalTileIndex{i, 0},
+                                          LocalTileSize(At.distribution().local_nr_tiles().rows(), 1)));
 
-    auto row_ij =
-        common::iterate_range2d(GlobalTileIndex{it, 0}, GlobalTileSize{1, At.nr_tiles().cols()});
-
-    // Note: V is aligned with At, but it must be accessed with the col due to mul from right
-    std::vector<matrix::ReadOnlyTileSender<T, D>> v_chunk;
-    v_chunk.reserve(to_sizet(At.nr_tiles().cols()));
-    for (const auto& ij : row_ij)
-      v_chunk.emplace_back(V.read(GlobalTileIndex{ij.col(), 0}));
-
-    std::vector<GlobalTileIndex> row_ij_lower;
-    std::transform(row_ij.begin(), row_ij.end(), std::back_inserter(row_ij_lower), [](auto&& ij) {
-      const bool is_lower = ij.row() > ij.col();
-      return is_lower ? ij : transposed(ij);
-    });
-
-    // Note: At has to be accessed just in the lower part
-    std::vector<matrix::ReadOnlyTileSender<T, D>> at_chunk;
-    at_chunk.reserve(to_sizet(At.nr_tiles().cols()));
-    for (const auto& ij_lower : row_ij_lower)
-      at_chunk.emplace_back(At.read(ij_lower));
-
-    ex::start_detached(ex::when_all(ex::just(it), ex::just(TileElementIndex{i_el_tl, j_el_tl}),
-                                    ex::when_all_vector(std::move(at_chunk)),
-                                    ex::when_all_vector(std::move(v_chunk)), std::move(tile_w)) |
-                       di::transform<di::TransformDispatchType::Blas>(di::Policy<B>(),
-                                                                      kernelHEMV<B, T>{}));
+    ex::start_detached(
+        di::whenAllLift(At.distribution().local_size(), TileElementIndex{i_el_tl, j_el_tl},
+                        ex::when_all_vector(std::move(at_tiles)),
+                        ex::when_all_vector(std::move(v_tiles)),
+                        ex::when_all_vector(std::move(w_tiles))) |
+        di::transform<di::TransformDispatchType::Blas>(di::Policy<B>(), kernelHEMV<B, T>{}));
   }
 }
 

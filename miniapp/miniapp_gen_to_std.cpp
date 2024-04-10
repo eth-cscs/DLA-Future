@@ -139,7 +139,7 @@ struct GenToStdMiniapp {
               comm_grid, opts.uplo, matrix_a.get(), matrix_b.get());
 
         // wait and barrier for all ranks
-        matrix_a.get().waitLocalTiles();
+        pika::wait();
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
         elapsed_time = timeit.elapsed();
       }

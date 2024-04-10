@@ -151,9 +151,7 @@ struct TridiagSolverMiniapp {
           tridiagonal_eigensolver<backend>(comm_grid, tridiag, evals_mirror.get(), evecs_mirror.get());
 
         // wait and barrier for all ranks
-        tridiag.waitLocalTiles();
-        evals_mirror.get().waitLocalTiles();
-        evecs_mirror.get().waitLocalTiles();
+        pika::wait();
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
         elapsed_time = timeit.elapsed();
       }

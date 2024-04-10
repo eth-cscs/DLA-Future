@@ -131,8 +131,7 @@ struct triangularSolverMiniapp {
     MatrixMirrorType b(bh);
 
     auto sync_barrier = [&]() {
-      a.get().waitLocalTiles();
-      b.get().waitLocalTiles();
+      pika::wait();
       DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
     };
 

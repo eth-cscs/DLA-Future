@@ -1156,7 +1156,7 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
                                                        comm::Index2D(mat_a.rankIndex().col(), 0),
                                                        comm::Index2D(mat_a.sourceRankIndex().col(), 0)));
 
-  if (nrefls == 0)
+  if (nrefls == 0) {
 #ifdef DLAF_WITH_HDF5
   if (getTuneParameters().debug_dump_reduction_to_band_data) {
     file->write(mat_a, "/band");
@@ -1165,6 +1165,7 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
   num_reduction_to_band_calls++;
 #endif
     return mat_taus;
+  }
 
   Matrix<T, Device::CPU> mat_taus_retiled =
       mat_taus.retiledSubPipeline(LocalTileSize(mat_a.blockSize().cols() / band_size, 1));

@@ -1538,7 +1538,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
 
 #ifdef DLAF_WITH_HDF5
   if (getTuneParameters().debug_dump_band_to_tridiagonal_data) {
-    file->write(mat_trid, "/tridiaginal");
+    file->write(mat_trid, "/tridiagonal");
   }
 
   num_b2t_calls++;

@@ -1157,6 +1157,13 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
                                                        comm::Index2D(mat_a.sourceRankIndex().col(), 0)));
 
   if (nrefls == 0)
+#ifdef DLAF_WITH_HDF5
+  if (getTuneParameters().debug_dump_reduction_to_band_data) {
+    file->write(mat_a, "/band");
+  }
+
+  num_reduction_to_band_calls++;
+#endif
     return mat_taus;
 
   Matrix<T, Device::CPU> mat_taus_retiled =

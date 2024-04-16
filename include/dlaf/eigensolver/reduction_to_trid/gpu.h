@@ -125,37 +125,19 @@ struct kernelSetupW<Backend::GPU, T> {
       }
     }
 
-    for (std::size_t i = i_first; i < w_tiles.size(); ++i) {
-      const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
-      auto&& tile_w = w_tiles[i];
-      gpublas::internal::Scal<T>::call(handle, to_int(tile_w.size().rows() - i_first_tl),
-                                       util::blasToCublasCast(&tau),
-                                       util::blasToCublasCast(tile_w.ptr({i_first_tl, j_el_tl})), 1);
-    }
+    gpublas::internal::Scal<T>::call(handle, to_int(panel_height), util::blasToCublasCast(&tau),
+                                     util::blasToCublasCast(w_tiles[i_first].ptr(ij_el_tl)), 1);
 
     T alpha = 0;
-    for (std::size_t i = i_first; i < w_tiles.size(); ++i) {
-      const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
-      auto&& tile_w = w_tiles[i];
-      auto&& tile_v = v_tiles[i].get();
-      T partial_result;
-      gpublas::internal::Dot<T>::call(handle, to_int(tile_w.size().rows() - i_first_tl),
-                                      util::blasToCublasCast(tile_w.ptr({i_first_tl, j_el_tl})), 1,
-                                      util::blasToCublasCast(tile_v.ptr({i_first_tl, j_el_tl})), 1,
-                                      util::blasToCublasCast(&partial_result));
-      alpha += partial_result;
-    }
+    gpublas::internal::Dot<T>::call(handle, to_int(panel_height),
+                                    util::blasToCublasCast(w_tiles[i_first].ptr(ij_el_tl)), 1,
+                                    util::blasToCublasCast(v_tiles[i_first].get().ptr(ij_el_tl)), 1,
+                                    util::blasToCublasCast(&alpha));
     alpha *= T(-0.5) * tau;
 
-    for (std::size_t i = i_first; i < w_tiles.size(); ++i) {
-      const SizeType i_first_tl = (i == i_first) ? i_el_tl : 0;
-      auto&& tile_w = w_tiles[i];
-      auto&& tile_v = v_tiles[i].get();
-      gpublas::internal::Axpy<T>::call(handle, to_int(tile_w.size().rows() - i_first_tl),
-                                       util::blasToCublasCast(&alpha),
-                                       util::blasToCublasCast(tile_v.ptr({i_first_tl, j_el_tl})), 1,
-                                       util::blasToCublasCast(tile_w.ptr({i_first_tl, j_el_tl})), 1);
-    }
+    gpublas::internal::Axpy<T>::call(handle, to_int(panel_height), util::blasToCublasCast(&alpha),
+                                     util::blasToCublasCast(v_tiles[i_first].get().ptr(ij_el_tl)), 1,
+                                     util::blasToCublasCast(w_tiles[i_first].ptr(ij_el_tl)), 1);
   }
 };
 

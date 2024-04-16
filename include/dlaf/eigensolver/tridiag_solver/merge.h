@@ -1903,10 +1903,9 @@ void mergeDistSubproblems(comm::CommunicatorPipeline<comm::CommunicatorType::Ful
   auto k_lc = ex::split(std::move(k_lc_unique));
 
   // Reorder Eigenvectors
-  using dlaf::permutations::internal::Permutations;
   copy(LocalTileIndex(idx_loc_begin.col(), 0), LocalTileSize(idx_loc_end.col() - idx_loc_begin.col(), 1),
        ws_hm.i5b, ws.i5b);
-  Permutations<B, D, T, Coord::Col>::call(i_begin, i_end, ws.i5b, ws.e0, ws.e1);
+  permutations::permute<B, D, T, Coord::Col>(i_begin, i_end, ws.i5b, ws.e0, ws.e1);
 
   // Reorder Eigenvalues
   applyIndex(i_begin, i_end, ws_h.i3, ws_h.d0, ws_hm.d1);

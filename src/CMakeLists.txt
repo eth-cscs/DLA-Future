@@ -354,13 +354,10 @@ configure_package_config_file(
 )
 
 write_basic_package_version_file(
-  DLAFConfigVersion.cmake
-  VERSION ${PACKAGE_VERSION}
-  COMPATIBILITY AnyNewerVersion
+  DLAFConfigVersion.cmake VERSION ${PACKAGE_VERSION} COMPATIBILITY AnyNewerVersion
 )
 
-install(FILES
-        ${CMAKE_CURRENT_BINARY_DIR}/DLAFConfig.cmake
-        ${CMAKE_CURRENT_BINARY_DIR}/DLAFConfigVersion.cmake
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/DLAFConfig.cmake
+              ${CMAKE_CURRENT_BINARY_DIR}/DLAFConfigVersion.cmake
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME}
 )

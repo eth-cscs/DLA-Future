@@ -69,7 +69,7 @@ Include <tuple> for \bstd::(forward_as_|make_|)tuple\b:
 ./test/unit/test_blas_tile_extensions.cpp:37:std::vector<std::tuple<SizeType, SizeType, SizeType>> scal_sizes = {
 ./test/unit/test_lapack_tile.cpp:55:std::vector<std::tuple<SizeType, SizeType, SizeType>> hegst_sizes = {
 Include <iostream> for \bstd::(cin|cout|cerr|clog)\b:
-./include/dlaf/matrix/print_csv.h:33:void print(format::csv, const Tile<const T, Device::CPU>& tile, std::ostream& os = std::cout) {
+./include/dlaf/matrix/print_csv.h:36:void print(format::csv, const Tile<const T, Device::CPU>& tile, std::ostream& os = std::cout) {
 ./include/dlaf/matrix/print_numpy.h:69:void print(format::numpy, const Tile<const T, Device::CPU>& tile, std::ostream& os = std::cout) {
 ./include/dlaf/memory/memory_chunk.h:70:      std::cout
 ./miniapp/kernel/miniapp_laset.cpp:108:      std::cout << "[" << run_index << "]"
@@ -127,12 +127,7 @@ Include <vector> for \bstd::vector\b:
 ./test/unit/test_blas_tile.cpp:26:const std::vector<blas::Diag> blas_diags({blas::Diag::Unit, blas::Diag::NonUnit});
 ./test/unit/test_blas_tile_extensions.cpp:37:std::vector<std::tuple<SizeType, SizeType, SizeType>> scal_sizes = {
 ./test/unit/test_lapack_tile.cpp:29:const std::vector<blas::Diag> blas_diags({blas::Diag::Unit, blas::Diag::NonUnit});
-./test/unit/test_util_math.cpp:231:  std::vector<SizeType> splits = util::interleaveSplits(l, b, o1, o2);
-Include <iomanip> for \bstd::setprecision\b:
-./include/dlaf/matrix/print_csv.h:36:      os << std::setprecision(5) << tile({ii, jj}) << ",";
-Include <type_traits> for \bstd::is_same\b:
-./src/eigensolver/tridiag_solver/gpu/kernels.cu:34:  if constexpr (std::is_same<T, float>::value) {
-./test/unit/test_util_math.cpp:34:  EXPECT_TRUE((std::is_same<int, decltype(util::ceilDiv(5, 3))>()));
+./test/unit/test_util_math.cpp:232:  std::vector<SizeType> splits = util::interleaveSplits(l, b, o1, o2);
 
 
-Found 123 violation(s)
+Found 120 violation(s)

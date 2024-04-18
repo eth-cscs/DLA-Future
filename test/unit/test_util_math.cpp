@@ -10,6 +10,7 @@
 
 #include <cstddef>
 #include <limits>
+#include <type_traits>
 
 #include <dlaf/util_math.h>
 

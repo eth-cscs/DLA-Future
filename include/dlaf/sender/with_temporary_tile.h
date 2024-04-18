@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <functional>
 #include <utility>
 
 #include <pika/execution.hpp>

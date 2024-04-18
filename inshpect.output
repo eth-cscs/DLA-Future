@@ -57,13 +57,6 @@ Include <utility> for \bstd::swap\b:
 ./include/dlaf/common/index2d.h:107:    std::swap(row_, col_);
 ./include/dlaf/util_math.h:47:    std::swap(small, big);
 ./miniapp/kernel/miniapp_laset.cpp:57:    std::swap(m, n);
-Include <functional> for \bstd::(c?ref)\b:
-./include/dlaf/communication/kernels/internal/all_reduce.h:72:      return whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_in_comm),
-./include/dlaf/communication/kernels/internal/broadcast.h:58:    return whenAllLift(std::move(pcomm), std::cref(tile_comm)) | transformMPI(sendBcast_o);
-./include/dlaf/communication/kernels/internal/p2p.h:62:    return whenAllLift(std::move(pcomm), dest, tag, std::cref(tile_comm)) | transformMPI(send_o);
-./include/dlaf/communication/kernels/internal/reduce.h:80:    return whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_comm)) |
-./include/dlaf/sender/with_temporary_tile.h:126:             return ex::just(std::cref(in)) |
-./test/unit/sender/test_with_temporary_tile.cpp:114:                ex::just(std::cref(temp)) |
 Include <tuple> for \bstd::(forward_as_|make_|)tuple\b:
 ./include/dlaf/eigensolver/tridiag_solver/impl.h:46:    std::vector<std::tuple<SizeType, SizeType, SizeType>>& indices) {
 ./include/dlaf/permutations/general/impl.h:159:      return std::tuple(std::move(splits), std::move(index_tile_futs), std::move(mat_in_tiles),
@@ -168,4 +161,4 @@ Include <type_traits> for \bstd::is_same\b:
 ./test/unit/test_util_math.cpp:34:  EXPECT_TRUE((std::is_same<int, decltype(util::ceilDiv(5, 3))>()));
 
 
-Found 150 violation(s)
+Found 144 violation(s)

@@ -9,6 +9,7 @@
 //
 
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 
 #include <dlaf/communication/communicator_grid.h>

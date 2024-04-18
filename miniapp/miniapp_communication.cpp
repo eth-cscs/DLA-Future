@@ -10,6 +10,8 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <sstream>
+#include <string>
 #include <utility>
 
 #include <blas/util.hh>

@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <array>
 #include <set>
 
 #include <mpi.h>

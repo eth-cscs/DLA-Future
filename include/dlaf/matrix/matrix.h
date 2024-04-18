@@ -13,6 +13,7 @@
 /// @file
 
 #include <exception>
+#include <utility>
 #include <vector>
 
 #include <pika/execution.hpp>

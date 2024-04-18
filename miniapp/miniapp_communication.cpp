@@ -10,6 +10,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <utility>
 
 #include <blas/util.hh>
 #include <mpi.h>

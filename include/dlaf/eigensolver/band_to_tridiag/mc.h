@@ -11,6 +11,7 @@
 #pragma once
 
 #include <memory>
+#include <utility>
 
 #include <pika/execution.hpp>
 #include <pika/semaphore.hpp>

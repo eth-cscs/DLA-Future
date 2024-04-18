@@ -13,6 +13,8 @@
 #include <whip.hpp>
 #endif
 
+#include <utility>
+
 #include <dlaf/common/assert.h>
 #include <dlaf/common/index2d.h>
 #include <dlaf/common/range2d.h>

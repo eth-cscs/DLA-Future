@@ -10,6 +10,7 @@
 #pragma once
 
 #include <type_traits>
+#include <utility>
 
 #include <pika/execution.hpp>
 

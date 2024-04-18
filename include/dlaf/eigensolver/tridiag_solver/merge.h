@@ -14,6 +14,7 @@
 #include <functional>
 #include <numeric>
 #include <tuple>
+#include <utility>
 
 #include <pika/barrier.hpp>
 #include <pika/execution.hpp>

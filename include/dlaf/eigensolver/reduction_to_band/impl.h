@@ -11,6 +11,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <utility>
 #include <vector>
 
 #include <pika/barrier.hpp>

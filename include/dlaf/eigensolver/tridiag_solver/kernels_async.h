@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <utility>
+
 #include <dlaf/eigensolver/tridiag_solver/kernels.h>
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/tile.h>

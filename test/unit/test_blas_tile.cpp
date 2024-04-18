@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <tuple>
 #include <vector>
 
 #include <dlaf/blas/tile.h>

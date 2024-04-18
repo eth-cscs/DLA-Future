@@ -12,6 +12,7 @@
 
 #include <cstddef>
 #include <numeric>
+#include <tuple>
 #include <utility>
 #include <vector>
 

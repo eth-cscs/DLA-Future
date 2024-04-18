@@ -12,6 +12,7 @@
 #include <cmath>
 #include <cstddef>
 #include <exception>
+#include <optional>
 #include <random>
 #include <string>
 #include <utility>

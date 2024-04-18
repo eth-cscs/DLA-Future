@@ -11,6 +11,7 @@
 #include <atomic>
 #include <chrono>
 #include <sstream>
+#include <tuple>
 #include <utility>
 #include <vector>
 

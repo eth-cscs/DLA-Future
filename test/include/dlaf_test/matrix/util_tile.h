@@ -12,6 +12,7 @@
 
 /// @file
 
+#include <atomic>
 #include <functional>
 #include <iomanip>
 #include <iostream>

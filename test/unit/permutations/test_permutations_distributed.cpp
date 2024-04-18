@@ -9,6 +9,7 @@
 //
 
 #include <algorithm>
+#include <utility>
 
 #include <pika/init.hpp>
 

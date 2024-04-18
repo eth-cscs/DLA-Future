@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <utility>
+
 #include <pika/init.hpp>
 
 #include <dlaf/blas/enum_output.h>

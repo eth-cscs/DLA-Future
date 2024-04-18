@@ -9,6 +9,7 @@
 //
 
 #include <limits>
+#include <utility>
 
 #include <dlaf/auxiliary/norm.h>
 #include <dlaf/communication/communicator_grid.h>

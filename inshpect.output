@@ -1,57 +1,9 @@
 # Includes
 
-Include <utility> for \bstd::move\b:
-./include/dlaf/matrix/tile.h:41:      : size_(size), memory_view_(std::move(memory_view)), ld_(ld) {
-./src/c_api/factorization/cholesky.h:43:  dlaf::matrix::Matrix<T, dlaf::Device::CPU> matrix_host(std::move(distribution), layout, a);
-./src/matrix/distribution.cpp:94:    : Distribution(std::move(rhs)) {
-./test/include/dlaf_test/matrix/util_matrix_local.h:97:  return MatrixLocal<T>(std::move(dest));
-./test/include/dlaf_test/matrix/util_matrix_senders.h:150:    std::move(previous[index]).get();
-./test/include/dlaf_test/matrix/util_tile.h:63:    pika::this_thread::experimental::sync_wait(std::move(sender));
-./test/src/gtest_mpi_listener.cpp:27:    : listener_(std::move(other)) {
-./test/unit/auxiliary/mc/test_norm.cpp:57:        Matrix<TypeParam, Device::CPU> matrix(std::move(distribution));
-./test/unit/c_api/eigensolver/test_eigensolver_c_api.cpp:173:    return EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
-./test/unit/c_api/eigensolver/test_gen_eigensolver_c_api.cpp:190:    return EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
-./test/unit/c_api/factorization/test_cholesky_c_api.cpp:74:  Matrix<T, Device::CPU> mat_h(std::move(distribution));
-./test/unit/common/test_pipeline.cpp:115:    tt::sync_wait(ex::when_all(std::move(checkpoint0), std::move(checkpoint1), std::move(checkpoint2)));
-./test/unit/communication/test_all_reduce.cpp:117:  sync::allReduce(communicator, op, std::move(message_input), std::move(message_output));
-./test/unit/communication/test_collective_async.cpp:131:    auto tile = tt::sync_wait(std::move(after));
-./test/unit/communication/test_comm_sender.cpp:44:  sync_wait(when_all(std::move(send), std::move(recv)) | then([](int e1, int e2) {
-./test/unit/communication/test_message.cpp:115:  auto new_message = std::move(message);
-./test/unit/communication/test_reduce.cpp:162:  sync::reduce(root, communicator, op, std::move(message_input), std::move(message_output));
-./test/unit/communication/test_transform_mpi.cpp:87:                      return std::move(pg);
-./test/unit/eigensolver/test_band_to_tridiag.cpp:145:  Matrix<T, Device::CPU> mat_a_h(std::move(distr));
-./test/unit/eigensolver/test_bt_reduction_to_band.cpp:211:  Matrix<T, Device::CPU> mat_c_h(std::move(dist_c));
-./test/unit/eigensolver/test_eigensolver.cpp:123:        return EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
-./test/unit/eigensolver/test_gen_eigensolver.cpp:120:        return EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
-./test/unit/eigensolver/test_gen_to_std.cpp:91:  Matrix<T, Device::CPU> mat_ah(std::move(distr_a));
-./test/unit/eigensolver/test_tridiag_solver_distributed.cpp:98:  matrix::util::set(tridiag, std::move(tridiag_fn));
-./test/unit/eigensolver/test_tridiag_solver_local.cpp:77:  matrix::util::set(tridiag, std::move(tridiag_fn));
-./test/unit/eigensolver/test_tridiag_solver_merge.cpp:145:  const SizeType k = tt::sync_wait(std::move(k_sender));
-./test/unit/factorization/test_cholesky.cpp:86:  Matrix<T, Device::CPU> mat_h(std::move(distribution));
-./test/unit/factorization/test_compute_t_factor.cpp:162:  return std::make_tuple(std::move(mat_taus), std::move(h_expected));
-./test/unit/matrix/test_copy.cpp:88:      Matrix<const TypeParam, Device::CPU> mat_src_const = std::move(mat_src);
-./test/unit/matrix/test_distribution.cpp:351:    Distribution obj_move(std::move(obj));
-./test/unit/matrix/test_matrix.cpp:208:      Matrix<Type, Device::CPU> mat(std::move(distribution));
-./test/unit/matrix/test_matrix_hdf5.cpp:76:    return std::make_tuple(std::move(matrix), std::move(original_values));
-./test/unit/matrix/test_matrix_local.cpp:130:    return std::make_pair(std::move(mat), output);
-./test/unit/matrix/test_matrix_mirror.cpp:247:  Matrix<const T, Source> mat(std::move(mat_nonconst));
-./test/unit/matrix/test_matrix_output.cpp:63:    return std::make_tuple(std::move(mat), output, output_csv);
-./test/unit/matrix/test_retiled_matrix.cpp:256:      std::move(rwsender0).get();
-./test/unit/matrix/test_tile.cpp:98:        Tile<Type, Device::CPU> tile(size, std::move(mem_view), ld);
-./test/unit/matrix/test_util_matrix.cpp:71:      Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), layout, mem());
-./test/unit/memory/test_memory_chunk.cpp:60:  memory::MemoryChunk<Type, Device::CPU> mem2(std::move(mem));
-./test/unit/memory/test_memory_view.cpp:215:  memory::MemoryView<Type, Device::CPU> mem2(std::move(mem));
-./test/unit/multiplication/test_multiplication_general.cpp:183:    Matrix<T, Device::CPU> matrix(std::move(dist));
-./test/unit/multiplication/test_multiplication_hermitian.cpp:115:  Matrix<T, Device::CPU> mat_ah(std::move(distr_a));
-./test/unit/multiplication/test_multiplication_triangular.cpp:119:  Matrix<T, Device::CPU> mat_ah(std::move(distr_a));
-./test/unit/permutations/test_permutations_distributed.cpp:77:  return {m, mb, i_begin_tile, i_end_tile, std::move(perms)};
-./test/unit/sender/test_with_temporary_tile.cpp:119:          return internal::whenAllLift(std::move(check_tile_sender), blas::Uplo::General, output_value,
-./test/unit/solver/test_triangular.cpp:116:  Matrix<T, Device::CPU> mat_ah(std::move(distr_a));
-./test/unit/test_lapack_tile.cpp:302:  auto tridiag = createTile<RealParam, Device::CPU>(std::move(tridiag_f), TileElementSize(sz, 2), sz);
 Include <array> for \bstd::array\b:
 ./include/dlaf/eigensolver/reduction_to_band/impl.h:73:std::array<T, 2> computeX0AndSquares(const bool has_head, const std::vector<matrix::Tile<T, D>>& panel,
 ./test/unit/communication/test_communicator_grid.cpp:28:std::array<int, 2> computeGridDims(int nranks) {
-./test/unit/eigensolver/test_tridiag_solver_merge.cpp:121:  constexpr std::array<SizeType, n> in_arr{1, 4, 2, 3, 0, 5, 6, 7, 8, 9};
+./test/unit/eigensolver/test_tridiag_solver_merge.cpp:122:  constexpr std::array<SizeType, n> in_arr{1, 4, 2, 3, 0, 5, 6, 7, 8, 9};
 Include <utility> for \bstd::declval\b:
 ./include/dlaf/eigensolver/tridiag_solver/impl.h:75:      ex::ensure_started(cuppensDecompAsync<T>(tridiag.readwrite(std::declval<LocalTileIndex>()),
 Include <optional> for \bstd::nullopt\b:
@@ -96,62 +48,60 @@ Include <cstddef> for \bstd::size_t\b:
 ./src/memory/memory_chunk.cpp:37:void initializeUmpireHostAllocator(std::size_t initial_bytes) {
 ./test/include/dlaf_test/comm_grids/grids_6_ranks.h:80:      const std::size_t ncommunicator_pipelines = 3;
 ./test/include/dlaf_test/matrix/matrix_local.h:123:  std::size_t tileLinearIndex(const GlobalTileIndex& index) const noexcept {
-./test/include/dlaf_test/matrix/util_matrix_local.h:53:  const auto linear_size = static_cast<std::size_t>(source.size().rows() * source.size().cols());
-./test/include/dlaf_test/matrix/util_matrix_senders.h:38:  result.reserve(static_cast<std::size_t>(dist.localNrTiles().linear_size()));
-./test/src/gtest_mpi_listener.cpp:87:          return last_test_part_results_[static_cast<std::size_t>(index)];
+./test/include/dlaf_test/matrix/util_matrix_local.h:54:  const auto linear_size = static_cast<std::size_t>(source.size().rows() * source.size().cols());
+./test/include/dlaf_test/matrix/util_matrix_senders.h:39:  result.reserve(static_cast<std::size_t>(dist.localNrTiles().linear_size()));
+./test/src/gtest_mpi_listener.cpp:88:          return last_test_part_results_[static_cast<std::size_t>(index)];
 ./test/unit/common/test_data_descriptor.cpp:46:    return {std::make_unique<T[]>(static_cast<std::size_t>(blocksize)), num_blocks, blocksize, stride};
-./test/unit/communication/test_comm_sender.cpp:36:  std::vector<double> send_buf(static_cast<std::size_t>(size), rank);
+./test/unit/communication/test_comm_sender.cpp:37:  std::vector<double> send_buf(static_cast<std::size_t>(size), rank);
 ./test/unit/communication/test_communicator_grid.cpp:214:  const std::vector<std::size_t> test_npipelines{1, 3, 10};
 ./test/unit/init/test_init.cpp:92:  const std::size_t default_val = default_cfg.num_hp_gpu_streams_per_thread;
-./test/unit/matrix/test_tile.cpp:388:                                  const std::vector<SubTileSpec>& specs, std::size_t last_dep,
-./test/unit/permutations/test_permutations_distributed.cpp:74:  const std::size_t nperms = to_sizet(i_end - i_begin);
+./test/unit/matrix/test_tile.cpp:389:                                  const std::vector<SubTileSpec>& specs, std::size_t last_dep,
+./test/unit/permutations/test_permutations_distributed.cpp:75:  const std::size_t nperms = to_sizet(i_end - i_begin);
 Include <utility> for \bstd::swap\b:
 ./include/dlaf/common/index2d.h:107:    std::swap(row_, col_);
 ./include/dlaf/util_math.h:47:    std::swap(small, big);
 ./miniapp/kernel/miniapp_laset.cpp:57:    std::swap(m, n);
-./test/unit/test_lapack_tile.cpp:120:        std::swap(m, n);
 Include <functional> for \bstd::(c?ref)\b:
 ./include/dlaf/communication/kernels/internal/all_reduce.h:72:      return whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_in_comm),
 ./include/dlaf/communication/kernels/internal/broadcast.h:58:    return whenAllLift(std::move(pcomm), std::cref(tile_comm)) | transformMPI(sendBcast_o);
 ./include/dlaf/communication/kernels/internal/p2p.h:62:    return whenAllLift(std::move(pcomm), dest, tag, std::cref(tile_comm)) | transformMPI(send_o);
 ./include/dlaf/communication/kernels/internal/reduce.h:80:    return whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_comm)) |
 ./include/dlaf/sender/with_temporary_tile.h:126:             return ex::just(std::cref(in)) |
-./test/unit/sender/test_with_temporary_tile.cpp:112:                ex::just(std::cref(temp)) |
+./test/unit/sender/test_with_temporary_tile.cpp:114:                ex::just(std::cref(temp)) |
 Include <tuple> for \bstd::(forward_as_|make_|)tuple\b:
 ./include/dlaf/eigensolver/tridiag_solver/impl.h:46:    std::vector<std::tuple<SizeType, SizeType, SizeType>>& indices) {
 ./include/dlaf/permutations/general/impl.h:159:      return std::tuple(std::move(splits), std::move(index_tile_futs), std::move(mat_in_tiles),
 ./src/c_api/utils.cpp:31:std::tuple<dlaf::matrix::Distribution, dlaf::matrix::LayoutInfo> distribution_and_layout(
 ./src/c_api/utils.h:15:std::tuple<dlaf::matrix::Distribution, dlaf::matrix::LayoutInfo> distribution_and_layout(
-./test/unit/eigensolver/test_tridiag_solver_distributed.cpp:48:const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
-./test/unit/eigensolver/test_tridiag_solver_local.cpp:40:  std::vector<std::tuple<SizeType, SizeType, SizeType>> expected_indices{{0, 1, 2},  {0, 2, 3},
+./test/unit/eigensolver/test_tridiag_solver_distributed.cpp:50:const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
+./test/unit/eigensolver/test_tridiag_solver_local.cpp:42:  std::vector<std::tuple<SizeType, SizeType, SizeType>> expected_indices{{0, 1, 2},  {0, 2, 3},
 ./test/unit/lapack/gpu/test_lacpy.cpp:32:std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> configs{
-./test/unit/matrix/test_distribution.cpp:191:std::tuple<SizeType, SizeType, SizeType> test_tile_size(const ParametersConstructor& test) {
+./test/unit/matrix/test_distribution.cpp:192:std::tuple<SizeType, SizeType, SizeType> test_tile_size(const ParametersConstructor& test) {
 ./test/unit/matrix/test_layout_info.cpp:20:const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, SizeType, SizeType, SizeType>>
-./test/unit/matrix/test_matrix.cpp:742:        return std::tuple(std::move(rosenders2a), std::move(rosenders2b), std::move(senders3));
-./test/unit/matrix/test_matrix_hdf5.cpp:76:    return std::make_tuple(std::move(matrix), std::move(original_values));
-./test/unit/matrix/test_retiled_matrix.cpp:48:const std::vector<std::tuple<LocalElementSize, TileElementSize, LocalTileSize>> local_sizes_tests({
-./test/unit/matrix/test_tile.cpp:44:using TileSizes = std::tuple<TileElementSize, SizeType>;
-./test/unit/multiplication/test_multiplication_general.cpp:290:const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
-./test/unit/permutations/test_permutations_distributed.cpp:48:using testcase_t = std::tuple<SizeType, SizeType, SizeType, SizeType, std::vector<SizeType>>;
+./test/unit/matrix/test_matrix.cpp:743:        return std::tuple(std::move(rosenders2a), std::move(rosenders2b), std::move(senders3));
+./test/unit/matrix/test_matrix_hdf5.cpp:77:    return std::make_tuple(std::move(matrix), std::move(original_values));
+./test/unit/matrix/test_retiled_matrix.cpp:49:const std::vector<std::tuple<LocalElementSize, TileElementSize, LocalTileSize>> local_sizes_tests({
+./test/unit/matrix/test_tile.cpp:45:using TileSizes = std::tuple<TileElementSize, SizeType>;
+./test/unit/multiplication/test_multiplication_general.cpp:292:const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
+./test/unit/permutations/test_permutations_distributed.cpp:49:using testcase_t = std::tuple<SizeType, SizeType, SizeType, SizeType, std::vector<SizeType>>;
 ./test/unit/permutations/test_permutations_local.cpp:88:const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
 ./test/unit/test_blas_tile.cpp:47:std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, SizeType>> gemm_sizes = {
 ./test/unit/test_blas_tile_extensions.cpp:37:std::vector<std::tuple<SizeType, SizeType, SizeType>> scal_sizes = {
-./test/unit/test_lapack_tile.cpp:54:std::vector<std::tuple<SizeType, SizeType, SizeType>> hegst_sizes = {
+./test/unit/test_lapack_tile.cpp:55:std::vector<std::tuple<SizeType, SizeType, SizeType>> hegst_sizes = {
 Include <utility> for \bstd::make_pair\b:
 ./include/dlaf/communication/broadcast_panel.h:42:  return std::make_pair(idx_cross, rank_owner);
 ./include/dlaf/eigensolver/tridiag_solver/tile_collector.h:44:    return std::make_pair(begin, size);
 ./test/include/dlaf_c_test/c_api_helpers.h:81:  return std::make_pair(local_ptr, lld);
-./test/unit/matrix/test_matrix_local.cpp:130:    return std::make_pair(std::move(mat), output);
 Include <iostream> for \bstd::(cin|cout|cerr|clog)\b:
 ./include/dlaf/matrix/print_csv.h:33:void print(format::csv, const Tile<const T, Device::CPU>& tile, std::ostream& os = std::cout) {
 ./include/dlaf/matrix/print_numpy.h:68:void print(format::numpy, const Tile<const T, Device::CPU>& tile, std::ostream& os = std::cout) {
 ./include/dlaf/memory/memory_chunk.h:70:      std::cout
 ./miniapp/kernel/miniapp_laset.cpp:107:      std::cout << "[" << run_index << "]"
 ./src/c_api/grid.cpp:63:    std::cerr << "Grid layout must be row major or column major." << std::endl;
-./test/include/dlaf_test/matrix/util_matrix_local.h:139:           std::ostream& os = std::cout) {
+./test/include/dlaf_test/matrix/util_matrix_local.h:140:           std::ostream& os = std::cout) {
 ./test/unit/common/test_data_descriptor.cpp:79:      std::cout << "Unknown memory type" << std::endl;
 Include <atomic> for \bstd::atomic\b:
-./test/include/dlaf_test/matrix/util_tile.h:48:      : ready(std::make_shared<std::atomic<bool>>(false)),
+./test/include/dlaf_test/matrix/util_tile.h:49:      : ready(std::make_shared<std::atomic<bool>>(false)),
 Include <utility> for \bstd::forward\b:
 ./include/dlaf/common/callable_object.h:29:    auto operator()(Ts&&... ts) const noexcept(noexcept((fname) (std::forward<Ts>(ts)...))) \
 ./include/dlaf/communication/sync/basic.h:30:  auto message = make_message(common::make_data(std::forward<DataIn>(data)));
@@ -163,7 +113,6 @@ Include <utility> for \bstd::forward\b:
 ./miniapp/include/dlaf/miniapp/kernel_runner.h:87:    return runInternal(std::forward<F>(kernel_task), streams_);
 ./test/include/dlaf_test/blas/invoke.h:34:    f(std::forward<Args>(args)...);
 ./test/include/dlaf_test/lapack/invoke.h:34:    f(std::forward<Args>(args)...);
-./test/include/dlaf_test/matrix/util_tile.h:49:        sender(std::forward<Sender>(sender) |
 ./test/unit/communication/test_comm_p2p.cpp:60:                               std::forward<SenderTile>(tile)) |
 ./test/unit/init/test_init.cpp:47:      init_ = std::make_unique<dlaf::ScopedInitializer>(std::forward<Args>(args)...);
 Include <vector> for \bstd::vector\b:
@@ -173,48 +122,48 @@ Include <vector> for \bstd::vector\b:
 ./include/dlaf/eigensolver/tridiag_solver/impl.h:46:    std::vector<std::tuple<SizeType, SizeType, SizeType>>& indices) {
 ./include/dlaf/eigensolver/tridiag_solver/merge.h:224:  std::vector<ex::unique_any_sender<T>> tiles_max;
 ./include/dlaf/eigensolver/tridiag_solver/rot.h:266:                         mb](std::vector<GivensRotation<T>> rots, std::vector<matrix::Tile<T, D>> tiles,
-./include/dlaf/matrix/tile.h:539:std::vector<ReadOnlyTileSender<T, D>> splitTile(ReadOnlyTileSender<T, D> tile,
+./include/dlaf/matrix/tile.h:540:std::vector<ReadOnlyTileSender<T, D>> splitTile(ReadOnlyTileSender<T, D> tile,
 ./include/dlaf/permutations/general/impl.h:98:    const SizeType i_perm, const std::vector<SizeType>& splits, const GlobalElementIndex out_begin,
 ./miniapp/include/dlaf/miniapp/options.h:154:                   const std::vector<char>& valid_values) {
 ./src/permutations/general/perms.cu:40:                             const std::vector<matrix::Tile<T, Device::GPU>>& tiles) {
 ./test/include/dlaf_test/comm_grids/grids_6_ranks.h:21:std::vector<comm::CommunicatorGrid> comm_grids;
 ./test/include/dlaf_test/matrix/matrix_local.h:134:  std::vector<Tile<T, Device::CPU>> tiles_;
-./test/src/gtest_mpi_listener.cpp:183:  std::vector<char> message_buffer(static_cast<std::size_t>(message_length));
-./test/unit/auxiliary/mc/test_norm.cpp:43:const std::vector<lapack::Norm> lapack_norms({lapack::Norm::Fro, lapack::Norm::Inf, lapack::Norm::Max,
-./test/unit/c_api/eigensolver/test_eigensolver_c_api.cpp:57:const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
-./test/unit/c_api/eigensolver/test_gen_eigensolver_c_api.cpp:55:const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
-./test/unit/c_api/factorization/test_cholesky_c_api.cpp:51:const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
+./test/src/gtest_mpi_listener.cpp:184:  std::vector<char> message_buffer(static_cast<std::size_t>(message_length));
+./test/unit/auxiliary/mc/test_norm.cpp:44:const std::vector<lapack::Norm> lapack_norms({lapack::Norm::Fro, lapack::Norm::Inf, lapack::Norm::Max,
+./test/unit/c_api/eigensolver/test_eigensolver_c_api.cpp:58:const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
+./test/unit/c_api/eigensolver/test_gen_eigensolver_c_api.cpp:56:const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
+./test/unit/c_api/factorization/test_cholesky_c_api.cpp:52:const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
 ./test/unit/common/test_data_descriptor.cpp:701:  std::vector<memory_data<TypeParam>> memory_types;
 ./test/unit/communication/test_broadcast_panel.cpp:50:std::vector<config_t> test_params{
 ./test/unit/communication/test_communicator_grid.cpp:214:  const std::vector<std::size_t> test_npipelines{1, 3, 10};
-./test/unit/eigensolver/test_band_to_tridiag.cpp:49:const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
+./test/unit/eigensolver/test_band_to_tridiag.cpp:50:const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
 ./test/unit/eigensolver/test_bt_band_to_tridiag.cpp:253:std::vector<config_t> configs{
-./test/unit/eigensolver/test_eigensolver.cpp:60:const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
-./test/unit/eigensolver/test_gen_eigensolver.cpp:60:const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
-./test/unit/eigensolver/test_gen_to_std.cpp:50:const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
+./test/unit/eigensolver/test_eigensolver.cpp:61:const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
+./test/unit/eigensolver/test_gen_eigensolver.cpp:61:const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
+./test/unit/eigensolver/test_gen_to_std.cpp:51:const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
 ./test/unit/eigensolver/test_reduction_to_band.cpp:82:std::vector<config_t> configs{
-./test/unit/eigensolver/test_tridiag_solver_distributed.cpp:48:const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
-./test/unit/eigensolver/test_tridiag_solver_local.cpp:40:  std::vector<std::tuple<SizeType, SizeType, SizeType>> expected_indices{{0, 1, 2},  {0, 2, 3},
-./test/unit/eigensolver/test_tridiag_solver_merge.cpp:69:  std::vector<SizeType> vec_arr{7, 2, 4, 8, 12, 1, 17, 32, 9, 6};
+./test/unit/eigensolver/test_tridiag_solver_distributed.cpp:50:const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
+./test/unit/eigensolver/test_tridiag_solver_local.cpp:42:  std::vector<std::tuple<SizeType, SizeType, SizeType>> expected_indices{{0, 1, 2},  {0, 2, 3},
+./test/unit/eigensolver/test_tridiag_solver_merge.cpp:70:  std::vector<SizeType> vec_arr{7, 2, 4, 8, 12, 1, 17, 32, 9, 6};
 ./test/unit/eigensolver/test_tridiag_solver_rot.cpp:50:    std::vector<GRot> rots;
-./test/unit/factorization/test_cholesky.cpp:50:const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
-./test/unit/factorization/test_compute_t_factor.cpp:206:std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, GlobalElementIndex>> configs{
+./test/unit/factorization/test_cholesky.cpp:51:const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
+./test/unit/factorization/test_compute_t_factor.cpp:207:std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, GlobalElementIndex>> configs{
 ./test/unit/lapack/gpu/test_lacpy.cpp:32:std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> configs{
-./test/unit/matrix/test_distribution.cpp:37:const std::vector<ParametersConstructor> tests_constructor = {
+./test/unit/matrix/test_distribution.cpp:38:const std::vector<ParametersConstructor> tests_constructor = {
 ./test/unit/matrix/test_distribution_extensions.cpp:42:const std::vector<ParametersIndices> tests_indices = {
 ./test/unit/matrix/test_layout_info.cpp:20:const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, SizeType, SizeType, SizeType>>
-./test/unit/matrix/test_tile.cpp:35:const std::vector<SizeType> sizes({0, 1, 13, 32});
+./test/unit/matrix/test_tile.cpp:36:const std::vector<SizeType> sizes({0, 1, 13, 32});
 ./test/unit/matrix/test_util_distribution.cpp:40:  std::vector<Parameters> tests = {
 ./test/unit/matrix/test_views.cpp:53:const std::vector<config_t> configs{
-./test/unit/multiplication/test_multiplication_general.cpp:221:std::vector<GemmConfig> gemm_configs = {
-./test/unit/multiplication/test_multiplication_hermitian.cpp:52:const std::vector<blas::Side> blas_sides({blas::Side::Left, blas::Side::Right});
-./test/unit/multiplication/test_multiplication_triangular.cpp:52:const std::vector<blas::Side> blas_sides({blas::Side::Left, blas::Side::Right});
-./test/unit/permutations/test_permutations_distributed.cpp:48:using testcase_t = std::tuple<SizeType, SizeType, SizeType, SizeType, std::vector<SizeType>>;
+./test/unit/multiplication/test_multiplication_general.cpp:223:std::vector<GemmConfig> gemm_configs = {
+./test/unit/multiplication/test_multiplication_hermitian.cpp:53:const std::vector<blas::Side> blas_sides({blas::Side::Left, blas::Side::Right});
+./test/unit/multiplication/test_multiplication_triangular.cpp:53:const std::vector<blas::Side> blas_sides({blas::Side::Left, blas::Side::Right});
+./test/unit/permutations/test_permutations_distributed.cpp:49:using testcase_t = std::tuple<SizeType, SizeType, SizeType, SizeType, std::vector<SizeType>>;
 ./test/unit/permutations/test_permutations_local.cpp:88:const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
-./test/unit/solver/test_triangular.cpp:52:const std::vector<blas::Side> blas_sides({blas::Side::Left, blas::Side::Right});
+./test/unit/solver/test_triangular.cpp:53:const std::vector<blas::Side> blas_sides({blas::Side::Left, blas::Side::Right});
 ./test/unit/test_blas_tile.cpp:26:const std::vector<blas::Diag> blas_diags({blas::Diag::Unit, blas::Diag::NonUnit});
 ./test/unit/test_blas_tile_extensions.cpp:37:std::vector<std::tuple<SizeType, SizeType, SizeType>> scal_sizes = {
-./test/unit/test_lapack_tile.cpp:28:const std::vector<blas::Diag> blas_diags({blas::Diag::Unit, blas::Diag::NonUnit});
+./test/unit/test_lapack_tile.cpp:29:const std::vector<blas::Diag> blas_diags({blas::Diag::Unit, blas::Diag::NonUnit});
 ./test/unit/test_util_math.cpp:231:  std::vector<SizeType> splits = util::interleaveSplits(l, b, o1, o2);
 Include <string> for \bstd::string\b:
 ./miniapp/miniapp_communication.cpp:94:std::string string_default(std::string name, Device D) {
@@ -229,9 +178,9 @@ Include <sstream> for \bstd::((i|o)?stringstream)\b:
 ./miniapp/include/dlaf/miniapp/options.h:162:    std::ostringstream valid_values_stream;
 ./miniapp/miniapp_communication.cpp:95:  std::stringstream s;
 ./src/c_api/utils.cpp:56:    std::stringstream ss;
-./test/src/gtest_mpi_listener.cpp:63:  std::ostringstream os;
+./test/src/gtest_mpi_listener.cpp:64:  std::ostringstream os;
 ./test/unit/common/test_size2d.cpp:94:  std::stringstream s;
-./test/unit/matrix/test_matrix.cpp:353:    std::stringstream s;                                        \
+./test/unit/matrix/test_matrix.cpp:354:    std::stringstream s;                                        \
 
 
-Found 212 violation(s)
+Found 162 violation(s)

@@ -9,6 +9,7 @@
 //
 
 #include <memory>
+#include <utility>
 
 #include <dlaf/memory/memory_chunk.h>
 

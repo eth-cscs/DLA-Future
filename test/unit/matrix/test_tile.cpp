@@ -9,6 +9,7 @@
 //
 
 #include <string>
+#include <utility>
 
 #include <pika/execution.hpp>
 

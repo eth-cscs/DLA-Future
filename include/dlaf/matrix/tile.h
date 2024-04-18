@@ -17,6 +17,7 @@
 #include <ostream>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 
 #include <pika/async_rw_mutex.hpp>
 #include <pika/execution.hpp>

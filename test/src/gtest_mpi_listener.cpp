@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <functional>
 #include <string>
+#include <utility>
 
 #include "gtest_mpi_listener.h"
 

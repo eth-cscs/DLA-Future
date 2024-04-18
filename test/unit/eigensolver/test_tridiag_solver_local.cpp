@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <utility>
+
 #include <dlaf/eigensolver/tridiag_solver.h>
 #include <dlaf/eigensolver/tridiag_solver/impl.h>
 #include <dlaf/matrix/matrix_mirror.h>

@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <utility>
+
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/sender/policy.h>

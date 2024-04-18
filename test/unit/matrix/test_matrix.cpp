@@ -10,6 +10,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <utility>
 #include <vector>
 
 #include <pika/execution.hpp>

@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <utility>
+
 #include <blas.hh>
 #include <blas/util.hh>
 #include <mpi.h>

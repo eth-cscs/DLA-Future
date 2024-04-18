@@ -1,15 +1,10 @@
 # Includes
 
-Include <utility> for \bstd::declval\b:
-./include/dlaf/eigensolver/tridiag_solver/impl.h:75:      ex::ensure_started(cuppensDecompAsync<T>(tridiag.readwrite(std::declval<LocalTileIndex>()),
 Include <optional> for \bstd::nullopt\b:
 ./include/dlaf/common/pipeline.h:49:      : pipeline(std::exchange(other.pipeline, std::nullopt)),
 ./include/dlaf/util_matrix.h:342:                              std::optional<SizeType> band_size = std::nullopt) {
 Include <type_traits> for \bstd::is_floating_point\b:
 ./include/dlaf/types.h:145:struct IsFloatingPointOrComplex : std::is_floating_point<T> {};
-Include <utility> for \bstd::pair\b:
-./include/dlaf/communication/broadcast_panel.h:38:std::pair<SizeType, comm::IndexT_MPI> transposedOwner(const matrix::Distribution& dist,
-./test/include/dlaf_c_test/c_api_helpers.h:65:std::pair<T*, int> top_left_tile(dlaf::matrix::Matrix<T, D>& mat) {
 Include <exception> for \bstd::terminate\b:
 ./include/dlaf/memory/memory_chunk.h:72:      std::terminate();
 ./src/c_api/utils.cpp:63:    std::terminate();
@@ -20,22 +15,22 @@ Include <cstddef> for \bstd::size_t\b:
 ./include/dlaf/eigensolver/band_to_tridiag/mc.h:1155:    constexpr std::size_t n_workspaces = 4;
 ./include/dlaf/eigensolver/bt_band_to_tridiag/impl.h:509:  HHManager(const SizeType b, const std::size_t, matrix::Distribution, matrix::Distribution) : b(b) {}
 ./include/dlaf/eigensolver/bt_reduction_to_band/impl.h:155:  constexpr std::size_t n_workspaces = 2;
-./include/dlaf/eigensolver/gen_to_std/impl.h:292:  constexpr std::size_t n_workspaces = 2;
+./include/dlaf/eigensolver/gen_to_std/impl.h:295:  constexpr std::size_t n_workspaces = 2;
 ./include/dlaf/eigensolver/internal/get_red2band_panel_nworkers.h:23:  const std::size_t available_workers = pika::resource::get_thread_pool("default").get_os_thread_count();
 ./include/dlaf/eigensolver/internal/get_tridiag_rank1_nworkers.h:21:inline std::size_t getTridiagRank1NWorkers() noexcept {
 ./include/dlaf/eigensolver/tridiag_solver/merge.h:269:inline std::size_t ev_sort_order(const ColType coltype) {
 ./include/dlaf/eigensolver/tridiag_solver/rot.h:290:        const std::size_t linear_tile_col = to_sizet(dist_sub.localTileLinearIndex(tile_col));
-./include/dlaf/factorization/cholesky/impl.h:195:  constexpr std::size_t n_workspaces = 2;
+./include/dlaf/factorization/cholesky/impl.h:198:  constexpr std::size_t n_workspaces = 2;
 ./include/dlaf/init.h:37:  std::size_t num_np_gpu_streams_per_thread = 3;
 ./include/dlaf/matrix/copy_tile.h:83:    const std::size_t m = to_sizet(source.size().rows());
 ./include/dlaf/matrix/hdf5.h:42:  static constexpr std::size_t dims = 1;
 ./include/dlaf/matrix/matrix.h:386:  for (std::size_t i = 0; i < n; ++i) {
 ./include/dlaf/memory/memory_chunk.h:27:void initializeUmpireHostAllocator(std::size_t initial_bytes);
 ./include/dlaf/multiplication/general/impl.h:89:  constexpr std::size_t n_workspaces = 2;
-./include/dlaf/multiplication/hermitian/impl.h:112:  constexpr std::size_t n_workspaces = 2;
-./include/dlaf/multiplication/triangular/impl.h:414:  constexpr std::size_t n_workspaces = 2;
+./include/dlaf/multiplication/hermitian/impl.h:115:  constexpr std::size_t n_workspaces = 2;
+./include/dlaf/multiplication/triangular/impl.h:417:  constexpr std::size_t n_workspaces = 2;
 ./include/dlaf/permutations/general/impl.h:104:  for (std::size_t i_split = 0; i_split < splits.size() - 1; ++i_split) {
-./include/dlaf/solver/triangular/impl.h:492:  constexpr std::size_t n_workspaces = 2;
+./include/dlaf/solver/triangular/impl.h:495:  constexpr std::size_t n_workspaces = 2;
 ./include/dlaf/tune.h:81:    red2band_panel_nworkers = std::max<std::size_t>(1, default_pool_thread_count / 2);
 ./include/dlaf/util_matrix.h:155:  getter_random(SizeType seed) : random_engine_(static_cast<std::size_t>(seed)) {
 ./miniapp/include/dlaf/miniapp/options.h:164:    for (std::size_t i = 0; i < valid_values.size(); ++i) {
@@ -50,15 +45,11 @@ Include <cstddef> for \bstd::size_t\b:
 ./test/unit/common/test_data_descriptor.cpp:46:    return {std::make_unique<T[]>(static_cast<std::size_t>(blocksize)), num_blocks, blocksize, stride};
 ./test/unit/communication/test_comm_sender.cpp:37:  std::vector<double> send_buf(static_cast<std::size_t>(size), rank);
 ./test/unit/communication/test_communicator_grid.cpp:215:  const std::vector<std::size_t> test_npipelines{1, 3, 10};
-./test/unit/init/test_init.cpp:92:  const std::size_t default_val = default_cfg.num_hp_gpu_streams_per_thread;
+./test/unit/init/test_init.cpp:93:  const std::size_t default_val = default_cfg.num_hp_gpu_streams_per_thread;
 ./test/unit/matrix/test_tile.cpp:389:                                  const std::vector<SubTileSpec>& specs, std::size_t last_dep,
 ./test/unit/permutations/test_permutations_distributed.cpp:75:  const std::size_t nperms = to_sizet(i_end - i_begin);
-Include <utility> for \bstd::swap\b:
-./include/dlaf/common/index2d.h:107:    std::swap(row_, col_);
-./include/dlaf/util_math.h:47:    std::swap(small, big);
-./miniapp/kernel/miniapp_laset.cpp:57:    std::swap(m, n);
 Include <tuple> for \bstd::(forward_as_|make_|)tuple\b:
-./include/dlaf/eigensolver/tridiag_solver/impl.h:46:    std::vector<std::tuple<SizeType, SizeType, SizeType>>& indices) {
+./include/dlaf/eigensolver/tridiag_solver/impl.h:47:    std::vector<std::tuple<SizeType, SizeType, SizeType>>& indices) {
 ./include/dlaf/permutations/general/impl.h:159:      return std::tuple(std::move(splits), std::move(index_tile_futs), std::move(mat_in_tiles),
 ./src/c_api/utils.cpp:32:std::tuple<dlaf::matrix::Distribution, dlaf::matrix::LayoutInfo> distribution_and_layout(
 ./src/c_api/utils.h:15:std::tuple<dlaf::matrix::Distribution, dlaf::matrix::LayoutInfo> distribution_and_layout(
@@ -77,38 +68,21 @@ Include <tuple> for \bstd::(forward_as_|make_|)tuple\b:
 ./test/unit/test_blas_tile.cpp:47:std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, SizeType>> gemm_sizes = {
 ./test/unit/test_blas_tile_extensions.cpp:37:std::vector<std::tuple<SizeType, SizeType, SizeType>> scal_sizes = {
 ./test/unit/test_lapack_tile.cpp:55:std::vector<std::tuple<SizeType, SizeType, SizeType>> hegst_sizes = {
-Include <utility> for \bstd::make_pair\b:
-./include/dlaf/communication/broadcast_panel.h:42:  return std::make_pair(idx_cross, rank_owner);
-./include/dlaf/eigensolver/tridiag_solver/tile_collector.h:44:    return std::make_pair(begin, size);
-./test/include/dlaf_c_test/c_api_helpers.h:81:  return std::make_pair(local_ptr, lld);
 Include <iostream> for \bstd::(cin|cout|cerr|clog)\b:
 ./include/dlaf/matrix/print_csv.h:33:void print(format::csv, const Tile<const T, Device::CPU>& tile, std::ostream& os = std::cout) {
 ./include/dlaf/matrix/print_numpy.h:69:void print(format::numpy, const Tile<const T, Device::CPU>& tile, std::ostream& os = std::cout) {
 ./include/dlaf/memory/memory_chunk.h:70:      std::cout
-./miniapp/kernel/miniapp_laset.cpp:107:      std::cout << "[" << run_index << "]"
+./miniapp/kernel/miniapp_laset.cpp:108:      std::cout << "[" << run_index << "]"
 ./src/c_api/grid.cpp:63:    std::cerr << "Grid layout must be row major or column major." << std::endl;
 ./test/include/dlaf_test/matrix/util_matrix_local.h:140:           std::ostream& os = std::cout) {
 ./test/unit/common/test_data_descriptor.cpp:79:      std::cout << "Unknown memory type" << std::endl;
 Include <atomic> for \bstd::atomic\b:
 ./test/include/dlaf_test/matrix/util_tile.h:49:      : ready(std::make_shared<std::atomic<bool>>(false)),
-Include <utility> for \bstd::forward\b:
-./include/dlaf/common/callable_object.h:29:    auto operator()(Ts&&... ts) const noexcept(noexcept((fname) (std::forward<Ts>(ts)...))) \
-./include/dlaf/communication/sync/basic.h:30:  auto message = make_message(common::make_data(std::forward<DataIn>(data)));
-./include/dlaf/eigensolver/gen_to_std/impl.h:39:      dlaf::internal::whenAllLift(1, blas::Uplo::Lower, std::forward<AKKSender>(a_kk),
-./include/dlaf/factorization/cholesky/impl.h:41:      dlaf::internal::whenAllLift(blas::Uplo::Lower, std::forward<MatrixTileSender>(matrix_tile)) |
-./include/dlaf/multiplication/hermitian/impl.h:39:                                  std::forward<ASender>(a_tile), std::forward<BSender>(b_tile), beta,
-./include/dlaf/multiplication/triangular/impl.h:40:                                  std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-./include/dlaf/solver/triangular/impl.h:43:                                  std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-./miniapp/include/dlaf/miniapp/kernel_runner.h:87:    return runInternal(std::forward<F>(kernel_task), streams_);
-./test/include/dlaf_test/blas/invoke.h:34:    f(std::forward<Args>(args)...);
-./test/include/dlaf_test/lapack/invoke.h:34:    f(std::forward<Args>(args)...);
-./test/unit/communication/test_comm_p2p.cpp:60:                               std::forward<SenderTile>(tile)) |
-./test/unit/init/test_init.cpp:47:      init_ = std::make_unique<dlaf::ScopedInitializer>(std::forward<Args>(args)...);
 Include <vector> for \bstd::vector\b:
 ./include/dlaf/auxiliary/norm/mc.h:80:  auto max_element = [](std::vector<NormT>&& values) {
 ./include/dlaf/eigensolver/band_to_tridiag/mc.h:696:  using TileVector = std::vector<matrix::Tile<T, Device::CPU>>;
 ./include/dlaf/eigensolver/bt_band_to_tridiag/impl.h:108:  std::vector<T> taus;
-./include/dlaf/eigensolver/tridiag_solver/impl.h:46:    std::vector<std::tuple<SizeType, SizeType, SizeType>>& indices) {
+./include/dlaf/eigensolver/tridiag_solver/impl.h:47:    std::vector<std::tuple<SizeType, SizeType, SizeType>>& indices) {
 ./include/dlaf/eigensolver/tridiag_solver/merge.h:224:  std::vector<ex::unique_any_sender<T>> tiles_max;
 ./include/dlaf/eigensolver/tridiag_solver/rot.h:266:                         mb](std::vector<GivensRotation<T>> rots, std::vector<matrix::Tile<T, D>> tiles,
 ./include/dlaf/matrix/tile.h:540:std::vector<ReadOnlyTileSender<T, D>> splitTile(ReadOnlyTileSender<T, D> tile,
@@ -161,4 +135,4 @@ Include <type_traits> for \bstd::is_same\b:
 ./test/unit/test_util_math.cpp:34:  EXPECT_TRUE((std::is_same<int, decltype(util::ceilDiv(5, 3))>()));
 
 
-Found 144 violation(s)
+Found 123 violation(s)

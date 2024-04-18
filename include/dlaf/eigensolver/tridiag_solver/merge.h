@@ -11,10 +11,12 @@
 
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <functional>
 #include <numeric>
 #include <tuple>
 #include <utility>
+#include <vector>
 
 #include <pika/barrier.hpp>
 #include <pika/execution.hpp>

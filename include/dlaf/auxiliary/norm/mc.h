@@ -10,6 +10,7 @@
 #pragma once
 
 #include <utility>
+#include <vector>
 
 #include <dlaf/auxiliary/norm/api.h>
 #include <dlaf/common/range2d.h>

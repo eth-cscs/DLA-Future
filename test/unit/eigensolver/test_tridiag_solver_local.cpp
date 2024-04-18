@@ -9,6 +9,7 @@
 //
 
 #include <utility>
+#include <vector>
 
 #include <dlaf/eigensolver/tridiag_solver.h>
 #include <dlaf/eigensolver/tridiag_solver/impl.h>

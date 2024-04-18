@@ -13,7 +13,9 @@
 #include <whip.hpp>
 #endif
 
+#include <cstddef>
 #include <utility>
+#include <vector>
 
 #include <dlaf/common/assert.h>
 #include <dlaf/common/index2d.h>

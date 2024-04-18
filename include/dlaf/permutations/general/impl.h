@@ -10,8 +10,10 @@
 
 #pragma once
 
+#include <cstddef>
 #include <numeric>
 #include <utility>
+#include <vector>
 
 #include <mpi.h>
 

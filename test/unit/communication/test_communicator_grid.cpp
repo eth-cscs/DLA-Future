@@ -9,7 +9,9 @@
 //
 
 #include <array>
+#include <cstddef>
 #include <set>
+#include <vector>
 
 #include <mpi.h>
 

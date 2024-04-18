@@ -10,7 +10,9 @@
 
 #pragma once
 
+#include <cstddef>
 #include <type_traits>
+#include <vector>
 
 #include <dlaf/common/range2d.h>
 #include <dlaf/matrix/layout_info.h>

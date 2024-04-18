@@ -10,6 +10,9 @@
 
 #pragma once
 
+#include <cstddef>
+#include <vector>
+
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/communication/error.h>
 

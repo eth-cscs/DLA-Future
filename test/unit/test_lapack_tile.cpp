@@ -9,6 +9,7 @@
 //
 #include <cmath>
 #include <utility>
+#include <vector>
 
 #include <dlaf/lapack/tile.h>
 

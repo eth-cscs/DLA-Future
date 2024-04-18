@@ -2,132 +2,42 @@
 
 Include <optional> for \bstd::nullopt\b:
 ./include/dlaf/common/pipeline.h:49:      : pipeline(std::exchange(other.pipeline, std::nullopt)),
-./include/dlaf/util_matrix.h:342:                              std::optional<SizeType> band_size = std::nullopt) {
+./include/dlaf/util_matrix.h:343:                              std::optional<SizeType> band_size = std::nullopt) {
 Include <type_traits> for \bstd::is_floating_point\b:
 ./include/dlaf/types.h:145:struct IsFloatingPointOrComplex : std::is_floating_point<T> {};
 Include <exception> for \bstd::terminate\b:
-./include/dlaf/memory/memory_chunk.h:72:      std::terminate();
+./include/dlaf/memory/memory_chunk.h:73:      std::terminate();
 ./src/c_api/utils.cpp:63:    std::terminate();
-Include <cstddef> for \bstd::size_t\b:
-./include/dlaf/common/data_descriptor.h:142:template <class T, std::size_t N>
-./include/dlaf/common/round_robin.h:27:  RoundRobin(std::size_t n, Args... args) {
-./include/dlaf/communication/communicator_grid.h:41:                   std::size_t npipelines = getTuneParameters().communicator_grid_num_pipelines);
-./include/dlaf/eigensolver/band_to_tridiag/mc.h:1155:    constexpr std::size_t n_workspaces = 4;
-./include/dlaf/eigensolver/bt_band_to_tridiag/impl.h:509:  HHManager(const SizeType b, const std::size_t, matrix::Distribution, matrix::Distribution) : b(b) {}
-./include/dlaf/eigensolver/bt_reduction_to_band/impl.h:155:  constexpr std::size_t n_workspaces = 2;
-./include/dlaf/eigensolver/gen_to_std/impl.h:295:  constexpr std::size_t n_workspaces = 2;
-./include/dlaf/eigensolver/internal/get_red2band_panel_nworkers.h:23:  const std::size_t available_workers = pika::resource::get_thread_pool("default").get_os_thread_count();
-./include/dlaf/eigensolver/internal/get_tridiag_rank1_nworkers.h:21:inline std::size_t getTridiagRank1NWorkers() noexcept {
-./include/dlaf/eigensolver/tridiag_solver/merge.h:269:inline std::size_t ev_sort_order(const ColType coltype) {
-./include/dlaf/eigensolver/tridiag_solver/rot.h:290:        const std::size_t linear_tile_col = to_sizet(dist_sub.localTileLinearIndex(tile_col));
-./include/dlaf/factorization/cholesky/impl.h:198:  constexpr std::size_t n_workspaces = 2;
-./include/dlaf/init.h:37:  std::size_t num_np_gpu_streams_per_thread = 3;
-./include/dlaf/matrix/copy_tile.h:83:    const std::size_t m = to_sizet(source.size().rows());
-./include/dlaf/matrix/hdf5.h:42:  static constexpr std::size_t dims = 1;
-./include/dlaf/matrix/matrix.h:386:  for (std::size_t i = 0; i < n; ++i) {
-./include/dlaf/memory/memory_chunk.h:27:void initializeUmpireHostAllocator(std::size_t initial_bytes);
-./include/dlaf/multiplication/general/impl.h:89:  constexpr std::size_t n_workspaces = 2;
-./include/dlaf/multiplication/hermitian/impl.h:115:  constexpr std::size_t n_workspaces = 2;
-./include/dlaf/multiplication/triangular/impl.h:417:  constexpr std::size_t n_workspaces = 2;
-./include/dlaf/permutations/general/impl.h:104:  for (std::size_t i_split = 0; i_split < splits.size() - 1; ++i_split) {
-./include/dlaf/solver/triangular/impl.h:495:  constexpr std::size_t n_workspaces = 2;
-./include/dlaf/tune.h:81:    red2band_panel_nworkers = std::max<std::size_t>(1, default_pool_thread_count / 2);
-./include/dlaf/util_matrix.h:155:  getter_random(SizeType seed) : random_engine_(static_cast<std::size_t>(seed)) {
-./miniapp/include/dlaf/miniapp/options.h:164:    for (std::size_t i = 0; i < valid_values.size(); ++i) {
-./src/communication/communicator_grid.cpp:19:                                   common::Ordering ordering, std::size_t npipelines) {
-./src/init.cpp:69:void initializeGpuPool(int device, std::size_t num_np_streams, std::size_t num_hp_streams) {
-./src/memory/memory_chunk.cpp:37:void initializeUmpireHostAllocator(std::size_t initial_bytes) {
-./test/include/dlaf_test/comm_grids/grids_6_ranks.h:80:      const std::size_t ncommunicator_pipelines = 3;
-./test/include/dlaf_test/matrix/matrix_local.h:123:  std::size_t tileLinearIndex(const GlobalTileIndex& index) const noexcept {
-./test/include/dlaf_test/matrix/util_matrix_local.h:54:  const auto linear_size = static_cast<std::size_t>(source.size().rows() * source.size().cols());
-./test/include/dlaf_test/matrix/util_matrix_senders.h:39:  result.reserve(static_cast<std::size_t>(dist.localNrTiles().linear_size()));
-./test/src/gtest_mpi_listener.cpp:89:          return last_test_part_results_[static_cast<std::size_t>(index)];
-./test/unit/common/test_data_descriptor.cpp:46:    return {std::make_unique<T[]>(static_cast<std::size_t>(blocksize)), num_blocks, blocksize, stride};
-./test/unit/communication/test_comm_sender.cpp:37:  std::vector<double> send_buf(static_cast<std::size_t>(size), rank);
-./test/unit/communication/test_communicator_grid.cpp:215:  const std::vector<std::size_t> test_npipelines{1, 3, 10};
-./test/unit/init/test_init.cpp:93:  const std::size_t default_val = default_cfg.num_hp_gpu_streams_per_thread;
-./test/unit/matrix/test_tile.cpp:389:                                  const std::vector<SubTileSpec>& specs, std::size_t last_dep,
-./test/unit/permutations/test_permutations_distributed.cpp:75:  const std::size_t nperms = to_sizet(i_end - i_begin);
 Include <tuple> for \bstd::(forward_as_|make_|)tuple\b:
-./include/dlaf/eigensolver/tridiag_solver/impl.h:47:    std::vector<std::tuple<SizeType, SizeType, SizeType>>& indices) {
-./include/dlaf/permutations/general/impl.h:159:      return std::tuple(std::move(splits), std::move(index_tile_futs), std::move(mat_in_tiles),
+./include/dlaf/eigensolver/tridiag_solver/impl.h:48:    std::vector<std::tuple<SizeType, SizeType, SizeType>>& indices) {
+./include/dlaf/permutations/general/impl.h:161:      return std::tuple(std::move(splits), std::move(index_tile_futs), std::move(mat_in_tiles),
 ./src/c_api/utils.cpp:32:std::tuple<dlaf::matrix::Distribution, dlaf::matrix::LayoutInfo> distribution_and_layout(
 ./src/c_api/utils.h:15:std::tuple<dlaf::matrix::Distribution, dlaf::matrix::LayoutInfo> distribution_and_layout(
-./test/unit/eigensolver/test_tridiag_solver_distributed.cpp:50:const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
-./test/unit/eigensolver/test_tridiag_solver_local.cpp:42:  std::vector<std::tuple<SizeType, SizeType, SizeType>> expected_indices{{0, 1, 2},  {0, 2, 3},
-./test/unit/lapack/gpu/test_lacpy.cpp:32:std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> configs{
-./test/unit/matrix/test_distribution.cpp:192:std::tuple<SizeType, SizeType, SizeType> test_tile_size(const ParametersConstructor& test) {
-./test/unit/matrix/test_layout_info.cpp:20:const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, SizeType, SizeType, SizeType>>
+./test/unit/eigensolver/test_tridiag_solver_distributed.cpp:51:const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
+./test/unit/eigensolver/test_tridiag_solver_local.cpp:43:  std::vector<std::tuple<SizeType, SizeType, SizeType>> expected_indices{{0, 1, 2},  {0, 2, 3},
+./test/unit/lapack/gpu/test_lacpy.cpp:34:std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> configs{
+./test/unit/matrix/test_distribution.cpp:193:std::tuple<SizeType, SizeType, SizeType> test_tile_size(const ParametersConstructor& test) {
+./test/unit/matrix/test_layout_info.cpp:22:const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, SizeType, SizeType, SizeType>>
 ./test/unit/matrix/test_matrix.cpp:744:        return std::tuple(std::move(rosenders2a), std::move(rosenders2b), std::move(senders3));
 ./test/unit/matrix/test_matrix_hdf5.cpp:77:    return std::make_tuple(std::move(matrix), std::move(original_values));
 ./test/unit/matrix/test_retiled_matrix.cpp:49:const std::vector<std::tuple<LocalElementSize, TileElementSize, LocalTileSize>> local_sizes_tests({
-./test/unit/matrix/test_tile.cpp:45:using TileSizes = std::tuple<TileElementSize, SizeType>;
-./test/unit/multiplication/test_multiplication_general.cpp:292:const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
-./test/unit/permutations/test_permutations_distributed.cpp:49:using testcase_t = std::tuple<SizeType, SizeType, SizeType, SizeType, std::vector<SizeType>>;
-./test/unit/permutations/test_permutations_local.cpp:88:const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
-./test/unit/test_blas_tile.cpp:47:std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, SizeType>> gemm_sizes = {
-./test/unit/test_blas_tile_extensions.cpp:37:std::vector<std::tuple<SizeType, SizeType, SizeType>> scal_sizes = {
-./test/unit/test_lapack_tile.cpp:55:std::vector<std::tuple<SizeType, SizeType, SizeType>> hegst_sizes = {
+./test/unit/matrix/test_tile.cpp:47:using TileSizes = std::tuple<TileElementSize, SizeType>;
+./test/unit/multiplication/test_multiplication_general.cpp:294:const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
+./test/unit/permutations/test_permutations_distributed.cpp:51:using testcase_t = std::tuple<SizeType, SizeType, SizeType, SizeType, std::vector<SizeType>>;
+./test/unit/permutations/test_permutations_local.cpp:90:const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
+./test/unit/test_blas_tile.cpp:49:std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, SizeType>> gemm_sizes = {
+./test/unit/test_blas_tile_extensions.cpp:39:std::vector<std::tuple<SizeType, SizeType, SizeType>> scal_sizes = {
+./test/unit/test_lapack_tile.cpp:56:std::vector<std::tuple<SizeType, SizeType, SizeType>> hegst_sizes = {
 Include <iostream> for \bstd::(cin|cout|cerr|clog)\b:
 ./include/dlaf/matrix/print_csv.h:36:void print(format::csv, const Tile<const T, Device::CPU>& tile, std::ostream& os = std::cout) {
 ./include/dlaf/matrix/print_numpy.h:69:void print(format::numpy, const Tile<const T, Device::CPU>& tile, std::ostream& os = std::cout) {
-./include/dlaf/memory/memory_chunk.h:70:      std::cout
+./include/dlaf/memory/memory_chunk.h:71:      std::cout
 ./miniapp/kernel/miniapp_laset.cpp:108:      std::cout << "[" << run_index << "]"
 ./src/c_api/grid.cpp:63:    std::cerr << "Grid layout must be row major or column major." << std::endl;
-./test/include/dlaf_test/matrix/util_matrix_local.h:140:           std::ostream& os = std::cout) {
-./test/unit/common/test_data_descriptor.cpp:79:      std::cout << "Unknown memory type" << std::endl;
+./test/include/dlaf_test/matrix/util_matrix_local.h:141:           std::ostream& os = std::cout) {
+./test/unit/common/test_data_descriptor.cpp:81:      std::cout << "Unknown memory type" << std::endl;
 Include <atomic> for \bstd::atomic\b:
 ./test/include/dlaf_test/matrix/util_tile.h:49:      : ready(std::make_shared<std::atomic<bool>>(false)),
-Include <vector> for \bstd::vector\b:
-./include/dlaf/auxiliary/norm/mc.h:80:  auto max_element = [](std::vector<NormT>&& values) {
-./include/dlaf/eigensolver/band_to_tridiag/mc.h:696:  using TileVector = std::vector<matrix::Tile<T, Device::CPU>>;
-./include/dlaf/eigensolver/bt_band_to_tridiag/impl.h:108:  std::vector<T> taus;
-./include/dlaf/eigensolver/tridiag_solver/impl.h:47:    std::vector<std::tuple<SizeType, SizeType, SizeType>>& indices) {
-./include/dlaf/eigensolver/tridiag_solver/merge.h:224:  std::vector<ex::unique_any_sender<T>> tiles_max;
-./include/dlaf/eigensolver/tridiag_solver/rot.h:266:                         mb](std::vector<GivensRotation<T>> rots, std::vector<matrix::Tile<T, D>> tiles,
-./include/dlaf/matrix/tile.h:540:std::vector<ReadOnlyTileSender<T, D>> splitTile(ReadOnlyTileSender<T, D> tile,
-./include/dlaf/permutations/general/impl.h:98:    const SizeType i_perm, const std::vector<SizeType>& splits, const GlobalElementIndex out_begin,
-./miniapp/include/dlaf/miniapp/options.h:155:                   const std::vector<char>& valid_values) {
-./src/permutations/general/perms.cu:40:                             const std::vector<matrix::Tile<T, Device::GPU>>& tiles) {
-./test/include/dlaf_test/comm_grids/grids_6_ranks.h:21:std::vector<comm::CommunicatorGrid> comm_grids;
-./test/include/dlaf_test/matrix/matrix_local.h:134:  std::vector<Tile<T, Device::CPU>> tiles_;
-./test/src/gtest_mpi_listener.cpp:185:  std::vector<char> message_buffer(static_cast<std::size_t>(message_length));
-./test/unit/auxiliary/mc/test_norm.cpp:44:const std::vector<lapack::Norm> lapack_norms({lapack::Norm::Fro, lapack::Norm::Inf, lapack::Norm::Max,
-./test/unit/c_api/eigensolver/test_eigensolver_c_api.cpp:58:const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
-./test/unit/c_api/eigensolver/test_gen_eigensolver_c_api.cpp:56:const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
-./test/unit/c_api/factorization/test_cholesky_c_api.cpp:52:const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
-./test/unit/common/test_data_descriptor.cpp:701:  std::vector<memory_data<TypeParam>> memory_types;
-./test/unit/communication/test_broadcast_panel.cpp:50:std::vector<config_t> test_params{
-./test/unit/communication/test_communicator_grid.cpp:215:  const std::vector<std::size_t> test_npipelines{1, 3, 10};
-./test/unit/eigensolver/test_band_to_tridiag.cpp:50:const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
-./test/unit/eigensolver/test_bt_band_to_tridiag.cpp:253:std::vector<config_t> configs{
-./test/unit/eigensolver/test_eigensolver.cpp:61:const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
-./test/unit/eigensolver/test_gen_eigensolver.cpp:61:const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
-./test/unit/eigensolver/test_gen_to_std.cpp:51:const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
-./test/unit/eigensolver/test_reduction_to_band.cpp:82:std::vector<config_t> configs{
-./test/unit/eigensolver/test_tridiag_solver_distributed.cpp:50:const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
-./test/unit/eigensolver/test_tridiag_solver_local.cpp:42:  std::vector<std::tuple<SizeType, SizeType, SizeType>> expected_indices{{0, 1, 2},  {0, 2, 3},
-./test/unit/eigensolver/test_tridiag_solver_merge.cpp:71:  std::vector<SizeType> vec_arr{7, 2, 4, 8, 12, 1, 17, 32, 9, 6};
-./test/unit/eigensolver/test_tridiag_solver_rot.cpp:50:    std::vector<GRot> rots;
-./test/unit/factorization/test_cholesky.cpp:51:const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
-./test/unit/factorization/test_compute_t_factor.cpp:207:std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, GlobalElementIndex>> configs{
-./test/unit/lapack/gpu/test_lacpy.cpp:32:std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> configs{
-./test/unit/matrix/test_distribution.cpp:38:const std::vector<ParametersConstructor> tests_constructor = {
-./test/unit/matrix/test_distribution_extensions.cpp:42:const std::vector<ParametersIndices> tests_indices = {
-./test/unit/matrix/test_layout_info.cpp:20:const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, SizeType, SizeType, SizeType>>
-./test/unit/matrix/test_tile.cpp:36:const std::vector<SizeType> sizes({0, 1, 13, 32});
-./test/unit/matrix/test_util_distribution.cpp:40:  std::vector<Parameters> tests = {
-./test/unit/matrix/test_views.cpp:53:const std::vector<config_t> configs{
-./test/unit/multiplication/test_multiplication_general.cpp:223:std::vector<GemmConfig> gemm_configs = {
-./test/unit/multiplication/test_multiplication_hermitian.cpp:53:const std::vector<blas::Side> blas_sides({blas::Side::Left, blas::Side::Right});
-./test/unit/multiplication/test_multiplication_triangular.cpp:53:const std::vector<blas::Side> blas_sides({blas::Side::Left, blas::Side::Right});
-./test/unit/permutations/test_permutations_distributed.cpp:49:using testcase_t = std::tuple<SizeType, SizeType, SizeType, SizeType, std::vector<SizeType>>;
-./test/unit/permutations/test_permutations_local.cpp:88:const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
-./test/unit/solver/test_triangular.cpp:53:const std::vector<blas::Side> blas_sides({blas::Side::Left, blas::Side::Right});
-./test/unit/test_blas_tile.cpp:26:const std::vector<blas::Diag> blas_diags({blas::Diag::Unit, blas::Diag::NonUnit});
-./test/unit/test_blas_tile_extensions.cpp:37:std::vector<std::tuple<SizeType, SizeType, SizeType>> scal_sizes = {
-./test/unit/test_lapack_tile.cpp:29:const std::vector<blas::Diag> blas_diags({blas::Diag::Unit, blas::Diag::NonUnit});
-./test/unit/test_util_math.cpp:232:  std::vector<SizeType> splits = util::interleaveSplits(l, b, o1, o2);
 
 
-Found 120 violation(s)
+Found 32 violation(s)

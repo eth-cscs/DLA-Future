@@ -11,6 +11,7 @@
 #include <complex>
 #include <tuple>
 #include <utility>
+#include <vector>
 
 #include <blas/util.hh>
 

@@ -10,6 +10,7 @@
 
 #include <limits>
 #include <utility>
+#include <vector>
 
 #include <dlaf/auxiliary/norm.h>
 #include <dlaf/communication/communicator_grid.h>

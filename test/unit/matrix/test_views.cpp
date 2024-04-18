@@ -10,6 +10,7 @@
 
 #include <list>
 #include <sstream>
+#include <vector>
 
 #include <dlaf/common/index2d.h>
 #include <dlaf/communication/communicator_grid.h>

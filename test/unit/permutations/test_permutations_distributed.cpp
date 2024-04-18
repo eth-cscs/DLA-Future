@@ -9,7 +9,9 @@
 //
 
 #include <algorithm>
+#include <cstddef>
 #include <utility>
+#include <vector>
 
 #include <pika/init.hpp>
 

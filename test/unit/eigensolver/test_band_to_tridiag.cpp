@@ -13,6 +13,7 @@
 #include <sstream>
 #include <tuple>
 #include <utility>
+#include <vector>
 
 #include <dlaf/common/single_threaded_blas.h>
 #include <dlaf/eigensolver/band_to_tridiag.h>

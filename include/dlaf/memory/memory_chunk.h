@@ -12,6 +12,7 @@
 
 /// @file
 
+#include <cstddef>
 #include <cstdlib>
 #include <memory>
 

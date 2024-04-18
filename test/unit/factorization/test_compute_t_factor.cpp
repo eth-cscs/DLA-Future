@@ -10,6 +10,7 @@
 
 #include <tuple>
 #include <utility>
+#include <vector>
 
 #include <blas.hh>
 

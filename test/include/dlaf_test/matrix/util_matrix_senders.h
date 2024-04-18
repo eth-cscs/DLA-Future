@@ -12,6 +12,7 @@
 
 /// @file
 
+#include <cstddef>
 #include <sstream>
 #include <utility>
 #include <vector>

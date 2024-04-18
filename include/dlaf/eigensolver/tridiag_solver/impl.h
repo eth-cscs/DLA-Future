@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <utility>
+#include <vector>
 
 #include <pika/execution.hpp>
 #include <pika/thread.hpp>

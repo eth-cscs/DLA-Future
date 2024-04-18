@@ -12,11 +12,13 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstddef>
 #include <exception>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <type_traits>
+#include <vector>
 
 #include <blas.hh>
 

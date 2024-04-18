@@ -11,6 +11,7 @@
 #include <functional>
 #include <tuple>
 #include <utility>
+#include <vector>
 
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/eigensolver/eigensolver.h>

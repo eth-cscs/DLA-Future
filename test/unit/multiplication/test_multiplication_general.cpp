@@ -1,3 +1,4 @@
+
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
@@ -9,6 +10,7 @@
 //
 
 #include <utility>
+#include <vector>
 
 #include <pika/init.hpp>
 

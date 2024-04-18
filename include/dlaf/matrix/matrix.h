@@ -12,6 +12,7 @@
 
 /// @file
 
+#include <cstddef>
 #include <exception>
 #include <utility>
 #include <vector>

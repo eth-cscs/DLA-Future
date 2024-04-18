@@ -11,6 +11,7 @@
 #include <array>
 #include <stdexcept>
 #include <utility>
+#include <vector>
 
 #include <dlaf/matrix/distribution.h>
 

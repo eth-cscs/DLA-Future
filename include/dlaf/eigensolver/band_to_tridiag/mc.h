@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <atomic>
+
 #include <pika/execution.hpp>
 #include <pika/semaphore.hpp>
 
@@ -1036,8 +1038,8 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   DLAF_ASSERT(grid.size() != comm::Size2D(1, 1), grid);
 
 #ifdef DLAF_WITH_HDF5
-  static size_t num_b2t_calls = 0;
-  std::string fname = "band_to_tridiag-" + std::to_string(num_b2t_calls) + ".h5";
+  static std::atomic<size_t> num_b2t_calls = 0;
+  std::string fname = "band_to_tridiag-" + matrix::internal::TypeToString<T>::value + "-" + std::to_string(num_b2t_calls) + ".h5";
   std::optional<matrix::internal::FileHDF5> file;
 
   if (getTuneParameters().debug_dump_band_to_tridiagonal_data) {

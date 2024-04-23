@@ -53,6 +53,32 @@ const H5::PredType& hdf5_datatype<std::complex<T>>::type = hdf5_datatype<T>::typ
 template <class T>
 struct hdf5_datatype<const T> : public hdf5_datatype<T> {};
 
+// Type to string mappings
+template<typename T>
+struct TypeToString {
+  static inline const std::string value = typeid(T).name();
+};
+
+template<>
+struct TypeToString<float> {
+  static inline const std::string value = "s";
+};
+
+template<>
+struct TypeToString<double> {
+  static inline const std::string value = "d";
+};
+
+template<>
+struct TypeToString<std::complex<float>> {
+  static inline const std::string value = "c";
+};
+
+template<>
+struct TypeToString<std::complex<double>> {
+  static inline const std::string value = "z";
+};
+
 // Helper function that for each local tile index in @p dist, gets a sender of a tile with
 // @p get_tile and sends it to a function that takes care of the mapping between file and memory.
 // Then, this function, passes all required arguments to @p dataset_op which should be either

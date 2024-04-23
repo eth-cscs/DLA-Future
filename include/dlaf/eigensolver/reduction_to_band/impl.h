@@ -9,6 +9,7 @@
 //
 #pragma once
 
+#include <atomic>
 #include <cmath>
 #include <cstddef>
 #include <vector>
@@ -1131,8 +1132,8 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
   auto mpi_col_chain_panel = grid.col_communicator_pipeline();
 
 #ifdef DLAF_WITH_HDF5
-  static size_t num_reduction_to_band_calls = 0;
-  std::string fname = "reduction_to_band-" + std::to_string(num_reduction_to_band_calls) + ".h5";
+  static std::atomic<size_t> num_reduction_to_band_calls = 0;
+  std::string fname = "reduction_to_band-" + matrix::internal::TypeToString<T>::value + "-" + std::to_string(num_reduction_to_band_calls) + ".h5";
   std::optional<matrix::internal::FileHDF5> file;
 
   if (getTuneParameters().debug_dump_reduction_to_band_data) {

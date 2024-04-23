@@ -47,7 +47,7 @@ upload_reports:
 "
 JOB_TEMPLATE="
 
-{{CATEGORY_LABEL}}_{{RANK_LABEL}}:
+{{CATEGORY_LABEL_NOPREFIX}}_{{RANK_LABEL}}:
   stage: test
   extends: .daint
   variables:
@@ -85,7 +85,7 @@ variables:
 "
 
 JOB_TEMPLATE="
-{{CATEGORY_LABEL}}_{{RANK_LABEL}}:
+{{CATEGORY_LABEL_NOPREFIX}}_{{RANK_LABEL}}:
   stage: test
   extends: .daint
   variables:
@@ -113,7 +113,9 @@ for rank_label in `ctest --print-labels | egrep -o "RANK_[1-9][0-9]?"`; do
             continue
         fi
 
-        JOB=`echo "$JOB_TEMPLATE" | sed "s|{{CATEGORY_LABEL}}|$category_label|g" \
+        category_label_noprefix=`echo "$category_label" | sed "s/CATEGORY_//"`
+        JOB=`echo "$JOB_TEMPLATE" | sed "s|{{CATEGORY_LABEL_NOPREFIX}}|$category_label_noprefix|g" \
+                                  | sed "s|{{CATEGORY_LABEL}}|$category_label|g" \
                                   | sed "s|{{RANK_LABEL}}|$rank_label|g" \
                                   | sed "s|{{NTASKS}}|$N|g" \
                                   | sed "s|{{CPUS_PER_TASK}}|$C|g"`

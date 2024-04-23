@@ -25,23 +25,19 @@ namespace dlaf {
 /// - debug_dump_eigensolver_data:
 ///     Enable dump of eigensolver input/output data to "eigensolver.h5" file that will be created in the
 ///     working folder (it should not exist before the execution).
-///     WARNING: just a single execution can be dumped on disk, and any subsequent call fails.
 ///     Set with environment variable DLAF_DEBUG_DUMP_EIGENSOLVER_DATA.
 /// - debug_dump_reduction_to_band_data:
 ///     Enable dump of reduction_to_band input/output data to "reduction_to_band.h5" file that will be
 ///     created in the working folder (it should not exist before the execution).
-///     WARNING: just a single execution can be dumped on disk, and any subsequent call fails. Set with
 ///    environment variable
 ///     DLAF_DEBUG_DUMP_EIGENSOLVER_DATA.
 /// - debug_dump_band_to_tridiagonal_data:
 ///     Enable dump of band_to_trigiagonal input/output data to "band_to_tridiagonal.h5" file that will
 ///     be created in the working folder (it should not exist before the execution).
-///     WARNING: just a single execution can be dumped on disk, and any subsequent call fails. Set with
 ///     environment variable DLAF_DEBUG_DUMP_BAND_TO_TRIDIAGONAL_DATA.
 /// - debug_dump_tridiag_solver_data:
 ///     Enable dump of tridiagonal solver input/output data to "tridiagonal.h5" file that will before
 ///     created in the working folder (it should not exist before the execution).
-///     WARNING: just a single execution can be dumped on disk, and any subsequent call fails.
 ///     Set with environment variable DLAF_DEBUG_DUMP_TRIDIAG_SOLVER_DATA.
 /// - red2band_panel_nworkers:
 ///     The maximum number of threads to use for computing the panel in the reduction to band algorithm.

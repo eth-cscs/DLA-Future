@@ -43,10 +43,7 @@ void test_transform_mpi() {
 
   auto send = just(send_buf.data(), size, dtype, send_rank, tag, comm) | transformMPI(MPI_Isend);
   auto recv = just(recv_buf.data(), size, dtype, recv_rank, tag, comm) | transformMPI(MPI_Irecv);
-  sync_wait(when_all(std::move(send), std::move(recv)) | then([](int e1, int e2) {
-              DLAF_MPI_CHECK_ERROR(e1);
-              DLAF_MPI_CHECK_ERROR(e2);
-            }));
+  sync_wait(when_all(std::move(send), std::move(recv)) | then([]() {}));
 
   std::vector<double> expected_recv_buf(static_cast<std::size_t>(size), recv_rank);
 
@@ -65,8 +62,7 @@ TEST(Bcast, Polling) {
   double val = (comm.rank() == root_rank) ? 4.2 : 1.2;
   std::vector<double> buf(static_cast<std::size_t>(size), val);
 
-  sync_wait(just(buf.data(), size, dtype, root_rank, comm) | transformMPI(MPI_Ibcast) |
-            then([](int e) { DLAF_MPI_CHECK_ERROR(e); }));
+  sync_wait(just(buf.data(), size, dtype, root_rank, comm) | transformMPI(MPI_Ibcast) | then([]() {}));
 
   std::vector<double> expected_buf(static_cast<std::size_t>(size), 4.2);
   ASSERT_TRUE(expected_buf == buf);

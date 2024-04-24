@@ -64,11 +64,7 @@ TEST_F(TransformMPITest, PromiseGuardManagement) {
 
     int message;
     whenAllLift(&message, 1, MPI_INT, 1, 0, chain.exclusive()) | transformMPI(MPI_Irecv) |
-        ex::then([&sent_guard](auto mpi_err_code) {
-          EXPECT_EQ(MPI_SUCCESS, mpi_err_code);
-          sent_guard = true;
-        }) |
-        ex::ensure_started();
+        ex::then([&sent_guard](/*auto mpi_err_code*/) { sent_guard = true; }) | ex::ensure_started();
 
     // Note:
     // At this point IRecv is (getting) posted but it won't complete until this Rank 0 will trigger

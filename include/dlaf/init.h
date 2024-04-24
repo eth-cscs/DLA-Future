@@ -41,7 +41,6 @@ struct configuration {
   std::size_t num_gpu_lapack_handles = 16;
   std::size_t umpire_host_memory_pool_initial_bytes = 1 << 30;
   std::size_t umpire_device_memory_pool_initial_bytes = 1 << 30;
-  std::string mpi_pool = "mpi";
 };
 
 std::ostream& operator<<(std::ostream& os, const configuration& cfg);

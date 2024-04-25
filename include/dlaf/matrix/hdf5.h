@@ -54,7 +54,7 @@ template <class T>
 struct hdf5_datatype<const T> : public hdf5_datatype<T> {};
 
 // Type to string mappings
-template<typename T>
+template <typename T>
 struct TypeToString {
   static inline constexpr std::string_view value = typeid(T).name();
 };
@@ -62,22 +62,22 @@ struct TypeToString {
 template <typename T>
 inline constexpr std::string_view TypeToString_v = TypeToString<T>::value;
 
-template<>
+template <>
 struct TypeToString<float> {
   static inline constexpr std::string_view value = "s";
 };
 
-template<>
+template <>
 struct TypeToString<double> {
   static inline constexpr std::string value = "d";
 };
 
-template<>
+template <>
 struct TypeToString<std::complex<float>> {
   static inline constexpr std::string_view value = "c";
 };
 
-template<>
+template <>
 struct TypeToString<std::complex<double>> {
   static inline constexpr std::string_view value = "z";
 };

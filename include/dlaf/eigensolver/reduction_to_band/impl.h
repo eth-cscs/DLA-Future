@@ -1135,7 +1135,8 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
 #ifdef DLAF_WITH_HDF5
   static std::atomic<size_t> num_reduction_to_band_calls = 0;
   std::stringstream fname;
-  fname << "reduction_to_band-" << matrix::internal::TypeToString<T>::value << "-" << std::to_string(num_reduction_to_band_calls) << ".h5";
+  fname << "reduction_to_band-" << matrix::internal::TypeToString<T>::value << "-"
+        << std::to_string(num_reduction_to_band_calls) << ".h5";
   std::optional<matrix::internal::FileHDF5> file;
 
   if (getTuneParameters().debug_dump_reduction_to_band_data) {
@@ -1161,11 +1162,11 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
 
   if (nrefls == 0) {
 #ifdef DLAF_WITH_HDF5
-  if (getTuneParameters().debug_dump_reduction_to_band_data) {
-    file->write(mat_a, "/band");
-  }
+    if (getTuneParameters().debug_dump_reduction_to_band_data) {
+      file->write(mat_a, "/band");
+    }
 
-  num_reduction_to_band_calls++;
+    num_reduction_to_band_calls++;
 #endif
 
     return mat_taus;

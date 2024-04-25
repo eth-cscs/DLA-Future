@@ -369,7 +369,8 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device
 #ifdef DLAF_WITH_HDF5
   static std::atomic<size_t> num_tridiag_solver_calls = 0;
   std::stringstream fname;
-  fname << "tridiag_solver-" << matrix::internal::TypeToString_v<T> << std::to_string(num_tridiag_solver_calls) << ".h5";
+  fname << "tridiag_solver-"
+        << matrix::internal::TypeToString_v<T> << std::to_string(num_tridiag_solver_calls) << ".h5";
   std::optional<matrix::internal::FileHDF5> file;
 
   if (getTuneParameters().debug_dump_tridiag_solver_data) {

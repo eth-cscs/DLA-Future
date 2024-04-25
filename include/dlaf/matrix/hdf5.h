@@ -14,7 +14,7 @@
 
 #include <complex>
 #include <cstdint>
-#include <string>
+#include <string_view>
 
 #include <H5Cpp.h>
 #include <mpi.h>
@@ -69,7 +69,7 @@ struct TypeToString<float> {
 
 template <>
 struct TypeToString<double> {
-  static inline constexpr std::string value = "d";
+  static inline constexpr std::string_view value = "d";
 };
 
 template <>

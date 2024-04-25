@@ -26,7 +26,6 @@ RUN spack repo rm --scope site dlaf && \
     spack -e ci develop --no-clone -p ${SOURCE} dla-future@master && \
     spack -e ci concretize -f && \
     mkdir ${BUILD} && \
-    mkdir -p $(dirname $(spack -e ci location -b dla-future)) && \
     ln -s ${BUILD} `spack -e ci location -b dla-future` && \
     spack -e ci --config "config:flags:keep_werror:all" install --jobs ${NUM_PROCS} --keep-stage --verbose
 

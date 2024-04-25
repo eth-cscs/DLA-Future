@@ -14,6 +14,7 @@
 
 #include <complex>
 #include <cstdint>
+#include <string>
 #include <string_view>
 
 #include <H5Cpp.h>

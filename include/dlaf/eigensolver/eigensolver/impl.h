@@ -12,6 +12,7 @@
 #include <atomic>
 #include <cmath>
 #include <optional>
+#include <sstream>
 #include <vector>
 
 #include <dlaf/blas/tile.h>
@@ -63,11 +64,12 @@ void Eigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo, M
 
 #ifdef DLAF_WITH_HDF5
   static std::atomic<size_t> num_eigensolver_calls = 0;
-  std::string fname = "eigensolver-" + matrix::internal::TypeToString<T>::value + "-" + std::to_string(num_eigensolver_calls) + ".h5";
+  std::stringstream fname;
+  fname << "eigensolver-" << matrix::internal::TypeToString<T>::value << "-" << std::to_string(num_eigensolver_calls) << ".h5";
   std::optional<matrix::internal::FileHDF5> file;
 
   if (getTuneParameters().debug_dump_eigensolver_data) {
-    file = matrix::internal::FileHDF5(grid.fullCommunicator(), fname);
+    file = matrix::internal::FileHDF5(grid.fullCommunicator(), fname.str());
     file->write(mat_a, "/input");
   }
 #endif

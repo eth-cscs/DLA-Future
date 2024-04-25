@@ -56,27 +56,30 @@ struct hdf5_datatype<const T> : public hdf5_datatype<T> {};
 // Type to string mappings
 template<typename T>
 struct TypeToString {
-  static inline const std::string value = typeid(T).name();
+  static inline constexpr std::string_view value = typeid(T).name();
 };
+
+template <typename T>
+inline constexpr std::string_view TypeToString_v = TypeToString<T>::value;
 
 template<>
 struct TypeToString<float> {
-  static inline const std::string value = "s";
+  static inline constexpr std::string_view value = "s";
 };
 
 template<>
 struct TypeToString<double> {
-  static inline const std::string value = "d";
+  static inline constexpr std::string value = "d";
 };
 
 template<>
 struct TypeToString<std::complex<float>> {
-  static inline const std::string value = "c";
+  static inline constexpr std::string_view value = "c";
 };
 
 template<>
 struct TypeToString<std::complex<double>> {
-  static inline const std::string value = "z";
+  static inline constexpr std::string_view value = "z";
 };
 
 // Helper function that for each local tile index in @p dist, gets a sender of a tile with

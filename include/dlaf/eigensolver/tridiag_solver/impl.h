@@ -10,6 +10,8 @@
 #pragma once
 
 #include <algorithm>
+#include <atomic>
+#include <sstream>
 
 #include <pika/execution.hpp>
 #include <pika/thread.hpp>
@@ -365,12 +367,13 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device
     return;
 
 #ifdef DLAF_WITH_HDF5
-  static size_t num_tridiag_solver_calls = 0;
-  std::string fname = "tridiag_solver-" + std::to_string(num_tridiag_solver_calls) + ".h5";
+  static std::atomic<size_t> num_tridiag_solver_calls = 0;
+  std::stringstream fname;
+  fname << "tridiag_solver-" << matrix::internal::TypeToString_v<T> << std::to_string(num_tridiag_solver_calls) << ".h5";
   std::optional<matrix::internal::FileHDF5> file;
 
   if (getTuneParameters().debug_dump_tridiag_solver_data) {
-    file = matrix::internal::FileHDF5(grid.fullCommunicator(), fname);
+    file = matrix::internal::FileHDF5(grid.fullCommunicator(), fname.str());
     file->write(tridiag, "/input");
   }
 #endif

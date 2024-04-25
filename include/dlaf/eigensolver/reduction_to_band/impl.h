@@ -12,6 +12,7 @@
 #include <atomic>
 #include <cmath>
 #include <cstddef>
+#include <sstream>
 #include <vector>
 
 #include <pika/barrier.hpp>
@@ -1133,11 +1134,12 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
 
 #ifdef DLAF_WITH_HDF5
   static std::atomic<size_t> num_reduction_to_band_calls = 0;
-  std::string fname = "reduction_to_band-" + matrix::internal::TypeToString<T>::value + "-" + std::to_string(num_reduction_to_band_calls) + ".h5";
+  std::stringstream fname;
+  fname << "reduction_to_band-" << matrix::internal::TypeToString<T>::value << "-" << std::to_string(num_reduction_to_band_calls) << ".h5";
   std::optional<matrix::internal::FileHDF5> file;
 
   if (getTuneParameters().debug_dump_reduction_to_band_data) {
-    file = matrix::internal::FileHDF5(grid.fullCommunicator(), fname);
+    file = matrix::internal::FileHDF5(grid.fullCommunicator(), fname.str());
     file->write(mat_a, "/input");
   }
 #endif
@@ -1165,6 +1167,7 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
 
   num_reduction_to_band_calls++;
 #endif
+
     return mat_taus;
   }
 

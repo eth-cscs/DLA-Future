@@ -1041,7 +1041,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
 #ifdef DLAF_WITH_HDF5
   static std::atomic<size_t> num_b2t_calls = 0;
   std::stringstream fname;
-  fname << "band_to_tridiag-" << matrix::internal::TypeToString<T>::value << "-"
+  fname << "band_to_tridiag-" << matrix::internal::TypeToString_v<T> << "-"
         << std::to_string(num_b2t_calls) << ".h5";
   std::optional<matrix::internal::FileHDF5> file;
 

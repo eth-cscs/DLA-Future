@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <typeinfo>
 
 #include <H5Cpp.h>
 #include <mpi.h>

@@ -65,7 +65,7 @@ void Eigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo, M
 #ifdef DLAF_WITH_HDF5
   static std::atomic<size_t> num_eigensolver_calls = 0;
   std::stringstream fname;
-  fname << "eigensolver-" << matrix::internal::TypeToString<T>::value << "-"
+  fname << "eigensolver-" << matrix::internal::TypeToString_v<T> << "-"
         << std::to_string(num_eigensolver_calls) << ".h5";
   std::optional<matrix::internal::FileHDF5> file;
 

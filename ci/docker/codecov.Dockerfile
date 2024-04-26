@@ -26,11 +26,8 @@ ARG NUM_PROCS
 # Note: we force spack to build in ${BUILD} creating a link to it
 RUN spack repo rm --scope site dlaf && \
     spack repo add ${SOURCE}/spack && \
-    spack -e ci develop --no-clone -p ${SOURCE} dla-future@master && \
+    spack -e ci develop --no-clone --path ${SOURCE} --build-directory ${BUILD} dla-future@master && \
     spack -e ci concretize -f && \
-    mkdir ${BUILD} && \
-    mkdir -p $(dirname $(spack -e ci location -b dla-future)) && \
-    ln -s ${BUILD} `spack -e ci location -b dla-future` && \
     spack -e ci --config "config:flags:keep_werror:all" install --jobs ${NUM_PROCS} --keep-stage --verbose
 
 # Prune and bundle binaries

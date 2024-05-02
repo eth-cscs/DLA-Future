@@ -77,9 +77,18 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:a6fa3537c575d4ebddc48d0c4e77ddc84"><td class="memItemLeft" align="right" valign="top"><a id="a6fa3537c575d4ebddc48d0c4e77ddc84"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>debug_dump_trisolver_data</b> = false</td></tr>
-<tr class="separator:a6fa3537c575d4ebddc48d0c4e77ddc84"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a43f161a0922d7137a9727ec0c26338c3"><td class="memItemLeft" align="right" valign="top"><a id="a43f161a0922d7137a9727ec0c26338c3"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>debug_dump_eigensolver_data</b> = false</td></tr>
+<tr class="separator:a43f161a0922d7137a9727ec0c26338c3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9875bb678ef62c49b09fff2a0ad8eebf"><td class="memItemLeft" align="right" valign="top"><a id="a9875bb678ef62c49b09fff2a0ad8eebf"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>debug_dump_reduction_to_band_data</b> = false</td></tr>
+<tr class="separator:a9875bb678ef62c49b09fff2a0ad8eebf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a08d37ee0b06c9c39fa5ad3b4b7ddecb8"><td class="memItemLeft" align="right" valign="top"><a id="a08d37ee0b06c9c39fa5ad3b4b7ddecb8"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>debug_dump_band_to_tridiagonal_data</b> = false</td></tr>
+<tr class="separator:a08d37ee0b06c9c39fa5ad3b4b7ddecb8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab4d07707175a19d47e989e21c9ba97ab"><td class="memItemLeft" align="right" valign="top"><a id="ab4d07707175a19d47e989e21c9ba97ab"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>debug_dump_tridiag_solver_data</b> = false</td></tr>
+<tr class="separator:ab4d07707175a19d47e989e21c9ba97ab"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9ae21c43d98f2124d531d928f922171d"><td class="memItemLeft" align="right" valign="top"><a id="a9ae21c43d98f2124d531d928f922171d"></a>
 std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>red2band_panel_nworkers</b> = 1</td></tr>
 <tr class="separator:a9ae21c43d98f2124d531d928f922171d"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -108,7 +117,10 @@ std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>communicator_g
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>DLA-Future tuning parameters.</p>
 <p>Holds the value of the parameters that can be used to tune DLA-Future.</p><ul>
-<li>debug_dump_trisolver_data: Enable dump of trisolver input/output data to "trid-ref.h5" file that will be created in the working folder (it should not exist before the execution). WARNING: just a single execution can be dumped on disk, and any subsequent call fails. Set with environment variable DLAF_DEBUG_DUMP_TRISOLVER_DATA.</li>
+<li>debug_dump_eigensolver_data: Enable dump of eigensolver input/output data to "eigensolver.h5" file that will be created in the working folder (it should not exist before the execution). Set with environment variable DLAF_DEBUG_DUMP_EIGENSOLVER_DATA.</li>
+<li>debug_dump_reduction_to_band_data: Enable dump of reduction_to_band input/output data to "reduction_to_band.h5" file that will be created in the working folder (it should not exist before the execution). environment variable DLAF_DEBUG_DUMP_EIGENSOLVER_DATA.</li>
+<li>debug_dump_band_to_tridiagonal_data: Enable dump of band_to_trigiagonal input/output data to "band_to_tridiagonal.h5" file that will be created in the working folder (it should not exist before the execution). environment variable DLAF_DEBUG_DUMP_BAND_TO_TRIDIAGONAL_DATA.</li>
+<li>debug_dump_tridiag_solver_data: Enable dump of tridiagonal solver input/output data to "tridiagonal.h5" file that will before created in the working folder (it should not exist before the execution). Set with environment variable DLAF_DEBUG_DUMP_TRIDIAG_SOLVER_DATA.</li>
 <li>red2band_panel_nworkers: The maximum number of threads to use for computing the panel in the reduction to band algorithm. Set with &ndash;dlaf:red2band-panel-nworkers or env variable DLAF_RED2BAND_PANEL_NWORKERS.</li>
 <li>red2band_barrier_busy_wait_us: The duration in microseconds to busy-wait in barriers in the reduction to band algorithm. Set with &ndash;dlaf:red2band-barrier-busy-wait-us or env variable DLAF_RED2BAND_BARRIER_BUSY_WAIT_US.</li>
 <li>tridiag_rank1_nworkers: The maximum number of threads to use for computing rank1 problem solution in tridiagonal solver algorithm. Set with &ndash;dlaf:tridiag-rank1-nworkers or env variable DLAF_TRIDIAG_RANK1_NWORKERS.</li>

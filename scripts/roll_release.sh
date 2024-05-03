@@ -22,11 +22,18 @@ VERSION_FULL="${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
 VERSION_FULL_TAG="v${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
 VERSION_TITLE="DLA-Future ${VERSION_FULL}"
 CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-RELEASE_BRANCH="release-${VERSION_MAJOR}.${VERSION_MINOR}"
 
 if ! which hub >/dev/null 2>&1; then
     echo "Hub not installed on this system (see https://hub.github.com/). Exiting."
     exit 1
+fi
+
+# Major and minor releases are made directly from master. Patch releases are branched out from the major
+# and minor releases with a release-X.Y branch.
+if [[ "${VERSION_PATCH}" -eq 0 ]]; then
+    RELEASE_BRANCH="master"
+else
+    RELEASE_BRANCH="release-${VERSION_MAJOR}.${VERSION_MINOR}"
 fi
 
 if ! [[ "$CURRENT_BRANCH" == "$RELEASE_BRANCH" ]]; then

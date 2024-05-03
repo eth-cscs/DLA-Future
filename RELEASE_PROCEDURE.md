@@ -34,6 +34,7 @@ DLA-Future follows [Semantic Versioning](https://semver.org).
 
 1. Synchronize [upstream spack
    package](https://github.com/spack/spack/blob/develop/var/spack/repos/builtin/packages/dla-future/package.py)
-   with local repository.
+   with local repository. Exclude blocks delimited by `###` comments. These are only intended for the
+   internal spack package.
 
 1. Delete your `GITHUB_TOKEN` if created only for the release.

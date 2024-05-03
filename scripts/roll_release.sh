@@ -59,7 +59,6 @@ else
     echo "Missing"
     sanity_errors=$((sanity_errors + 1))
 fi
-exit 0
 
 if [[ ${sanity_errors} -gt 0 ]]; then
     echo "Found ${sanity_errors} error(s). Fix it/them and try again."

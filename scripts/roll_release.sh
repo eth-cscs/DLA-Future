@@ -72,7 +72,10 @@ VERSION_DESCRIPTION=$(
         # Remove the heading
         tail -n+3 |
         # Find the next heading or the end of the file and print everything until that heading
-        sed '/^## /Q'
+        sed '/^## /Q' |
+        # Move headings one level up, i.e. transform ### to ##, ## to #, etc. There should be no
+        # top-level heading in the file except for "# Changelog".
+        sed 's/^##/#/'
 )
 
 echo ""

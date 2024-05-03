@@ -30,6 +30,8 @@ DLA-Future follows [Semantic Versioning](https://semver.org).
 
 1. Modify the release procedure if necessary.
 
+1. Update spack recipe in `spack/packages/dla-future/package.py` adding the new release.
+
 1. Synchronize [upstream spack
    package](https://github.com/spack/spack/blob/develop/var/spack/repos/builtin/packages/dla-future/package.py)
    with local repository.

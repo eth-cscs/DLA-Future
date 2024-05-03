@@ -2,9 +2,8 @@
 
 DLA-Future follows [Semantic Versioning](https://semver.org).
 
-1. For minor and major releases: create and check out a new branch at an
-   appropriate point on `main` with the name `release-major.minor`.  `major` and `minor` should be the
-   major and minor versions of the release. For patch releases: check out the corresponding
+1. For minor and major releases: check out the `master` branch. All changes required for the release are
+   added to `master` via pull requests. For patch releases: check out the corresponding
    `release-major.minor` branch.
 
 1. Write release notes in `CHANGELOG.md`. Check for issues and pull requests for the release on the

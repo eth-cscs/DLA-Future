@@ -8,8 +8,11 @@ DLA-Future follows [Semantic Versioning](https://semver.org).
    `release-major.minor` branch.
 
 1. Write release notes in `CHANGELOG.md`. Check for issues and pull requests for the release on the
-   [DLA-F Planning board](https://github.com/orgs/eth-cscs/projects/1). All list entries and paragraphs
-   must be on a single line for correct formatting on GitHub.
+   [DLA-F Planning board](https://github.com/orgs/eth-cscs/projects/1). Make sure to include changes that
+   may affect users, such as API changes, bugfixes, performance improvements, dependency updates. Changes
+   that do not directly affect users may be left out, such as CI changes, miscellaneous spack package
+   updates, documentation updates, or utility script updates. All list entries and paragraphs must be on
+   a single line for correct formatting on GitHub.
 
 1. Make sure the version is set correctly in `CMakeLists.txt`.
 

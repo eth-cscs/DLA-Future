@@ -4,7 +4,7 @@
 
 ### Bugfixes
 
-- Update project version and export it in CMake. ([#1121](https://github.com/eth-cscs/DLA-Future/pull/1121))
+- Update project version and export it in CMake. (#1121)
 
 ## DLA-Future 0.4.0
 

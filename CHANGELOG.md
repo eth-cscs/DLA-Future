@@ -19,9 +19,11 @@
 - Introduced stackless threads where appropriate. (#1037)
 
 ### Bug fixes:
+
 -  Use `drop_operation_state` to avoid stack overflows. (#1004)
 
 ### Notes:
+
 (*) At the time of the release the spack spec `blaspp~openmp ^intel-oneapi-mkl threads=openmp` doesn't build. If you rely on multithreaded BLAS we suggest to use `blaspp+openmp ^intel-oneapi-mkl threads=openmp` until https://github.com/spack/spack/pull/42087 gets merged.
 
 ## DLA-Future 0.3.1
@@ -35,20 +37,24 @@
 ## DLA-Future 0.3.0
 
 ### Changes:
+
 - added C and ScaLAPACK API (generalized eigensolver) (#992)
 - removed pika-algorithm dependency (#945)
 
 ### Performance improvements:
+
 - Fixed Cholesky priorities (#999)
 
 ## DLA-Future 0.2.1
 
 ### Bugfix:
+
 - Fixed a problem in `reduction_to_band` that could have produced results filled with NaNs for certain corner cases. (E.g. input matrix with all off-band elements set to 0).
 
 ## DLA-Future 0.2.0
 
 ### Changes:
+
 - renamed algorithms using snake case (#942)
 - added C and ScaLAPACK API (cholesky and eigensolver) (#886)
 - `Matrix` API:
@@ -56,9 +62,13 @@
   - initial support for matrix subpipelines (#898)
   - initial support for submatrices (#934)
   - initial support for matrix redistribution (#933)
+
 ### Bugfixes:
+
 - fixed a problem in `tridiagonal_eigensolver` which produced wrong results for some classes of matrices (#960)
+
 ### Performance improvements:
+
 - introduced busy barriers in `reduction_to_band` (#864)
 - new `band_to_tridiagonal` algorithm implementation (#938, #946)
 - improved the rank1 problem solution in `tridiagonal_eigensolver` (#904, #936)

@@ -13,7 +13,7 @@ DLA-Future follows [Semantic Versioning](https://semver.org).
    updates, documentation updates, or utility script updates. All list entries and paragraphs must be on
    a single line for correct formatting on GitHub.
 
-1. Make sure the version is set correctly in `CMakeLists.txt`.
+1. Update the version in `CMakeLists.txt`.
 
 1. When making a post-1.0.0 major release, remove deprecated functionality if
    appropriate.
@@ -28,10 +28,6 @@ DLA-Future follows [Semantic Versioning](https://semver.org).
    `GITHUB_TOKEN` or both `GITHUB_USER` and `GITHUB_PASSWORD` for the hub release command. When creating
    a `GITHUB_TOKEN`, the only access necessary is `public_repo`.
 
-1. Merge release branch into `master` (with `--no-ff`).
-
-1. Modify the release procedure if necessary.
-
 1. Update spack recipe in `spack/packages/dla-future/package.py` adding the new release.
 
 1. Synchronize [upstream spack
@@ -40,3 +36,5 @@ DLA-Future follows [Semantic Versioning](https://semver.org).
    internal spack package.
 
 1. Delete your `GITHUB_TOKEN` if created only for the release.
+
+1. Modify the release procedure if necessary.

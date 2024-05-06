@@ -20,7 +20,7 @@ jobs:
           set -x
           sudo apt-get update
           sudo apt-get install -y fd-find ripgrep
-          wget -q https://github.com/tomwright/dasel/releases/download/v2.0.0/dasel-linux-amd64 -O /tmp/dasel
+          wget -q https://github.com/TomWright/dasel/releases/download/v2.7.0/dasel_linux_amd64 -O /tmp/dasel
           sudo mv /tmp/dasel /usr/local/bin/dasel
           sudo chmod +x /usr/local/bin/dasel
           pushd /tmp

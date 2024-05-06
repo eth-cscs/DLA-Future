@@ -38,15 +38,6 @@ jobs:
           popd
 
           pushd /tmp
-          curl --output inshpect \
-            --location https://raw.githubusercontent.com/msimberg/inshpect/f7b6045cdf832da30be1b0fb88a35827cc443ffa/inshpect
-          sha256sum inshpect
-          echo "04b6160cc0b1a45a38db319617697a0bb6a0c1413313d945a4ba73811dd5288a inshpect" | sha256sum --check
-          chmod +x inshpect
-          mv inshpect /usr/local/bin
-          popd
-
-          pushd /tmp
           curl --output ripgrep.tar.gz \
             --location https://github.com/BurntSushi/ripgrep/releases/download/13.0.0/ripgrep-13.0.0-x86_64-unknown-linux-musl.tar.gz
           echo "ee4e0751ab108b6da4f47c52da187d5177dc371f0f512a7caaec5434e711c091 ripgrep.tar.gz" | sha256sum --check

@@ -17,6 +17,7 @@ jobs:
     steps:
       - name: Install tools
         run: |
+          set -x
           sudo apt-get update
           sudo apt-get install -y fd-find ripgrep
           wget -q https://github.com/tomwright/dasel/releases/download/v2.0.0/dasel-linux-amd64 -O /tmp/dasel

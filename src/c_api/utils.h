@@ -9,6 +9,8 @@
 //
 #include <tuple>
 
+#pragma once
+
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/layout_info.h>

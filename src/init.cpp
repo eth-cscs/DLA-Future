@@ -224,7 +224,13 @@ void updateConfiguration(const pika::program_options::variables_map& vm, configu
   updateConfigurationValue(vm, param.band_to_tridiag_1d_block_size_base,
                            "BAND_TO_TRIDIAG_1D_BLOCK_SIZE_BASE", "band-to-tridiag-1d-block-size-base");
 
-  updateConfigurationValue(vm, param.debug_dump_trisolver_data, "DEBUG_DUMP_TRISOLVER_DATA", "");
+  updateConfigurationValue(vm, param.debug_dump_eigensolver_data, "DEBUG_DUMP_EIGENSOLVER_DATA", "");
+  updateConfigurationValue(vm, param.debug_dump_reduction_to_band_data,
+                           "DEBUG_DUMP_REDUCTION_TO_BAND_DATA", "");
+  updateConfigurationValue(vm, param.debug_dump_band_to_tridiagonal_data,
+                           "DEBUG_DUMP_BAND_TO_TRIDIAGONAL_DATA", "");
+  updateConfigurationValue(vm, param.debug_dump_tridiag_solver_data, "DEBUG_DUMP_TRIDIAG_SOLVER_DATA",
+                           "");
 
   updateConfigurationValue(vm, param.tridiag_rank1_nworkers, "TRIDIAG_RANK1_NWORKERS",
                            "tridiag-rank1-nworkers");

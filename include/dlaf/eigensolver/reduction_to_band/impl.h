@@ -10,8 +10,10 @@
 #pragma once
 
 #include <array>
+#include <atomic>
 #include <cmath>
 #include <cstddef>
+#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -43,6 +45,7 @@
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/copy_tile.h>
 #include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/hdf5.h>
 #include <dlaf/matrix/index.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/panel.h>
@@ -1131,6 +1134,19 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
   auto mpi_col_chain = grid.col_communicator_pipeline();
   auto mpi_col_chain_panel = grid.col_communicator_pipeline();
 
+#ifdef DLAF_WITH_HDF5
+  static std::atomic<size_t> num_reduction_to_band_calls = 0;
+  std::stringstream fname;
+  fname << "reduction_to_band-" << matrix::internal::TypeToString_v<T> << "-"
+        << std::to_string(num_reduction_to_band_calls) << ".h5";
+  std::optional<matrix::internal::FileHDF5> file;
+
+  if (getTuneParameters().debug_dump_reduction_to_band_data) {
+    file = matrix::internal::FileHDF5(grid.fullCommunicator(), fname.str());
+    file->write(mat_a, "/input");
+  }
+#endif
+
   const auto& dist = mat_a.distribution();
   const comm::Index2D rank = dist.rankIndex();
 
@@ -1146,8 +1162,17 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
                                                        comm::Index2D(mat_a.rankIndex().col(), 0),
                                                        comm::Index2D(mat_a.sourceRankIndex().col(), 0)));
 
-  if (nrefls == 0)
+  if (nrefls == 0) {
+#ifdef DLAF_WITH_HDF5
+    if (getTuneParameters().debug_dump_reduction_to_band_data) {
+      file->write(mat_a, "/band");
+    }
+
+    num_reduction_to_band_calls++;
+#endif
+
     return mat_taus;
+  }
 
   Matrix<T, Device::CPU> mat_taus_retiled =
       mat_taus.retiledSubPipeline(LocalTileSize(mat_a.blockSize().cols() / band_size, 1));
@@ -1424,6 +1449,14 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
     vt.reset();
     v.reset();
   }
+
+#ifdef DLAF_WITH_HDF5
+  if (getTuneParameters().debug_dump_reduction_to_band_data) {
+    file->write(mat_a, "/band");
+  }
+
+  num_reduction_to_band_calls++;
+#endif
 
   return mat_taus;
 }

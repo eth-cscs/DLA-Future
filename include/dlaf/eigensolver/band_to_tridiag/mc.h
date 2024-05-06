@@ -10,8 +10,10 @@
 
 #pragma once
 
+#include <atomic>
 #include <cstddef>
 #include <memory>
+#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -34,6 +36,7 @@
 #include <dlaf/lapack/gpu/laset.h>
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/hdf5.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/tile.h>
 #include <dlaf/memory/memory_view.h>
@@ -1039,6 +1042,19 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   // Should be dispatched to local implementation if (1x1) grid.
   DLAF_ASSERT(grid.size() != comm::Size2D(1, 1), grid);
 
+#ifdef DLAF_WITH_HDF5
+  static std::atomic<size_t> num_b2t_calls = 0;
+  std::stringstream fname;
+  fname << "band_to_tridiag-" << matrix::internal::TypeToString_v<T> << "-"
+        << std::to_string(num_b2t_calls) << ".h5";
+  std::optional<matrix::internal::FileHDF5> file;
+
+  if (getTuneParameters().debug_dump_band_to_tridiagonal_data) {
+    file = matrix::internal::FileHDF5(grid.fullCommunicator(), fname.str());
+    file->write(mat_a, "/input");
+  }
+#endif
+
   // note: A is square and has square blocksize
   SizeType size = mat_a.size().cols();
   SizeType n = mat_a.nrTiles().cols();
@@ -1528,6 +1544,14 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
       ex::start_detached(comm::schedule_bcast_recv(mpi_chain_bcast.exclusive(), 0,
                                                    mat_trid.readwrite(index)));
   }
+
+#ifdef DLAF_WITH_HDF5
+  if (getTuneParameters().debug_dump_band_to_tridiagonal_data) {
+    file->write(mat_trid, "/tridiagonal");
+  }
+
+  num_b2t_calls++;
+#endif
 
   return {std::move(mat_trid), std::move(mat_v)};
 }

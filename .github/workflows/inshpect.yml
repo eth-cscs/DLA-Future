@@ -19,7 +19,7 @@ jobs:
         run: |
           set -x
           sudo apt-get update
-          sudo apt-get install -y fd-find ripgrep
+          sudo apt-get install -y fd-find
           wget -q https://github.com/TomWright/dasel/releases/download/v2.7.0/dasel_linux_amd64 -O /tmp/dasel
           sudo mv /tmp/dasel /usr/local/bin/dasel
           sudo chmod +x /usr/local/bin/dasel
@@ -30,6 +30,13 @@ jobs:
           echo "4b891a178fa99ac800b9b92acc0596d72f640ca1ae6de7f35ac4b3785dcd7af9 inshpect" | sha256sum --check
           chmod +x inshpect
           mv inshpect /usr/local/bin
+          popd
+          pushd /tmp
+          curl --output ripgrep.tar.gz \
+            --location https://github.com/BurntSushi/ripgrep/releases/download/13.0.0/ripgrep-13.0.0-x86_64-unknown-linux-musl.tar.gz
+          echo "ee4e0751ab108b6da4f47c52da187d5177dc371f0f512a7caaec5434e711c091 ripgrep.tar.gz" | sha256sum --check
+          tar --extract --strip-components 1 --file ripgrep.tar.gz
+          mv rg /usr/local/bin
           popd
       - name: Checkout
         uses: actions/checkout@v4

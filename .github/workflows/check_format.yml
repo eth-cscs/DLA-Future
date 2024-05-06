@@ -37,14 +37,6 @@ jobs:
           mv dasel /usr/local/bin
           popd
 
-          pushd /tmp
-          curl --output ripgrep.tar.gz \
-            --location https://github.com/BurntSushi/ripgrep/releases/download/13.0.0/ripgrep-13.0.0-x86_64-unknown-linux-musl.tar.gz
-          echo "ee4e0751ab108b6da4f47c52da187d5177dc371f0f512a7caaec5434e711c091 ripgrep.tar.gz" | sha256sum --check
-          tar --extract --strip-components 1 --file ripgrep.tar.gz
-          mv rg /usr/local/bin
-          popd
-
       - name: Fetch master
         run: git fetch --no-tags --depth=1 origin +refs/heads/master:refs/heads/master
 

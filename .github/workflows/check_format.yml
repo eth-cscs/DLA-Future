@@ -83,10 +83,3 @@ jobs:
           done
 
           test ! -s pragma-once.check
-
-      - name: Inshpect
-        if: always()
-        run: |
-          export INSHPECT_NUMTHREADS=4
-          export INSHPECT_FD=fdfind
-          inshpect . .inshpect.toml

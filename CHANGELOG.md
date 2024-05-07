@@ -49,7 +49,7 @@
 
 ### Bug fixes
 
-- Fixed a problem in `reduction_to_band` that could have produced results filled with NaNs for certain corner cases. (E.g. input matrix with all off-band elements set to 0).
+- Fixed a problem in `reduction_to_band` that could have produced results filled with NaNs for certain corner cases. (E.g. input matrix with all off-band elements set to 0). (#980)
 
 ## DLA-Future 0.2.0
 

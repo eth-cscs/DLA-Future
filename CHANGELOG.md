@@ -30,9 +30,9 @@
 
 ### Bug fixes
 
-- Fixed compilation with gcc 9.3.
-- Fixed compilation with CUDA 11.2.
-- Improved eigensolver tests.
+- Fixed compilation with gcc 9.3. (#1043)
+- Fixed compilation with CUDA 11.2. (#1045)
+- Improved eigensolver tests. (#1039)
 
 ## DLA-Future 0.3.0
 

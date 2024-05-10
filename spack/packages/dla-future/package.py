@@ -183,77 +183,77 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         args.append(self.define_from_variant("BUILD_SHARED_LIBS", "shared"))
 
         # BLAS/LAPACK
-        if spec["lapack"].name in INTEL_MATH_LIBRARIES:
-            mkl_provider = spec["lapack"].name
+        # if spec["lapack"].name in INTEL_MATH_LIBRARIES:
+        #     mkl_provider = spec["lapack"].name
 
-            vmap = {
-                "intel-oneapi-mkl": {
-                    "threading": {
-                        "none": "sequential",
-                        "openmp": "gnu_thread",
-                        "tbb": "tbb_thread",
-                    },
-                    "mpi": {"intel-mpi": "intelmpi", "mpich": "mpich", "openmpi": "openmpi"},
-                },
-                "intel-mkl": {
-                    "threading": {"none": "seq", "openmp": "omp", "tbb": "tbb"},
-                    "mpi": {"intel-mpi": "mpich", "mpich": "mpich", "openmpi": "ompi"},
-                },
-            }
+        #     vmap = {
+        #         "intel-oneapi-mkl": {
+        #             "threading": {
+        #                 "none": "sequential",
+        #                 "openmp": "gnu_thread",
+        #                 "tbb": "tbb_thread",
+        #             },
+        #             "mpi": {"intel-mpi": "intelmpi", "mpich": "mpich", "openmpi": "openmpi"},
+        #         },
+        #         "intel-mkl": {
+        #             "threading": {"none": "seq", "openmp": "omp", "tbb": "tbb"},
+        #             "mpi": {"intel-mpi": "mpich", "mpich": "mpich", "openmpi": "ompi"},
+        #         },
+        #     }
 
-            if mkl_provider not in vmap.keys():
-                raise RuntimeError(
-                    f"dla-future does not support {mkl_provider} as lapack provider"
-                )
-            mkl_mapper = vmap[mkl_provider]
+        #     if mkl_provider not in vmap.keys():
+        #         raise RuntimeError(
+        #             f"dla-future does not support {mkl_provider} as lapack provider"
+        #         )
+        #     mkl_mapper = vmap[mkl_provider]
 
-            mkl_threads = mkl_mapper["threading"][spec[mkl_provider].variants["threads"].value]
-            if mkl_provider == "intel-oneapi-mkl":
-                args += [
-                    self.define("DLAF_WITH_MKL", True),
-                    self.define("MKL_INTERFACE", "lp64"),
-                    self.define("MKL_THREADING", mkl_threads),
-                ]
-            elif mkl_provider == "intel-mkl":
-                args += [
-                    self.define("DLAF_WITH_MKL", True)
-                    if spec.version <= Version("0.3")
-                    else self.define("DLAF_WITH_MKL_LEGACY", True),
-                    self.define("MKL_LAPACK_TARGET", f"mkl::mkl_intel_32bit_{mkl_threads}_dyn"),
-                ]
+        #     mkl_threads = mkl_mapper["threading"][spec[mkl_provider].variants["threads"].value]
+        #     if mkl_provider == "intel-oneapi-mkl":
+        #         args += [
+        #             self.define("DLAF_WITH_MKL", True),
+        #             self.define("MKL_INTERFACE", "lp64"),
+        #             self.define("MKL_THREADING", mkl_threads),
+        #         ]
+        #     elif mkl_provider == "intel-mkl":
+        #         args += [
+        #             self.define("DLAF_WITH_MKL", True)
+        #             if spec.version <= Version("0.3")
+        #             else self.define("DLAF_WITH_MKL_LEGACY", True),
+        #             self.define("MKL_LAPACK_TARGET", f"mkl::mkl_intel_32bit_{mkl_threads}_dyn"),
+        #         ]
 
-            if "+scalapack" in spec:
-                try:
-                    mpi_provider = spec["mpi"].name
-                    if mpi_provider in ["mpich", "cray-mpich", "mvapich", "mvapich2"]:
-                        mkl_mpi = mkl_mapper["mpi"]["mpich"]
-                    else:
-                        mkl_mpi = mkl_mapper["mpi"][mpi_provider]
-                except KeyError:
-                    raise RuntimeError(
-                        f"dla-future does not support {spec['mpi'].name} as mpi provider with "
-                        f"the selected scalapack provider {mkl_provider}"
-                    )
+        #     if "+scalapack" in spec:
+        #         try:
+        #             mpi_provider = spec["mpi"].name
+        #             if mpi_provider in ["mpich", "cray-mpich", "mvapich", "mvapich2"]:
+        #                 mkl_mpi = mkl_mapper["mpi"]["mpich"]
+        #             else:
+        #                 mkl_mpi = mkl_mapper["mpi"][mpi_provider]
+        #         except KeyError:
+        #             raise RuntimeError(
+        #                 f"dla-future does not support {spec['mpi'].name} as mpi provider with "
+        #                 f"the selected scalapack provider {mkl_provider}"
+        #             )
 
-                if mkl_provider == "intel-oneapi-mkl":
-                    args.append(self.define("MKL_MPI", mkl_mpi))
-                elif mkl_provider == "intel-mkl":
-                    args.append(
-                        self.define(
-                            "MKL_SCALAPACK_TARGET",
-                            f"mkl::scalapack_{mkl_mpi}_intel_32bit_{mkl_threads}_dyn",
-                        )
-                    )
-        else:
-            args.append(self.define("DLAF_WITH_MKL", False))
-            args.append(
-                self.define(
-                    "LAPACK_LIBRARY",
-                    " ".join([spec[dep].libs.ld_flags for dep in ["blas", "lapack"]]),
-                )
+        #         if mkl_provider == "intel-oneapi-mkl":
+        #             args.append(self.define("MKL_MPI", mkl_mpi))
+        #         elif mkl_provider == "intel-mkl":
+        #             args.append(
+        #                 self.define(
+        #                     "MKL_SCALAPACK_TARGET",
+        #                     f"mkl::scalapack_{mkl_mpi}_intel_32bit_{mkl_threads}_dyn",
+        #                 )
+        #             )
+        # else:
+        args.append(self.define("DLAF_WITH_MKL", False))
+        args.append(
+            self.define(
+                "LAPACK_LIBRARY",
+                " ".join([spec[dep].libs.ld_flags for dep in ["blas", "lapack"]]),
             )
-            if "+scalapack" in spec:
-                args.append(self.define("SCALAPACK_LIBRARY", spec["scalapack"].libs.ld_flags))
+        )
+        if "+scalapack" in spec:
+            args.append(self.define("SCALAPACK_LIBRARY", spec["scalapack"].libs.ld_flags))
 
         args.append(self.define_from_variant("DLAF_WITH_SCALAPACK", "scalapack"))
 

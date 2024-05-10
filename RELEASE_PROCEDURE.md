@@ -15,6 +15,8 @@ DLA-Future follows [Semantic Versioning](https://semver.org).
 
 1. Update the version in `CMakeLists.txt`.
 
+1. Update the version and date in `CITATION.cff`.
+
 1. When making a post-1.0.0 major release, remove deprecated functionality if
    appropriate.
 

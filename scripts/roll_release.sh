@@ -43,6 +43,7 @@ fi
 
 changelog_path="CHANGELOG.md"
 readme_path="README.md"
+cff_path="CITATION.cff"
 
 echo "You are about to tag and create a final release on GitHub."
 
@@ -61,6 +62,14 @@ fi
 
 printf "Checking that %s has a documentation entry for %s... " "${readme_path}" "${VERSION_FULL}"
 if grep "^- \[Documentation of \`${VERSION_FULL_TAG}\`\](https://eth-cscs.github.io/DLA-Future/${VERSION_FULL_TAG}" "${readme_path}"; then
+    echo "OK"
+else
+    echo "Missing"
+    sanity_errors=$((sanity_errors + 1))
+fi
+
+printf "Checking that %s has correct version for %s... " "${cff_path}" "${VERSION_FULL}"
+if grep "^version: ${VERSION_FULL}" "${cff_path}"; then
     echo "OK"
 else
     echo "Missing"

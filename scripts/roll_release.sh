@@ -29,11 +29,11 @@ if ! which hub >/dev/null 2>&1; then
 fi
 
 # Major and minor releases are made directly from master. Patch releases are branched out from the major
-# and minor releases with a release-X.Y branch.
+# and minor releases with a version_X.Y branch.
 if [[ "${VERSION_PATCH}" -eq 0 ]]; then
     RELEASE_BRANCH="master"
 else
-    RELEASE_BRANCH="release-${VERSION_MAJOR}.${VERSION_MINOR}"
+    RELEASE_BRANCH="version_${VERSION_MAJOR}.${VERSION_MINOR}"
 fi
 
 if ! [[ "$CURRENT_BRANCH" == "$RELEASE_BRANCH" ]]; then

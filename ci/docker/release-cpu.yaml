@@ -18,7 +18,7 @@ spack:
       true
 
   specs:
-    - dla-future@master +miniapps +ci-test +ci-check-threads
+    - dla-future@master +miniapps +ci-test +ci-check-threads cxxflags="-fopenmp -Wl,/opt/intel/oneapi/mkl/2024.0/lib/libmkl_gf_lp64.so,/opt/intel/oneapi/mkl/2024.0/lib/libmkl_gnu_thread.so,/opt/intel/oneapi/mkl/2024.0/lib/libmkl_core.so"
 
   packages:
     all:

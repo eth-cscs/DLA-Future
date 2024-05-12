@@ -48,19 +48,6 @@ jobs:
       - name: Fetch master
         run: git fetch --no-tags --depth=1 origin +refs/heads/master:refs/heads/master
 
-         # Fails if there are tabs in source files.
-      # - name: Check formatting
-      #   run: ./.github/format.sh
-
-      # - name: Check scripts formatting
-      #   if: always()
-      #   run: black --line-length 105 scripts/
-
-      #    # Fails if there are differences.
-      # - name: Formatting issues
-      #   if: always()
-      #   run: git diff --color --exit-code
-
       - name: Check include guards
         if: always()
         run: |

@@ -1,11 +1,6 @@
 name: Inshepct
 
 on:
-  push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
-    branches:
-      - master
   pull_request:
     branches:
       - master

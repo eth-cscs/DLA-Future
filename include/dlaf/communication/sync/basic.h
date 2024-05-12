@@ -8,11 +8,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <utility>
-
 #pragma once
 
 /// @file
+
+#include <utility>
 
 #include <dlaf/common/data.h>
 #include <dlaf/communication/communicator.h>

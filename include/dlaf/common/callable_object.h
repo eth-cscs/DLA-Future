@@ -8,8 +8,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <utility>
-
 #pragma once
 
 /// @file
@@ -25,6 +23,9 @@
 /// The function name is wrapped in parentheses to disable ADL. It is assumed
 /// that all required overloads are found relative to the namespace where the
 /// macro is used.
+
+#include <utility>
+
 #define DLAF_MAKE_CALLABLE_OBJECT(fname)                                                    \
   constexpr struct fname##_t {                                                              \
     template <typename... Ts>                                                               \

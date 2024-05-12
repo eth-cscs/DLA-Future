@@ -8,13 +8,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <iomanip>
-#include <iostream>
-
 #pragma once
 
 /// @file
 
+#include <iomanip>
+#include <iostream>
 #include <string>
 
 #include <dlaf/common/index2d.h>

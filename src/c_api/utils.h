@@ -7,9 +7,10 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
-#include <tuple>
 
 #pragma once
+
+#include <tuple>
 
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/matrix/distribution.h>

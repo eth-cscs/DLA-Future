@@ -8,10 +8,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#pragma once
+
 #include <cstddef>
 #include <utility>
-
-#pragma once
 
 #include <pika/execution.hpp>
 

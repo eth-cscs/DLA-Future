@@ -52,7 +52,7 @@ stages:
     # default configuration variables
     # can be overwritten in the configuration as needed
     DOCKERFILE: ci/docker/build.Dockerfile
-    BASE_IMAGE: docker.io/ubuntu:22.04
+    BASE_IMAGE: docker.io/ubuntu:24.04
     EXTRA_APTGET: ""
     CXXSTD: 17
     USE_MKL: "OFF"
@@ -81,7 +81,7 @@ stages:
     # default configuration variables
     # can be overwritten in the configuration as needed
     DOCKERFILE: ci/docker/deploy.Dockerfile
-    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
+    DEPLOY_BASE_IMAGE: docker.io/ubuntu:24.04
     EXTRA_APTGET_DEPLOY: ""
   artifacts:
     paths:

@@ -18,6 +18,7 @@ cuda gcc11 codecov build:
     - cuda gcc11 codecov deps
   variables:
     DOCKERFILE: ci/docker/codecov.Dockerfile
+    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-codecov/deploy:$CI_COMMIT_SHA
 
 cuda gcc11 codecov test:

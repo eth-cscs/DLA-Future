@@ -8,7 +8,6 @@ cpu clang16 release deps:
     COMPILER: clang@16
     USE_MKL: "ON"
     SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
-    BASE_IMAGE: docker.io/ubuntu:23.10
     BUILD_IMAGE: $CSCS_REGISTRY_PATH/cpu-clang16-release/build
 
 cpu clang16 release build:
@@ -19,7 +18,6 @@ cpu clang16 release build:
     - cpu clang16 release deps
   variables:
     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cpu-clang16-release/deploy:$CI_COMMIT_SHA
-    DEPLOY_BASE_IMAGE: docker.io/ubuntu:23.10
 
 cpu clang16 release test:
   extends: .run_common

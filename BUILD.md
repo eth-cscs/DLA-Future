@@ -2,11 +2,11 @@
 
 ## Build using Spack
 
-Example installation:
+Minimal installation:
 
 `spack install dla-future ^[virtuals=blas,lapack] intel-oneapi-mkl`
 
-or you can also build C API compatible with ScaLAPACK with:
+Minimal installation with (optional) C API compatible with ScaLAPACK:
 
 `spack install dla-future +scalapack ^[virtuals=blas,lapack,scalapack] intel-oneapi-mkl`
 
@@ -22,7 +22,7 @@ You can examine all the available variants of the package using:
 `spack info dla-future`
 
 You can go even further with a more detailed spec like this one, which builds DLA-Future in debug mode, using the clang compiler, specifying that the pika on which it depends has to be built
-in debug mode too, and that we want to use MPICH as MPI implementation, without fortran support (because clang does not support it).
+in debug mode too, and that we want to use MPICH as MPI implementation, without Fortran support (because clang does not support it).
 
 `spack install dla-future %clang build_type=Debug ^pika build_type=Debug ^mpich ~fortran`
 
@@ -38,11 +38,11 @@ you can use the spack package `dla-future` provided in the git repository, that 
 
 This will add a new repository with namespace `dlaf`.
 
-And install the master version with:
+You can then install the master version with:
 
 `spack install dla-future@master <variants>`
 
-## Build the old good way
+## Build the good old way
 
 ### Dependencies
 
@@ -63,7 +63,7 @@ And install the master version with:
 
 You can download the [releases](https://github.com/eth-cscs/DLA-Future/releases).
 
-Otherwise, if you have `git` you can clone this repository with the command
+Otherwise, if you have `git`, you can clone this repository with
 
 ```
 git clone https://github.com/eth-cscs/DLA-Future.git
@@ -72,7 +72,7 @@ git clone https://github.com/eth-cscs/DLA-Future.git
 ### Build and install
 
 You can build all the dependencies by yourself, but you have to ensure that:
-- pika: `PIKA_WITH_CUDA=ON` (if building for CUDA) + `PIKA_WITH_MPI`
+- pika: `PIKA_WITH_CUDA=ON` (if building for CUDA) + `PIKA_WITH_MPI=ON`
 
 The main CMake options for DLAF build customization are:
 

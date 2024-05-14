@@ -4,14 +4,19 @@
 
 Minimal installation:
 
-`spack install dla-future ^[virtuals=blas,lapack] intel-oneapi-mkl`
+```
+spack install dla-future ^[virtuals=blas,lapack] intel-oneapi-mkl
+```
 
 Minimal installation with (optional) C API compatible with ScaLAPACK:
 
-`spack install dla-future +scalapack ^[virtuals=blas,lapack,scalapack] intel-oneapi-mkl`
+```
+spack install dla-future +scalapack ^[virtuals=blas,lapack,scalapack] intel-oneapi-mkl
+```
 
 GPU support can be enabled with the following variants:
 
+Variant | Dependent variant | Note
 :---|:---|:---
 `+cuda` | `cuda_arch=<arch>` | enable CUDA GPU support and specify the GPU architecture
 `+rocm` | `amdgpu_target=<arch>` | enable AMD GPU support and specify the GPU architecture
@@ -19,12 +24,16 @@ GPU support can be enabled with the following variants:
 
 You can examine all the available variants of the package using:
 
-`spack info dla-future`
+```
+spack info dla-future
+```
 
 You can go even further with a more detailed spec like this one, which builds DLA-Future in debug mode, using the clang compiler, specifying that the pika on which it depends has to be built
 in debug mode too, and that we want to use MPICH as MPI implementation, without Fortran support (because clang does not support it).
 
-`spack install dla-future %clang build_type=Debug ^pika build_type=Debug ^mpich ~fortran`
+```
+spack install dla-future %clang build_type=Debug ^pika build_type=Debug ^mpich ~fortran
+```
 
 See [Spack documentation](https://spack.readthedocs.io/en/latest/) for more information about the build system. 
 
@@ -33,14 +42,18 @@ See [Spack documentation](https://spack.readthedocs.io/en/latest/) for more info
 If you want to test the newest available version,
 you can use the spack package `dla-future` provided in the git repository, that can be easily added to your own spack as follows:
 
-`git clone https://github.com/eth-cscs/DLA-Future.git`
-`spack repo add $DLAF_ROOT/spack`
+```
+git clone https://github.com/eth-cscs/DLA-Future.git
+spack repo add $DLAF_ROOT/spack
+```
 
 This will add a new repository with namespace `dlaf`.
 
 You can then install the master version with:
 
-`spack install dla-future@master <variants>`
+```
+spack install dla-future@master <variants>
+```
 
 ## Build the good old way
 

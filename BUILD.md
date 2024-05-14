@@ -28,7 +28,7 @@ You can examine all the available variants of the package using:
 spack info dla-future
 ```
 
-You can go even further with a more detailed spec like this one, which builds DLA-Future in debug mode, using the clang compiler, specifying that the pika on which it depends has to be built
+You can go even further with a more detailed spec like this one, which builds `dla-future` in debug mode, using the clang compiler, specifying that the `pika` on which it depends has to be built
 in debug mode too, and that we want to use MPICH as MPI implementation, without Fortran support (because clang does not support it).
 
 ```

@@ -12,9 +12,9 @@ jobs:
     steps:
       - name: Install tools
         run: |
-          sudo apt-get update
-          sudo apt-get install -y fd-find
-          wget -q https://github.com/TomWright/dasel/releases/download/v2.7.0/dasel_linux_amd64 -O /tmp/dasel
+          sudo apt update
+          sudo apt install -y fd-find
+          curl -sL https://github.com/TomWright/dasel/releases/download/v2.7.0/dasel_linux_amd64 -o /tmp/dasel
           sudo mv /tmp/dasel /usr/local/bin/dasel
           sudo chmod +x /usr/local/bin/dasel
           pushd /tmp

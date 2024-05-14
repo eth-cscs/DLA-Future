@@ -4,7 +4,7 @@
 
 ### Changes
 
-- Introduced an option (*) for forcing contiguous communication buffers. (#1096)
+- Introduced an option (*) for forcing contiguous GPU communication buffers. (#1096)
 - Introduced an option (*) for enabling GPU aware MPI communication. (#1102)
 
 (*) These options are available as spack variants.

@@ -10,10 +10,23 @@ or you can also build C API compatible with ScaLAPACK with:
 
 `spack install dla-future +scalapack ^[virtuals=blas,lapack,scalapack] intel-oneapi-mkl`
 
+GPU support can be enabled with the following variants:
+
+:---|:---|:---
+`+cuda` | `cuda_arch=<arch>` | enable CUDA GPU support and specify the GPU architecture
+`+rocm` | `amdgpu_target=<arch>` | enable AMD GPU support and specify the GPU architecture
+`+mpi-gpu-aware` | `+mpi-gpu-force-contiguous` | Enable GPU aware communication (recommended if supported by MPI), and force communication of contiguous GPU buffers (recommended)
+
+You can examine all the available variants of the package using:
+
+`spack info dla-future`
+
 You can go even further with a more detailed spec like this one, which builds DLA-Future in debug mode, using the clang compiler, specifying that the pika on which it depends has to be built
 in debug mode too, and that we want to use MPICH as MPI implementation, without fortran support (because clang does not support it).
 
 `spack install dla-future %clang build_type=Debug ^pika build_type=Debug ^mpich ~fortran`
+
+See [Spack documentation](https://spack.readthedocs.io/en/latest/) for more information about the build system. 
 
 ### master branch
 

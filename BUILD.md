@@ -1,20 +1,5 @@
 # Building DLAF
 
-## Dependencies
-
-- MPI
-- [pika](https://github.com/pika-org/pika)
-- [umpire](https://github.com/LLNL/Umpire)
-- [blaspp](https://bitbucket.org/icl/blaspp/src/default/)
-- [lapackpp](https://bitbucket.org/icl/lapackpp/src/default/)
-- Intel MKL or other LAPACK implementation
-- A ScaLAPACK implementation (optional, ScaLAPACK-like C API only)
-- [whip](https://github.com/eth-cscs/whip) (optional, GPU only)
-- [cuda](https://developer.nvidia.com/cuda) (optional, NVidia GPUs only)
-- [HIP/ROCm](https://github.com/RadeonOpenCompute/ROCm) (optional, AMD GPUs only)
-- [GoogleTest](https://github.com/google/googletest) (optional; bundled) - unit testing
-- Doxygen (optional) - documentation
-
 ## Build using Spack
 
 Example installation:
@@ -33,7 +18,7 @@ in debug mode too, and that we want to use MPICH as MPI implementation, without 
 ### master branch
 
 If you want to test the newest available version,
-You can use the spack package `dla-future` provided in the git repository, that can be easily added to your own spack as follows:
+you can use the spack package `dla-future` provided in the git repository, that can be easily added to your own spack as follows:
 
 `git clone https://github.com/eth-cscs/DLA-Future.git`
 `spack repo add $DLAF_ROOT/spack`
@@ -46,6 +31,21 @@ And install the master version with:
 
 
 ## Build the old good way
+
+### Dependencies
+
+- MPI
+- [pika](https://github.com/pika-org/pika)
+- [umpire](https://github.com/LLNL/Umpire)
+- [blaspp](https://bitbucket.org/icl/blaspp/src/default/)
+- [lapackpp](https://bitbucket.org/icl/lapackpp/src/default/)
+- Intel MKL or other LAPACK implementation
+- A ScaLAPACK implementation (optional, ScaLAPACK-like C API only)
+- [whip](https://github.com/eth-cscs/whip) (optional, GPU only)
+- [cuda](https://developer.nvidia.com/cuda) (optional, NVidia GPUs only)
+- [HIP/ROCm](https://github.com/RadeonOpenCompute/ROCm) (optional, AMD GPUs only)
+- [GoogleTest](https://github.com/google/googletest) (optional; bundled) - unit testing
+- Doxygen (optional) - documentation
 
 ### Get DLA-Future
 

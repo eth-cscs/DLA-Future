@@ -10,7 +10,7 @@ or you can also build C API compatible with ScaLAPACK with:
 
 `spack install dla-future +scalapack ^[virtuals=blas,lapack,scalapack] intel-oneapi-mkl`
 
-You can go even further with a more detailed spec like this one, which builds dla-future in debug mode, using the clang compiler, specifying that the pika on which it depends has to be built
+You can go even further with a more detailed spec like this one, which builds DLA-Future in debug mode, using the clang compiler, specifying that the pika on which it depends has to be built
 in debug mode too, and that we want to use MPICH as MPI implementation, without fortran support (because clang does not support it).
 
 `spack install dla-future %clang build_type=Debug ^pika build_type=Debug ^mpich ~fortran`
@@ -29,7 +29,6 @@ And install the master version with:
 
 `spack install dla-future@master <variants>`
 
-
 ## Build the old good way
 
 ### Dependencies
@@ -42,7 +41,7 @@ And install the master version with:
 - Intel MKL or other LAPACK implementation
 - A ScaLAPACK implementation (optional, ScaLAPACK-like C API only)
 - [whip](https://github.com/eth-cscs/whip) (optional, GPU only)
-- [cuda](https://developer.nvidia.com/cuda) (optional, NVidia GPUs only)
+- [CUDA](https://developer.nvidia.com/cuda) (optional, NVidia GPUs only)
 - [HIP/ROCm](https://github.com/RadeonOpenCompute/ROCm) (optional, AMD GPUs only)
 - [GoogleTest](https://github.com/google/googletest) (optional; bundled) - unit testing
 - Doxygen (optional) - documentation
@@ -58,10 +57,11 @@ git clone https://github.com/eth-cscs/DLA-Future.git
 ```
 
 ### Build and install
+
 You can build all the dependencies by yourself, but you have to ensure that:
 - pika: `PIKA_WITH_CUDA=ON` (if building for CUDA) + `PIKA_WITH_MPI`
 
-And here the main CMake options for DLAF build customization:
+The main CMake options for DLAF build customization are:
 
 CMake option | Values | Note
 :---|:---|:---

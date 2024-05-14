@@ -35,7 +35,7 @@ in debug mode too, and that we want to use MPICH as MPI implementation, without 
 spack install dla-future %clang build_type=Debug ^pika build_type=Debug ^mpich ~fortran
 ```
 
-See [Spack documentation](https://spack.readthedocs.io/en/latest/) for more information about the build system. 
+See [Spack documentation](https://spack.readthedocs.io/en/latest/) for more information about the build system.
 
 ### master branch
 

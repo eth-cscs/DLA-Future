@@ -15,7 +15,7 @@
 
 ### Bug fixes
 
-- Implemented a workaround for hipMemcpyDefault 2D memcpys, due to bugs in HIP (#1106)
+- Implemented a workaround for hipMemcpyDefault 2D memcpys, due to bugs in HIP. (#1106)
 - Miniapps initialize HIP before MPI, as on older Cray MPICH versions initializing HIP after MPI leads to HIP not seeing any devices. (#1090)
 
 ## DLA-Future 0.4.1

@@ -76,6 +76,14 @@ else
     sanity_errors=$((sanity_errors + 1))
 fi
 
+printf "Checking that %s has correct title for %s... " "${cff_path}" "${VERSION_FULL}"
+if grep "^title: ${VERSION_TITLE}" "${cff_path}"; then
+    echo "OK"
+else
+    echo "Missing"
+    sanity_errors=$((sanity_errors + 1))
+fi
+
 if [[ ${sanity_errors} -gt 0 ]]; then
     echo "Found ${sanity_errors} error(s). Fix it/them and try again."
     exit 1

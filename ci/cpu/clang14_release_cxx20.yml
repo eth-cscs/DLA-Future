@@ -1,0 +1,30 @@
+include:
+  - local: 'ci/common-ci.yml'
+
+cpu clang14 cxx20 release deps:
+  extends: .build_deps_common
+  variables:
+    EXTRA_APTGET: "clang-14 libomp-14-dev"
+    COMPILER: clang@14
+    CXXSTD: 20
+    SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
+    USE_MKL: "ON"
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cpu-clang14-20-release/build
+
+cpu clang14 cxx20 release build:
+  extends:
+    - .build_common
+    - .build_for_daint-mc
+  needs:
+    - cpu clang14 cxx20 release deps
+  variables:
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cpu-clang14-cxx20-release/deploy:$CI_COMMIT_SHA
+
+cpu clang14 cxx20 release test:
+  extends: .run_common
+  needs:
+    - cpu clang14 cxx20 release build
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cpu clang14 cxx20 release build

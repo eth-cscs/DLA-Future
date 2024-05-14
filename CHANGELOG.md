@@ -11,7 +11,7 @@
 
 ### Performance improvements
 
-- Don't communicate in algorithms when using only one rank communicators. (#1097)
+- Don't communicate in algorithms when using single rank communicators. (#1097)
 
 ### Bug fixes
 

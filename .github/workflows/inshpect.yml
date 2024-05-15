@@ -1,4 +1,4 @@
-name: Inshepct
+name: Inshpect
 
 on:
   pull_request:
@@ -19,7 +19,6 @@ jobs:
           pushd /tmp
           curl --output inshpect \
             --location https://raw.githubusercontent.com/msimberg/inshpect/d31ba8ed7e636c57cb9085ed3a8450d998e6b8a5/inshpect
-          sha256sum inshpect
           echo "4b891a178fa99ac800b9b92acc0596d72f640ca1ae6de7f35ac4b3785dcd7af9 inshpect" | sha256sum --check
           chmod +x inshpect
           mv inshpect /usr/local/bin

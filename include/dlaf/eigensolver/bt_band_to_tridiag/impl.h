@@ -623,7 +623,6 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
 
   const SizeType b = band_size;
   const SizeType group_size = getTuneParameters().bt_band_to_tridiag_hh_apply_group_size;
-  const SizeType nsweeps = nrSweeps<T>(mat_hh.size().cols());
 
   const LocalTileSize tiles_per_block(mat_e.blockSize().rows() / b, 1);
   Matrix<T, D> mat_e_rt = mat_e.retiledSubPipeline(tiles_per_block);
@@ -659,26 +658,56 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
 
   HHManager<B, D, T> helperBackend(b, n_workspaces, dist_t, dist_w);
 
-  // Note: sweep are on diagonals, steps are on verticals
-  const SizeType j_last_sweep = (nsweeps - 1) / b;
-  for (SizeType j = j_last_sweep; j >= 0; --j) {
+  const SizeType j_last_sweep_b = (nrSweeps<T>(mat_hh.size().cols()) - 1) / b;
+  const SizeType maxsteps_b = nrStepsForSweep(0, mat_hh.size().rows(), b);
+
+  // Note: Next two nested `for`s describe a special order loop over the matrix, which allow to
+  // better schedule priority tasks.
+  //
+  // Each element depends on:
+  // - top
+  // - bottom-right
+  // - right
+  //
+  // This basic rule for dependencies can be described collectively as a mechanism where elements are
+  // "unlocked" in different epochs, which forms a pattern like if the matrix get scanned not
+  // perpendicularly to their main axis, but instead it gets scanned by a slightly skewed line that goes
+  // from top right to bottom left.
+  //
+  //  5 x x x x
+  //  6 4 x x x
+  //  7 5 3 x x
+  //  8 6 4 2 x
+  //  9 7 5 3 1
+  //
+  // Elements of the same epoch are somehow "independent" and so they can potentially run in parallel,
+  // given that previous epoch has been completed. Since scheduling happens sequentially, elements
+  // of the same epoch will be ordered starting from top-most one, resulting in
+  //
+  //  7  x x x x
+  // 10  5 x x x
+  // 12  8 3 x x
+  // 14 11 6 2 x
+  // 15 13 9 4 1
+
+  for (SizeType k = j_last_sweep_b; k > -maxsteps_b; --k) {
     auto& mat_t = t_panels.nextResource();
     auto& mat_v = v_panels.nextResource();
     auto& mat_w = w_panels.nextResource();
     auto& mat_w2 = w2_panels.nextResource();
 
-    // Note: apply the entire column (steps)
-    const SizeType steps = nrStepsForSweep(j * b, mat_hh.size().cols(), b);
-    for (SizeType step = 0; step < steps; ++step) {
-      const SizeType i = j + step;
+    for (SizeType i_b = std::abs<SizeType>(k), j_b = std::max<SizeType>(0, k);
+         i_b < j_b + nrStepsForSweep(j_b * b, mat_hh.size().cols(), b); i_b += 2, ++j_b) {
+      const SizeType step_b = i_b - j_b;
 
-      const GlobalElementIndex ij_el(i * b, j * b);
+      const GlobalElementIndex ij_el(i_b * b, j_b * b);
       const LocalTileIndex ij(dist_hh.localTileIndex(dist_hh.globalTileIndex(ij_el)));
 
       // Note:  reflector with size = 1 must be ignored, except for the last step of the last sweep
       //        with complex type
       const SizeType nrefls = [&]() {
-        const bool allowSize1 = isComplex_v<T> && j == j_last_sweep && step == steps - 1;
+        const bool allowSize1 = isComplex_v<T> && j_b == j_last_sweep_b &&
+                                step_b == nrStepsForSweep(j_b * b, mat_hh.size().cols(), b) - 1;
         const GlobalElementSize delta(dist_hh.size().rows() - ij_el.row() - 1,
                                       std::min(b, dist_hh.size().cols() - ij_el.col()));
         return std::min(b, std::min(delta.rows() - (allowSize1 ? 0 : 1), delta.cols()));
@@ -808,7 +837,7 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid& grid, const Si
   auto mpi_chain_col = grid.col_communicator_pipeline();
   auto mpi_chain_col_p2p = grid.col_communicator_pipeline();
 
-  const SizeType idx_last_sweep_b = (nrSweeps<T>(mat_hh.size().cols()) - 1) / b;
+  const SizeType j_last_sweep_b = (nrSweeps<T>(mat_hh.size().cols()) - 1) / b;
   const SizeType maxsteps_b = nrStepsForSweep(0, mat_hh.size().rows(), b);
 
   // Note: Next two nested `for`s describe a special order loop over the matrix, which allow to
@@ -839,7 +868,7 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid& grid, const Si
   // 12  8 3 x x
   // 14 11 6 2 x
   // 15 13 9 4 1
-  for (SizeType k = idx_last_sweep_b; k > -maxsteps_b; --k) {
+  for (SizeType k = j_last_sweep_b; k > -maxsteps_b; --k) {
     auto& mat_t = t_panels.nextResource();
     auto& panel_hh = hh_panels.nextResource();
     auto& mat_v = v_panels.nextResource();
@@ -859,7 +888,7 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid& grid, const Si
       // Note:  reflector with size = 1 must be ignored, except for the last step of the last sweep
       //        with complex type
       const SizeType nrefls = [&]() {
-        const bool allowSize1 = isComplex_v<T> && j_b == idx_last_sweep_b &&
+        const bool allowSize1 = isComplex_v<T> && j_b == j_last_sweep_b &&
                                 step_b == nrStepsForSweep(j_b * b, mat_hh.size().cols(), b) - 1;
         const GlobalElementSize delta(dist_hh.size().rows() - ij_el.row() - 1,
                                       std::min(b, dist_hh.size().cols() - ij_el.col()));

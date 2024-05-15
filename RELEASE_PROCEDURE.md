@@ -22,8 +22,8 @@ DLA-Future follows [Semantic Versioning](https://semver.org).
 
 1. Update the minimum required versions if necessary.
 
-1. Add a link to the documentation for the release. The documentation will be generated automatically
-   after the `vx.y.z` tag has been created and pushed.
+1. Add a link to the documentation for the release in `DOCUMENTATION.md` and update the link in `README.md`.
+   The documentation will be generated automatically after the `vx.y.z` tag has been created and pushed.
 
 1. Create a release on GitHub using the script `scripts/roll_release.sh`. This
    script automatically tags the release with the corresponding release number.  You'll need to set

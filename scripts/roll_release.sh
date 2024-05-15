@@ -22,6 +22,7 @@ VERSION_FULL="${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
 VERSION_FULL_TAG="v${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
 VERSION_TITLE="DLA-Future ${VERSION_FULL}"
 CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+RELEASE_DATE=$(date '+%Y-%m-%d')
 
 if ! which hub >/dev/null 2>&1; then
     echo "Hub not installed on this system (see https://hub.github.com/). Exiting."
@@ -84,6 +85,14 @@ else
     sanity_errors=$((sanity_errors + 1))
 fi
 
+printf "Checking that %s has today's date... " "${cff_path}"
+if grep "^date-released: '${RELEASE_DATE}'" "${cff_path}"; then
+    echo "OK"
+else
+    echo "Missing"
+    sanity_errors=$((sanity_errors + 1))
+fi
+
 if [[ ${sanity_errors} -gt 0 ]]; then
     echo "Found ${sanity_errors} error(s). Fix it/them and try again."
     exit 1
@@ -105,6 +114,7 @@ VERSION_DESCRIPTION=$(
 echo ""
 echo "The version is: ${VERSION_FULL}"
 echo "The version title is: ${VERSION_TITLE}"
+echo "The release date is: ${RELEASE_DATE}"
 echo "The version description is:"
 echo "${VERSION_DESCRIPTION}"
 

@@ -12,9 +12,6 @@
 #include <type_traits>
 #include <utility>
 
-#ifdef EXTRA_MPI_TYPES_DEBUGGING
-#include <pika/debugging/demangle_helper.hpp>
-#endif
 #include <pika/debugging/print.hpp>
 #include <pika/execution.hpp>
 
@@ -26,6 +23,10 @@
 #include <dlaf/sender/when_all_lift.h>
 //
 #include <pika/mpi.hpp>
+//
+#ifdef EXTRA_MPI_TYPES_DEBUGGING
+#include <pika/debugging/demangle_helper.hpp>
+#endif
 
 namespace dlaf::comm::internal {
 

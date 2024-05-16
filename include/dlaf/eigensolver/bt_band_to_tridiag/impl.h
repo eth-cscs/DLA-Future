@@ -618,12 +618,12 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
     return;
 
   // Note: if no householder reflectors are going to be applied (in case of trivial matrix)
-  if (mat_hh.size().rows() <= (dlaf::isComplex_v<T> ? 1 : 2))
+  if (nrSweeps<T>(mat_hh.size().rows()) == 0)
     return;
 
   const SizeType b = band_size;
+  const SizeType mb = mat_hh.blockSize().rows();
   const SizeType group_size = getTuneParameters().bt_band_to_tridiag_hh_apply_group_size;
-  const SizeType nsweeps = nrSweeps<T>(mat_hh.size().cols());
 
   const LocalTileSize tiles_per_block(mat_e.blockSize().rows() / b, 1);
   Matrix<T, D> mat_e_rt = mat_e.retiledSubPipeline(tiles_per_block);
@@ -646,45 +646,82 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
   //               0 0 0 d
   const TileElementSize w_tile_sz(2 * b - 1, b);
 
-  const SizeType dist_w_rows = mat_e_rt.nrTiles().rows() * w_tile_sz.rows();
-  const matrix::Distribution dist_w({dist_w_rows, b}, w_tile_sz);
-  const matrix::Distribution dist_t({mat_hh.size().rows(), b}, {b, b});
-  const matrix::Distribution dist_w2({b, mat_e_rt.size().cols()}, {b, mat_e_rt.blockSize().cols()});
+  const SizeType nlocal_ws =
+      std::max<SizeType>(1, dist_hh.localNrTiles().rows() * (util::ceilDiv<SizeType>(mb / b, 2) + 1));
+  const matrix::Distribution dist_ws_hh({nlocal_ws * b, b}, {b, b});
+  const matrix::Distribution dist_ws_v({nlocal_ws * w_tile_sz.rows(), w_tile_sz.cols()}, w_tile_sz);
+  const matrix::Distribution dist_ws_w2({nlocal_ws * b, mat_e_rt.size().cols()},
+                                        {b, mat_e_rt.blockSize().cols()});
 
   constexpr std::size_t n_workspaces = 2;
-  RoundRobin<Panel<Coord::Col, T, D>> t_panels(n_workspaces, dist_t);
-  RoundRobin<Panel<Coord::Col, T, D>> v_panels(n_workspaces, dist_w);
-  RoundRobin<Panel<Coord::Col, T, D>> w_panels(n_workspaces, dist_w);
-  RoundRobin<Panel<Coord::Row, T, D>> w2_panels(n_workspaces, dist_w2);
 
-  HHManager<B, D, T> helperBackend(b, n_workspaces, dist_t, dist_w);
+  RoundRobin<Panel<Coord::Col, T, D>> t_panels(n_workspaces, dist_ws_hh);
 
-  // Note: sweep are on diagonals, steps are on verticals
-  const SizeType j_last_sweep = (nsweeps - 1) / b;
-  for (SizeType j = j_last_sweep; j >= 0; --j) {
+  RoundRobin<Panel<Coord::Col, T, D>> v_panels(n_workspaces, dist_ws_v);
+  RoundRobin<Panel<Coord::Col, T, D>> w_panels(n_workspaces, dist_ws_v);
+
+  RoundRobin<Panel<Coord::Row, T, D>> w2_panels(n_workspaces, dist_ws_w2);
+
+  HHManager<B, D, T> helperBackend(b, n_workspaces, dist_ws_hh, dist_ws_v);
+
+  const SizeType idx_last_sweep_b = (nrSweeps<T>(mat_hh.size().cols()) - 1) / b;
+  const SizeType maxsteps_b = nrStepsForSweep(0, mat_hh.size().rows(), b);
+
+  // Note: Next two nested `for`s describe a special order loop over the matrix, which allow to
+  // better schedule communications considering the structure of the algorithm.
+  //
+  // Each element depends on:
+  // - top
+  // - bottom-right
+  // - right
+  //
+  // This basic rule for dependencies can be described collectively as a mechanism where elements are
+  // "unlocked" in different epochs, which forms a pattern like if the matrix get scanned not
+  // perpendicularly to their main axis, but instead it gets scanned by a slightly skewed line that goes
+  // from top right to bottom left.
+  //
+  //  5 x x x x
+  //  6 4 x x x
+  //  7 5 3 x x
+  //  8 6 4 2 x
+  //  9 7 5 3 1
+  //
+  // Elements of the same epoch are somehow "independent" and so they can potentially run in parallel,
+  // given that previous epoch has been completed. Since scheduling happens sequentially, elements
+  // of the same epoch will be ordered starting from top-most one, resulting in
+  //
+  //  7  x x x x
+  // 10  5 x x x
+  // 12  8 3 x x
+  // 14 11 6 2 x
+  // 15 13 9 4 1
+  for (SizeType k = idx_last_sweep_b; k > -maxsteps_b; --k) {
     auto& mat_t = t_panels.nextResource();
     auto& mat_v = v_panels.nextResource();
     auto& mat_w = w_panels.nextResource();
     auto& mat_w2 = w2_panels.nextResource();
 
-    // Note: apply the entire column (steps)
-    const SizeType steps = nrStepsForSweep(j * b, mat_hh.size().cols(), b);
-    for (SizeType step = 0; step < steps; ++step) {
-      const SizeType i = j + step;
-
-      const GlobalElementIndex ij_el(i * b, j * b);
-      const LocalTileIndex ij(dist_hh.localTileIndex(dist_hh.globalTileIndex(ij_el)));
+    for (SizeType i_b = std::abs<SizeType>(k), j_b = std::max<SizeType>(0, k);
+         i_b < j_b + nrStepsForSweep(j_b * b, mat_hh.size().cols(), b); i_b += 2, ++j_b) {
+      const SizeType step_b = i_b - j_b;
+      const GlobalElementIndex ij_el(i_b * b, j_b * b);
+      const GlobalTileIndex ij_g(dist_hh.globalTileIndex(ij_el));
 
       // Note:  reflector with size = 1 must be ignored, except for the last step of the last sweep
       //        with complex type
       const SizeType nrefls = [&]() {
-        const bool allowSize1 = isComplex_v<T> && j == j_last_sweep && step == steps - 1;
+        const bool allowSize1 = isComplex_v<T> && j_b == idx_last_sweep_b &&
+                                step_b == nrStepsForSweep(j_b * b, mat_hh.size().cols(), b) - 1;
         const GlobalElementSize delta(dist_hh.size().rows() - ij_el.row() - 1,
                                       std::min(b, dist_hh.size().cols() - ij_el.col()));
         return std::min(b, std::min(delta.rows() - (allowSize1 ? 0 : 1), delta.cols()));
       }();
 
       const TileAccessHelper helper(b, nrefls, dist_hh, dist_e_rt, ij_el);
+      const DistIndexing indexing_helper(helper, dist_hh, b, ij_g, i_b);
+
+      if (!indexing_helper.isInvolved())
+        continue;
 
       if (nrefls < b) {
         mat_t.setWidth(nrefls);
@@ -693,32 +730,50 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
         mat_w2.setHeight(nrefls);
       }
 
+      // Note:
+      // From HH it is possible to extract V that is needed for computing W and W2, both required
+      // for updating E.
+
+      const SizeType ncols_local = dist_e_rt.localNrTiles().cols();
+
+      // COMPUTE V and W from HH and T
+      auto tile_hh = splitTile(mat_hh.read(ij_g), helper.specHHCompact());
       auto [tile_v_unshared, tile_w_unshared] =
-          helperBackend.computeVW(group_size, ij, helper,
-                                  splitTile(mat_hh.read(ij), helper.specHHCompact()), mat_v, mat_t,
-                                  mat_w);
+          helperBackend.computeVW(group_size, indexing_helper.wsIndexHH(), helper,
+                                  std::move(tile_hh), mat_v, mat_t, mat_w);
       auto tile_v = matrix::shareReadWriteTile(ex::make_unique_any_sender(std::move(tile_v_unshared)));
       auto tile_w = matrix::shareReadWriteTile(ex::make_unique_any_sender(std::move(tile_w_unshared)));
 
-      for (SizeType j_e = 0; j_e < dist_e_rt.nrTiles().cols(); ++j_e) {
-        const auto idx_e = helper.topIndexE(j_e);
+      // UPDATE E
+      for (SizeType j_e = 0; j_e < ncols_local; ++j_e) {
+        const SizeType j_e_g = dist_e_rt.template globalTileFromLocalTile<Coord::Col>(j_e);
+        const LocalTileIndex idx_w2(indexing_helper.wsIndexHH().row(), j_e);
 
+        const GlobalTileIndex idx_e_top = helper.topIndexE(j_e_g);
+        const auto nb = mat_e_rt.tileSize(idx_e_top).cols();
+
+        // SINGLE ROW UPDATE
         if (!helper.affectsMultipleTiles()) {
-          ex::start_detached(
-              ex::when_all(ex::just(group_size), tile_v, tile_w,
-                           mat_w2.readwrite(LocalTileIndex(0, j_e)), mat_e_rt.readwrite(idx_e)) |
-              dlaf::internal::transform<dlaf::internal::TransformDispatchType::Blas>(
-                  dlaf::internal::Policy<B>(thread_priority::normal, thread_stacksize::nostack),
-                  ApplyHHToSingleTileRow<B, T>{}));
+          ex::start_detached(ex::when_all(ex::just(group_size), tile_v, tile_w,
+                                          splitTile(mat_w2.readwrite(idx_w2), helper.specW2(nb)),
+                                          mat_e_rt.readwrite(idx_e_top)) |
+                             dlaf::internal::transform<dlaf::internal::TransformDispatchType::Blas>(
+                                 dlaf::internal::Policy<B>(thread_priority::normal,
+                                                           thread_stacksize::nostack),
+                                 ApplyHHToSingleTileRow<B, T>{}));
         }
+        // TWO ROWs
         else {
-          ex::start_detached(
-              ex::when_all(ex::just(group_size), tile_v, tile_w,
-                           mat_w2.readwrite(LocalTileIndex(0, j_e)), mat_e_rt.readwrite(idx_e),
-                           mat_e_rt.readwrite(helper.bottomIndexE(j_e))) |
-              dlaf::internal::transform<dlaf::internal::TransformDispatchType::Blas>(
-                  dlaf::internal::Policy<B>(thread_priority::normal, thread_stacksize::nostack),
-                  ApplyHHToDoubleTileRow<B, T>{}));
+          const GlobalTileIndex idx_e_bottom = helper.bottomIndexE(j_e_g);
+
+          // TWO ROWs (same RANK)
+            ex::start_detached(
+                ex::when_all(ex::just(group_size), tile_v, tile_w,
+                             splitTile(mat_w2.readwrite(idx_w2), helper.specW2(nb)),
+                             mat_e_rt.readwrite(idx_e_top), mat_e_rt.readwrite(idx_e_bottom)) |
+                dlaf::internal::transform<dlaf::internal::TransformDispatchType::Blas>(
+                    dlaf::internal::Policy<B>(thread_priority::normal, thread_stacksize::nostack),
+                    ApplyHHToDoubleTileRow<B, T>{}));
         }
       }
 

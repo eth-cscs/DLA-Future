@@ -4,7 +4,7 @@ on:
   pull_request:
 
 jobs:
-  doc:
+  inshpect:
     runs-on: ubuntu-22.04
 
     steps:

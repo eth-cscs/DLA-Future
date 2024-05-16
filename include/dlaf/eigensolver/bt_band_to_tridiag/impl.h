@@ -739,8 +739,8 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
       // COMPUTE V and W from HH and T
       auto tile_hh = splitTile(mat_hh.read(ij_g), helper.specHHCompact());
       auto [tile_v_unshared, tile_w_unshared] =
-          helperBackend.computeVW(group_size, indexing_helper.wsIndexHH(), helper,
-                                  std::move(tile_hh), mat_v, mat_t, mat_w);
+          helperBackend.computeVW(group_size, indexing_helper.wsIndexHH(), helper, std::move(tile_hh),
+                                  mat_v, mat_t, mat_w);
       auto tile_v = matrix::shareReadWriteTile(ex::make_unique_any_sender(std::move(tile_v_unshared)));
       auto tile_w = matrix::shareReadWriteTile(ex::make_unique_any_sender(std::move(tile_w_unshared)));
 
@@ -767,13 +767,13 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
           const GlobalTileIndex idx_e_bottom = helper.bottomIndexE(j_e_g);
 
           // TWO ROWs (same RANK)
-            ex::start_detached(
-                ex::when_all(ex::just(group_size), tile_v, tile_w,
-                             splitTile(mat_w2.readwrite(idx_w2), helper.specW2(nb)),
-                             mat_e_rt.readwrite(idx_e_top), mat_e_rt.readwrite(idx_e_bottom)) |
-                dlaf::internal::transform<dlaf::internal::TransformDispatchType::Blas>(
-                    dlaf::internal::Policy<B>(thread_priority::normal, thread_stacksize::nostack),
-                    ApplyHHToDoubleTileRow<B, T>{}));
+          ex::start_detached(
+              ex::when_all(ex::just(group_size), tile_v, tile_w,
+                           splitTile(mat_w2.readwrite(idx_w2), helper.specW2(nb)),
+                           mat_e_rt.readwrite(idx_e_top), mat_e_rt.readwrite(idx_e_bottom)) |
+              dlaf::internal::transform<dlaf::internal::TransformDispatchType::Blas>(
+                  dlaf::internal::Policy<B>(thread_priority::normal, thread_stacksize::nostack),
+                  ApplyHHToDoubleTileRow<B, T>{}));
         }
       }
 

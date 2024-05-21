@@ -24,9 +24,9 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install --no-install-recommends clang-format-15 python3
-          pip3 install black==23.03.0
-          pip3 install cmakelang==0.6.13
+          sudo apt-get install --no-install-recommends clang-format-15 python3 python3-pip
+          pip3 install --break-system-packages black==23.03.0
+          pip3 install --break-system-packages cmakelang==0.6.13
 
       - name: Fetch master
         run: git fetch --no-tags --depth=1 origin +refs/heads/master:refs/heads/master

@@ -17,8 +17,8 @@ jobs:
           curl --output dasel \
             --location https://github.com/TomWright/dasel/releases/download/v2.7.0/dasel_linux_amd64
           echo "38decc82e0dcf9a5ccd22918b909a78c92ee0d919b4534b0a6d90c802936b1a0 asel" | sha256sum --check
-          sudo mv dasel /usr/local/bin/dasel
-          sudo chmod +x /usr/local/bin/dasel
+          mv dasel /usr/local/bin/dasel
+          chmod +x /usr/local/bin/dasel
           popd
 
           pushd /tmp

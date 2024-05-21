@@ -13,11 +13,11 @@ jobs:
           sudo apt update
           sudo apt install -y fd-find
 
-
           curl --output /tmp/dasel \
             --location https://github.com/TomWright/dasel/releases/download/v2.7.0/dasel_linux_amd64
           sudo mv /tmp/dasel /usr/local/bin/dasel
           sudo chmod +x /usr/local/bin/dasel
+
           pushd /tmp
           curl --output inshpect \
             --location https://raw.githubusercontent.com/msimberg/inshpect/d31ba8ed7e636c57cb9085ed3a8450d998e6b8a5/inshpect
@@ -25,6 +25,7 @@ jobs:
           chmod +x inshpect
           mv inshpect /usr/local/bin
           popd
+
           pushd /tmp
           curl --output ripgrep.tar.gz \
             --location https://github.com/BurntSushi/ripgrep/releases/download/13.0.0/ripgrep-13.0.0-x86_64-unknown-linux-musl.tar.gz

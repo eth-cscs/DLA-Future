@@ -17,8 +17,8 @@ jobs:
           curl --output dasel \
             --location https://github.com/TomWright/dasel/releases/download/v2.7.0/dasel_linux_amd64
           echo "38decc82e0dcf9a5ccd22918b909a78c92ee0d919b4534b0a6d90c802936b1a0 asel" | sha256sum --check
-          mv dasel /usr/local/bin/dasel
-          chmod +x /usr/local/bin/dasel
+          chmod +x dasel
+          mv dasel /usr/local/bin
           popd
 
           pushd /tmp
@@ -26,7 +26,7 @@ jobs:
             --location https://raw.githubusercontent.com/msimberg/inshpect/d31ba8ed7e636c57cb9085ed3a8450d998e6b8a5/inshpect
           echo "4b891a178fa99ac800b9b92acc0596d72f640ca1ae6de7f35ac4b3785dcd7af9 inshpect" | sha256sum --check
           chmod +x inshpect
-          mv inshpect /usr/local/bin
+          mv inshpect /usr/local/bin/inshpect
           popd
 
           pushd /tmp

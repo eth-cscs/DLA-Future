@@ -8,14 +8,13 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-
 #pragma once
+
+#include <utility>
 
 #ifdef DLAF_WITH_GPU
 #include <whip.hpp>
 #endif
-
-#include <utility>
 
 #include <dlaf/types.h>
 

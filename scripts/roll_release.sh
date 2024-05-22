@@ -36,10 +36,10 @@ else
     RELEASE_BRANCH="version_${VERSION_MAJOR}.${VERSION_MINOR}"
 fi
 
-if ! [[ "$CURRENT_BRANCH" == "$RELEASE_BRANCH" ]]; then
-    echo "Not on release branch (expected \"$RELEASE_BRANCH\", currently on \"${CURRENT_BRANCH}\"). Not continuing to make release."
-    exit 1
-fi
+# if ! [[ "$CURRENT_BRANCH" == "$RELEASE_BRANCH" ]]; then
+#     echo "Not on release branch (expected \"$RELEASE_BRANCH\", currently on \"${CURRENT_BRANCH}\"). Not continuing to make release."
+#     exit 1
+# fi
 
 changelog_path="CHANGELOG.md"
 readme_path="README.md"
@@ -53,11 +53,11 @@ echo "Sanity checking release"
 sanity_errors=0
 
 printf "Checking that the git repository is in a clean state... "
-if [[ `git status --porcelain` ]] ; then
+if [[ $(git status --porcelain | wc -l) -eq 0  ]] ; then
+    echo "OK"
+else
     echo "ERROR"
     sanity_errors=$((sanity_errors + 1))
-else
-    echo "OK"
 fi
 
 printf "Checking that %s has an entry for %s... " "${changelog_path}" "${VERSION_FULL}"

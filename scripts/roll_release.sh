@@ -36,10 +36,10 @@ else
     RELEASE_BRANCH="version_${VERSION_MAJOR}.${VERSION_MINOR}"
 fi
 
-# if ! [[ "$CURRENT_BRANCH" == "$RELEASE_BRANCH" ]]; then
-#     echo "Not on release branch (expected \"$RELEASE_BRANCH\", currently on \"${CURRENT_BRANCH}\"). Not continuing to make release."
-#     exit 1
-# fi
+if ! [[ "$CURRENT_BRANCH" == "$RELEASE_BRANCH" ]]; then
+    echo "Not on release branch (expected \"$RELEASE_BRANCH\", currently on \"${CURRENT_BRANCH}\"). Not continuing to make release."
+    exit 1
+fi
 
 changelog_path="CHANGELOG.md"
 readme_path="README.md"

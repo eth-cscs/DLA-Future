@@ -18,8 +18,7 @@
 #include <dlaf/matrix/matrix_ref.h>
 #include <dlaf/types.h>
 
-namespace dlaf::multiplication {
-namespace internal {
+namespace dlaf::multiplication::internal {
 using dlaf::matrix::internal::MatrixRef;
 
 template <Backend B, Device D, class T>
@@ -47,5 +46,4 @@ DLAF_MULTIPLICATION_GENERAL_ETI(extern, Backend::GPU, Device::GPU, std::complex<
 DLAF_MULTIPLICATION_GENERAL_ETI(extern, Backend::GPU, Device::GPU, std::complex<double>)
 #endif
 
-}
 }

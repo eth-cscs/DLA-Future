@@ -27,8 +27,7 @@
 #include <dlaf/sender/when_all_lift.h>
 #include <dlaf/util_matrix.h>
 
-namespace dlaf::multiplication {
-namespace internal {
+namespace dlaf::multiplication::internal {
 
 template <Backend B, Device D, class T>
 void General<B, D, T>::callNN(const T alpha, MatrixRef<const T, D>& mat_a, MatrixRef<const T, D>& mat_b,

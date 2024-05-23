@@ -214,8 +214,11 @@ cscs["santis"] = {
 
 # Env
 export MPICH_OPT_THREAD_SYNC=0 # Required to work around MPICH bug
+export MPICH_GPU_SUPPORT_ENABLED=1
 export MIMALLOC_EAGER_COMMIT_DELAY=0
 export MIMALLOC_LARGE_OS_PAGES=1
+export PIKA_SMALL_STACK_SIZE=0x40000
+export DLAF_BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE=128
 
 # Debug
 module list &> modules_{bs_name}.txt

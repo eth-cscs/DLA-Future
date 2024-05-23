@@ -389,7 +389,8 @@ auto stablePartitionIndexForDeflationArrays(const SizeType n, const ColType* typ
 //
 // Both permutations are represented using global indices, but:
 // - @p index_sorted          sorts "globally", i.e. considering all evecs across ranks
-// - @p index_sorted_coltype  sorts "locally", i.e. consdering just evecs from the same rank
+// - @p index_sorted_coltype  sorts "locally", i.e. considering just evecs from the same rank (global indices)
+// - @p i5_lc                 sorts "locally", i.e. considering just evecs from current rank (local indices)
 //
 // In addition, even if all ranks have the full permutation, it is important to highlight that
 // thanks to how it is built, i.e. rank-independent permutations, @p index_sorted_coltype can be used as
@@ -399,11 +400,15 @@ auto stablePartitionIndexForDeflationArrays(const SizeType n, const ColType* typ
 // rank                   |     0     |     1     |     0     |
 // initial                | 0U| 1L| 2X| 3U| 4U| 5X| 6L| 7L| 8X|
 // index_sorted           | 0U| 1L| 3U| 4U| 6L| 7L| 2X| 5X| 8X| -> sort(non-deflated) | sort(deflated)
-// index_sorted_col_type  | 0U| 1L| 6L| 3U| 4U| 5X| 7L| 2X| 8X| -> rank0(ULLLXX) - rank1(UUX)
+// index_sorted_col_type  | 0U| 1L| 6L| 3U| 4U| 5X| 7L| 2X| 8X| -> rank0(ULLLXX) - rank1(UUX) (global indices)
+// i5_lc                  | 0U| 1L| 3L|...........| 4L| 2X| 5X| -> rank0(ULLLXX)  (local indices)
+// i5_lc                  |...........| 0U| 1U| 2X|...........| -> rank1(UUX)     (local indices)
 //
 // index_sorted_col_type can be used "locally":
 // on rank0               | 0U| 1L| 6L| --| --| --| 7L| 2X| 8X| -> ULLLXX
 // on rank1               | --| --| --| 3U| 4U| 5X| --| --| --| -> UUX
+//
+// i5_lc is just local to the current rank, and it is a view over index_sorted_col_type where indices are local.
 //
 // where U: Upper, D: Dense, L: Lower, X: Deflated
 //
@@ -411,11 +416,12 @@ auto stablePartitionIndexForDeflationArrays(const SizeType n, const ColType* typ
 // which is useful since eigenvectors are more expensive to permute, so we can keep them in their
 // initial order.
 //
-// @param types                 array[n] column type of each eigenvector after deflation (initial order)
-// @param evals                 array[n] of eigenvalues sorted as perm_sorted
-// @param perm_sorted           array[n] current -> initial (i.e. evals[i] -> types[perm_sorted[i]])
-// @param index_sorted          array[n] global(sort(non-deflated)|sort(deflated))) -> initial
-// @param index_sorted_coltype  array[n] local(sort(upper)|sort(dense)|sort(lower)|sort(deflated))) -> initial
+// @param types                 array[n]    column type of each eigenvector after deflation (initial order)
+// @param evals                 array[n]    of eigenvalues sorted as perm_sorted
+// @param perm_sorted           array[n]    current -> initial (i.e. evals[i] -> types[perm_sorted[i]])
+// @param index_sorted          array[n]    global(sort(non-deflated)|sort(deflated))) -> initial
+// @param index_sorted_coltype  array[n]    local(sort(upper)|sort(dense)|sort(lower)|sort(deflated))) -> initial
+// @param i5_lc                 array[n_lc] local(sort(upper)|sort(dense)|sort(lower)|sort(deflated))) -> initial
 //
 // @return k                    number of non-deflated eigenvectors
 // @return k_local              number of local non-deflated eigenvectors
@@ -508,6 +514,12 @@ auto stablePartitionIndexForDeflationArrays(const matrix::Distribution& dist_sub
     index_sorted_coltype[to_sizet(jjj_el)] = jj_el;
   }
 
+  // This is the local version of the previous one, just for the current rank
+  for (SizeType i_lc = 0; i_lc < dist_sub.local_size().cols(); ++i_lc) {
+    const SizeType i = dist_sub.global_element_from_local_element<Coord::Col>(i_lc);
+    i5_lc[i_lc] = dist_sub.local_element_from_global_element<Coord::Col>(index_sorted_coltype[i]);
+  }
+
   std::array<SizeType, 3> n_udl = [&]() {
     SizeType first_dense;
     for (first_dense = 0; first_dense < n; ++first_dense) {
@@ -540,12 +552,6 @@ auto stablePartitionIndexForDeflationArrays(const matrix::Distribution& dist_sub
 
     return std::array<SizeType, 3>{first_dense, last_dense + 1, last_lower + 1};
   }();
-
-  // This is just the local part of previous one
-  for (SizeType i_lc = 0; i_lc < dist_sub.local_size().cols(); ++i_lc) {
-    const SizeType i = dist_sub.global_element_from_local_element<Coord::Col>(i_lc);
-    i5_lc[i_lc] = dist_sub.local_element_from_global_element<Coord::Col>(index_sorted_coltype[i]);
-  }
 
   // invert i3 and store it in i2 (temporary)
   //    i3 (in)  : initial  <--- deflated

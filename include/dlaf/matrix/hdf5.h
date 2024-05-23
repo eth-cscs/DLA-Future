@@ -15,6 +15,8 @@
 #include <complex>
 #include <cstdint>
 #include <string>
+#include <string_view>
+#include <typeinfo>
 
 #include <H5Cpp.h>
 #include <mpi.h>
@@ -52,6 +54,35 @@ const H5::PredType& hdf5_datatype<std::complex<T>>::type = hdf5_datatype<T>::typ
 
 template <class T>
 struct hdf5_datatype<const T> : public hdf5_datatype<T> {};
+
+// Type to string mappings
+template <typename T>
+struct TypeToString {
+  static inline constexpr std::string_view value = typeid(T).name();
+};
+
+template <typename T>
+inline constexpr std::string_view TypeToString_v = TypeToString<T>::value;
+
+template <>
+struct TypeToString<float> {
+  static inline constexpr std::string_view value = "s";
+};
+
+template <>
+struct TypeToString<double> {
+  static inline constexpr std::string_view value = "d";
+};
+
+template <>
+struct TypeToString<std::complex<float>> {
+  static inline constexpr std::string_view value = "c";
+};
+
+template <>
+struct TypeToString<std::complex<double>> {
+  static inline constexpr std::string_view value = "z";
+};
 
 // Helper function that for each local tile index in @p dist, gets a sender of a tile with
 // @p get_tile and sends it to a function that takes care of the mapping between file and memory.

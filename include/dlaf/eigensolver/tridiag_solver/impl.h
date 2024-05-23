@@ -10,6 +10,8 @@
 #pragma once
 
 #include <algorithm>
+#include <atomic>
+#include <sstream>
 
 #include <pika/execution.hpp>
 #include <pika/thread.hpp>
@@ -27,6 +29,7 @@
 #include <dlaf/eigensolver/tridiag_solver/merge.h>
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/hdf5.h>
 #include <dlaf/permutations/general.h>
 #include <dlaf/permutations/general/impl.h>
 #include <dlaf/sender/make_sender_algorithm_overloads.h>
@@ -363,6 +366,19 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device
   if (evecs.size().isEmpty())
     return;
 
+#ifdef DLAF_WITH_HDF5
+  static std::atomic<size_t> num_tridiag_solver_calls = 0;
+  std::stringstream fname;
+  fname << "tridiag_solver-"
+        << matrix::internal::TypeToString_v<T> << std::to_string(num_tridiag_solver_calls) << ".h5";
+  std::optional<matrix::internal::FileHDF5> file;
+
+  if (getTuneParameters().debug_dump_tridiag_solver_data) {
+    file = matrix::internal::FileHDF5(grid.fullCommunicator(), fname.str());
+    file->write(tridiag, "/input");
+  }
+#endif
+
   // If the matrix is composed by a single tile simply call stedc.
   if (evecs.nrTiles().linear_size() == 1) {
     if constexpr (D == Device::CPU) {
@@ -441,6 +457,15 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device
   dlaf::permutations::permute<Backend::MC, Device::CPU, T, Coord::Col>(row_task_chain, 0, n, ws_h.i1,
                                                                        ws_hm.e0, ws_hm.e2);
   copy(ws_hm.e2, evecs);
+
+#ifdef DLAF_WITH_HDF5
+  if (getTuneParameters().debug_dump_tridiag_solver_data) {
+    file->write(evecs, "/evecs");
+    file->write(evals, "/evals");
+  }
+
+  num_tridiag_solver_calls++;
+#endif
 }
 
 // \overload TridiagSolver<B, D, T>::call()

@@ -1007,9 +1007,11 @@ void multiplyEigenvectors(const SizeType sub_offset, const SizeType n, const Siz
   // └───┴────────┴────┘  └────────────┴────┘
 
   namespace ex = pika::execution::experimental;
+  using pika::execution::thread_priority;
 
   ex::start_detached(
       ex::when_all(std::forward<KSender>(k), std::forward<UDLSenders>(n_udl)) |
+      ex::transfer(dlaf::internal::getBackendScheduler<Backend::MC>(thread_priority::high)) |
       ex::then([sub_offset, n, n_upper, n_lower, e0 = e0.subPipeline(), e1 = e1.subPipelineConst(),
                 e2 = e2.subPipelineConst()](const SizeType k, std::array<std::size_t, 3> n_udl) mutable {
         using dlaf::matrix::internal::MatrixRef;

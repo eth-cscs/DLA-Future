@@ -211,6 +211,7 @@ cscs["santis"] = {
 #SBATCH --hint=multithread
 #SBATCH --output=output.txt
 #SBATCH --error=error.txt
+#SBATCH --reservation=notransparenthugepages
 
 # Env
 export MPICH_OPT_THREAD_SYNC=0 # Required to work around MPICH bug

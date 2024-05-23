@@ -1817,12 +1817,11 @@ void mergeDistSubproblems(comm::CommunicatorPipeline<comm::CommunicatorType::Ful
 
   const GlobalElementIndex sub_offset{i_begin * dist.tile_size().rows(),
                                       i_begin * dist.tile_size().cols()};
-  const matrix::Distribution dist_sub(
-      dist, {sub_offset,
-             {
-                 global_tile_element_distance<Coord::Row>(dist, i_begin, i_end),
-                 global_tile_element_distance<Coord::Col>(dist, i_begin, i_end),
-             }});
+  const GlobalElementSize sub_size{
+      global_tile_element_distance<Coord::Row>(dist, i_begin, i_end),
+      global_tile_element_distance<Coord::Col>(dist, i_begin, i_end),
+  };
+  const matrix::Distribution dist_sub(dist, {sub_offset, sub_size});
 
   // Calculate the size of the upper subproblem
   const SizeType n_upper = global_tile_element_distance<Coord::Row>(dist, i_begin, i_split);

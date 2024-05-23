@@ -50,13 +50,14 @@ template <Backend B, Device D, class T, Coord coord>
 void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
              Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {
   DLAF_ASSERT(matrix::local_matrix(perms), perms);
+  DLAF_ASSERT(matrix::same_process_grid(mat_in, mat_out), mat_in, mat_out);
 
   // Note:
   // These are not implementation constraints, but more logic constraints. Indeed, these ensure that
   // the range [i_begin, i_end] is square in terms of elements (it would not make sense to have it square
   // in terms of number of tiles). Moreover, by requiring mat_in and mat_out matrices to have the same
   // shape, it is ensured that range [i_begin, i_end] is actually the same on both sides.
-  DLAF_ASSERT(square_size(mat_in), mat_in);
+  DLAF_ASSERT(matrix::square_size(mat_in), mat_in);
   DLAF_ASSERT(matrix::square_blocksize(mat_in), mat_in);
   DLAF_ASSERT(matrix::equal_size(mat_in, mat_out), mat_in);
   DLAF_ASSERT(matrix::equal_blocksize(mat_in, mat_out), mat_in);
@@ -67,6 +68,9 @@ void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
 
   DLAF_ASSERT(perms.block_size().rows() == mat_in.block_size().rows(), mat_in, perms);
 
+  // Note:
+  // perms is a column vector with a number of elements equal to the local part of matrix involved
+  // in the permutation, i.e. [i_begin, i_end), along coord axis
   DLAF_ASSERT(perms.size().cols() == 1, perms);
   DLAF_ASSERT(perms.size().rows() == mat_in.distribution().local_size().template get<coord>(), perms,
               mat_in);

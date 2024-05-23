@@ -214,6 +214,7 @@ cscs["santis"] = {
 #SBATCH --reservation=notransparenthugepages
 
 # Env
+export FI_CXI_RDZV_THRESHOLD=262144
 export MPICH_OPT_THREAD_SYNC=0 # Required to work around MPICH bug
 export MPICH_GPU_SUPPORT_ENABLED=1
 export MIMALLOC_EAGER_COMMIT_DELAY=0

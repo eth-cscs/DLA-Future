@@ -45,6 +45,13 @@ struct PermutationsDistTestMC : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(PermutationsDistTestMC, RealMatrixElementTypes);
 
+#ifdef DLAF_WITH_GPU
+template <class T>
+struct PermutationsDistTestGPU : public TestWithCommGrids {};
+
+TYPED_TEST_SUITE(PermutationsDistTestGPU, RealMatrixElementTypes);
+#endif
+
 // n, nb, i_begin, i_end, permutation
 // permutation has to be defined using element indices wrt to the range described by [i_begin, i_end)
 // tiles and not global indices.
@@ -269,3 +276,17 @@ TYPED_TEST(PermutationsDistTestMC, ColumnsLocal) {
     }
   }
 }
+
+#ifdef DLAF_WITH_GPU
+TYPED_TEST(PermutationsDistTestGPU, ColumnsLocal) {
+  using T = TypeParam;
+  constexpr auto GPU = Device::GPU;
+
+  for (auto& comm_grid : this->commGrids()) {
+    for (const auto& [n, nb, i_begin, i_end] : params2) {
+      testDistPermutationsAsLocal<T, GPU, Coord::Col>(comm_grid, n, nb, i_begin, i_end);
+      pika::wait();
+    }
+  }
+}
+#endif

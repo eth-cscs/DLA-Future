@@ -141,8 +141,8 @@ void applyPermutationOnCPU(
   const SizeType j_in_lc = subm_dist.local_tile_from_local_element<C>(perm_from);
   const SizeType j_out_lc = subm_dist.local_tile_from_local_element<C>(perm_to);
 
-  const TileElementIndex ij_in_tl(C, subm_dist.tile_element_from_local_element<OC>(perm_from), 0);
-  const TileElementIndex ij_out_tl(C, subm_dist.tile_element_from_local_element<OC>(perm_to), 0);
+  const TileElementIndex ij_in_tl(C, subm_dist.tile_element_from_local_element<C>(perm_from), 0);
+  const TileElementIndex ij_out_tl(C, subm_dist.tile_element_from_local_element<C>(perm_to), 0);
 
   for (SizeType i_lc = 0; i_lc < subm_dist.local_nr_tiles().get<OC>(); ++i_lc) {
     const LocalTileIndex ij_in(OC, i_lc, j_in_lc);
@@ -202,7 +202,7 @@ void Permutations<B, D, T, C>::call(const SizeType i_begin, const SizeType i_end
       const SizeType* perm_arr = index_tile_futs[0].get().ptr();
 
       DLAF_ASSERT_HEAVY(i_perm >= 0 && i_perm < nperms, i_perm, nperms);
-      DLAF_ASSERT_HEAVY(perm_arr[i_perm] >= 0 && perm_arr[i_perm] < nperms, i_perm, nperms);
+      DLAF_ASSERT_HEAVY(perm_arr[i_perm] >= 0 && perm_arr[i_perm] < nperms, perm_arr[i_perm], nperms);
 
       applyPermutationOnCPU<T, C>(i_perm, subm_dist, perm_arr, mat_in_tiles, mat_out_tiles);
     };

@@ -9,6 +9,7 @@
 //
 
 #include <array>
+#include <sstream>
 
 #include <dlaf/common/index2d.h>
 

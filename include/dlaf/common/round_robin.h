@@ -11,6 +11,7 @@
 
 /// @file
 
+#include <cstddef>
 #include <vector>
 
 #include <dlaf/common/assert.h>

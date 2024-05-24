@@ -8,6 +8,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <tuple>
+#include <utility>
+#include <vector>
+
 #include <pika/init.hpp>
 
 #include <dlaf/communication/communicator_pipeline.h>

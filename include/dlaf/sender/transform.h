@@ -9,6 +9,8 @@
 //
 #pragma once
 
+#include <utility>
+
 #include <pika/execution.hpp>
 
 #include <dlaf/common/consume_rvalues.h>

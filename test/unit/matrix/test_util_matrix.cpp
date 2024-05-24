@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <utility>
 #include <vector>
 
 #include <pika/execution.hpp>

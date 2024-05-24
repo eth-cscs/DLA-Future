@@ -10,9 +10,12 @@
 #pragma once
 
 #include <cmath>
+#include <cstddef>
 #include <exception>
+#include <optional>
 #include <random>
 #include <string>
+#include <utility>
 
 #ifndef M_PI
 constexpr double M_PI = 3.141592;

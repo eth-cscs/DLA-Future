@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <vector>
+
 #include <dlaf/common/range2d.h>
 #include <dlaf/communication/broadcast_panel.h>
 #include <dlaf/communication/communicator.h>

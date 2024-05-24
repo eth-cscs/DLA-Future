@@ -8,6 +8,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 #include <cmath>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 #include <dlaf/lapack/tile.h>
 

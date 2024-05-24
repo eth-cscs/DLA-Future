@@ -11,6 +11,7 @@
 #pragma once
 
 #include <limits>
+#include <utility>
 
 #include <dlaf/common/single_threaded_blas.h>
 #include <dlaf/common/vector.h>

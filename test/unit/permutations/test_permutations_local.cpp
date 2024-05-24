@@ -8,6 +8,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <tuple>
+#include <vector>
+
 #include <dlaf/matrix/matrix_mirror.h>
 #include <dlaf/permutations/general.h>
 #include <dlaf/util_matrix.h>

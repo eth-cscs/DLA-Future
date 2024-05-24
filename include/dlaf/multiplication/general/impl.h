@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <cstddef>
+
 #include <dlaf/blas/tile.h>
 #include <dlaf/blas/tile_extensions.h>
 #include <dlaf/common/assert.h>

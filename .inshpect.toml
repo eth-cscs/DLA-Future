@@ -1,0 +1,176 @@
+#
+# Distributed Linear Algebra with Future (DLAF)
+#
+# Copyright (c) 2018-2023, ETH Zurich
+# All rights reserved.
+#
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+
+extensions = ["c", "cpp", "cu", "h", "h.in"]
+
+[includes]
+enable = true
+patterns = [
+    { pattern = '\bstd::make_shared\b', include = 'memory' },
+    { pattern = '\bstd::map\b', include = 'map' },
+    { pattern = '\bstd::set\b', include = 'set' },
+    { pattern = '\bstd::multi_map\b', include = 'multi_map' },
+    { pattern = '\bstd::multi_set\b', include = 'multi_set' },
+    { pattern = '\bstd::unordered_map\b', include = 'unordered_map' },
+    { pattern = '\bstd::unordered_set\b', include = 'unordered_set' },
+    { pattern = '\bstd::unordered_multi_map\b', include = 'unordered_map' },
+    { pattern = '\bstd::unordered_multi_set\b', include = 'unordered_set' },
+    { pattern = '\bstd::((shared|unique)_ptr)\b', include = 'memory' },
+    { pattern = '\bstd::addressof\b', include = 'memory' },
+    { pattern = '\bstd::list\b', include = 'list' },
+    { pattern = '\bstd::string\b', include = 'string' },
+    { pattern = '\bstd::vector\b', include = 'vector' },
+    { pattern = '\bstd::array\b', include = 'array' },
+    { pattern = '\bstd::reference_wrapper\b', include = 'functional' },
+    { pattern = '\bstd::(c?ref)\b', include = 'functional' },
+    { pattern = '\bstd::(u?int[0-9]+_t)\b', include = 'cstdint' },
+    { pattern = '\bstd::((i|o)?stringstream)\b', include = 'sstream' },
+    { pattern = '\bstd::((i|o)?fstream)\b', include = 'fstream' },
+    { pattern = '\bstd::(cin|cout|cerr|clog)\b', include = 'iostream' },
+    { pattern = '\bstd::setw\b', include = 'iomanip' },
+    { pattern = '\bstd::setprecision\b', include = 'iomanip' },
+    { pattern = '\bstd::size_t\b', include = 'cstddef' },
+    { pattern = '\bstd::ptrdiff_t\b', include = 'cstddef' },
+    { pattern = '\bstd::nullptr_t\b', include = 'cstddef' },
+    { pattern = '\bstd::(true|false)_type\b', include = 'type_traits' },
+    { pattern = '\bstd::(bool|integral)_constant\b', include = 'type_traits' },
+    { pattern = '\bstd::invoke_result\b', include = 'type_traits' },
+    { pattern = '\bstd::invoke_result_t\b', include = 'type_traits' },
+    { pattern = '\bstd::is_void\b', include = 'type_traits' },
+    { pattern = '\bstd::is_void_t\b', include = 'type_traits' },
+    { pattern = '\bstd::is_null_pointer\b', include = 'type_traits' },
+    { pattern = '\bstd::is_integral\b', include = 'type_traits' },
+    { pattern = '\bstd::is_floating_point\b', include = 'type_traits' },
+    { pattern = '\bstd::is_array\b', include = 'type_traits' },
+    { pattern = '\bstd::is_enum\b', include = 'type_traits' },
+    { pattern = '\bstd::is_union\b', include = 'type_traits' },
+    { pattern = '\bstd::is_class\b', include = 'type_traits' },
+    { pattern = '\bstd::is_function\b', include = 'type_traits' },
+    { pattern = '\bstd::is_pointer\b', include = 'type_traits' },
+    { pattern = '\bstd::is_lvalue_reference\b', include = 'type_traits' },
+    { pattern = '\bstd::is_rvalue_reference\b', include = 'type_traits' },
+    { pattern = '\bstd::is_member_object_pointer\b', include = 'type_traits' },
+    { pattern = '\bstd::is_member_function_pointer\b', include = 'type_traits' },
+    { pattern = '\bstd::is_fundamental\b', include = 'type_traits' },
+    { pattern = '\bstd::is_arithmetic\b', include = 'type_traits' },
+    { pattern = '\bstd::is_scalar\b', include = 'type_traits' },
+    { pattern = '\bstd::is_object\b', include = 'type_traits' },
+    { pattern = '\bstd::is_compound\b', include = 'type_traits' },
+    { pattern = '\bstd::is_reference\b', include = 'type_traits' },
+    { pattern = '\bstd::is_member_pointer\b', include = 'type_traits' },
+    { pattern = '\bstd::is_const\b', include = 'type_traits' },
+    { pattern = '\bstd::is_volatile\b', include = 'type_traits' },
+    { pattern = '\bstd::is_trivial\b', include = 'type_traits' },
+    { pattern = '\bstd::is_trivially_copyable\b', include = 'type_traits' },
+    { pattern = '\bstd::is_standard_layout\b', include = 'type_traits' },
+    { pattern = '\bstd::is_pod\b', include = 'type_traits' },
+    { pattern = '\bstd::is_literal_type\b', include = 'type_traits' },
+    { pattern = '\bstd::is_empty\b', include = 'type_traits' },
+    { pattern = '\bstd::is_polymorphic\b', include = 'type_traits' },
+    { pattern = '\bstd::is_abstract\b', include = 'type_traits' },
+    { pattern = '\bstd::is_signed\b', include = 'type_traits' },
+    { pattern = '\bstd::is_unsigned\b', include = 'type_traits' },
+    { pattern = '\bstd::is_constructible\b', include = 'type_traits' },
+    { pattern = '\bstd::is_trivially_constructible\b', include = 'type_traits' },
+    { pattern = '\bstd::is_nothrow_constructible\b', include = 'type_traits' },
+    { pattern = '\bstd::is_default_constructible\b', include = 'type_traits' },
+    { pattern = '\bstd::is_trivially_default_constructible\b', include = 'type_traits' },
+    { pattern = '\bstd::is_nothrow_default_constructible\b', include = 'type_traits' },
+    { pattern = '\bstd::is_copy_constructible\b', include = 'type_traits' },
+    { pattern = '\bstd::is_trivially_copy_constructible\b', include = 'type_traits' },
+    { pattern = '\bstd::is_nothrow_copy_constructible\b', include = 'type_traits' },
+    { pattern = '\bstd::is_move_constructible\b', include = 'type_traits' },
+    { pattern = '\bstd::is_trivially_move_constructible\b', include = 'type_traits' },
+    { pattern = '\bstd::is_nothrow_move_constructible\b', include = 'type_traits' },
+    { pattern = '\bstd::is_assignable\b', include = 'type_traits' },
+    { pattern = '\bstd::is_trivially_assignable\b', include = 'type_traits' },
+    { pattern = '\bstd::is_nothrow_assignable\b', include = 'type_traits' },
+    { pattern = '\bstd::is_copy_assignable\b', include = 'type_traits' },
+    { pattern = '\bstd::is_trivially_copy_assignable\b', include = 'type_traits' },
+    { pattern = '\bstd::is_nothrow_copy_assignable\b', include = 'type_traits' },
+    { pattern = '\bstd::is_move_assignable\b', include = 'type_traits' },
+    { pattern = '\bstd::is_trivially_move_assignable\b', include = 'type_traits' },
+    { pattern = '\bstd::is_nothrow_move_assignable\b', include = 'type_traits' },
+    { pattern = '\bstd::is_destructible\b', include = 'type_traits' },
+    { pattern = '\bstd::is_trivially_destructible\b', include = 'type_traits' },
+    { pattern = '\bstd::is_same\b', include = 'type_traits' },
+    { pattern = '\bstd::is_base_of\b', include = 'type_traits' },
+    { pattern = '\bstd::is_convertible\b', include = 'type_traits' },
+    { pattern = '\bstd::has_virtual_destructor\b', include = 'type_traits' },
+    { pattern = '\bstd::alignment_of\b', include = 'type_traits' },
+    { pattern = '\bstd::aligned_storage\b', include = 'type_traits' },
+    { pattern = '\bstd::aligned_union\b', include = 'type_traits' },
+    { pattern = '\bstd::rank\b', include = 'type_traits' },
+    { pattern = '\bstd::extent\b', include = 'type_traits' },
+    { pattern = '\bstd::add_(cv|const|pointer|volatile|lvalue_reference|rvalue_reference)\b', include = 'type_traits' },
+    { pattern = '\bstd::make_signed\b', include = 'type_traits' },
+    { pattern = '\bstd::make_unsigned\b', include = 'type_traits' },
+    { pattern = '\bstd::remove_(cv|const|volatile|reference|pointer|extent|all_extents)\b', include = 'type_traits' },
+    { pattern = '\bstd::decay\b', include = 'type_traits' },
+    { pattern = '\bstd::enable_if\b', include = 'type_traits' },
+    { pattern = '\bstd::conditional\b', include = 'type_traits' },
+    { pattern = '\bstd::common_type\b', include = 'type_traits' },
+    { pattern = '\bstd::underlying_type\b', include = 'type_traits' },
+    { pattern = '\bstd::result_of\b', include = 'type_traits' },
+    { pattern = '\bstd::is_invocable([a-z_]*)\b', include = 'type_traits' },
+    { pattern = '\btypeid\b', include = 'typeinfo' },
+    { pattern = '\bstd::type_info\b', include = 'typeinfo' },
+    { pattern = '\bstd::(mem((set)|(cpy)|(move)))\b', include = 'cstring' },
+    { pattern = '\bstd::swap\b', include = 'utility' },
+    { pattern = '\bstd::move\b', include = 'utility' },
+    { pattern = '\bstd::forward\b', include = 'utility' },
+    { pattern = '\bstd::declval\b', include = 'utility' },
+    { pattern = '\bstd::pair\b', include = 'utility' },
+    { pattern = '\bstd::make_pair\b', include = 'utility' },
+    { pattern = '\bstd::in_place\b', include = 'utility' },
+    { pattern = '\bstd::exception_ptr\b', include = 'exception' },
+    { pattern = '\bstd::terminate\b', include = 'exception' },
+    { pattern = '\bstd::(s|g)et_terminate\b', include = 'exception' },
+    { pattern = '\bstd::swap_ranges\b', include = 'algorithm' },
+    { pattern = '\bstd::iter_swap\b', include = 'algorithm' },
+    { pattern = '\bstd::atomic\b', include = 'atomic' },
+    { pattern = '\bstd::(memory_order_[a-z_]+)\b', include = 'atomic' },
+    { pattern = '\bstd::(minstd_rand(0)?)\b', include = 'random' },
+    { pattern = '\bstd::(mt19937(_64)?)\b', include = 'random' },
+    { pattern = '\bstd::random_device\b', include = 'random' },
+    { pattern = '\bstd::uniform_(int|uniform)_distribution\b', include = 'random' },
+    { pattern = '\bstd::apply\b', include = 'tuple' },
+    { pattern = '\bstd::(forward_as_|make_|)tuple\b', include = 'tuple' },
+    { pattern = '\bstd::ignore\b', include = 'tuple' },
+    { pattern = '\bstd::tie\b', include = 'tuple' },
+    { pattern = '\bstd::tuple_(cat|element|size)\b', include = 'tuple' },
+    { pattern = '\bstd::(make_)optional\b', include = 'optional' },
+    { pattern = '\bstd::nullopt\b', include = 'optional' },
+    { pattern = '\bstd::any(|_cast)\b', include = 'any' },
+    { pattern = '\bstd::error_(code|condition|category)\b', include = 'system_error' },
+    { pattern = '\bstd::system_error\b', include = 'system_error' },
+    { pattern = '\bstd::chrono\b', include = 'chrono' },
+]
+
+[copyright]
+enable = false
+
+[license]
+enable = false
+
+[spdx]
+enable = false
+
+[pragma_once]
+enable = false
+
+[deprecated_includes]
+enable = false
+
+[deprecated_names]
+enable = false
+
+[disallowed_macros]
+enable = false

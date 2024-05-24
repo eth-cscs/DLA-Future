@@ -9,6 +9,7 @@
 //
 
 #include <cmath>
+#include <vector>
 
 #include <pika/execution.hpp>
 #include <pika/init.hpp>

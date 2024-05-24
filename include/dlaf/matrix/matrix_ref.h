@@ -12,6 +12,8 @@
 
 /// @file
 
+#include <utility>
+
 #include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_base.h>

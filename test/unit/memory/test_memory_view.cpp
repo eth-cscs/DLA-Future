@@ -8,6 +8,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <memory>
+#include <utility>
+
 #include <dlaf/memory/memory_view.h>
 
 #include <gtest/gtest.h>

@@ -8,6 +8,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <tuple>
+#include <vector>
+
 #include <whip.hpp>
 
 #include <dlaf/blas/enum_output.h>

@@ -13,9 +13,12 @@
 /// @file
 
 #include <exception>
+#include <memory>
 #include <ostream>
 #include <tuple>
 #include <type_traits>
+#include <utility>
+#include <vector>
 
 #include <pika/async_rw_mutex.hpp>
 #include <pika/execution.hpp>

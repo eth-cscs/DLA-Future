@@ -12,6 +12,7 @@
 
 /// @file
 
+#include <cstddef>
 #include <functional>
 #include <iomanip>
 #include <iostream>

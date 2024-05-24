@@ -12,6 +12,7 @@
 
 /// @file
 
+#include <optional>
 #include <utility>
 
 #include <pika/async_rw_mutex.hpp>

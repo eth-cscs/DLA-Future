@@ -13,10 +13,12 @@
 #ifdef DLAF_WITH_HDF5
 
 #include <complex>
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <string_view>
 #include <typeinfo>
+#include <utility>
 
 #include <H5Cpp.h>
 #include <mpi.h>

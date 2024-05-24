@@ -12,6 +12,9 @@
 #include <algorithm>
 #include <atomic>
 #include <sstream>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 #include <pika/execution.hpp>
 #include <pika/thread.hpp>

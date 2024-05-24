@@ -14,7 +14,7 @@ on: [pull_request]
 
 jobs:
   check-licenses:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/javascript-action@v1

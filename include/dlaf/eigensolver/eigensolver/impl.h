@@ -9,8 +9,10 @@
 //
 #pragma once
 
+#include <atomic>
 #include <cmath>
 #include <optional>
+#include <sstream>
 #include <vector>
 
 #include <dlaf/blas/tile.h>
@@ -60,28 +62,35 @@ void Eigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo, M
   if (uplo != blas::Uplo::Lower)
     DLAF_UNIMPLEMENTED(uplo);
 
-  auto mat_taus = reduction_to_band<B>(grid, mat_a, band_size);
-  auto ret = band_to_tridiagonal<Backend::MC>(grid, uplo, band_size, mat_a);
-
 #ifdef DLAF_WITH_HDF5
+  static std::atomic<size_t> num_eigensolver_calls = 0;
+  std::stringstream fname;
+  fname << "eigensolver-" << matrix::internal::TypeToString_v<T> << "-"
+        << std::to_string(num_eigensolver_calls) << ".h5";
   std::optional<matrix::internal::FileHDF5> file;
 
-  if (getTuneParameters().debug_dump_trisolver_data) {
-    file = matrix::internal::FileHDF5(grid.fullCommunicator(), "trid-ref.h5");
-    file->write(ret.tridiagonal, "/tridiag");
+  if (getTuneParameters().debug_dump_eigensolver_data) {
+    file = matrix::internal::FileHDF5(grid.fullCommunicator(), fname.str());
+    file->write(mat_a, "/input");
   }
 #endif
+
+  auto mat_taus = reduction_to_band<B>(grid, mat_a, band_size);
+
+  auto ret = band_to_tridiagonal<Backend::MC>(grid, uplo, band_size, mat_a);
 
   tridiagonal_eigensolver<B>(grid, ret.tridiagonal, evals, mat_e);
 
+  bt_band_to_tridiagonal<B>(grid, band_size, mat_e, ret.hh_reflectors);
+  bt_reduction_to_band<B>(grid, band_size, mat_e, mat_a, mat_taus);
+
 #ifdef DLAF_WITH_HDF5
-  if (getTuneParameters().debug_dump_trisolver_data) {
+  if (getTuneParameters().debug_dump_eigensolver_data) {
     file->write(evals, "/evals");
     file->write(mat_e, "/evecs");
   }
-#endif
 
-  bt_band_to_tridiagonal<B>(grid, band_size, mat_e, ret.hh_reflectors);
-  bt_reduction_to_band<B>(grid, band_size, mat_e, mat_a, mat_taus);
+  num_eigensolver_calls++;
+#endif
 }
 }

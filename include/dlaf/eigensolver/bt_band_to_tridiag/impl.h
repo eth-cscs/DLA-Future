@@ -625,10 +625,12 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
   const SizeType group_size = getTuneParameters().bt_band_to_tridiag_hh_apply_group_size;
   const SizeType nsweeps = nrSweeps<T>(mat_hh.size().cols());
 
-  const LocalTileSize tiles_per_block(mat_e.blockSize().rows() / b, 1);
-  Matrix<T, D> mat_e_rt = mat_e.retiledSubPipeline(tiles_per_block);
+  const LocalTileSize tiles_per_block_hh(mat_hh.blockSize().rows() / b, mat_hh.blockSize().cols() / b);
+  Matrix<const T, Device::CPU> mat_hh_rt = mat_hh.retiledSubPipelineConst(tiles_per_block_hh);
+  const LocalTileSize tiles_per_block_e(mat_e.blockSize().rows() / b, 1);
+  Matrix<T, D> mat_e_rt = mat_e.retiledSubPipeline(tiles_per_block_e);
 
-  const auto& dist_hh = mat_hh.distribution();
+  const auto& dist_hh_rt = mat_hh_rt.distribution();
   const auto& dist_e_rt = mat_e_rt.distribution();
 
   // Note: w_tile_sz can store reflectors as they are actually applied, opposed to how they are
@@ -648,7 +650,7 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
 
   const SizeType dist_w_rows = mat_e_rt.nrTiles().rows() * w_tile_sz.rows();
   const matrix::Distribution dist_w({dist_w_rows, b}, w_tile_sz);
-  const matrix::Distribution dist_t({mat_hh.size().rows(), b}, {b, b});
+  const matrix::Distribution dist_t({mat_hh_rt.size().rows(), b}, {b, b});
   const matrix::Distribution dist_w2({b, mat_e_rt.size().cols()}, {b, mat_e_rt.blockSize().cols()});
 
   constexpr std::size_t n_workspaces = 2;
@@ -668,23 +670,23 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
     auto& mat_w2 = w2_panels.nextResource();
 
     // Note: apply the entire column (steps)
-    const SizeType steps = nrStepsForSweep(j * b, mat_hh.size().cols(), b);
+    const SizeType steps = nrStepsForSweep(j * b, mat_hh_rt.size().cols(), b);
     for (SizeType step = 0; step < steps; ++step) {
       const SizeType i = j + step;
 
       const GlobalElementIndex ij_el(i * b, j * b);
-      const LocalTileIndex ij(dist_hh.localTileIndex(dist_hh.globalTileIndex(ij_el)));
+      const LocalTileIndex ij(dist_hh_rt.localTileIndex(dist_hh_rt.globalTileIndex(ij_el)));
 
       // Note:  reflector with size = 1 must be ignored, except for the last step of the last sweep
       //        with complex type
       const SizeType nrefls = [&]() {
         const bool allowSize1 = isComplex_v<T> && j == j_last_sweep && step == steps - 1;
-        const GlobalElementSize delta(dist_hh.size().rows() - ij_el.row() - 1,
-                                      std::min(b, dist_hh.size().cols() - ij_el.col()));
+        const GlobalElementSize delta(dist_hh_rt.size().rows() - ij_el.row() - 1,
+                                      std::min(b, dist_hh_rt.size().cols() - ij_el.col()));
         return std::min(b, std::min(delta.rows() - (allowSize1 ? 0 : 1), delta.cols()));
       }();
 
-      const TileAccessHelper helper(b, nrefls, dist_hh, dist_e_rt, ij_el);
+      const TileAccessHelper helper(b, nrefls, dist_hh_rt, dist_e_rt, ij_el);
 
       if (nrefls < b) {
         mat_t.setWidth(nrefls);
@@ -695,7 +697,7 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
 
       auto [tile_v_unshared, tile_w_unshared] =
           helperBackend.computeVW(group_size, ij, helper,
-                                  splitTile(mat_hh.read(ij), helper.specHHCompact()), mat_v, mat_t,
+                                  splitTile(mat_hh_rt.read(ij), helper.specHHCompact()), mat_v, mat_t,
                                   mat_w);
       auto tile_v = matrix::shareReadWriteTile(ex::make_unique_any_sender(std::move(tile_v_unshared)));
       auto tile_w = matrix::shareReadWriteTile(ex::make_unique_any_sender(std::move(tile_w_unshared)));

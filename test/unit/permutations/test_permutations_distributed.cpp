@@ -277,6 +277,18 @@ TYPED_TEST(PermutationsDistTestMC, ColumnsLocal) {
   }
 }
 
+TYPED_TEST(PermutationsDistTestMC, RowsLocal) {
+  using T = TypeParam;
+  constexpr auto CPU = Device::CPU;
+
+  for (auto& comm_grid : this->commGrids()) {
+    for (const auto& [n, nb, i_begin, i_end] : params2) {
+      testDistPermutationsAsLocal<T, CPU, Coord::Row>(comm_grid, n, nb, i_begin, i_end);
+      pika::wait();
+    }
+  }
+}
+
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(PermutationsDistTestGPU, ColumnsLocal) {
   using T = TypeParam;
@@ -285,6 +297,18 @@ TYPED_TEST(PermutationsDistTestGPU, ColumnsLocal) {
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& [n, nb, i_begin, i_end] : params2) {
       testDistPermutationsAsLocal<T, GPU, Coord::Col>(comm_grid, n, nb, i_begin, i_end);
+      pika::wait();
+    }
+  }
+}
+
+TYPED_TEST(PermutationsDistTestGPU, RowsLocal) {
+  using T = TypeParam;
+  constexpr auto GPU = Device::GPU;
+
+  for (auto& comm_grid : this->commGrids()) {
+    for (const auto& [n, nb, i_begin, i_end] : params2) {
+      testDistPermutationsAsLocal<T, GPU, Coord::Row>(comm_grid, n, nb, i_begin, i_end);
       pika::wait();
     }
   }

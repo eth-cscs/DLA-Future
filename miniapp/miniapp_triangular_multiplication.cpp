@@ -109,7 +109,8 @@ struct triangularMultiplicationMiniapp {
     dlaf::matrix::MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU> b(bh);
 
     auto sync_barrier = [&]() {
-      pika::wait();
+      a.get().waitLocalTiles();
+      b.get().waitLocalTiles();
       DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
     };
 

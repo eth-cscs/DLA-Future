@@ -97,6 +97,8 @@ struct Options
 struct reductionToBandMiniapp {
   template <dlaf::Backend backend, typename T>
   static void run(const Options& opts) {
+    using pika::this_thread::experimental::sync_wait;
+
     using namespace dlaf;
     using dlaf::SizeType;
     using dlaf::comm::Communicator;
@@ -159,6 +161,11 @@ struct reductionToBandMiniapp {
         // wait and barrier for all ranks
         matrix.waitLocalTiles();
         taus.waitLocalTiles();
+        for (std::size_t i = 0; i < comm_grid.num_pipelines(); ++i) {
+          sync_wait(comm_grid.full_communicator_pipeline().exclusive());
+          sync_wait(comm_grid.row_communicator_pipeline().exclusive());
+          sync_wait(comm_grid.col_communicator_pipeline().exclusive());
+        }
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         elapsed_time = timeit.elapsed();

@@ -424,7 +424,7 @@ void applyPackingIndex(const matrix::Distribution& subm_dist, IndexMapSender&& i
 
       [[maybe_unused]] const SizeType nperms = subm_dist.size().get<C>();
       DLAF_ASSERT_HEAVY(i_perm >= 0 && i_perm < nperms, i_perm, nperms);
-      DLAF_ASSERT_HEAVY(perm_arr[i_perm] >= 0 && perm_arr[i_perm] < nperms, i_perm, nperms);
+      DLAF_ASSERT_HEAVY(perm_arr[i_perm] >= 0 && perm_arr[i_perm] < nperms, perm_arr[i_perm], nperms);
 
       applyPermutationOnCPU<T, C>(i_perm, subm_dist, perm_arr, mat_in_tiles, mat_out_tiles);
     };

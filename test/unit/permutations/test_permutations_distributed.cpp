@@ -82,7 +82,7 @@ testcase_t customPermutation(SizeType m, SizeType mb, SizeType i_begin_tile, Siz
                              std::vector<SizeType> perms) {
   const auto [i_begin, i_end] = tileToElementRange(m, mb, i_begin_tile, i_end_tile);
 
-  const std::size_t nperms = to_sizet(i_end - i_begin);
+  [[maybe_unused]] const std::size_t nperms = to_sizet(i_end - i_begin);
   DLAF_ASSERT(perms.size() == nperms, perms.size(), nperms);
 
   return {m, mb, i_begin_tile, i_end_tile, std::move(perms)};

@@ -198,10 +198,11 @@ void Permutations<B, D, T, C>::call(const SizeType i_begin, const SizeType i_end
   if constexpr (D == Device::CPU) {
     const SizeType nperms = subm_dist.size().get<C>();
 
-    auto permute_fn = [subm_dist, nperms](const auto i_perm, const auto& index_tile_futs,
-                                          const auto& mat_in_tiles, const auto& mat_out_tiles) {
+    auto permute_fn = [subm_dist](const auto i_perm, const auto& index_tile_futs,
+                                  const auto& mat_in_tiles, const auto& mat_out_tiles) {
       const SizeType* perm_arr = index_tile_futs[0].get().ptr();
 
+      [[maybe_unused]] const SizeType nperms = subm_dist.size().get<C>();
       DLAF_ASSERT_HEAVY(i_perm >= 0 && i_perm < nperms, i_perm, nperms);
       DLAF_ASSERT_HEAVY(perm_arr[i_perm] >= 0 && perm_arr[i_perm] < nperms, perm_arr[i_perm], nperms);
 
@@ -417,10 +418,11 @@ void applyPackingIndex(const matrix::Distribution& subm_dist, IndexMapSender&& i
   if constexpr (D == Device::CPU) {
     const SizeType nperms = subm_dist.size().get<C>();
 
-    auto permute_fn = [subm_dist, nperms](const auto i_perm, const auto& index_tile_futs,
-                                          const auto& mat_in_tiles, const auto& mat_out_tiles) {
+    auto permute_fn = [subm_dist](const auto i_perm, const auto& index_tile_futs,
+                                  const auto& mat_in_tiles, const auto& mat_out_tiles) {
       const SizeType* perm_arr = index_tile_futs[0].get().ptr();
 
+      [[maybe_unused]] const SizeType nperms = subm_dist.size().get<C>();
       DLAF_ASSERT_HEAVY(i_perm >= 0 && i_perm < nperms, i_perm, nperms);
       DLAF_ASSERT_HEAVY(perm_arr[i_perm] >= 0 && perm_arr[i_perm] < nperms, i_perm, nperms);
 

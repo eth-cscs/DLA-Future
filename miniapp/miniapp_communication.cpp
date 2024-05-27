@@ -172,7 +172,8 @@ void benchmark_all_reduce(int64_t run_index, const Options& opts, Communicator& 
     return scheduleAllReduce(std::move(comm), MPI_SUM, std::move(ro_tile), std::move(rw_tile));
   };
   benchmark_ro_rw(pcomm, matrix, matrix_out, allred);
-  pika::wait();
+  matrix.waitLocalTiles();
+  matrix_out.waitLocalTiles();
   DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
   auto t = timeit.elapsed();
 

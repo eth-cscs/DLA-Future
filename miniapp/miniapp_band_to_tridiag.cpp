@@ -127,7 +127,8 @@ struct BandToTridiagMiniapp {
         auto [trid, hhr] = bench();
 
         // wait and barrier for all ranks
-        pika::wait();
+        trid.waitLocalTiles();
+        hhr.waitLocalTiles();
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
         elapsed_time = timeit.elapsed();
       }

@@ -95,37 +95,6 @@ namespace dlaf::permutations::internal {
 // [2]: The input submatrix is defined by `begin_tiles`, `ld_tiles`, `distr` and `in_tiles`
 // [3]: The subregion is defined by `begin` and `sz`
 // [4]: The output submatrix is defined by `begin_tiles`, `ld_tiles`, `distr` and `out_tiles`
-
-template <class T, Coord C>
-void applyPermutationOnCPU(
-    const SizeType i_perm, const std::vector<SizeType>& splits, const GlobalElementIndex out_begin,
-    const SizeType in_offset, const matrix::Distribution& subm_dist, const SizeType* perm_arr,
-    const std::vector<matrix::internal::TileAsyncRwMutexReadOnlyWrapper<T, Device::CPU>>& in_tiles_fut,
-    const std::vector<matrix::Tile<T, Device::CPU>>& out_tiles) {
-  constexpr auto OC = orthogonal(C);
-
-  for (std::size_t i_split = 0; i_split < splits.size() - 1; ++i_split) {
-    const SizeType split = splits[i_split];
-
-    GlobalElementIndex i_split_gl_in(split + in_offset, perm_arr[i_perm]);
-    GlobalElementIndex i_split_gl_out(split + out_begin.get<OC>(), out_begin.get<C>() + i_perm);
-    TileElementSize region(splits[i_split + 1] - split, 1);
-
-    if constexpr (C == Coord::Row) {
-      region.transpose();
-      i_split_gl_in.transpose();
-      i_split_gl_out.transpose();
-    }
-
-    const TileElementIndex i_subtile_in = subm_dist.tileElementIndex(i_split_gl_in);
-    const auto& tile_in = in_tiles_fut[to_sizet(subm_dist.globalTileLinearIndex(i_split_gl_in))].get();
-    const TileElementIndex i_subtile_out = subm_dist.tileElementIndex(i_split_gl_out);
-    auto& tile_out = out_tiles[to_sizet(subm_dist.globalTileLinearIndex(i_split_gl_out))];
-
-    dlaf::tile::lacpy<T>(region, i_subtile_in, tile_in, i_subtile_out, tile_out);
-  }
-}
-
 template <class T, Coord C>
 void applyPermutationOnCPU(
     const SizeType i_perm, const matrix::Distribution& subm_dist, const SizeType* perm_arr,
@@ -466,7 +435,6 @@ void unpackLocalOnCPU(const matrix::Distribution& subm_dist, const matrix::Distr
     const size_t rank_index = to_sizet(rank);
 
     const SizeType* perm_arr = index_tile_futs[0].get().ptr();
-    const GlobalElementSize sz = subm_dist.size();
 
     const int a = std::accumulate(send_counts.cbegin(), send_counts.cbegin() + rank, 0);
     const int b = a + send_counts[rank_index];
@@ -486,30 +454,17 @@ void unpackLocalOnCPU(const matrix::Distribution& subm_dist, const matrix::Distr
     std::transform(perm_arr, perm_arr + subm_dist.size().get<C>(), std::back_inserter(perm_offseted),
                    [offset](const SizeType perm) { return perm + offset; });
 
-    constexpr auto OC = orthogonal(C);
-    const SizeType in_offset = 0;
-    const GlobalElementIndex out_begin{0, 0};
-
-    std::vector<SizeType> splits =
-        dlaf::util::interleaveSplits(sz.get<OC>(), subm_dist.blockSize().get<OC>(),
-                                     subm_dist.distanceToAdjacentTile<OC>(in_offset),
-                                     subm_dist.distanceToAdjacentTile<OC>(out_begin.get<OC>()));
-
-    return std::tuple(a, b, std::move(splits), std::move(perm_offseted), std::move(mat_in_tiles),
-                      std::move(mat_out_tiles));
+    return std::tuple(a, b, std::move(perm_offseted), std::move(mat_in_tiles), std::move(mat_out_tiles));
   };
 
   auto permutations_unpack_local_f = [subm_dist](const auto i_perm, const auto a, const auto b,
-                                                 const auto& splits, const auto& perm_offseted,
-                                                 const auto& mat_in_tiles, const auto& mat_out_tiles) {
+                                                 const auto& perm_offseted, const auto& mat_in_tiles,
+                                                 const auto& mat_out_tiles) {
     const SizeType* perm_arr = perm_offseted.data();
 
     // [a, b)
     if (a <= perm_arr[i_perm] && perm_arr[i_perm] < b) {
-      const SizeType in_offset = 0;
-      const GlobalElementIndex out_begin{0, 0};
-      applyPermutationOnCPU<T, C>(i_perm, splits, out_begin, in_offset, subm_dist, perm_arr,
-                                  mat_in_tiles, mat_out_tiles);
+      applyPermutationOnCPU<T, C>(i_perm, subm_dist, perm_arr, mat_in_tiles, mat_out_tiles);
     }
   };
 
@@ -537,31 +492,18 @@ void unpackOthersOnCPU(const matrix::Distribution& subm_dist, const matrix::Dist
     const int a = std::accumulate(recv_counts.cbegin(), recv_counts.cbegin() + rank, 0);
     const int b = a + recv_counts[rank_index];
 
-    constexpr auto OC = orthogonal(C);
-    const GlobalElementSize sz = subm_dist.size();
-    const SizeType in_offset = 0;
-    const GlobalElementIndex out_begin{0, 0};
-
-    std::vector<SizeType> splits =
-        dlaf::util::interleaveSplits(sz.get<OC>(), subm_dist.blockSize().get<OC>(),
-                                     subm_dist.distanceToAdjacentTile<OC>(in_offset),
-                                     subm_dist.distanceToAdjacentTile<OC>(out_begin.get<OC>()));
-
-    return std::tuple(a, b, std::move(splits), std::move(index_tile_futs), std::move(mat_in_tiles),
+    return std::tuple(a, b, std::move(index_tile_futs), std::move(mat_in_tiles),
                       std::move(mat_out_tiles));
   };
 
   auto permutations_unpack_f = [subm_dist](const auto i_perm, const auto a, const auto b,
-                                           const auto& splits, const auto& index_tile_futs,
-                                           const auto& mat_in_tiles, const auto& mat_out_tiles) {
+                                           const auto& index_tile_futs, const auto& mat_in_tiles,
+                                           const auto& mat_out_tiles) {
     const SizeType* perm_arr = index_tile_futs[0].get().ptr();
 
     // [0, a) and [b, end)
     if (perm_arr[i_perm] < a || b <= perm_arr[i_perm]) {
-      const SizeType in_offset = 0;
-      const GlobalElementIndex out_begin{0, 0};
-      applyPermutationOnCPU<T, C>(i_perm, splits, out_begin, in_offset, subm_dist, perm_arr,
-                                  mat_in_tiles, mat_out_tiles);
+      applyPermutationOnCPU<T, C>(i_perm, subm_dist, perm_arr, mat_in_tiles, mat_out_tiles);
     }
   };
 

@@ -244,7 +244,7 @@ void testDistPermutationsAsLocal(comm::CommunicatorGrid& grid, SizeType n, SizeT
     permutations::permute<B, D, T, C>(i_begin, i_end, perms.get(), mat_in.get(), mat_out.get());
   }
 
-  auto expected_out = [=](const GlobalElementIndex& i_el) {
+  auto expected_out = [=, i_start_el_lc = i_start_el_lc](const GlobalElementIndex& i_el) {
     const GlobalTileIndex i_tile = dist.global_tile_index(i_el);
     if (i_begin <= i_tile.row() && i_tile.row() < i_end && i_begin <= i_tile.col() &&
         i_tile.col() < i_end) {

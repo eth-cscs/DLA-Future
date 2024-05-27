@@ -194,7 +194,6 @@ void testDistPermutationsAsLocal(comm::CommunicatorGrid& grid, SizeType n, SizeT
   const GlobalElementSize size(n, n);
   const TileElementSize block_size(nb, nb);
   const Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
-
   const Distribution dist(size, block_size, grid.size(), grid.rank(), src_rank_index);
 
   const SizeType max_perms_lc = dist.local_size().get<C>();
@@ -204,6 +203,8 @@ void testDistPermutationsAsLocal(comm::CommunicatorGrid& grid, SizeType n, SizeT
 
   const auto [i_start_el_lc, i_end_el_lc] = tileToElementRange(max_perms_lc, nb, i_begin_lc, i_end_lc);
   const SizeType nperms_lc = i_end_el_lc - i_start_el_lc;
+
+  // Note: create a local "mirror" permutation
   for (SizeType i_window_lc = 0; i_window_lc < nperms_lc; ++i_window_lc)
     perms[to_sizet(i_start_el_lc + i_window_lc)] = nperms_lc - 1 - i_window_lc;
 
@@ -260,9 +261,9 @@ void testDistPermutationsAsLocal(comm::CommunicatorGrid& grid, SizeType n, SizeT
 }
 
 const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> params2 = {
-    {6, 2, 0, 3},
-    {36, 4, 0, 9},
-    {6, 2, 1, 3},
+    {6, 2, 0, 3},  {36, 4, 0, 9},  // full matrix
+    {6, 2, 1, 3},  {36, 4, 2, 7},  // sub-matrix
+    {36, 5, 2, 8},                 // sub-matrix, with last tile incomplete
 };
 
 TYPED_TEST(PermutationsDistTestMC, ColumnsLocal) {
@@ -272,18 +273,6 @@ TYPED_TEST(PermutationsDistTestMC, ColumnsLocal) {
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& [n, nb, i_begin, i_end] : params2) {
       testDistPermutationsAsLocal<T, CPU, Coord::Col>(comm_grid, n, nb, i_begin, i_end);
-      pika::wait();
-    }
-  }
-}
-
-TYPED_TEST(PermutationsDistTestMC, RowsLocal) {
-  using T = TypeParam;
-  constexpr auto CPU = Device::CPU;
-
-  for (auto& comm_grid : this->commGrids()) {
-    for (const auto& [n, nb, i_begin, i_end] : params2) {
-      testDistPermutationsAsLocal<T, CPU, Coord::Row>(comm_grid, n, nb, i_begin, i_end);
       pika::wait();
     }
   }
@@ -301,7 +290,21 @@ TYPED_TEST(PermutationsDistTestGPU, ColumnsLocal) {
     }
   }
 }
+#endif
 
+TYPED_TEST(PermutationsDistTestMC, RowsLocal) {
+  using T = TypeParam;
+  constexpr auto CPU = Device::CPU;
+
+  for (auto& comm_grid : this->commGrids()) {
+    for (const auto& [n, nb, i_begin, i_end] : params2) {
+      testDistPermutationsAsLocal<T, CPU, Coord::Row>(comm_grid, n, nb, i_begin, i_end);
+      pika::wait();
+    }
+  }
+}
+
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(PermutationsDistTestGPU, RowsLocal) {
   using T = TypeParam;
   constexpr auto GPU = Device::GPU;

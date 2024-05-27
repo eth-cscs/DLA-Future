@@ -485,8 +485,7 @@ void unpackOthersOnCPU(const matrix::Distribution& subm_dist, const matrix::Dist
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
-  auto setup_unpack_f = [subm_dist,
-                         rank = dist.rankIndex().get<C>()](auto recv_counts, auto index_tile_futs,
+  auto setup_unpack_f = [rank = dist.rankIndex().get<C>()](auto recv_counts, auto index_tile_futs,
                                                            auto mat_in_tiles, auto mat_out_tiles) {
     const size_t rank_index = to_sizet(rank);
     const int a = std::accumulate(recv_counts.cbegin(), recv_counts.cbegin() + rank, 0);

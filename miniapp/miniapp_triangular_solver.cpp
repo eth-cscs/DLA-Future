@@ -44,13 +44,13 @@ using dlaf::DefaultDevice_v;
 using dlaf::Device;
 using dlaf::GlobalElementIndex;
 using dlaf::GlobalElementSize;
-using dlaf::matrix::Matrix;
-using dlaf::matrix::MatrixMirror;
 using dlaf::SizeType;
 using dlaf::TileElementSize;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
 using dlaf::common::Ordering;
+using dlaf::matrix::Matrix;
+using dlaf::matrix::MatrixMirror;
 
 struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {

@@ -233,7 +233,8 @@ void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f) {
     using TileType = typename std::decay_t<decltype(matrix)>::TileType;
     auto set_f = [tile_origin, el_f = el_f](const TileType& tile) {
       for (auto ij_el_tl : iterate_range2d(tile.size())) {
-        GlobalElementIndex ij_el_gl(tile_origin.row() + ij_el_tl.row(), tile_origin.col() + ij_el_tl.col());
+        GlobalElementIndex ij_el_gl(tile_origin.row() + ij_el_tl.row(),
+                                    tile_origin.col() + ij_el_tl.col());
         tile(ij_el_tl) = el_f(ij_el_gl);
       }
     };
@@ -431,8 +432,7 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const Size
       if (ij_gl.row() == ij_gl.col())
         internal::set_diagonal_tile(tile, random_value, offset_value);
       else
-        internal::set_lower_and_upper_tile(tile, random_value, full_tile_size, ij_gl, dist,
-                                           band_size);
+        internal::set_lower_and_upper_tile(tile, random_value, full_tile_size, ij_gl, dist, band_size);
     };
 
     dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(thread_stacksize::nostack),

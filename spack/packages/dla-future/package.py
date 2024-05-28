@@ -184,7 +184,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         args.append(self.define_from_variant("BUILD_SHARED_LIBS", "shared"))
 
         # BLAS/LAPACK
-        if spec["lapack"].name in INTEL_MATH_LIBRARIES:
+        if spec.version <= Version("0.4") and spec["lapack"].name in INTEL_MATH_LIBRARIES:
             mkl_provider = spec["lapack"].name
 
             vmap = {
@@ -246,7 +246,8 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                         )
                     )
         else:
-            args.append(self.define("DLAF_WITH_MKL", False))
+            # TODO: Auto-detect MKL or not?
+            args.append(self.define("DLAF_WITH_MKL", spec["lapack"].name in INTEL_MATH_LIBRARIES))
             args.append(
                 self.define(
                     "LAPACK_LIBRARY",

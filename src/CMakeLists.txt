@@ -94,7 +94,6 @@ target_compile_definitions(
             $<$<BOOL:${DLAF_ASSERT_HEAVY_ENABLE}>:DLAF_ASSERT_HEAVY_ENABLE>
             DLAF_FUNCTION_NAME=$<IF:$<BOOL:is_pretty_function_available>,__PRETTY_FUNCTION__,__func__>
             $<$<BOOL:${DLAF_WITH_MKL}>:DLAF_WITH_MKL>
-            $<$<BOOL:${DLAF_WITH_MKL_LEGACY}>:DLAF_WITH_MKL>
             $<$<BOOL:${DLAF_WITH_OPENMP}>:DLAF_WITH_OPENMP>
             $<$<BOOL:${DLAF_WITH_GPU}>:DLAF_WITH_GPU>
             $<$<BOOL:${DLAF_WITH_CUDA}>:DLAF_WITH_CUDA>

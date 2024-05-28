@@ -247,7 +247,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                     )
         else:
             # TODO: Auto-detect MKL or not?
-            args.append(self.define("DLAF_WITH_MKL", spec["lapack"].name in INTEL_MATH_LIBRARIES))
+            # TODO: for now don't set explicitly, let dlaf auto-detect: args.append(self.define("DLAF_WITH_MKL", spec["lapack"].name in INTEL_MATH_LIBRARIES))
             args.append(
                 self.define(
                     "LAPACK_LIBRARY",

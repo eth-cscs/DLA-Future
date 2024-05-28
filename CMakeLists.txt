@@ -58,6 +58,8 @@ try_compile(
   DLAF_WITH_MKL_TRY_COMPILE SOURCES "${PROJECT_SOURCE_DIR}/cmake/tests/mkl_set_num_threads.cpp"
   LINK_OPTIONS "${LAPACK_LIBRARY}"
 )
+# TODO: Maybe don't need to print this? Though maybe it's nice to have...
+message(WARNING "DLAF_WITH_MKL_TRY_COMPILE=${DLAF_WITH_MKL_TRY_COMPILE}")
 option(DLAF_WITH_MKL "Enable oneMKL as provider for BLAS and LAPACK" "${DLAF_WITH_MKL_TRY_COMPILE}")
 
 if(DLAF_WITH_MKL)

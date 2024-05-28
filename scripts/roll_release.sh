@@ -11,7 +11,7 @@
 #
 
 # This script tags a release locally and creates a release on GitHub. It relies
-# on the hub command line tool (https://hub.github.com/).
+# on the GitHub CLI (https://cli.github.com).
 
 set -o errexit
 
@@ -24,8 +24,8 @@ VERSION_TITLE="DLA-Future ${VERSION_FULL}"
 CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 RELEASE_DATE=$(date '+%Y-%m-%d')
 
-if ! which hub >/dev/null 2>&1; then
-    echo "Hub not installed on this system (see https://hub.github.com/). Exiting."
+if ! which gh >/dev/null 2>&1; then
+    echo "GitHub CLI not installed on this system (see https://cli.github.com). Exiting."
     exit 1
 fi
 
@@ -134,11 +134,6 @@ select yn in "Yes" "No"; do
     esac
 done
 
-if [[ -z "${GITHUB_USER}" || -z "${GITHUB_PASSWORD}" ]] && [[ -z "${GITHUB_TOKEN}" ]]; then
-    echo "Need GITHUB_USER and GITHUB_PASSWORD or only GITHUB_TOKEN to be set to use hub release."
-    exit 1
-fi
-
 echo ""
 if [[ "$(git tag -l ${VERSION_FULL_TAG})" == "${VERSION_FULL_TAG}" ]]; then
     echo "Tag already exists locally."
@@ -157,7 +152,6 @@ fi
 
 echo ""
 echo "Creating release."
-hub release create \
-    --message="${VERSION_TITLE}" \
-    --message="${VERSION_DESCRIPTION}" \
-    "${VERSION_FULL_TAG}"
+gh release create "${VERSION_FULL_TAG}" \
+   --title "${VERSION_TITLE}" \
+   --notes "${VERSION_DESCRIPTION}"

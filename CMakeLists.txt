@@ -8,7 +8,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-cmake_minimum_required(VERSION 3.22)
+# TODO: Bump to 3.25 or keep 3.22?
+cmake_minimum_required(VERSION 3.25)
 
 project(DLAF VERSION 0.4.1)
 
@@ -34,7 +35,6 @@ endif()
 
 option(BUILD_SHARED_LIBS "Build shared libraries." ON)
 option(DLAF_WITH_OPENMP "${DLAF_WITH_OPENMP_DESCRIPTION}" ${DLAF_WITH_OPENMP_DEFAULT})
-option(DLAF_WITH_MKL "Enable oneMKL as provider for BLAS and LAPACK" OFF)
 option(DLAF_WITH_CUDA "Enable CUDA support" OFF)
 option(DLAF_WITH_HIP "Enable HIP support" OFF)
 cmake_dependent_option(
@@ -53,6 +53,12 @@ option(DLAF_BUILD_TESTING_HEADER "Build header tests" OFF)
 option(DLAF_BUILD_DOC "Build documentation" OFF)
 option(DLAF_WITH_PRECOMPILED_HEADERS "Use precompiled headers." OFF)
 option(DLAF_WITH_SCALAPACK "Build ScaLAPACK-like C API (requires ScaLAPACK)" OFF)
+
+try_compile(
+  DLAF_WITH_MKL_TRY_COMPILE SOURCES "${PROJECT_SOURCE_DIR}/cmake/tests/mkl_set_num_threads.cpp"
+  LINK_OPTIONS "${LAPACK_LIBRARY}"
+)
+option(DLAF_WITH_MKL "Enable oneMKL as provider for BLAS and LAPACK" "${DLAF_WITH_MKL_TRY_COMPILE}")
 
 if(DLAF_WITH_MKL)
   # When using MKL there is no need to set the number of threads with

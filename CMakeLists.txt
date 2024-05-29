@@ -55,13 +55,16 @@ option(DLAF_WITH_SCALAPACK "Build ScaLAPACK-like C API (requires ScaLAPACK)" OFF
 
 unset(DLAF_WITH_MKL_TRY_COMPILE CACHE)
 try_compile(
-  DLAF_WITH_MKL_TRY_COMPILE "${PROJECT_SOURCE_DIR}/cmake/tests"
+  DLAF_WITH_MKL_TRY_COMPILE "${PROJECT_BINARY_DIR}/cmake/tests"
   "${PROJECT_SOURCE_DIR}/cmake/tests/mkl_set_num_threads.cpp"
   CMAKE_FLAGS "-DINCLUDE_DIRECTORIES=${LAPACK_INCLUDE_DIR}"
   LINK_LIBRARIES ${LAPACK_LIBRARY}
 )
-# TODO: Maybe don't need to print this? Though maybe it's nice to have...
-message(WARNING "DLAF_WITH_MKL_TRY_COMPILE=${DLAF_WITH_MKL_TRY_COMPILE}")
+if(DLAF_WITH_MKL_TRY_COMPILE)
+  message(STATUS "Intel MKL detection: Found")
+else()
+  message(STATUS "Intel MKL detection: Not found")
+endif()
 option(DLAF_WITH_MKL "Enable MKL as provider for BLAS and LAPACK" "${DLAF_WITH_MKL_TRY_COMPILE}")
 
 if(DLAF_WITH_MKL)

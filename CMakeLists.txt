@@ -61,7 +61,7 @@ try_compile(
 )
 # TODO: Maybe don't need to print this? Though maybe it's nice to have...
 message(WARNING "DLAF_WITH_MKL_TRY_COMPILE=${DLAF_WITH_MKL_TRY_COMPILE}")
-option(DLAF_WITH_MKL "Enable oneMKL as provider for BLAS and LAPACK" "${DLAF_WITH_MKL_TRY_COMPILE}")
+option(DLAF_WITH_MKL "Enable MKL as provider for BLAS and LAPACK" "${DLAF_WITH_MKL_TRY_COMPILE}")
 
 if(DLAF_WITH_MKL)
   # When using MKL there is no need to set the number of threads with

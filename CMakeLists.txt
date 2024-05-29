@@ -63,7 +63,6 @@ try_compile(
 message(WARNING "DLAF_WITH_MKL_TRY_COMPILE=${DLAF_WITH_MKL_TRY_COMPILE}")
 option(DLAF_WITH_MKL "Enable oneMKL as provider for BLAS and LAPACK" "${DLAF_WITH_MKL_TRY_COMPILE}")
 
-# TODO: Enable both, just in case?
 if(DLAF_WITH_MKL)
   # When using MKL there is no need to set the number of threads with
   # omp_set_num_threads; it's sufficient to use MKL's own mechanisms.

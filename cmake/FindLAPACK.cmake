@@ -19,6 +19,9 @@
 #   LAPACK_LIBRARY
 #       ;-list of {lib name, lib filepath, -Llibrary_folder}
 #
+#   LAPACK_INCLUDE_DIR
+#       ;-list of include folders
+#
 # This module sets the following variables:
 #   LAPACK_FOUND - set to true if a library implementing the LAPACK interface is found
 #
@@ -62,9 +65,14 @@ mark_as_advanced(LAPACK_LIBRARY)
 
 _lapack_check_is_working()
 
+# TODO: Checks?
+mark_as_advanced(LAPACK_INCLUDE_DIR)
+
 ### Package
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(LAPACK DEFAULT_MSG LAPACK_LIBRARY _LAPACK_CHECK _LAPACK_CHECK_BLAS)
+find_package_handle_standard_args(
+  LAPACK DEFAULT_MSG LAPACK_LIBRARY LAPACK_INCLUDE_DIR _LAPACK_CHECK _LAPACK_CHECK_BLAS
+)
 
 # Remove the placeholder
 if(LAPACK_LIBRARY STREQUAL "LAPACK_LIBRARIES-PLACEHOLDER-FOR-EMPTY-LIBRARIES")
@@ -77,4 +85,5 @@ if(LAPACK_FOUND)
   endif()
 
   target_link_libraries(DLAF::LAPACK INTERFACE "${LAPACK_LIBRARY}" "${_DEPS}")
+  target_include_directories(DLAF::LAPACK INTERFACE "${LAPACK_INCLUDE_DIR}")
 endif()

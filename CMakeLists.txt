@@ -8,8 +8,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-# TODO: Bump to 3.25 or keep 3.22?
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.22)
 
 project(DLAF VERSION 0.4.1)
 

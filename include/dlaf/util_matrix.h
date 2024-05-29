@@ -535,7 +535,7 @@ void set_random_non_zero_diagonal(Matrix<T, Device::CPU>& matrix) {
     GlobalTileIndex ij = dist.global_tile_index(ij_lc);
 
     const SizeType seed = ij.col() + ij.row() * matrix.size().cols();
-    const BaseType<T> lower_limit = 0.1;
+    const BaseType<T> lower_limit = static_cast<BaseType<T>>(0.1);
 
     using TileType = typename std::decay_t<decltype(matrix)>::TileType;
     auto set_hp_f = [=](const TileType& tile) {

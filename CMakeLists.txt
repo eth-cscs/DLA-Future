@@ -55,8 +55,10 @@ option(DLAF_WITH_PRECOMPILED_HEADERS "Use precompiled headers." OFF)
 option(DLAF_WITH_SCALAPACK "Build ScaLAPACK-like C API (requires ScaLAPACK)" OFF)
 
 try_compile(
-  DLAF_WITH_MKL_TRY_COMPILE SOURCES "${PROJECT_SOURCE_DIR}/cmake/tests/mkl_set_num_threads.cpp"
-  LINK_OPTIONS "${LAPACK_LIBRARY}"
+  DLAF_WITH_MKL_TRY_COMPILE "${PROJECT_SOURCE_DIR}/cmake/tests"
+  "${PROJECT_SOURCE_DIR}/cmake/tests/mkl_set_num_threads.cpp"
+  CMAKE_FLAGS "-DINCLUDE_DIRECTORIES=${LAPACK_INCLUDE_DIR}"
+  LINK_LIBRARIES ${LAPACK_LIBRARY}
 )
 # TODO: Maybe don't need to print this? Though maybe it's nice to have...
 message(WARNING "DLAF_WITH_MKL_TRY_COMPILE=${DLAF_WITH_MKL_TRY_COMPILE}")

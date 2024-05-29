@@ -53,6 +53,7 @@ option(DLAF_BUILD_DOC "Build documentation" OFF)
 option(DLAF_WITH_PRECOMPILED_HEADERS "Use precompiled headers." OFF)
 option(DLAF_WITH_SCALAPACK "Build ScaLAPACK-like C API (requires ScaLAPACK)" OFF)
 
+unset(DLAF_WITH_MKL_TRY_COMPILE CACHE)
 try_compile(
   DLAF_WITH_MKL_TRY_COMPILE "${PROJECT_SOURCE_DIR}/cmake/tests"
   "${PROJECT_SOURCE_DIR}/cmake/tests/mkl_set_num_threads.cpp"

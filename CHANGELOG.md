@@ -6,16 +6,20 @@
 
 - Introduced an option (*) for forcing contiguous GPU communication buffers. (#1096)
 - Introduced an option (*) for enabling GPU aware MPI communication. (#1102)
+- Removed special handling of Intel MKL, as it could lead with broken installations. (#1149)
+    - Spack installations: spack will set the correct variables.
+    - Manual installations: the user is responsible to correctly set variables (see [BUILD.md](BUILD.md)):
 
 (*) These options are available as spack variants.
 
 ### Performance improvements
 
 - Don't communicate in algorithms when using single rank communicators. (#1097)
+- Fixed slow performance of local version of `bt_band_to_tridiagonal` (#1144)
 
 ### Bug fixes
 
-- Implemented a workaround for hipMemcpyDefault 2D memcpys, due to bugs in HIP. (#1106)
+- Implemented a workaround for `hipMemcpyDefault` 2D memcpys, due to bugs in HIP. (#1106)
 - Miniapps initialize HIP before MPI, as on older Cray MPICH versions initializing HIP after MPI leads to HIP not seeing any devices. (#1090)
 
 ## DLA-Future 0.4.1

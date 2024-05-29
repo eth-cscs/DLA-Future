@@ -291,7 +291,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                 args.append(
                     self.define(
                         "CMAKE_CUDA_FLAGS",
-                        "-Werror=cross-execution-space-call;-Werror=reorder;-Werror=deprecated-declarations;-Werror=default-stream-launch;-Werror=ext-lambda-captures-this",
+                        "-Werror=cross-execution-space-call -Werror=reorder -Werror=deprecated-declarations -Werror=default-stream-launch -Werror=ext-lambda-captures-this",
                     )
                 )
             if "+rocm" in spec:

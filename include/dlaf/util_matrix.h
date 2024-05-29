@@ -189,8 +189,8 @@ void set0(pika::execution::thread_priority priority, LocalTileIndex begin, Local
   using pika::execution::thread_stacksize;
   using pika::execution::experimental::start_detached;
 
-  for (const auto& ij : iterate_range2d(begin, sz))
-    start_detached(matrix.readwrite(ij) |
+  for (const auto& ij_lc : iterate_range2d(begin, sz))
+    start_detached(matrix.readwrite(ij_lc) |
                    tile::set0(Policy<backend>(priority, thread_stacksize::nostack)));
 }
 
@@ -210,8 +210,8 @@ void set0(pika::execution::thread_priority priority, Panel<axis, T, D, storage>&
   using pika::execution::thread_stacksize;
   using pika::execution::experimental::start_detached;
 
-  for (const auto& ij : panel.iteratorLocal())
-    start_detached(panel.readwrite(ij) |
+  for (const auto& ij_lc : panel.iteratorLocal())
+    start_detached(panel.readwrite(ij_lc) |
                    tile::set0(Policy<backend>(priority, thread_stacksize::nostack)));
 }
 
@@ -226,9 +226,9 @@ void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f) {
   using pika::execution::thread_stacksize;
 
   const Distribution& dist = matrix.distribution();
-  for (auto ij : iterate_range2d(dist.local_nr_tiles())) {
-    GlobalTileIndex ij_gl = dist.global_tile_index(ij);
-    auto tile_origin = dist.global_element_index(ij_gl, {0, 0});
+  for (auto ij_lc : iterate_range2d(dist.local_nr_tiles())) {
+    GlobalTileIndex ij = dist.global_tile_index(ij_lc);
+    auto tile_origin = dist.global_element_index(ij, {0, 0});
 
     using TileType = typename std::decay_t<decltype(matrix)>::TileType;
     auto set_f = [tile_origin, el_f = el_f](const TileType& tile) {
@@ -240,7 +240,7 @@ void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f) {
     };
 
     dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(thread_stacksize::nostack),
-                                    std::move(set_f), matrix.readwrite(ij));
+                                    std::move(set_f), matrix.readwrite(ij_lc));
   }
 }
 
@@ -278,8 +278,8 @@ void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f, const blas::Op op) 
 /// The diagonal elements are set to 1 and the other elements to 0.
 template <class T>
 void set_identity(Matrix<T, Device::CPU>& matrix) {
-  set(matrix, [](const GlobalElementIndex& ij) {
-    if (ij.row() == ij.col())
+  set(matrix, [](const GlobalElementIndex& ij_lc) {
+    if (ij_lc.row() == ij_lc.col())
       return T{1};
     return T{0};
   });
@@ -300,9 +300,9 @@ void set_random(Matrix<T, Device::CPU>& matrix) {
   using pika::execution::thread_stacksize;
 
   const Distribution& dist = matrix.distribution();
-  for (auto ij : iterate_range2d(dist.local_nr_tiles())) {
-    GlobalTileIndex ij_gl = dist.global_tile_index(ij);
-    auto tile_origin = dist.global_element_index(ij_gl, {0, 0});
+  for (auto ij_lc : iterate_range2d(dist.local_nr_tiles())) {
+    GlobalTileIndex ij = dist.global_tile_index(ij_lc);
+    auto tile_origin = dist.global_element_index(ij, {0, 0});
     auto seed = tile_origin.col() + tile_origin.row() * matrix.size().cols();
 
     using TileType = typename std::decay_t<decltype(matrix)>::TileType;
@@ -314,7 +314,7 @@ void set_random(Matrix<T, Device::CPU>& matrix) {
     };
 
     dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(thread_stacksize::nostack),
-                                    std::move(rnd_f), matrix.readwrite(ij));
+                                    std::move(rnd_f), matrix.readwrite(ij_lc));
   }
 }
 
@@ -339,11 +339,12 @@ void set_diagonal_tile(const Tile<T, Device::CPU>& tile, internal::getter_random
 
 template <class T>
 void set_lower_and_upper_tile(const Tile<T, Device::CPU>& tile, internal::getter_random<T>& random_value,
-                              TileElementSize full_tile_size, GlobalTileIndex ij_gl,
+                              TileElementSize full_tile_size, GlobalTileIndex ij,
                               dlaf::matrix::Distribution dist,
                               std::optional<SizeType> band_size = std::nullopt) {
-  auto is_off_band = [](GlobalElementIndex ij, std::optional<SizeType> band_size) {
-    return band_size ? ij.col() < ij.row() - *band_size || ij.col() > ij.row() + *band_size : false;
+  auto is_off_band = [](GlobalElementIndex ij_lc, std::optional<SizeType> band_size) {
+    return band_size ? ij_lc.col() < ij_lc.row() - *band_size || ij_lc.col() > ij_lc.row() + *band_size
+                     : false;
   };
 
   // LOWER or UPPER (except DIAGONAL)
@@ -354,11 +355,11 @@ void set_lower_and_upper_tile(const Tile<T, Device::CPU>& tile, internal::getter
 
       // but they are set row-wise in the original tile and col-wise in the
       // transposed one
-      if (ij_gl.row() > ij_gl.col()) {  // LOWER
+      if (ij.row() > ij.col()) {  // LOWER
         TileElementIndex index{i, j};
         if (index.isIn(tile.size())) {
-          auto ij = dist.globalElementIndex(ij_gl, index);
-          if (is_off_band(ij, band_size))
+          auto ij_lc = dist.globalElementIndex(ij, index);
+          if (is_off_band(ij_lc, band_size))
             tile(index) = T(0);
           else
             tile(index) = value;
@@ -367,8 +368,8 @@ void set_lower_and_upper_tile(const Tile<T, Device::CPU>& tile, internal::getter
       else {  // UPPER
         TileElementIndex index{j, i};
         if (index.isIn(tile.size())) {
-          auto ij = dist.globalElementIndex(ij_gl, index);
-          if (is_off_band(ij, band_size))
+          auto ij_lc = dist.globalElementIndex(ij, index);
+          if (is_off_band(ij_lc, band_size))
             tile(index) = T(0);
           else
             tile(index) = dlaf::conj(value);
@@ -412,16 +413,16 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const Size
 
   auto full_tile_size = matrix.block_size();
 
-  for (auto ij : iterate_range2d(dist.local_nr_tiles())) {
-    GlobalTileIndex ij_gl = dist.global_tile_index(ij);
+  for (auto ij_lc : iterate_range2d(dist.local_nr_tiles())) {
+    GlobalTileIndex ij = dist.global_tile_index(ij_lc);
 
-    auto tile_origin = dist.global_element_index(ij_gl, {0, 0});
+    auto tile_origin = dist.global_element_index(ij, {0, 0});
 
     // compute the same seed for original and "transposed" tiles, so transposed ones will know the
     // values of the original one without the need of accessing real values (nor communication in case
     // of distributed matrices)
     SizeType seed;
-    if (ij_gl.row() >= ij_gl.col())  // LOWER or DIAGONAL
+    if (ij.row() >= ij.col())  // LOWER or DIAGONAL
       seed = tile_origin.col() + tile_origin.row() * matrix.size().cols();
     else
       seed = tile_origin.row() + tile_origin.col() * matrix.size().rows();
@@ -429,14 +430,14 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const Size
     using TileType = typename std::decay_t<decltype(matrix)>::TileType;
     auto set_hp_f = [=](const TileType& tile) {
       internal::getter_random<T> random_value(seed);
-      if (ij_gl.row() == ij_gl.col())
+      if (ij.row() == ij.col())
         internal::set_diagonal_tile(tile, random_value, offset_value);
       else
-        internal::set_lower_and_upper_tile(tile, random_value, full_tile_size, ij_gl, dist, band_size);
+        internal::set_lower_and_upper_tile(tile, random_value, full_tile_size, ij, dist, band_size);
     };
 
     dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(thread_stacksize::nostack),
-                                    std::move(set_hp_f), matrix.readwrite(ij));
+                                    std::move(set_hp_f), matrix.readwrite(ij_lc));
   }
 }
 
@@ -530,16 +531,16 @@ void set_random_non_zero_diagonal(Matrix<T, Device::CPU>& matrix) {
   DLAF_ASSERT(square_size(matrix), matrix);
   DLAF_ASSERT(square_blocksize(matrix), matrix);
 
-  for (auto ij : iterate_range2d(dist.local_nr_tiles())) {
-    GlobalTileIndex ij_gl = dist.global_tile_index(ij);
+  for (auto ij_lc : iterate_range2d(dist.local_nr_tiles())) {
+    GlobalTileIndex ij = dist.global_tile_index(ij_lc);
 
-    const SizeType seed = ij_gl.col() + ij_gl.row() * matrix.size().cols();
+    const SizeType seed = ij.col() + ij.row() * matrix.size().cols();
     const BaseType<T> lower_limit = 0.1;
 
     using TileType = typename std::decay_t<decltype(matrix)>::TileType;
     auto set_hp_f = [=](const TileType& tile) {
       internal::getter_random<T> random_value(seed);
-      if (ij_gl.row() == ij_gl.col()) {
+      if (ij.row() == ij.col()) {
         for (auto ij_el_tl : iterate_range2d(tile.size())) {
           auto value = random_value();
           if (ij_el_tl.row() == ij_el_tl.col() && std::abs(value) < lower_limit) {
@@ -559,7 +560,7 @@ void set_random_non_zero_diagonal(Matrix<T, Device::CPU>& matrix) {
     };
 
     dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(thread_stacksize::nostack),
-                                    std::move(set_hp_f), matrix.readwrite(ij));
+                                    std::move(set_hp_f), matrix.readwrite(ij_lc));
   }
 }
 

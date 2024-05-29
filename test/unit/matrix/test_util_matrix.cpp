@@ -239,7 +239,7 @@ TYPED_TEST(MatrixUtilsTest, SetRandomNonZeroDiagonal) {
           auto tile = pika::this_thread::experimental::sync_wait(matrix.readwrite(jj));
           for (auto j_el = 0; j_el < tile.size().rows(); ++j_el) {
             // 0.099 instead of 0.1 to account for rounding.
-            EXPECT_LE(BaseType<TypeParam>{0.099}, std::abs(tile({j_el, j_el})));
+            EXPECT_LE(BaseType<TypeParam>{0.099f}, std::abs(tile({j_el, j_el})));
           }
         }
       }

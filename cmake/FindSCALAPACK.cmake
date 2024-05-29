@@ -29,8 +29,6 @@ find_library(
 find_package_handle_standard_args(SCALAPACK DEFAULT_MSG SCALAPACK_LIBRARY)
 
 mark_as_advanced(SCALAPACK_LIBRARY)
-
-# TODO: Checks?
 mark_as_advanced(SCALAPACK_INCLUDE_DIR)
 
 if(SCALAPACK_FOUND)

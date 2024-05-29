@@ -287,15 +287,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             # Enable TESTS and setup CI specific parameters
             args.append(self.define("CMAKE_CXX_FLAGS", "-Werror"))
             if "+cuda" in spec:
-                # TODO: -Werror=missing-launch-bounds triggers warnings!?
-                # TODO: Which to enable?
-                # args.append(
-                #     self.define(
-                #         "CMAKE_CUDA_FLAGS",
-                #         "-Werror=cross-execution-space-call -Werror=reorder -Werror=deprecated-declarations -Werror=default-stream-launch -Werror=ext-lambda-captures-this",
-                #     )
-                # )
-                pass
+                args.append(self.define("CMAKE_CUDA_FLAGS", "-Werror=all-warnings"))
             if "+rocm" in spec:
                 args.append(self.define("CMAKE_HIP_FLAGS", "-Werror"))
             args.append(self.define("BUILD_TESTING", True))

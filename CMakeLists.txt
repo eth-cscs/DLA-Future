@@ -143,27 +143,9 @@ if(DLAF_WITH_OPENMP)
   find_package(OpenMP REQUIRED)
 endif()
 
-# ----- LAPACK/SCALAPACK
-if(DLAF_WITH_MKL) # oneMKL
-  set(MKL_INTERFACE "lp64" CACHE STRING "")
-  set(MKL_THREADING "sequential" CACHE STRING "")
-  set(MKL_MPI "mpich" CACHE STRING "")
-
-  find_package(MKL CONFIG REQUIRED)
-
-  set(LAPACK_FOUND TRUE)
-  add_library(DLAF::LAPACK INTERFACE IMPORTED GLOBAL)
-  target_link_libraries(DLAF::LAPACK INTERFACE MKL::MKL)
-
-  if(DLAF_WITH_SCALAPACK)
-    set(SCALAPACK_FOUND TRUE)
-    add_library(DLAF::SCALAPACK INTERFACE IMPORTED GLOBAL)
-  endif()
-else()
-  find_package(LAPACK REQUIRED)
-  if(DLAF_WITH_SCALAPACK)
-    find_package(SCALAPACK REQUIRED)
-  endif()
+find_package(LAPACK REQUIRED)
+if(DLAF_WITH_SCALAPACK)
+  find_package(SCALAPACK REQUIRED)
 endif()
 
 # ----- pika

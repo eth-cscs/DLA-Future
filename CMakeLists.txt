@@ -53,19 +53,29 @@ option(DLAF_BUILD_DOC "Build documentation" OFF)
 option(DLAF_WITH_PRECOMPILED_HEADERS "Use precompiled headers." OFF)
 option(DLAF_WITH_SCALAPACK "Build ScaLAPACK-like C API (requires ScaLAPACK)" OFF)
 
-unset(DLAF_WITH_MKL_TRY_COMPILE CACHE)
-try_compile(
-  DLAF_WITH_MKL_TRY_COMPILE "${PROJECT_BINARY_DIR}/cmake/tests"
-  "${PROJECT_SOURCE_DIR}/cmake/tests/mkl_set_num_threads.cpp"
-  CMAKE_FLAGS "-DINCLUDE_DIRECTORIES=${LAPACK_INCLUDE_DIR}"
-  LINK_LIBRARIES ${LAPACK_LIBRARY}
-)
-if(DLAF_WITH_MKL_TRY_COMPILE)
-  message(STATUS "Intel MKL detection: Found")
-else()
-  message(STATUS "Intel MKL detection: Not found")
-endif()
 option(DLAF_WITH_MKL "Enable MKL as provider for BLAS and LAPACK" "${DLAF_WITH_MKL_TRY_COMPILE}")
+if(DEFINED CACHE{DLAF_WITH_MKL})
+  if(DLAF_WITH_MKL)
+    message(STATUS "Intel MKL support: Enabled by user")
+  else()
+    message(STATUS "Intel MKL support: Disabled by user")
+  endif()
+  set(DLAF_WITH_MKL_INTERNAL ${DLAF_WITH_MKL} CACHE BOOL "" FORCE)
+else()
+  unset(DLAF_WITH_MKL_TRY_COMPILE CACHE)
+  try_compile(
+    DLAF_WITH_MKL_TRY_COMPILE "${PROJECT_BINARY_DIR}/cmake/tests"
+    "${PROJECT_SOURCE_DIR}/cmake/tests/mkl_set_num_threads.cpp"
+    CMAKE_FLAGS "-DINCLUDE_DIRECTORIES=${LAPACK_INCLUDE_DIR}"
+    LINK_LIBRARIES ${LAPACK_LIBRARY}
+  )
+  if(DLAF_WITH_MKL_TRY_COMPILE)
+    message(STATUS "Intel MKL support: Found")
+  else()
+    message(STATUS "Intel MKL support: Not found")
+  endif()
+  set(DLAF_WITH_MKL_INTERNAL ${DLAF_WITH_MKL_TRY_COMPILE} CACHE BOOL "" FORCE)
+endif()
 
 if(DLAF_WITH_MKL)
   # When using MKL there is no need to set the number of threads with

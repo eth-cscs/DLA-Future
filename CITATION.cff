@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: DLA-Future 0.4.1
+title: DLA-Future 0.5.0
 message: >-
   If you use this software, please cite it using the
   metadata from this file.
@@ -52,5 +52,5 @@ keywords:
   - "linear algebra"
   - mpi
 license: BSD-3-Clause
-version: 0.4.1
-date-released: '2024-05-10'
+version: 0.5.0
+date-released: '2024-05-31'

@@ -6,7 +6,7 @@
 
 - Introduced an option (*) for forcing contiguous GPU communication buffers. (#1096)
 - Introduced an option (*) for enabling GPU aware MPI communication. (#1102)
-- Removed special handling of Intel MKL, as it could lead with broken installations. (#1149)
+- Removed special handling of Intel MKL, as it could lead to broken installations. (#1149)
     - Spack installations: spack will set the correct variables.
     - Manual installations: the user is responsible to correctly set variables (see [BUILD.md](BUILD.md)).
 

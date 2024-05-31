@@ -1,0 +1,25 @@
+var searchData=
+[
+  ['lacpy_0',['lacpy',['../util__lapack_8h.html#a2a62e0ec6768b42ae19efff5ea5e4331',1,'lapack::lacpy()'],['../lapack_2tile_8h.html#a1bbf24144aebc55d9d50bb3b53ae38f7',1,'dlaf::tile::lacpy(TileElementSize region, TileElementIndex in_idx, const Tile&lt; const T, Device::CPU &gt; &amp;in, TileElementIndex out_idx, const Tile&lt; T, Device::CPU &gt; &amp;out)'],['../lapack_2tile_8h.html#adba78fac5535c410d8bd2e6c53ff8c7d',1,'dlaf::tile::lacpy(const Tile&lt; const T, Device::CPU &gt; &amp;a, const Tile&lt; T, Device::CPU &gt; &amp;b)']]],
+  ['lange_1',['lange',['../lapack_2tile_8h.html#af3873df04fe8430177930b56d3cc7883',1,'dlaf::tile']]],
+  ['lantr_2',['lantr',['../lapack_2tile_8h.html#a760575503b01d456b9871ee228c6bfe6',1,'dlaf::tile']]],
+  ['laset_3',['laset',['../util__lapack_8h.html#a653b4d466d700c7d6d3befb51c8ca9d8',1,'lapack::laset()'],['../lapack_2tile_8h.html#a19439efac55cc846b684ed2c6f78eb33',1,'dlaf::tile::laset()']]],
+  ['layoutinfo_4',['LayoutInfo',['../classdlaf_1_1matrix_1_1_layout_info.html#a8c41196b99f84410426dfdd62609b982',1,'dlaf::matrix::LayoutInfo']]],
+  ['ld_5',['ld',['../classdlaf_1_1matrix_1_1_tile_3_01const_01_t_00_01_d_01_4.html#a44282c10a5112a78c95c557538f13a74',1,'dlaf::matrix::Tile&lt; const T, D &gt;']]],
+  ['linearindex_6',['linearIndex',['../structdlaf_1_1matrix_1_1_panel_3_01axis_00_01const_01_t_00_01_d_00_01_store_transposed_1_1_no_01_4.html#a1d863b84e40d0567f731413ff788a1a6',1,'dlaf::matrix::Panel&lt; axis, const T, D, StoreTransposed::No &gt;']]],
+  ['local_5felement_5fdistance_5ffrom_5fglobal_5ftile_7',['local_element_distance_from_global_tile',['../distribution_8h.html#acc89a2e82161ffdef7e0edbae62db94b',1,'dlaf::matrix::internal::distribution']]],
+  ['local_5felement_5fdistance_5ffrom_5flocal_5ftile_8',['local_element_distance_from_local_tile',['../distribution_8h.html#afa0087b335cf4784edca2ca99c2d2834',1,'dlaf::matrix::internal::distribution::local_element_distance_from_local_tile(const Distribution &amp;dist, SizeType i_loc_begin, SizeType i_loc_end) noexcept'],['../distribution_8h.html#a570cac1abc843f4760988c6c5035715e',1,'dlaf::matrix::internal::distribution::local_element_distance_from_local_tile(const Distribution &amp;dist, LocalTileIndex begin, LocalTileIndex end) noexcept']]],
+  ['local_5felement_5ffrom_5fglobal_5felement_9',['local_element_from_global_element',['../classdlaf_1_1matrix_1_1_distribution.html#a044dae58229b5d6119954355bafa2889',1,'dlaf::matrix::Distribution']]],
+  ['local_5felement_5ffrom_5flocal_5ftile_5fand_5ftile_5felement_10',['local_element_from_local_tile_and_tile_element',['../classdlaf_1_1matrix_1_1_distribution.html#ac0074ec6b0b0f048f8161140420999ad',1,'dlaf::matrix::Distribution']]],
+  ['local_5fmatrix_11',['local_matrix',['../util__matrix_8h.html#a8ee2cf1dd04133dae245b795281c8156',1,'dlaf::matrix']]],
+  ['local_5fnr_5ftiles_12',['local_nr_tiles',['../classdlaf_1_1matrix_1_1_distribution.html#ac907945b22c5d53abb88e83916ff70e6',1,'dlaf::matrix::Distribution']]],
+  ['local_5ftile_5felement_5foffset_5fon_5frank_13',['local_tile_element_offset_on_rank',['../distribution__extensions_8h.html#aaae910edc459ef46133a10bfce1b7018',1,'dlaf::matrix::internal::distribution']]],
+  ['local_5ftile_5ffrom_5fglobal_5felement_14',['local_tile_from_global_element',['../classdlaf_1_1matrix_1_1_distribution.html#a79d052c0ef8197e875fd931e4fcbef08',1,'dlaf::matrix::Distribution']]],
+  ['local_5ftile_5ffrom_5fglobal_5ftile_15',['local_tile_from_global_tile',['../classdlaf_1_1matrix_1_1_distribution.html#a2d970bc522369610879937581c034671',1,'dlaf::matrix::Distribution::local_tile_from_global_tile()'],['../util__distribution_8h.html#a498a397bb7fe437b9c052476235b6e8f',1,'dlaf::util::matrix::local_tile_from_global_tile()']]],
+  ['local_5ftile_5ffrom_5fglobal_5ftile_5fany_5frank_16',['local_tile_from_global_tile_any_rank',['../distribution__extensions_8h.html#aeea4998d7f7abb5dd168b36c431fbf72',1,'dlaf::matrix::internal::distribution']]],
+  ['local_5ftile_5ffrom_5flocal_5felement_17',['local_tile_from_local_element',['../classdlaf_1_1matrix_1_1_distribution.html#a5b357d62aa7dd5cf30a6cfdc24917281',1,'dlaf::matrix::Distribution']]],
+  ['local_5ftile_5ffrom_5flocal_5felement_5fon_5frank_18',['local_tile_from_local_element_on_rank',['../distribution__extensions_8h.html#ad37aa090138c6b7642fdfe40496dd3f4',1,'dlaf::matrix::internal::distribution']]],
+  ['local_5ftile_5findex_19',['local_tile_index',['../classdlaf_1_1matrix_1_1_distribution.html#a31ba898528f39c064da13966fd274bcb',1,'dlaf::matrix::Distribution']]],
+  ['local_5ftile_5flinear_5findex_20',['local_tile_linear_index',['../distribution_8h.html#a6f56b432e36d3c0e960381f50023e619',1,'dlaf::matrix::internal::distribution']]],
+  ['local_5ftile_5foffset_5fon_5frank_21',['local_tile_offset_on_rank',['../distribution__extensions_8h.html#a05ff8ff9216f5f2ada6ecc701397c374',1,'dlaf::matrix::internal::distribution']]]
+];

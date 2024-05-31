@@ -15,6 +15,7 @@
 
 set -o errexit
 
+REPO="eth-cscs/DLA-Future"
 VERSION_MAJOR=$(sed -n 's/project(DLAF VERSION \([0-9]\+\)\.[0-9]\+\.[0-9]\+)/\1/p' CMakeLists.txt)
 VERSION_MINOR=$(sed -n 's/project(DLAF VERSION [0-9]\+\.\([0-9]\+\)\.[0-9]\+)/\1/p' CMakeLists.txt)
 VERSION_PATCH=$(sed -n 's/project(DLAF VERSION [0-9]\+\.[0-9]\+\.\([0-9]\+\))/\1/p' CMakeLists.txt)
@@ -158,5 +159,6 @@ fi
 echo ""
 echo "Creating release."
 gh release create "${VERSION_FULL_TAG}" \
-   --title "${VERSION_TITLE}" \
-   --notes "${VERSION_DESCRIPTION}"
+    --repo "${REPO}" \
+    --title "${VERSION_TITLE}" \
+    --notes "${VERSION_DESCRIPTION}"

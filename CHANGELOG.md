@@ -8,7 +8,7 @@
 - Introduced an option (*) for enabling GPU aware MPI communication. (#1102)
 - Removed special handling of Intel MKL, as it could lead with broken installations. (#1149)
     - Spack installations: spack will set the correct variables.
-    - Manual installations: the user is responsible to correctly set variables (see [BUILD.md](BUILD.md)):
+    - Manual installations: the user is responsible to correctly set variables (see [BUILD.md](BUILD.md)).
 
 (*) These options are available as spack variants.
 

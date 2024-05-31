@@ -214,6 +214,7 @@ cscs["santis"] = {
 #SBATCH --reservation=notransparenthugepages
 
 # Env
+export FI_MR_CACHE_MONITOR=disabled # Avoids occasional hangs with multiple nodes
 export FI_CXI_RDZV_THRESHOLD=262144
 export MPICH_OPT_THREAD_SYNC=0 # Required to work around MPICH bug
 export MPICH_GPU_SUPPORT_ENABLED=1

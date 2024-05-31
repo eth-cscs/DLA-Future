@@ -53,7 +53,6 @@ option(DLAF_BUILD_DOC "Build documentation" OFF)
 option(DLAF_WITH_PRECOMPILED_HEADERS "Use precompiled headers." OFF)
 option(DLAF_WITH_SCALAPACK "Build ScaLAPACK-like C API (requires ScaLAPACK)" OFF)
 
-option(DLAF_WITH_MKL "Enable MKL as provider for BLAS and LAPACK" "${DLAF_WITH_MKL_TRY_COMPILE}")
 if(DEFINED CACHE{DLAF_WITH_MKL})
   if(DLAF_WITH_MKL)
     message(STATUS "Intel MKL support: Enabled by user")

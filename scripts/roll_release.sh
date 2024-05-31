@@ -29,6 +29,11 @@ if ! which gh >/dev/null 2>&1; then
     exit 1
 fi
 
+if ! gh auth status >/dev/null 2>&1; then
+    echo 'gh is not logged in. Run `gh auth login` to authenticate with your GitHub account, or set `GITHUB_TOKEN` to a token with `public_repo` access. Exiting.'
+    exit 1
+fi
+
 # Major and minor releases are made directly from master. Patch releases are branched out from the major
 # and minor releases with a version_X.Y branch.
 if [[ "${VERSION_PATCH}" -eq 0 ]]; then

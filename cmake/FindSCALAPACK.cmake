@@ -29,6 +29,7 @@ find_library(
 find_package_handle_standard_args(SCALAPACK DEFAULT_MSG SCALAPACK_LIBRARY)
 
 mark_as_advanced(SCALAPACK_LIBRARY)
+mark_as_advanced(SCALAPACK_INCLUDE_DIR)
 
 if(SCALAPACK_FOUND)
   if(NOT TARGET DLAF::SCALAPACK)
@@ -36,4 +37,5 @@ if(SCALAPACK_FOUND)
   endif()
 
   target_link_libraries(DLAF::SCALAPACK INTERFACE "${SCALAPACK_LIBRARY}")
+  target_include_directories(DLAF::SCALAPACK INTERFACE "${SCALAPACK_INCLUDE_DIR}")
 endif()

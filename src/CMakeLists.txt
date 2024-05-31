@@ -58,6 +58,16 @@ option(DLAF_ASSERT_ENABLE "Enable low impact assertions" ${DLAF_ASSERT_DEFAULT})
 option(DLAF_ASSERT_MODERATE_ENABLE "Enable medium impact assertions" ${DLAF_ASSERT_MODERATE_DEFAULT})
 option(DLAF_ASSERT_HEAVY_ENABLE "Enable high impact assertions" ${DLAF_ASSERT_HEAVY_DEFAULT})
 
+# We require separable compilation for CUDA with Umpire versions prior to 2024.02 (first 2024 version)
+# because the libumpire.so library contains device code. In theory we only need it if
+# UMPIRE_ENABLE_DEVICE_ALLOCATOR is enabled, but it's not exported by Umpire so we unconditionally use
+# separable compilation before 2024 versions. Starting from 2024.02 the device code is in a separate
+# library.
+set(DLAF_WITH_SEPARABLE_COMPILATION OFF)
+if(DLAF_WITH_CUDA AND Umpire_VERSION_MAJOR LESS 2024)
+  set(DLAF_WITH_SEPARABLE_COMPILATION ON)
+endif()
+
 # Define DLAF's PRIVATE properties
 add_library(dlaf.prop_private INTERFACE)
 target_compile_options(dlaf.prop_private INTERFACE -gz)
@@ -93,8 +103,7 @@ target_compile_definitions(
             $<$<BOOL:${DLAF_ASSERT_MODERATE_ENABLE}>:DLAF_ASSERT_MODERATE_ENABLE>
             $<$<BOOL:${DLAF_ASSERT_HEAVY_ENABLE}>:DLAF_ASSERT_HEAVY_ENABLE>
             DLAF_FUNCTION_NAME=$<IF:$<BOOL:is_pretty_function_available>,__PRETTY_FUNCTION__,__func__>
-            $<$<BOOL:${DLAF_WITH_MKL}>:DLAF_WITH_MKL>
-            $<$<BOOL:${DLAF_WITH_MKL_LEGACY}>:DLAF_WITH_MKL>
+            $<$<BOOL:${DLAF_WITH_MKL_INTERNAL}>:DLAF_WITH_MKL>
             $<$<BOOL:${DLAF_WITH_OPENMP}>:DLAF_WITH_OPENMP>
             $<$<BOOL:${DLAF_WITH_GPU}>:DLAF_WITH_GPU>
             $<$<BOOL:${DLAF_WITH_CUDA}>:DLAF_WITH_CUDA>
@@ -175,7 +184,7 @@ function(DLAF_addSublibrary name)
   target_link_libraries(${lib_name} PUBLIC dlaf.prop)
   target_link_libraries(${lib_name} PUBLIC ${DLAF_ASL_LIBRARIES})
   target_link_libraries(${lib_name} PRIVATE dlaf.prop_private)
-  if(DLAF_WITH_CUDA)
+  if(DLAF_WITH_SEPARABLE_COMPILATION)
     set_target_properties(${lib_name} PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
   endif()
 endfunction()
@@ -293,7 +302,7 @@ add_library(
 target_link_libraries(DLAF PUBLIC dlaf.prop)
 target_link_libraries(DLAF PRIVATE dlaf.prop_private)
 target_add_warnings(DLAF)
-if(DLAF_WITH_CUDA)
+if(DLAF_WITH_SEPARABLE_COMPILATION)
   set_target_properties(DLAF PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 endif()
 

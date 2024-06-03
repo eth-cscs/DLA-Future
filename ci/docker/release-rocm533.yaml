@@ -18,7 +18,7 @@ spack:
       true
 
   specs:
-  - dla-future@master +rocm amdgpu_target=gfx90a:xnack- +mpi-gpu-aware +miniapps +ci-test
+  - dla-future@master +rocm amdgpu_target=gfx90a:xnack- +mpi_gpu_aware +miniapps +ci-test
 
   packages:
     all:

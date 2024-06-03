@@ -17,6 +17,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
     license("BSD-3-Clause")
 
+    version("0.5.0", sha256="f964ee2a96bb58b3f0ee4563ae65fcd136e409a7c0e66beda33f926fc9515a8e")
     version("0.4.1", sha256="ba95f26475ad68da1f3a24d091dc1b925525e269e4c83c1eaf1d37d29b526666")
     version("0.4.0", sha256="34fd0da0d1a72b6981bed0bba029ba0947e0d0d99beb3e0aad0a478095c9527d")
     version("0.3.1", sha256="350a7fd216790182aa52639a3d574990a9d57843e02b92d87b854912f4812bfe")
@@ -46,23 +47,14 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         description="Build C API compatible with ScaLAPACK",
     )
 
-    variant(
-        "mpi-gpu-aware",
-        default=False,
-        when="@master",
-        description="Use GPU-aware MPI.",
-    )
-    conflicts(
-        "+mpi-gpu-aware",
-        when="~cuda ~rocm",
-        msg="GPU-aware MPI requires +cuda or +rocm",
-    )
+    variant("mpi_gpu_aware", default=False, when="@0.5.0:", description="Use GPU-aware MPI.")
+    conflicts("+mpi_gpu_aware", when="~cuda ~rocm", msg="GPU-aware MPI requires +cuda or +rocm")
 
     variant(
-        "mpi-gpu-force-contiguous",
+        "mpi_gpu_force_contiguous",
         default=True,
-        when="@master +mpi-gpu-aware",
-        description="Force communication buffers to be contiguous before communicating.",
+        when="@0.5.0: +mpi_gpu_aware",
+        description="Force GPU communication buffers to be contiguous before communicating.",
     )
 
     generator("ninja")
@@ -148,8 +140,8 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             depends_on(f"umpire cuda_arch={arch}", when=f"cuda_arch={arch}")
 
     patch(
-        "https://github.com/eth-cscs/DLA-Future/pull/1063/commits/efc9c176a7a8c512b3f37d079dec8c25ac1b7389.patch?full_index=1",
-        sha256="7f382c872d89f22da1ad499e85ffe9881cc7404c8465e42877a210a09382e2ea",
+        "https://github.com/eth-cscs/DLA-Future/commit/efc9c176a7a8c512b3f37d079dec8c25ac1b7389.patch?full_index=1",
+        sha256="f40e4a734650f56c39379717a682d00d6400a7a102d90821542652824a8f64cd",
         when="@:0.3 %gcc@13:",
     )
 
@@ -217,9 +209,11 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                 ]
             elif mkl_provider == "intel-mkl":
                 args += [
-                    self.define("DLAF_WITH_MKL", True)
-                    if spec.version <= Version("0.3")
-                    else self.define("DLAF_WITH_MKL_LEGACY", True),
+                    (
+                        self.define("DLAF_WITH_MKL", True)
+                        if spec.version <= Version("0.3")
+                        else self.define("DLAF_WITH_MKL_LEGACY", True)
+                    ),
                     self.define("MKL_LAPACK_TARGET", f"mkl::mkl_intel_32bit_{mkl_threads}_dyn"),
                 ]
 
@@ -258,8 +252,12 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
         args.append(self.define_from_variant("DLAF_WITH_SCALAPACK", "scalapack"))
 
-        args.append(self.define_from_variant("DLAF_WITH_MPI_GPU_AWARE", "mpi-gpu-aware"))
-        args.append(self.define_from_variant("DLAF_WITH_MPI_GPU_FORCE_CONTIGUOUS", "mpi-gpu-force-contiguous"))
+        args.append(self.define_from_variant("DLAF_WITH_MPI_GPU_AWARE", "mpi_gpu_aware"))
+        args.append(
+            self.define_from_variant(
+                "DLAF_WITH_MPI_GPU_FORCE_CONTIGUOUS", "mpi_gpu_force_contiguous"
+            )
+        )
 
         # CUDA/HIP
         args.append(self.define_from_variant("DLAF_WITH_CUDA", "cuda"))

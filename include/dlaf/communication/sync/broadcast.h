@@ -12,6 +12,8 @@
 
 /// @file
 
+#include <utility>
+
 #include <dlaf/common/assert.h>
 #include <dlaf/common/callable_object.h>
 #include <dlaf/common/data.h>

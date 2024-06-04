@@ -11,6 +11,8 @@
 
 /// @file
 
+#include <utility>
+
 #include <blas.hh>
 
 #include <dlaf/eigensolver/gen_eigensolver/api.h>

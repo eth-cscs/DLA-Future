@@ -13,6 +13,7 @@
 #include <cstddef>
 #include <mutex>
 #include <random>
+#include <utility>
 #include <vector>
 
 #include <pika/execution.hpp>

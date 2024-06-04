@@ -11,7 +11,11 @@
 #pragma once
 
 #include <atomic>
+#include <cstddef>
+#include <memory>
 #include <sstream>
+#include <utility>
+#include <vector>
 
 #include <pika/execution.hpp>
 #include <pika/semaphore.hpp>

@@ -17,6 +17,7 @@
 #include <ostream>
 #include <string>
 #include <type_traits>
+#include <utility>
 
 #include <dlaf/common/assert.h>
 #include <dlaf/types.h>

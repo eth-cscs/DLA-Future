@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <cstddef>
+
 #include <umpire/ResourceManager.hpp>
 #include <umpire/strategy/QuickPool.hpp>
 #include <umpire/strategy/ThreadSafeAllocator.hpp>

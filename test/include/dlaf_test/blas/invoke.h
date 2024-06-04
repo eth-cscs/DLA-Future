@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <utility>
+
 #ifdef DLAF_WITH_GPU
 #include <whip.hpp>
 #endif

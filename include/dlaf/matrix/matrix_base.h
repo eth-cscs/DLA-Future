@@ -14,6 +14,7 @@
 
 #include <cstddef>
 #include <ostream>
+#include <utility>
 
 #include <dlaf/matrix/distribution.h>
 

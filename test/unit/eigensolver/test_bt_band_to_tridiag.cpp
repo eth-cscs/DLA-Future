@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <vector>
+
 #include <pika/init.hpp>
 
 #include <dlaf/common/single_threaded_blas.h>

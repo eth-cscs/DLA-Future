@@ -9,6 +9,9 @@
 //
 #pragma once
 
+#include <cstddef>
+#include <utility>
+
 #include <pika/execution.hpp>
 #include <pika/thread.hpp>
 

@@ -10,8 +10,11 @@
 
 #pragma once
 
+#include <cstddef>
 #include <tuple>
 #include <type_traits>
+#include <utility>
+#include <vector>
 
 #include <pika/execution.hpp>
 #include <pika/thread.hpp>

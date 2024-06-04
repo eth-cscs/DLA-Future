@@ -11,6 +11,8 @@
 #include <cstdlib>
 #include <filesystem>
 #include <string>
+#include <tuple>
+#include <utility>
 
 #include <dlaf/common/index2d.h>
 #include <dlaf/communication/communicator.h>

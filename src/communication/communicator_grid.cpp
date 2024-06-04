@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <cstddef>
+
 #include <dlaf/common/with_result_of.h>
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/communication/index.h>

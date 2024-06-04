@@ -25,10 +25,11 @@ DLA-Future follows [Semantic Versioning](https://semver.org).
 1. Add a link to the documentation for the release in `DOCUMENTATION.md` and update the link in `README.md`.
    The documentation will be generated automatically after the `vx.y.z` tag has been created and pushed.
 
+1. Ensure you have `gh` ([GitHub CLI](https://cli.github.com)) installed. Run `gh auth login` to authenticate
+   with your GitHub account, or set `GITHUB_TOKEN` to a token with `public_repo` access.
+
 1. Create a release on GitHub using the script `scripts/roll_release.sh`. This
-   script automatically tags the release with the corresponding release number.  You'll need to set
-   `GITHUB_TOKEN` or both `GITHUB_USER` and `GITHUB_PASSWORD` for the hub release command. When creating
-   a `GITHUB_TOKEN`, the only access necessary is `public_repo`.
+   script automatically tags the release with the corresponding release number.
 
 1. Update spack recipe in `spack/packages/dla-future/package.py` adding the new release.
 

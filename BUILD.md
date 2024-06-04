@@ -95,7 +95,6 @@ CMake option | Values | Note
 `blaspp_DIR` | CMAKE:PATH | Location of the blaspp CMake-config file
 `lapackpp_DIR` | CMAKE:PATH | Location of the lapackpp CMake-config file
 `DLAF_WITH_MKL` | `{ON,OFF}` (default: `OFF`) | if blaspp/lapackpp is built with oneMKL
-`DLAF_WITH_LEGACY_MKL` | `{ON,OFF}` (default: `OFF`) | if blaspp/lapackpp is built with MKL (deprecated)
 `DLAF_WITH_SCALAPACK` | `{ON,OFF}` (default: `OFF`) | Enable ScaLAPACK-like API.
 `MKL_ROOT` | CMAKE:PATH | Location of the MKL library
 `DLAF_ASSERT_ENABLE` | `{ON,OFF}` (default: `ON`) | enable/disable cheap assertions

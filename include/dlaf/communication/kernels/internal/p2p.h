@@ -13,6 +13,7 @@
 /// @file
 
 #include <complex>
+#include <functional>
 #include <utility>
 
 #include <mpi.h>

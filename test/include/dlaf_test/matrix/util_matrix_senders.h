@@ -12,7 +12,9 @@
 
 /// @file
 
+#include <cstddef>
 #include <sstream>
+#include <utility>
 #include <vector>
 
 #include <pika/execution.hpp>

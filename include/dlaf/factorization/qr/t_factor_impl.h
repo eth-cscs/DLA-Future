@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <utility>
+
 #include <blas.hh>
 
 #include <pika/execution.hpp>

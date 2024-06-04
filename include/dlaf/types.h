@@ -16,6 +16,7 @@
 #include <cstddef>
 #include <limits>
 #include <ostream>
+#include <type_traits>
 
 #include <dlaf/common/assert.h>
 

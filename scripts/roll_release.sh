@@ -11,10 +11,11 @@
 #
 
 # This script tags a release locally and creates a release on GitHub. It relies
-# on the hub command line tool (https://hub.github.com/).
+# on the GitHub CLI (https://cli.github.com).
 
 set -o errexit
 
+REPO="eth-cscs/DLA-Future"
 VERSION_MAJOR=$(sed -n 's/project(DLAF VERSION \([0-9]\+\)\.[0-9]\+\.[0-9]\+)/\1/p' CMakeLists.txt)
 VERSION_MINOR=$(sed -n 's/project(DLAF VERSION [0-9]\+\.\([0-9]\+\)\.[0-9]\+)/\1/p' CMakeLists.txt)
 VERSION_PATCH=$(sed -n 's/project(DLAF VERSION [0-9]\+\.[0-9]\+\.\([0-9]\+\))/\1/p' CMakeLists.txt)
@@ -24,8 +25,13 @@ VERSION_TITLE="DLA-Future ${VERSION_FULL}"
 CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 RELEASE_DATE=$(date '+%Y-%m-%d')
 
-if ! which hub >/dev/null 2>&1; then
-    echo "Hub not installed on this system (see https://hub.github.com/). Exiting."
+if ! which gh >/dev/null 2>&1; then
+    echo "GitHub CLI not installed on this system (see https://cli.github.com). Exiting."
+    exit 1
+fi
+
+if ! gh auth status >/dev/null 2>&1; then
+    echo 'gh is not logged in. Run `gh auth login` to authenticate with your GitHub account, or set `GITHUB_TOKEN` to a token with `public_repo` access. Exiting.'
     exit 1
 fi
 
@@ -52,6 +58,14 @@ echo ""
 echo "Sanity checking release"
 
 sanity_errors=0
+
+printf "Checking that the git repository is in a clean state... "
+if [[ $(git status --porcelain | wc -l) -eq 0  ]] ; then
+    echo "OK"
+else
+    echo "ERROR"
+    sanity_errors=$((sanity_errors + 1))
+fi
 
 printf "Checking that %s has an entry for %s... " "${changelog_path}" "${VERSION_FULL}"
 if grep "## DLA-Future ${VERSION_FULL}" "${changelog_path}"; then
@@ -126,11 +140,6 @@ select yn in "Yes" "No"; do
     esac
 done
 
-if [[ -z "${GITHUB_USER}" || -z "${GITHUB_PASSWORD}" ]] && [[ -z "${GITHUB_TOKEN}" ]]; then
-    echo "Need GITHUB_USER and GITHUB_PASSWORD or only GITHUB_TOKEN to be set to use hub release."
-    exit 1
-fi
-
 echo ""
 if [[ "$(git tag -l ${VERSION_FULL_TAG})" == "${VERSION_FULL_TAG}" ]]; then
     echo "Tag already exists locally."
@@ -139,7 +148,7 @@ else
     git tag --annotate "${VERSION_FULL_TAG}" --message="${VERSION_TITLE}"
 fi
 
-remote=$(git remote -v | grep github.com:eth-cscs\/DLA-Future.git | cut -f1 | uniq)
+remote=$(git remote -v | grep "github.com[:/]eth-cscs/DLA-Future.git" | cut -f1 | uniq)
 if [[ "$(git ls-remote --tags --refs $remote | grep -o ${VERSION_FULL_TAG})" == "${VERSION_FULL_TAG}" ]]; then
     echo "Tag already exists remotely."
 else
@@ -149,7 +158,7 @@ fi
 
 echo ""
 echo "Creating release."
-hub release create \
-    --message="${VERSION_TITLE}" \
-    --message="${VERSION_DESCRIPTION}" \
-    "${VERSION_FULL_TAG}"
+gh release create "${VERSION_FULL_TAG}" \
+    --repo "${REPO}" \
+    --title "${VERSION_TITLE}" \
+    --notes "${VERSION_DESCRIPTION}"

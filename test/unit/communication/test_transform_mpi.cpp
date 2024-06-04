@@ -11,6 +11,7 @@
 #include <atomic>
 #include <chrono>
 #include <thread>
+#include <utility>
 
 #include <dlaf/common/pipeline.h>
 #include <dlaf/communication/communicator.h>

@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <utility>
+
 #include <mpi.h>
 
 #include <pika/execution.hpp>

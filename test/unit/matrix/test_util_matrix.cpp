@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <utility>
 #include <vector>
 
 #include <pika/execution.hpp>
@@ -60,6 +61,11 @@ const std::vector<TestSizes> sizes_tests({
 GlobalElementSize globalTestSize(const LocalElementSize& size, const comm::Size2D& grid_size) {
   return {size.rows() * grid_size.rows(), size.cols() * grid_size.cols()};
 }
+
+GlobalElementSize globalSquareTestSize(const LocalElementSize& size, const comm::Size2D& grid_size) {
+  auto k = std::max(grid_size.rows(), grid_size.cols());
+  return GlobalElementSize{size.rows() * k, size.cols() * k};
+};
 
 TYPED_TEST(MatrixUtilsTest, Set0) {
   for (auto& comm_grid : this->commGrids()) {
@@ -181,11 +187,6 @@ TYPED_TEST(MatrixUtilsTest, SetRandomHermitianPositiveDefinite) {
       {{13, 13}, {3, 3}},  // square matrix multi block
   });
 
-  auto globalSquareTestSize = [](const LocalElementSize& size, const comm::Size2D& grid_size) {
-    auto k = std::max(grid_size.rows(), grid_size.cols());
-    return GlobalElementSize{size.rows() * k, size.cols() * k};
-  };
-
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : square_blocks_configs) {
       GlobalElementSize size = globalSquareTestSize(test.size, comm_grid.size());
@@ -206,6 +207,42 @@ TYPED_TEST(MatrixUtilsTest, SetRandomHermitianPositiveDefinite) {
       CHECK_MATRIX_NEAR(identity_2N, matrix, 0, 1);
 
       check_is_hermitian(matrix, comm_grid);
+    }
+  }
+}
+
+TYPED_TEST(MatrixUtilsTest, SetRandomNonZeroDiagonal) {
+  std::vector<TestSizes> square_blocks_configs({
+      {{0, 0}, {13, 13}},  // square null matrix
+      {{5, 5}, {26, 26}},  // square matrix single block
+      {{9, 9}, {3, 3}},    // square matrix multi block "full-tile"
+      {{13, 13}, {3, 3}},  // square matrix multi block
+  });
+
+  auto zero = [](const GlobalElementIndex&) { return TypeUtilities<TypeParam>::element(0, 0); };
+
+  for (auto& comm_grid : this->commGrids()) {
+    for (const auto& test : square_blocks_configs) {
+      GlobalElementSize size = globalSquareTestSize(test.size, comm_grid.size());
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+      memory::MemoryView<TypeParam, Device::CPU> mem(layout.minMemSize());
+      Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), layout, mem());
+
+      matrix::util::set_random_non_zero_diagonal(matrix);
+
+      CHECK_MATRIX_NEAR(zero, matrix, 0, 1);
+
+      for (auto j = 0; j < matrix.nrTiles().cols(); ++j) {
+        GlobalTileIndex jj{j, j};
+        if (matrix.distribution().rankGlobalTile(jj) == comm_grid.rank()) {
+          auto tile = pika::this_thread::experimental::sync_wait(matrix.readwrite(jj));
+          for (auto j_el = 0; j_el < tile.size().rows(); ++j_el) {
+            // 0.099 instead of 0.1 to account for rounding.
+            EXPECT_LE(BaseType<TypeParam>{0.099f}, std::abs(tile({j_el, j_el})));
+          }
+        }
+      }
     }
   }
 }

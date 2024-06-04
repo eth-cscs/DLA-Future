@@ -9,6 +9,9 @@
 //
 
 #include <future>
+#include <iostream>
+#include <string>
+#include <utility>
 
 #ifdef DLAF_WITH_GPU
 #include <whip.hpp>

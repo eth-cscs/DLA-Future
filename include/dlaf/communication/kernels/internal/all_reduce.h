@@ -11,6 +11,7 @@
 #pragma once
 
 #include <complex>
+#include <functional>
 #include <utility>
 
 #include <mpi.h>

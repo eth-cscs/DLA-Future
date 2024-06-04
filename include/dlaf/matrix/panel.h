@@ -11,6 +11,9 @@
 
 /// @file
 
+#include <set>
+#include <utility>
+
 #include <pika/execution.hpp>
 
 #include <dlaf/common/index2d.h>

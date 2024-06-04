@@ -9,6 +9,8 @@
 //
 #pragma once
 
+#include <utility>
+
 #include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/layout_info.h>
 #include <dlaf/matrix/matrix.h>

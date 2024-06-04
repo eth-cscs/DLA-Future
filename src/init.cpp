@@ -11,11 +11,13 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cstddef>
 #include <cstdlib>
 #include <exception>
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <string>
 
 #include <pika/mpi.hpp>
 #include <pika/runtime.hpp>

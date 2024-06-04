@@ -8,8 +8,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <cstddef>
+#include <iostream>
 #include <memory>
 #include <type_traits>
+#include <vector>
 
 #include <dlaf/common/data.h>
 #include <dlaf/common/data_descriptor.h>

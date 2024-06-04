@@ -8,7 +8,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <iostream>
 #include <limits>
+#include <unordered_map>
 
 #include <mpi.h>
 

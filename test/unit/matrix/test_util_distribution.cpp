@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <vector>
+
 #include <dlaf/matrix/util_distribution.h>
 #include <dlaf/types.h>
 

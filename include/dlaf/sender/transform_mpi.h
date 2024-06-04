@@ -10,6 +10,7 @@
 #pragma once
 
 #include <type_traits>
+#include <utility>
 
 #ifdef EXTRA_MPI_TYPES_DEBUGGING
 #include <pika/debugging/demangle_helper.hpp>

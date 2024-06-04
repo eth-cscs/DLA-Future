@@ -11,7 +11,9 @@
 
 /// @file
 
+#include <cstddef>
 #include <iostream>
+#include <string>
 
 #include <pika/program_options.hpp>
 #include <pika/runtime.hpp>

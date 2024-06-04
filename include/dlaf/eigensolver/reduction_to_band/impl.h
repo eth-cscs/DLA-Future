@@ -9,10 +9,12 @@
 //
 #pragma once
 
+#include <array>
 #include <atomic>
 #include <cmath>
 #include <cstddef>
 #include <sstream>
+#include <utility>
 #include <vector>
 
 #include <pika/barrier.hpp>

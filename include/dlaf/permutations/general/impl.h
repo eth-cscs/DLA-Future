@@ -95,34 +95,39 @@ namespace dlaf::permutations::internal {
 // [2]: The input submatrix is defined by `begin_tiles`, `ld_tiles`, `distr` and `in_tiles`
 // [3]: The subregion is defined by `begin` and `sz`
 // [4]: The output submatrix is defined by `begin_tiles`, `ld_tiles`, `distr` and `out_tiles`
-
 template <class T, Coord C>
 void applyPermutationOnCPU(
-    const SizeType i_perm, const std::vector<SizeType>& splits, const GlobalElementIndex out_begin,
-    const SizeType in_offset, const matrix::Distribution& subm_dist, const SizeType* perm_arr,
+    const SizeType i_perm, const matrix::Distribution& subm_dist, const SizeType* perm_arr,
     const std::vector<matrix::internal::TileAsyncRwMutexReadOnlyWrapper<T, Device::CPU>>& in_tiles_fut,
     const std::vector<matrix::Tile<T, Device::CPU>>& out_tiles) {
+  namespace dist_extra = dlaf::matrix::internal::distribution;
+
   constexpr auto OC = orthogonal(C);
 
-  for (std::size_t i_split = 0; i_split < splits.size() - 1; ++i_split) {
-    const SizeType split = splits[i_split];
+  const SizeType perm_from = perm_arr[i_perm];
+  const SizeType perm_to = i_perm;
 
-    GlobalElementIndex i_split_gl_in(split + in_offset, perm_arr[i_perm]);
-    GlobalElementIndex i_split_gl_out(split + out_begin.get<OC>(), out_begin.get<C>() + i_perm);
-    TileElementSize region(splits[i_split + 1] - split, 1);
+  const SizeType j_in_lc = subm_dist.local_tile_from_local_element<C>(perm_from);
+  const SizeType j_out_lc = subm_dist.local_tile_from_local_element<C>(perm_to);
 
-    if constexpr (C == Coord::Row) {
-      region.transpose();
-      i_split_gl_in.transpose();
-      i_split_gl_out.transpose();
-    }
+  const TileElementIndex ij_in_tl(C, subm_dist.tile_element_from_local_element<C>(perm_from), 0);
+  const TileElementIndex ij_out_tl(C, subm_dist.tile_element_from_local_element<C>(perm_to), 0);
 
-    const TileElementIndex i_subtile_in = subm_dist.tileElementIndex(i_split_gl_in);
-    const auto& tile_in = in_tiles_fut[to_sizet(subm_dist.globalTileLinearIndex(i_split_gl_in))].get();
-    const TileElementIndex i_subtile_out = subm_dist.tileElementIndex(i_split_gl_out);
-    auto& tile_out = out_tiles[to_sizet(subm_dist.globalTileLinearIndex(i_split_gl_out))];
+  for (SizeType i_lc = 0; i_lc < subm_dist.local_nr_tiles().get<OC>(); ++i_lc) {
+    const LocalTileIndex ij_in(OC, i_lc, j_in_lc);
+    const LocalTileIndex ij_out(OC, i_lc, j_out_lc);
 
-    dlaf::tile::lacpy<T>(region, i_subtile_in, tile_in, i_subtile_out, tile_out);
+    const SizeType linear_in = dist_extra::local_tile_linear_index(subm_dist, ij_in);
+    const auto& tile_in = in_tiles_fut[to_sizet(linear_in)].get();
+
+    const SizeType linear_out = dist_extra::local_tile_linear_index(subm_dist, ij_out);
+    auto& tile_out = out_tiles[to_sizet(linear_out)];
+
+    DLAF_ASSERT_HEAVY(tile_in.size().template get<OC>() == tile_out.size().template get<OC>(),
+                      tile_in.size(), tile_out.size());
+    const TileElementSize region(OC, tile_in.size().template get<OC>(), 1);
+
+    dlaf::tile::lacpy<T>(region, ij_in_tl, tile_in, ij_out_tl, tile_out);
   }
 }
 
@@ -131,57 +136,50 @@ void Permutations<B, D, T, C>::call(const SizeType i_begin, const SizeType i_end
                                     Matrix<const SizeType, D>& perms, Matrix<const T, D>& mat_in,
                                     Matrix<T, D>& mat_out) {
   namespace ex = pika::execution::experimental;
+  namespace dist_extra = dlaf::matrix::internal::distribution;
+  using dist_extra::local_element_distance_from_global_tile;
 
   if (i_begin == i_end)
     return;
 
-  const matrix::Distribution& distr = mat_in.distribution();
-  const SizeType m = distr.globalTileElementDistance<Coord::Row>(i_begin, i_end);
-  const SizeType n = distr.globalTileElementDistance<Coord::Col>(i_begin, i_end);
-  matrix::Distribution subm_dist(LocalElementSize(m, n), distr.blockSize());
-  const SizeType ntiles = i_end - i_begin;
+  const matrix::Distribution& dist = mat_in.distribution();
+  const SizeType m = local_element_distance_from_global_tile<Coord::Row>(dist, i_begin, i_end);
+  const SizeType n = local_element_distance_from_global_tile<Coord::Col>(dist, i_begin, i_end);
+  const matrix::Distribution subm_dist(LocalElementSize(m, n), dist.tile_size());
 
-  auto perms_range = common::iterate_range2d(LocalTileIndex(i_begin, 0), LocalTileSize(ntiles, 1));
-  auto mat_range =
-      common::iterate_range2d(LocalTileIndex(i_begin, i_begin), LocalTileSize(ntiles, ntiles));
+  if (subm_dist.size().isEmpty())
+    return;
+
+  auto next_local_from_global = [&dist](const SizeType i) -> LocalTileIndex {
+    return {dist.next_local_tile_from_global_tile<Coord::Row>(i),
+            dist.next_local_tile_from_global_tile<Coord::Col>(i)};
+  };
+  const LocalTileIndex idx_begin_lc = next_local_from_global(i_begin);
+  const LocalTileIndex idx_end_lc = next_local_from_global(i_end);
+
+  auto perms_range = common::iterate_range2d(LocalTileIndex(idx_begin_lc.get<C>(), 0),
+                                             LocalTileIndex(idx_end_lc.get<C>(), 1));
+  auto mat_range = common::iterate_range2d(idx_begin_lc, idx_end_lc);
   auto sender = ex::when_all(ex::when_all_vector(matrix::selectRead(perms, std::move(perms_range))),
                              ex::when_all_vector(matrix::selectRead(mat_in, mat_range)),
-                             ex::when_all_vector(matrix::select(mat_out, mat_range)));
+                             ex::when_all_vector(matrix::select(mat_out, std::move(mat_range))));
 
   if constexpr (D == Device::CPU) {
-    auto setup_permute_fn = [subm_dist](auto index_tile_futs, auto mat_in_tiles, auto mat_out_tiles) {
-      const GlobalElementIndex out_begin{0, 0};
-      const SizeType in_offset = 0;
-      constexpr Coord orth_coord = orthogonal(C);
+    const SizeType nperms = subm_dist.size().get<C>();
 
-      std::vector<SizeType> splits = util::interleaveSplits(
-          subm_dist.size().get<orth_coord>(), subm_dist.blockSize().get<orth_coord>(),
-          subm_dist.distanceToAdjacentTile<orth_coord>(in_offset),
-          subm_dist.distanceToAdjacentTile<orth_coord>(out_begin.get<orth_coord>()));
-
-      return std::tuple(std::move(splits), std::move(index_tile_futs), std::move(mat_in_tiles),
-                        std::move(mat_out_tiles));
-    };
-
-    auto permute_fn = [subm_dist](const auto i_perm, const auto& splits, const auto& index_tile_futs,
+    auto permute_fn = [subm_dist](const auto i_perm, const auto& index_tile_futs,
                                   const auto& mat_in_tiles, const auto& mat_out_tiles) {
-      const TileElementIndex zero(0, 0);
-      const SizeType* perm_arr = index_tile_futs[0].get().ptr(zero);
-      const GlobalElementIndex out_begin{0, 0};
-      const SizeType in_offset = 0;
+      const SizeType* perm_arr = index_tile_futs[0].get().ptr();
 
       [[maybe_unused]] const SizeType nperms = subm_dist.size().get<C>();
       DLAF_ASSERT_HEAVY(i_perm >= 0 && i_perm < nperms, i_perm, nperms);
-      DLAF_ASSERT_HEAVY(perm_arr[i_perm] >= 0 && perm_arr[i_perm] < nperms, i_perm, nperms);
+      DLAF_ASSERT_HEAVY(perm_arr[i_perm] >= 0 && perm_arr[i_perm] < nperms, perm_arr[i_perm], nperms);
 
-      applyPermutationOnCPU<T, C>(i_perm, splits, out_begin, in_offset, subm_dist, perm_arr,
-                                  mat_in_tiles, mat_out_tiles);
+      applyPermutationOnCPU<T, C>(i_perm, subm_dist, perm_arr, mat_in_tiles, mat_out_tiles);
     };
 
-    ex::start_detached(std::move(sender) |
-                       dlaf::internal::transform(dlaf::internal::Policy<B>(),
-                                                 std::move(setup_permute_fn)) |
-                       ex::unpack() | ex::bulk(subm_dist.size().get<C>(), std::move(permute_fn)));
+    ex::start_detached(std::move(sender) | ex::transfer(dlaf::internal::getBackendScheduler<B>()) |
+                       ex::bulk(nperms, std::move(permute_fn)));
   }
   else {
 #if defined(DLAF_WITH_GPU)
@@ -198,81 +196,6 @@ void Permutations<B, D, T, C>::call(const SizeType i_begin, const SizeType i_end
                        dlaf::internal::transform(dlaf::internal::Policy<B>(), std::move(permute_fn)));
 #endif
   }
-}
-
-template <class T, Coord C>
-void permuteJustLocal(const SizeType i_begin, const SizeType i_end,
-                      Matrix<const SizeType, Device::CPU>& perms, Matrix<const T, Device::CPU>& mat_in,
-                      Matrix<T, Device::CPU>& mat_out) {
-  static_assert(C == Coord::Col, "Just column permutation");
-
-  namespace ut = matrix::util;
-  namespace ex = pika::execution::experimental;
-  namespace di = dlaf::internal;
-  namespace distex = matrix::internal::distribution;
-
-  using matrix::internal::MatrixRef;
-  using matrix::internal::SubMatrixSpec;
-
-  using distex::global_tile_element_distance;
-  using distex::local_tile_linear_index;
-
-  if (i_begin == i_end)
-    return;
-
-  const matrix::Distribution& dist = mat_in.distribution();
-  const SubMatrixSpec sub_spec{dist.global_element_index({i_begin, i_begin}, {0, 0}),
-                               {
-                                   global_tile_element_distance<Coord::Row>(dist, i_begin, i_end),
-                                   global_tile_element_distance<Coord::Col>(dist, i_begin, i_end),
-                               }};
-
-  MatrixRef<const T, Device::CPU> mat_sub_in(mat_in, sub_spec);
-  MatrixRef<T, Device::CPU> mat_sub_out(mat_out, sub_spec);
-
-  const matrix::Distribution& dist_sub = mat_sub_in.distribution();
-
-  auto permute_fn = [dist_sub](const auto& perm_tiles_futs, const auto& mat_in_tiles,
-                               const auto& mat_out_tiles, auto&&...) {
-    const SizeType* perm_ptr = perm_tiles_futs[0].get().ptr();
-
-    const SizeType nperms_lc = dist_sub.localSize().cols();
-    for (SizeType j_el_lc = 0; j_el_lc < nperms_lc; ++j_el_lc) {
-      const SizeType j_el = dist_sub.global_element_from_local_element<Coord::Col>(j_el_lc);
-      const SizeType jj_el = perm_ptr[to_sizet(j_el)];
-
-      const SizeType j_lc = dist_sub.local_tile_from_local_element<Coord::Col>(j_el_lc);
-      const SizeType j_el_tl = dist_sub.tile_element_from_local_element<Coord::Col>(j_el_lc);
-
-      const SizeType jj_lc = dist_sub.local_tile_from_global_element<Coord::Col>(jj_el);
-      const SizeType jj_el_tl = dist_sub.tile_element_from_global_element<Coord::Col>(jj_el);
-
-      for (SizeType i_lc = 0; i_lc < dist_sub.local_nr_tiles().rows(); ++i_lc) {
-        const std::size_t j_lc_linear = to_sizet(local_tile_linear_index(dist_sub, {i_lc, j_lc}));
-        const std::size_t jj_lc_linear = to_sizet(local_tile_linear_index(dist_sub, {i_lc, jj_lc}));
-
-        const auto& tile_in = mat_in_tiles[jj_lc_linear].get();
-        auto& tile_out = mat_out_tiles[j_lc_linear];
-
-        DLAF_ASSERT_HEAVY(tile_in.size().rows() == tile_out.size().rows(), tile_in.size(),
-                          tile_out.size());
-        const TileElementSize region(tile_in.size().rows(), 1);
-        const TileElementIndex sub_in(0, jj_el_tl);
-        const TileElementIndex sub_out(0, j_el_tl);
-
-        dlaf::tile::lacpy<T>(region, sub_in, tile_in, sub_out, tile_out);
-      }
-    }
-  };
-
-  const SizeType ntiles = i_end - i_begin;
-  const auto perms_range = common::iterate_range2d(LocalTileIndex(i_begin, 0), LocalTileSize(ntiles, 1));
-  const auto mat_range = common::iterate_range2d(dist_sub.local_nr_tiles());
-  auto sender = ex::when_all(ex::when_all_vector(matrix::selectRead(perms, std::move(perms_range))),
-                             ex::when_all_vector(matrix::selectRead(mat_sub_in, mat_range)),
-                             ex::when_all_vector(matrix::select(mat_sub_out, mat_range)));
-
-  ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(permute_fn), std::move(sender)));
 }
 
 template <class T, Device D>
@@ -462,39 +385,21 @@ void applyPackingIndex(const matrix::Distribution& subm_dist, IndexMapSender&& i
                              std::forward<OutSender>(out));
 
   if constexpr (D == Device::CPU) {
-    auto setup_permute_fn = [subm_dist](auto index_tile_futs, auto mat_in_tiles, auto mat_out_tiles) {
-      const GlobalElementIndex out_begin{0, 0};
-      const SizeType in_offset = 0;
-      constexpr Coord orth_coord = orthogonal(C);
+    const SizeType nperms = subm_dist.size().get<C>();
 
-      std::vector<SizeType> splits = util::interleaveSplits(
-          subm_dist.size().get<orth_coord>(), subm_dist.blockSize().get<orth_coord>(),
-          subm_dist.distanceToAdjacentTile<orth_coord>(in_offset),
-          subm_dist.distanceToAdjacentTile<orth_coord>(out_begin.get<orth_coord>()));
-
-      return std::tuple(std::move(splits), std::move(index_tile_futs), std::move(mat_in_tiles),
-                        std::move(mat_out_tiles));
-    };
-
-    auto permute_fn = [subm_dist](const auto i_perm, const auto& splits, const auto& index_tile_futs,
+    auto permute_fn = [subm_dist](const auto i_perm, const auto& index_tile_futs,
                                   const auto& mat_in_tiles, const auto& mat_out_tiles) {
-      TileElementIndex zero(0, 0);
-      const SizeType* perm_arr = index_tile_futs[0].get().ptr(zero);
-      const GlobalElementIndex out_begin{0, 0};
-      const SizeType in_offset = 0;
+      const SizeType* perm_arr = index_tile_futs[0].get().ptr();
 
       [[maybe_unused]] const SizeType nperms = subm_dist.size().get<C>();
       DLAF_ASSERT_HEAVY(i_perm >= 0 && i_perm < nperms, i_perm, nperms);
-      DLAF_ASSERT_HEAVY(perm_arr[i_perm] >= 0 && perm_arr[i_perm] < nperms, i_perm, nperms);
+      DLAF_ASSERT_HEAVY(perm_arr[i_perm] >= 0 && perm_arr[i_perm] < nperms, perm_arr[i_perm], nperms);
 
-      applyPermutationOnCPU<T, C>(i_perm, splits, out_begin, in_offset, subm_dist, perm_arr,
-                                  mat_in_tiles, mat_out_tiles);
+      applyPermutationOnCPU<T, C>(i_perm, subm_dist, perm_arr, mat_in_tiles, mat_out_tiles);
     };
 
-    ex::start_detached(std::move(sender) |
-                       dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(),
-                                                 std::move(setup_permute_fn)) |
-                       ex::unpack() | ex::bulk(subm_dist.size().get<C>(), permute_fn));
+    ex::start_detached(std::move(sender) | ex::transfer(di::getBackendScheduler<Backend::MC>()) |
+                       ex::bulk(nperms, std::move(permute_fn)));
   }
   else {
 #if defined(DLAF_WITH_GPU)
@@ -530,7 +435,6 @@ void unpackLocalOnCPU(const matrix::Distribution& subm_dist, const matrix::Distr
     const size_t rank_index = to_sizet(rank);
 
     const SizeType* perm_arr = index_tile_futs[0].get().ptr();
-    const GlobalElementSize sz = subm_dist.size();
 
     const int a = std::accumulate(send_counts.cbegin(), send_counts.cbegin() + rank, 0);
     const int b = a + send_counts[rank_index];
@@ -550,30 +454,17 @@ void unpackLocalOnCPU(const matrix::Distribution& subm_dist, const matrix::Distr
     std::transform(perm_arr, perm_arr + subm_dist.size().get<C>(), std::back_inserter(perm_offseted),
                    [offset](const SizeType perm) { return perm + offset; });
 
-    constexpr auto OC = orthogonal(C);
-    const SizeType in_offset = 0;
-    const GlobalElementIndex out_begin{0, 0};
-
-    std::vector<SizeType> splits =
-        dlaf::util::interleaveSplits(sz.get<OC>(), subm_dist.blockSize().get<OC>(),
-                                     subm_dist.distanceToAdjacentTile<OC>(in_offset),
-                                     subm_dist.distanceToAdjacentTile<OC>(out_begin.get<OC>()));
-
-    return std::tuple(a, b, std::move(splits), std::move(perm_offseted), std::move(mat_in_tiles),
-                      std::move(mat_out_tiles));
+    return std::tuple(a, b, std::move(perm_offseted), std::move(mat_in_tiles), std::move(mat_out_tiles));
   };
 
   auto permutations_unpack_local_f = [subm_dist](const auto i_perm, const auto a, const auto b,
-                                                 const auto& splits, const auto& perm_offseted,
-                                                 const auto& mat_in_tiles, const auto& mat_out_tiles) {
+                                                 const auto& perm_offseted, const auto& mat_in_tiles,
+                                                 const auto& mat_out_tiles) {
     const SizeType* perm_arr = perm_offseted.data();
 
     // [a, b)
     if (a <= perm_arr[i_perm] && perm_arr[i_perm] < b) {
-      const SizeType in_offset = 0;
-      const GlobalElementIndex out_begin{0, 0};
-      applyPermutationOnCPU<T, C>(i_perm, splits, out_begin, in_offset, subm_dist, perm_arr,
-                                  mat_in_tiles, mat_out_tiles);
+      applyPermutationOnCPU<T, C>(i_perm, subm_dist, perm_arr, mat_in_tiles, mat_out_tiles);
     }
   };
 
@@ -594,38 +485,24 @@ void unpackOthersOnCPU(const matrix::Distribution& subm_dist, const matrix::Dist
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
-  auto setup_unpack_f = [subm_dist,
-                         rank = dist.rankIndex().get<C>()](auto recv_counts, auto index_tile_futs,
+  auto setup_unpack_f = [rank = dist.rankIndex().get<C>()](auto recv_counts, auto index_tile_futs,
                                                            auto mat_in_tiles, auto mat_out_tiles) {
     const size_t rank_index = to_sizet(rank);
     const int a = std::accumulate(recv_counts.cbegin(), recv_counts.cbegin() + rank, 0);
     const int b = a + recv_counts[rank_index];
 
-    constexpr auto OC = orthogonal(C);
-    const GlobalElementSize sz = subm_dist.size();
-    const SizeType in_offset = 0;
-    const GlobalElementIndex out_begin{0, 0};
-
-    std::vector<SizeType> splits =
-        dlaf::util::interleaveSplits(sz.get<OC>(), subm_dist.blockSize().get<OC>(),
-                                     subm_dist.distanceToAdjacentTile<OC>(in_offset),
-                                     subm_dist.distanceToAdjacentTile<OC>(out_begin.get<OC>()));
-
-    return std::tuple(a, b, std::move(splits), std::move(index_tile_futs), std::move(mat_in_tiles),
+    return std::tuple(a, b, std::move(index_tile_futs), std::move(mat_in_tiles),
                       std::move(mat_out_tiles));
   };
 
   auto permutations_unpack_f = [subm_dist](const auto i_perm, const auto a, const auto b,
-                                           const auto& splits, const auto& index_tile_futs,
-                                           const auto& mat_in_tiles, const auto& mat_out_tiles) {
+                                           const auto& index_tile_futs, const auto& mat_in_tiles,
+                                           const auto& mat_out_tiles) {
     const SizeType* perm_arr = index_tile_futs[0].get().ptr();
 
     // [0, a) and [b, end)
     if (perm_arr[i_perm] < a || b <= perm_arr[i_perm]) {
-      const SizeType in_offset = 0;
-      const GlobalElementIndex out_begin{0, 0};
-      applyPermutationOnCPU<T, C>(i_perm, splits, out_begin, in_offset, subm_dist, perm_arr,
-                                  mat_in_tiles, mat_out_tiles);
+      applyPermutationOnCPU<T, C>(i_perm, subm_dist, perm_arr, mat_in_tiles, mat_out_tiles);
     }
   };
 

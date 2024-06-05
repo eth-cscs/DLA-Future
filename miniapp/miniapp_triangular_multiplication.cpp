@@ -49,9 +49,11 @@ using dlaf::TileElementSize;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
 using dlaf::common::Ordering;
+using dlaf::matrix::Matrix;
+using dlaf::matrix::MatrixMirror;
 
 struct Options
-    : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::No> {
+    : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
   SizeType m;
   SizeType n;
   SizeType mb;
@@ -95,16 +97,15 @@ linear_system_t<T> sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T
 }
 
 struct triangularMultiplicationMiniapp {
-  template <dlaf::Backend backend, typename T>
+  template <Backend backend, typename T>
   static void run(const Options& opts) {
+    using blas::Side;
+    using MatrixMirrorType = MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU>;
+    using ConstMatrixMirrorType = MatrixMirror<const T, DefaultDevice_v<backend>, Device::CPU>;
+    using HostMatrixType = Matrix<T, Device::CPU>;
+    using ConstHostMatrixType = Matrix<const T, Device::CPU>;
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
-
-    // Allocate memory for the matrices
-    dlaf::matrix::Matrix<T, Device::CPU> ah(GlobalElementSize{opts.m, opts.m},
-                                            TileElementSize{opts.mb, opts.mb}, comm_grid);
-    dlaf::matrix::Matrix<T, Device::CPU> bh(GlobalElementSize{opts.m, opts.n},
-                                            TileElementSize{opts.mb, opts.nb}, comm_grid);
 
     dlaf::matrix::MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU> a(ah);
     dlaf::matrix::MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU> b(bh);

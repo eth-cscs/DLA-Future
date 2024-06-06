@@ -26,8 +26,10 @@ namespace internal {
 ///
 /// It uses DLAF_FUNCTION_NAME that it is set to \_\_PRETTY_FUNCTION\_\_ or \_\_func\_\_ depending on
 /// availability of the former one.
-#define SOURCE_LOCATION() \
-  ::dlaf::common::internal::source_location { __FILE__, __LINE__, DLAF_FUNCTION_NAME }
+#define SOURCE_LOCATION()                     \
+  ::dlaf::common::internal::source_location { \
+    __FILE__, __LINE__, DLAF_FUNCTION_NAME    \
+  }
 
 /// Anticipation of std::source_location from C++20.
 ///

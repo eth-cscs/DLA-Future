@@ -48,8 +48,8 @@ template <typename F>
 struct MPICallHelper {
   std::decay_t<F> f;
   template <typename... Ts>
-  auto operator()(Ts&&... ts)
-      -> decltype(std::move(f)(dlaf::common::internal::unwrap(ts)..., std::declval<MPI_Request*>())) {
+  auto operator()(Ts&&... ts) -> decltype(std::move(f)(dlaf::common::internal::unwrap(ts)...,
+                                                       std::declval<MPI_Request*>())) {
     MPI_Request req;
     auto is_request_completed = [&req] {
       int flag;

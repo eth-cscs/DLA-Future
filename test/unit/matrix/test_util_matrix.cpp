@@ -65,7 +65,7 @@ GlobalElementSize globalTestSize(const LocalElementSize& size, const comm::Size2
 GlobalElementSize globalSquareTestSize(const LocalElementSize& size, const comm::Size2D& grid_size) {
   auto k = std::max(grid_size.rows(), grid_size.cols());
   return GlobalElementSize{size.rows() * k, size.cols() * k};
-};
+}
 
 TYPED_TEST(MatrixUtilsTest, Set0) {
   for (auto& comm_grid : this->commGrids()) {

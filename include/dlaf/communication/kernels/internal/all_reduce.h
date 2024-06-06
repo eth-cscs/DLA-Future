@@ -69,7 +69,7 @@ template <Device DCommIn, Device DCommOut, class T, Device DIn, Device DOut>
   auto all_reduce_final = [reduce_op, pcomm = std::move(pcomm),
                            tile_in = std::move(tile_in)](const auto& tile_out_comm) mutable {
     auto all_reduce = [reduce_op, pcomm = std::move(pcomm),
-                       &tile_out_comm](auto const& tile_in_comm) mutable {
+                       &tile_out_comm](const auto& tile_in_comm) mutable {
       return whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_in_comm),
                          std::cref(tile_out_comm)) |
              transformMPI(allReduce_o);

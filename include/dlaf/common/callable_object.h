@@ -26,12 +26,12 @@
 /// that all required overloads are found relative to the namespace where the
 /// macro is used.
 
-#define DLAF_MAKE_CALLABLE_OBJECT(fname)                                                    \
-  constexpr struct fname##_t {                                                              \
-    template <typename... Ts>                                                               \
-    auto operator()(Ts&&... ts) const noexcept(noexcept((fname) (std::forward<Ts>(ts)...))) \
-        -> decltype((fname) (std::forward<Ts>(ts)...)) {                                    \
-      return (fname) (std::forward<Ts>(ts)...);                                             \
-    }                                                                                       \
-  } fname##_o {                                                                             \
+#define DLAF_MAKE_CALLABLE_OBJECT(fname)                                                              \
+  constexpr struct fname##_t {                                                                        \
+    template <typename... Ts>                                                                         \
+    auto operator()(Ts&&... ts) const noexcept(                                                       \
+        noexcept((fname) (std::forward<Ts>(ts)...))) -> decltype((fname) (std::forward<Ts>(ts)...)) { \
+      return (fname) (std::forward<Ts>(ts)...);                                                       \
+    }                                                                                                 \
+  } fname##_o {                                                                                       \
   }

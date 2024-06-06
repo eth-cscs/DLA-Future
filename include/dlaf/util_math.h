@@ -79,8 +79,8 @@ template <typename IntType>
 constexpr IntType ceilDiv(const IntType num, const IntType den);
 #else
 template <typename IntType>
-constexpr auto ceilDiv(const IntType num, const IntType den)
-    -> std::enable_if_t<std::is_integral_v<IntType>, IntType> {
+constexpr auto ceilDiv(const IntType num,
+                       const IntType den) -> std::enable_if_t<std::is_integral_v<IntType>, IntType> {
   return (num + den - 1) / den;
 }
 #endif

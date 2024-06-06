@@ -17,6 +17,12 @@ macro(target_add_warnings target_name)
   set(IS_COMPILER_GCC $<CXX_COMPILER_ID:GNU>)
   set(IS_CUDA_NVCC $<COMPILE_LANG_AND_ID:CUDA,NVIDIA>)
 
+  target_compile_options(${target_name}
+    PRIVATE -ffunction-sections
+            -fdata-sections
+            -Wl,--gc-sections
+  )
+
   target_compile_options(
     ${target_name}
     PRIVATE -Wall

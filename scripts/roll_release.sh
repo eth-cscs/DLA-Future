@@ -27,6 +27,7 @@ RELEASE_DATE=$(date '+%Y-%m-%d')
 
 GREP_VERSION_FULL="$(echo ${VERSION_FULL} | sed s/\\./\\\\./g)"
 GREP_VERSION_FULL_TAG="$(echo ${VERSION_FULL_TAG} | sed s/\\./\\\\./g)"
+GREP_VERSION_TITLE="$(echo ${VERSION_TITLE} | sed s/\\./\\\\./g)"
 
 if ! which gh >/dev/null 2>&1; then
     echo "GitHub CLI not installed on this system (see https://cli.github.com). Exiting."

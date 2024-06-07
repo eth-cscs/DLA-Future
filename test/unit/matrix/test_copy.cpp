@@ -66,12 +66,12 @@ T inputValues(const GlobalElementIndex& index) noexcept {
   const SizeType i = index.row();
   const SizeType j = index.col();
   return TypeUtilities<T>::element(i + j / 1024., j - i / 128.);
-};
+}
 
 template <class T>
 T outputValues(const GlobalElementIndex&) noexcept {
   return TypeUtilities<T>::element(13, 26);
-};
+}
 
 TYPED_TEST(MatrixCopyTest, FullMatrixCPU) {
   using dlaf::matrix::util::set;

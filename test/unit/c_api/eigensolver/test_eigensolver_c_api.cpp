@@ -81,10 +81,9 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
   const TileElementSize block_size(mb, mb);
 
   Matrix<const T, Device::CPU> reference = [&]() {
-    auto reference = [&]() -> auto{
+    auto reference = [&]() -> auto {
       return Matrix<T, Device::CPU>(GlobalElementSize(m, m), block_size, grid);
-    }
-    ();
+    }();
     matrix::util::set_random_hermitian(reference);
     return reference;
   }();

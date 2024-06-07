@@ -57,7 +57,7 @@ public:
     }
 
     return *this;
-  };
+  }
 
   Pipeline(const Pipeline&) = delete;
   Pipeline& operator=(const Pipeline&) = delete;

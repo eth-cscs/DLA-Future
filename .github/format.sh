@@ -22,7 +22,7 @@ do
 
   case $FILE in
     *.cpp|*.h|*.h.in|*.tpp|*.cu)
-      clang-format-15 -i --style=file $FILE
+      clang-format-18 -i --style=file $FILE
       # The following is needed for regions in which clang-format is disabled.
       # Note: clang-format removes trailing spaces even in disabled regions.
       # Check if tab are present.

@@ -148,6 +148,9 @@ struct triangularMultiplicationMiniapp {
 
     const T alpha = 2.0;
 
+    double m = size_b.rows();
+    double n = size_b.cols();
+    auto add_mul = n * m * (side == Side::Left ? m : n) / 2;
     const double total_ops = dlaf::total_ops<T>(add_mul, add_mul);
 
     auto [in_op_a, out_b, in_b] = ::sampleLeftTr(uplo, op, diag, alpha, ah.size().rows());

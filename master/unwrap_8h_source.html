@@ -145,7 +145,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span> </div>
 <div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>  <span class="keyword">template</span> &lt;<span class="keyword">typename</span>... Ts&gt;</div>
 <div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>  <span class="keyword">auto</span> operator()(Ts&amp;&amp;... ts) &amp;&amp; -&gt; <span class="keyword">decltype</span>(std::move(f)(</div>
-<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>      <a class="code hl_struct" href="structdlaf_1_1common_1_1internal_1_1_unwrapper.html">Unwrapper&lt;std::decay_t&lt;Ts&gt;</a>&gt;::unwrap(std::forward&lt;Ts&gt;(ts))...)) {</div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>                                     <a class="code hl_struct" href="structdlaf_1_1common_1_1internal_1_1_unwrapper.html">Unwrapper&lt;std::decay_t&lt;Ts&gt;</a>&gt;::unwrap(std::forward&lt;Ts&gt;(ts))...)) {</div>
 <div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>    <span class="keywordflow">return</span> std::move(f)(<a class="code hl_struct" href="structdlaf_1_1common_1_1internal_1_1_unwrapper.html">Unwrapper&lt;std::decay_t&lt;Ts&gt;</a>&gt;::unwrap(std::forward&lt;Ts&gt;(ts))...);</div>
 <div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>  }</div>
 <div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span> </div>

@@ -149,8 +149,8 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00079" name="l00079"></a><span class="lineno"><a class="line" href="util__math_8h.html#a65aa2478fed7af8bdb404930d7a90fb3">   79</a></span><span class="keyword">constexpr</span> IntType ceilDiv(<span class="keyword">const</span> IntType num, <span class="keyword">const</span> IntType den);</div>
 <div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span><span class="preprocessor">#else</span></div>
 <div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span><span class="keyword">template</span> &lt;<span class="keyword">typename</span> IntType&gt;</div>
-<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span><span class="keyword">constexpr</span> <span class="keyword">auto</span> ceilDiv(<span class="keyword">const</span> IntType num, <span class="keyword">const</span> IntType den)</div>
-<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>    -&gt; std::enable_if_t&lt;std::is_integral_v&lt;IntType&gt;, IntType&gt; {</div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span><span class="keyword">constexpr</span> <span class="keyword">auto</span> ceilDiv(<span class="keyword">const</span> IntType num,</div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>                       <span class="keyword">const</span> IntType den) -&gt; std::enable_if_t&lt;std::is_integral_v&lt;IntType&gt;, IntType&gt; {</div>
 <div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>  <span class="keywordflow">return</span> (num + den - 1) / den;</div>
 <div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>}</div>
 <div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span><span class="preprocessor">#endif</span></div>

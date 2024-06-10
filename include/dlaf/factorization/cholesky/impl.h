@@ -13,6 +13,11 @@
 #include <cstddef>
 #include <utility>
 
+#ifdef DLAF_WITH_HDF5
+#include <atomic>
+#include <sstream>
+#endif
+
 #include <pika/execution.hpp>
 
 #include <dlaf/blas/tile.h>
@@ -27,6 +32,7 @@
 #include <dlaf/factorization/cholesky/api.h>
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/hdf5.h>
 #include <dlaf/matrix/index.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/panel.h>
@@ -187,6 +193,20 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid& grid, Matrix<T
   using namespace cholesky_l;
   using pika::execution::thread_priority;
 
+
+#ifdef DLAF_WITH_HDF5
+  static std::atomic<size_t> num_cholesky_calls = 0;
+  std::stringstream fname;
+  fname << "cholesky-facrorization-" << matrix::internal::TypeToString_v<T> << "-"
+        << std::to_string(num_cholesky_calls) << ".h5";
+  std::optional<matrix::internal::FileHDF5> file;
+
+  if (getTuneParameters().debug_dump_cholesky_factorization_data) {
+    file = matrix::internal::FileHDF5(grid.fullCommunicator(), fname.str());
+    file->write(mat_a, "/input");
+  }
+#endif
+
   // Set up MPI executor pipelines
   auto mpi_row_task_chain = grid.row_communicator_pipeline();
   auto mpi_col_task_chain = grid.col_communicator_pipeline();
@@ -283,6 +303,14 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid& grid, Matrix<T
     panel.reset();
     panelT.reset();
   }
+
+#ifdef DLAF_WITH_HDF5
+  if (getTuneParameters().debug_dump_cholesky_factorization_data) {
+    file->write(mat_a, "/cholesky");
+  }
+  
+  num_cholesky_calls++;
+#endif
 }
 
 // Local implementation of Upper Cholesky factorization.

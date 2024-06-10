@@ -23,6 +23,18 @@ namespace dlaf {
 /// DLA-Future tuning parameters.
 ///
 /// Holds the value of the parameters that can be used to tune DLA-Future.
+/// - debug_dump_cholesky_factorization_data:
+///     Enable dump of Cholesky factorization input/output data to "cholesky-factorization.h5" file
+///     that will be created in the working folder (it should not exist before the execution).
+///     Set with environment variable DLAF_DEBUG_CHOLESKY_FACTORIZATION_DATA.
+/// - debug_dump_generalized_to_standard_data:
+///     Enable dump of gen_to_std input/output data to "generalized-to-standard.h5" file that will be
+///     created in the working folder (it should not exist before the execution).
+///     Set with environment variable DLAF_DEBUG_GENERALIZED_TO_STANDARD_DATA.
+/// - debug_dump_generalized_eigensolver_data:
+///     Enable dump of generalized eigensolver input/output data to "eigensolver.h5" file that will be 
+///     created in the working folder (it should not exist before the execution).
+///     Set with environment variable DLAF_DEBUG_GENERALIZED_EIGENSOLVER_DATA.
 /// - debug_dump_eigensolver_data:
 ///     Enable dump of eigensolver input/output data to "eigensolver.h5" file that will be created in the
 ///     working folder (it should not exist before the execution).
@@ -94,6 +106,9 @@ struct TuneParameters {
     red2band_panel_nworkers = std::max<std::size_t>(1, default_pool_thread_count / 2);
     tridiag_rank1_nworkers = default_pool_thread_count;
   }
+  bool debug_dump_cholesky_factorization_data = false;
+  bool debug_dump_generalized_to_standard_data = false;
+  bool debug_dump_generalized_eigensolver_data = false;
   bool debug_dump_eigensolver_data = false;
   bool debug_dump_reduction_to_band_data = false;
   bool debug_dump_band_to_tridiagonal_data = false;

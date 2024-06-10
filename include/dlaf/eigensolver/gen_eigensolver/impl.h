@@ -9,10 +9,16 @@
 //
 #pragma once
 
+#ifdef DLAF_WITH_HDF5
+#include <atomic>
+#include <sstream>
+#endif
+
 #include <dlaf/eigensolver/eigensolver.h>
 #include <dlaf/eigensolver/gen_eigensolver/api.h>
 #include <dlaf/eigensolver/gen_to_std.h>
 #include <dlaf/factorization/cholesky.h>
+#include <dlaf/matrix/hdf5.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/solver/triangular.h>
 #include <dlaf/util_matrix.h>
@@ -35,6 +41,20 @@ template <Backend B, Device D, class T>
 void GenEigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix<T, D>& mat_a,
                                    Matrix<T, D>& mat_b, Matrix<BaseType<T>, D>& eigenvalues,
                                    Matrix<T, D>& eigenvectors) {
+#ifdef DLAF_WITH_HDF5
+  static std::atomic<size_t> num_gen_eigensolver_calls = 0;
+  std::stringstream fname;
+  fname << "generalized-eigensolver-" << matrix::internal::TypeToString_v<T> << "-"
+        << std::to_string(num_gen_eigensolver_calls) << ".h5";
+  std::optional<matrix::internal::FileHDF5> file;
+
+  if (getTuneParameters().debug_dump_generalized_eigensolver_data) {
+    file = matrix::internal::FileHDF5(grid.fullCommunicator(), fname.str());
+    file->write(mat_a, "/input-a");
+    file->write(mat_b, "/input-b");
+  }
+#endif
+
   cholesky_factorization<B>(grid, uplo, mat_b);
   generalized_to_standard<B>(grid, uplo, mat_a, mat_b);
 
@@ -42,6 +62,15 @@ void GenEigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo
 
   triangular_solver<B>(grid, blas::Side::Left, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1),
                        mat_b, eigenvectors);
+
+#ifdef DLAF_WITH_HDF5
+  if (getTuneParameters().debug_dump_generalized_eigensolver_data) {
+    file->write(eigenvalues, "/evals");
+    file->write(eigenvectors, "/evecs");
+  }
+  
+  num_gen_eigensolver_calls++;
+#endif
 }
 
 }

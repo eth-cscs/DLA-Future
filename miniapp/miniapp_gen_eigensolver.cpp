@@ -28,6 +28,7 @@
 #include <dlaf/eigensolver/internal/get_band_size.h>
 #include <dlaf/init.h>
 #include <dlaf/matrix/copy.h>
+#include <dlaf/matrix/hdf5.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_mirror.h>
 #include <dlaf/miniapp/dispatch.h>
@@ -51,6 +52,10 @@ using dlaf::common::Ordering;
 using dlaf::matrix::MatrixMirror;
 using pika::this_thread::experimental::sync_wait;
 
+#ifdef DLAF_WITH_HDF5
+using dlaf::matrix::internal::FileHDF5;
+#endif
+
 /// Check results of the eigensolver
 template <typename T>
 void checkGenEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
@@ -63,12 +68,35 @@ struct Options
   SizeType m;
   SizeType mb;
   blas::Uplo uplo;
+#ifdef DLAF_WITH_HDF5
+  std::filesystem::path input_file;
+  std::string input_dataset_a;
+  std::string input_dataset_b;
+  std::filesystem::path output_file;
+#endif
 
   Options(const pika::program_options::variables_map& vm)
       : MiniappOptions(vm), m(vm["matrix-size"].as<SizeType>()), mb(vm["block-size"].as<SizeType>()),
         uplo(dlaf::miniapp::parseUplo(vm["uplo"].as<std::string>())) {
     DLAF_ASSERT(m > 0, m);
     DLAF_ASSERT(mb > 0, mb);
+
+#ifdef DLAF_WITH_HDF5
+    if (vm.count("input-file") == 1) {
+      input_file = vm["input-file"].as<std::filesystem::path>();
+
+      if (!vm["matrix-size"].defaulted()) {
+        std::cerr << "Warning! "
+                     "Specified matrix size will be ignored because an input file has been specified."
+                  << std::endl;
+      }
+    }
+    input_dataset_a = vm["input-dataset-a"].as<std::string>();
+    input_dataset_b = vm["input-dataset-b"].as<std::string>();
+    if (vm.count("output-file") == 1) {
+      output_file = vm["output-file"].as<std::filesystem::path>();
+    }
+#endif
   }
 
   Options(Options&&) = default;
@@ -94,7 +122,16 @@ struct GenEigensolverMiniapp {
     GlobalElementSize matrix_size(opts.m, opts.m);
     TileElementSize block_size(opts.mb, opts.mb);
 
-    ConstHostMatrixType matrix_a_ref = [matrix_size, block_size, &comm_grid]() {
+    ConstHostMatrixType matrix_a_ref = [matrix_size, block_size, &comm_grid, &opts]() {
+#ifdef DLAF_WITH_HDF5
+      if (!opts.input_file.empty()) {
+        auto infile = FileHDF5(opts.input_file, FileHDF5::FileMode::readonly);
+        if (opts.local)
+          return infile.read<T>(opts.input_dataset_a, block_size);
+        else
+          return infile.read<T>(opts.input_dataset_a, block_size, comm_grid, {0, 0});
+      }
+#endif
       using dlaf::matrix::util::set_random_hermitian;
 
       HostMatrixType hermitian(matrix_size, block_size, comm_grid);
@@ -103,7 +140,16 @@ struct GenEigensolverMiniapp {
       return hermitian;
     }();
 
-    ConstHostMatrixType matrix_b_ref = [matrix_size, block_size, &comm_grid]() {
+    ConstHostMatrixType matrix_b_ref = [matrix_size, block_size, &comm_grid, &opts]() {
+#ifdef DLAF_WITH_HDF5
+      if (!opts.input_file.empty()) {
+        auto infile = FileHDF5(opts.input_file, FileHDF5::FileMode::readonly);
+        if (opts.local)
+          return infile.read<T>(opts.input_dataset_b, block_size);
+        else
+          return infile.read<T>(opts.input_dataset_b, block_size, comm_grid, {0, 0});
+      }
+#endif
       using dlaf::matrix::util::set_random_hermitian_positive_definite;
 
       HostMatrixType triangular(matrix_size, block_size, comm_grid);
@@ -144,6 +190,23 @@ struct GenEigensolverMiniapp {
       eigenvectors.waitLocalTiles();
       DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
       double elapsed_time = timeit.elapsed();
+
+#ifdef DLAF_WITH_HDF5
+      if (run_index == opts.nruns - 1) {
+        if (!opts.output_file.empty()) {
+          auto outfile = [&]() {
+            if (opts.local)
+              return FileHDF5(opts.output_file, FileHDF5::FileMode::readwrite);
+            else
+              return FileHDF5(world, opts.output_file);
+          }();
+          outfile.write(matrix_a_ref, opts.input_dataset_a);
+          outfile.write(matrix_b_ref, opts.input_dataset_b);
+          outfile.write(eigenvalues, "/evals");
+          outfile.write(eigenvectors, "/evecs");
+        }
+      }
+#endif
 
       matrix_a.reset();
       matrix_b.reset();
@@ -212,6 +275,12 @@ int main(int argc, char** argv) {
   desc_commandline.add_options()
     ("matrix-size",  value<SizeType>()   ->default_value(4096), "Matrix size")
     ("block-size",   value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
+#ifdef DLAF_WITH_HDF5
+    ("input-file",    value<std::filesystem::path>()                              , "Load matrix from given HDF5 file")
+    ("input-dataset-a", value<std::string>()         -> default_value("/input-a") , "Name of HDF5 dataset to load as matrix")
+    ("input-dataset-b", value<std::string>()         -> default_value("/input-b") , "Name of HDF5 dataset to load as matrix")
+    ("output-file",   value<std::filesystem::path>()                              , "Save eigenvectors and eigenvalues to given HDF5 file")
+#endif
   ;
   // clang-format on
   dlaf::miniapp::addUploOption(desc_commandline);

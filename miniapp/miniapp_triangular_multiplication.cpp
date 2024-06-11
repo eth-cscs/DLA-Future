@@ -181,7 +181,7 @@ struct triangularMultiplicationMiniapp {
 
         std::cout << "[" << run_index << "]"
                   << " " << elapsed_time << "s"
-                  << " " << gigaflops << "GFlop/s"
+                  << " " << gigaflops + << "GFlop/s"
                   << " " << dlaf::internal::FormatShort{opts.type}
                   << dlaf::internal::FormatShort{opts.side} << dlaf::internal::FormatShort{opts.uplo}
                   << dlaf::internal::FormatShort{opts.op} << dlaf::internal::FormatShort{opts.diag}

@@ -180,8 +180,7 @@ struct triangularMultiplicationMiniapp {
         double gigaflops = total_ops / elapsed_time / 1e9;
 
         std::cout << "[" << run_index << "]" << " " << elapsed_time << "s" << " " << gigaflops
-                  << "GFlop/s"
-                  << " " << dlaf::internal::FormatShort{opts.type}
+                  << "GFlop/s" << " " << dlaf::internal::FormatShort{opts.type}
                   << dlaf::internal::FormatShort{opts.side} << dlaf::internal::FormatShort{opts.uplo}
                   << dlaf::internal::FormatShort{opts.op} << dlaf::internal::FormatShort{opts.diag}
                   << " " << bh.size() << " " << bh.blockSize() << " " << comm_grid.size() << " "

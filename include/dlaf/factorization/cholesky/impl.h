@@ -193,7 +193,6 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid& grid, Matrix<T
   using namespace cholesky_l;
   using pika::execution::thread_priority;
 
-
 #ifdef DLAF_WITH_HDF5
   static std::atomic<size_t> num_cholesky_calls = 0;
   std::stringstream fname;
@@ -308,7 +307,7 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid& grid, Matrix<T
   if (getTuneParameters().debug_dump_cholesky_factorization_data) {
     file->write(mat_a, "/cholesky");
   }
-  
+
   num_cholesky_calls++;
 #endif
 }

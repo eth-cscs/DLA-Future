@@ -68,7 +68,7 @@ void GenEigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo
     file->write(eigenvalues, "/evals");
     file->write(eigenvectors, "/evecs");
   }
-  
+
   num_gen_eigensolver_calls++;
 #endif
 }

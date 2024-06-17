@@ -32,7 +32,7 @@ namespace dlaf {
 ///     created in the working folder (it should not exist before the execution).
 ///     Set with environment variable DLAF_DEBUG_GENERALIZED_TO_STANDARD_DATA.
 /// - debug_dump_generalized_eigensolver_data:
-///     Enable dump of generalized eigensolver input/output data to "eigensolver.h5" file that will be 
+///     Enable dump of generalized eigensolver input/output data to "eigensolver.h5" file that will be
 ///     created in the working folder (it should not exist before the execution).
 ///     Set with environment variable DLAF_DEBUG_GENERALIZED_EIGENSOLVER_DATA.
 /// - debug_dump_eigensolver_data:

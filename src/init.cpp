@@ -223,9 +223,12 @@ void updateConfiguration(const pika::program_options::variables_map& vm, configu
   updateConfigurationValue(vm, param.band_to_tridiag_1d_block_size_base,
                            "BAND_TO_TRIDIAG_1D_BLOCK_SIZE_BASE", "band-to-tridiag-1d-block-size-base");
 
-  updateConfigurationValue(vm, param.debug_dump_cholesky_factorization_data, "DEBUG_DUMP_CHOLESKY_FACTORIZATION_DATA", "");
-  updateConfigurationValue(vm, param.debug_dump_generalized_eigensolver_data, "DEBUG_DUMP_GENERALIZED_EIGENSOLVER_DATA", "");
-  updateConfigurationValue(vm, param.debug_dump_generalized_to_standard_data, "DEBUG_DUMP_GENERALIZED_TO_STANDARD_DATA", "");
+  updateConfigurationValue(vm, param.debug_dump_cholesky_factorization_data,
+                           "DEBUG_DUMP_CHOLESKY_FACTORIZATION_DATA", "");
+  updateConfigurationValue(vm, param.debug_dump_generalized_eigensolver_data,
+                           "DEBUG_DUMP_GENERALIZED_EIGENSOLVER_DATA", "");
+  updateConfigurationValue(vm, param.debug_dump_generalized_to_standard_data,
+                           "DEBUG_DUMP_GENERALIZED_TO_STANDARD_DATA", "");
   updateConfigurationValue(vm, param.debug_dump_eigensolver_data, "DEBUG_DUMP_EIGENSOLVER_DATA", "");
   updateConfigurationValue(vm, param.debug_dump_reduction_to_band_data,
                            "DEBUG_DUMP_REDUCTION_TO_BAND_DATA", "");

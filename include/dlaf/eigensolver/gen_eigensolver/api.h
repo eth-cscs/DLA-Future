@@ -25,7 +25,7 @@ struct GenEigensolver {
                    const Factorization factorization);
   static void call(comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix<T, device>& mat_a,
                    Matrix<T, device>& mat_b, Matrix<BaseType<T>, device>& eigenvalues,
-                   Matrix<T, device>& eigenvectors, const Factorization factorizatio);
+                   Matrix<T, device>& eigenvectors, const Factorization factorization);
 };
 
 // ETI

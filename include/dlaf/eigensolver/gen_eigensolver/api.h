@@ -16,12 +16,13 @@
 
 namespace dlaf::eigensolver::internal {
 
-enum class Factorization {do_factorization, already_factorized};
+enum class Factorization { do_factorization, already_factorized };
 
 template <Backend backend, Device device, class T>
 struct GenEigensolver {
   static void call(blas::Uplo uplo, Matrix<T, device>& mat_a, Matrix<T, device>& mat_b,
-                   Matrix<BaseType<T>, device>& eigenvalues, Matrix<T, device>& eigenvectors, const Factorization factorization);
+                   Matrix<BaseType<T>, device>& eigenvalues, Matrix<T, device>& eigenvectors,
+                   const Factorization factorization);
   static void call(comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix<T, device>& mat_a,
                    Matrix<T, device>& mat_b, Matrix<BaseType<T>, device>& eigenvalues,
                    Matrix<T, device>& eigenvectors, const Factorization factorizatio);

@@ -1,5 +1,11 @@
 # Changelog
 
+## DLA-Future 0.Y.Z
+
+### Changes
+
+- Renamed ScaLAPACK-like generalized eigensolvers `pXsygvx`/`pXhegvx` to `pXsygvd`/`pXhegvd`
+
 ## DLA-Future 0.5.0
 
 ### Changes

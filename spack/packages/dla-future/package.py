@@ -167,6 +167,8 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         default=False,
         description="Check number of spawned threads in CI (Advanced usage).",
     )
+
+    variant("pch", default=False, description="Enable precompiled headers.")
     ###
 
     def cmake_args(self):
@@ -298,6 +300,8 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         ### Variants available only in the DLAF repo spack package
         if "+ci-check-threads" in spec:
             args.append(self.define("DLAF_TEST_PREFLAGS", "check-threads"))
+
+        args.append(self.define_from_variant("DLAF_WITH_PRECOMPILED_HEADERS", "pch"))
         ###
 
         # MINIAPPS

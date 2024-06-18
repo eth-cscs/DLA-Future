@@ -107,7 +107,7 @@ int hermitian_generalized_eigensolver_factorized(const int dlaf_context, const c
 #ifdef DLAF_WITH_SCALAPACK
 
 template <typename T>
-void pxhegvx_helper(const char uplo, const int m, T* a, const int ia, const int ja, const int desca[9],
+void pxhegvd_helper(const char uplo, const int m, T* a, const int ia, const int ja, const int desca[9],
                     T* b, const int ib, const int jb, const int descb[9], dlaf::BaseType<T>* w, T* z,
                     const int iz, int jz, const int descz[9], int& info, bool factorized) {
   DLAF_ASSERT(desca[0] == 1, desca[0]);
@@ -137,18 +137,18 @@ void pxhegvx_helper(const char uplo, const int m, T* a, const int ia, const int 
 }
 
 template <typename T>
-void pxhegvx(const char uplo, const int m, T* a, const int ia, const int ja, const int desca[9], T* b,
+void pxhegvd(const char uplo, const int m, T* a, const int ia, const int ja, const int desca[9], T* b,
              const int ib, const int jb, const int descb[9], dlaf::BaseType<T>* w, T* z, const int iz,
              int jz, const int descz[9], int& info) {
-  pxhegvx_helper<T>(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, info, false);
+  pxhegvd_helper<T>(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, info, false);
 }
 
 template <typename T>
-void pxhegvx_factorized(const char uplo, const int m, T* a, const int ia, const int ja,
+void pxhegvd_factorized(const char uplo, const int m, T* a, const int ia, const int ja,
                         const int desca[9], T* b, const int ib, const int jb, const int descb[9],
                         dlaf::BaseType<T>* w, T* z, const int iz, int jz, const int descz[9],
                         int& info) {
-  pxhegvx_helper<T>(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, info, true);
+  pxhegvd_helper<T>(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, info, true);
 }
 
 #endif

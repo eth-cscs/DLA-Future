@@ -137,7 +137,7 @@ void pxhegvd_helper(const char uplo, const int m, T* a, const int ia, const int 
 }
 
 template <typename T>
-void pxhegvd(const char uplo, const int m, T* a, const int ia, const int ja, const int desca[9], T* b,
+void pxhegvx(const char uplo, const int m, T* a, const int ia, const int ja, const int desca[9], T* b,
              const int ib, const int jb, const int descb[9], dlaf::BaseType<T>* w, T* z, const int iz,
              int jz, const int descz[9], int& info) {
   pxhegvd_helper<T>(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, info, false);

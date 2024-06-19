@@ -209,19 +209,19 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
       int desc_z[] = {1, dlaf_context, (int) m, (int) m, (int) mb, (int) mb, 0, 0, lld_eigenvectors};
       int info = -1;
       if constexpr (std::is_same_v<T, double>) {
-        C_dlaf_pdsygvd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
+        C_dlaf_pdsygvx(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
                        eigenvalues_ptr, local_eigenvectors_ptr, 1, 1, desc_z, &info);
       }
       else if constexpr (std::is_same_v<T, float>) {
-        C_dlaf_pssygvd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
+        C_dlaf_pssygvx(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
                        eigenvalues_ptr, local_eigenvectors_ptr, 1, 1, desc_z, &info);
       }
       else if constexpr (std::is_same_v<T, std::complex<double>>) {
-        C_dlaf_pzhegvd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
+        C_dlaf_pzhegvx(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
                        eigenvalues_ptr, local_eigenvectors_ptr, 1, 1, desc_z, &info);
       }
       else if constexpr (std::is_same_v<T, std::complex<float>>) {
-        C_dlaf_pchegvd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
+        C_dlaf_pchegvx(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
                        eigenvalues_ptr, local_eigenvectors_ptr, 1, 1, desc_z, &info);
       }
       else {

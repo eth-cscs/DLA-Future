@@ -88,7 +88,7 @@ int dlaf_hermitian_generalized_eigensolver_factorized_z(
 
 #ifdef DLAF_WITH_SCALAPACK
 
-void dlaf_pssygvd(const char uplo, const int m, float* a, const int ia, const int ja, const int desca[9],
+void dlaf_pssygvx(const char uplo, const int m, float* a, const int ia, const int ja, const int desca[9],
                   float* b, const int ib, const int jb, const int descb[9], float* w, float* z,
                   const int iz, const int jz, const int descz[9], int* info) noexcept {
   pxhegvx<float>(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, *info);

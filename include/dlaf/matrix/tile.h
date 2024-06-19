@@ -230,7 +230,7 @@ public:
 
   Tile(Tile&& rhs) noexcept : data_(std::move(rhs.data_)), dep_tracker_(std::move(rhs.dep_tracker_)) {
     rhs.dep_tracker_ = std::monostate();
-  };
+  }
 
   /// Destroys the Tile.
   ///
@@ -303,7 +303,7 @@ private:
     return memory::MemoryView<T, D>(tile.data_.memoryView(),
                                     spec.size.isEmpty() ? 0 : tile.data_.linearIndex(spec.origin),
                                     tile.data_.linearSize(spec.size, tile.ld()));
-  };
+  }
 
   Tile(const TileElementSize& size, const memory::MemoryView<ElementType, D>& memory_view,
        SizeType ld) noexcept

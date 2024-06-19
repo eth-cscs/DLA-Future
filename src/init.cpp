@@ -112,21 +112,21 @@ template <class T>
 struct parseFromString {
   static std::optional<T> call(const std::string& val) {
     return val;
-  };
+  }
 };
 
 template <>
 struct parseFromString<std::size_t> {
   static std::optional<std::size_t> call(const std::string& var) {
     return std::stoull(var);
-  };
+  }
 };
 
 template <>
 struct parseFromString<SizeType> {
   static std::optional<SizeType> call(const std::string& var) {
     return std::stoll(var);
-  };
+  }
 };
 
 template <>
@@ -137,7 +137,7 @@ struct parseFromString<bool> {
     if (is_one_of_ignore_case(var, {"OFF", "FALSE", "NO", "0"}))
       return false;
     return std::nullopt;
-  };
+  }
 
 private:
   static bool is_one_of_ignore_case(std::string value, const std::array<std::string, 4>& values) {

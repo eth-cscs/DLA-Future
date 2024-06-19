@@ -41,9 +41,8 @@ TEST(BcastMatrixTest, TransformMPIRW) {
     start_detached(when_all(ccomm.exclusive(), mat.readwrite(index)) |
                    comm::internal::transformMPI(comm::internal::sendBcast_o));
     mat.readwrite(index) |
-        transformDetach(internal::Policy<Backend::MC>(), [sz](matrix::Tile<double, Device::CPU> tile) {
-          tile({sz - 1, 0}) = 2.;
-        });
+        transformDetach(internal::Policy<Backend::MC>(),
+                        [sz](matrix::Tile<double, Device::CPU> tile) { tile({sz - 1, 0}) = 2.; });
     EXPECT_EQ(2., sync_wait(mat.read(index)).get()({sz - 1, 0}));
   }
   else {
@@ -72,9 +71,8 @@ TEST(BcastMatrixTest, TransformMPIRO) {
     start_detached(when_all(ccomm.exclusive(), mat.read(index)) |
                    comm::internal::transformMPI(comm::internal::sendBcast_o));
     mat.readwrite(index) |
-        transformDetach(internal::Policy<Backend::MC>(), [sz](matrix::Tile<double, Device::CPU> tile) {
-          tile({sz - 1, 0}) = 2.;
-        });
+        transformDetach(internal::Policy<Backend::MC>(),
+                        [sz](matrix::Tile<double, Device::CPU> tile) { tile({sz - 1, 0}) = 2.; });
     EXPECT_EQ(2., sync_wait(mat.read(index)).get()({sz - 1, 0}));
   }
   else {

@@ -9,6 +9,8 @@
 //
 #pragma once
 
+#include <utility>
+
 /// @file
 
 #include <dlaf/communication/communicator_pipeline.h>

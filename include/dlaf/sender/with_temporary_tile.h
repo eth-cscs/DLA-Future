@@ -10,6 +10,9 @@
 
 #pragma once
 
+#include <functional>
+#include <utility>
+
 #include <pika/execution.hpp>
 
 #include <dlaf/common/unwrap.h>
@@ -57,7 +60,7 @@ moveNonConstTile(T&) -> moveNonConstTile<T>;
 /// runtime check will be performed on the input tile, and if it is not
 /// contiguous a new tile will also be allocated.
 ///
-/// In addition to requesting a destination device and contigous memory, the
+/// In addition to requesting a destination device and contiguous memory, the
 /// user may request additional operations that will be performed only when a
 /// new tile is allocated. If the input tile is used directly none of the
 /// following operations will be performed as they are unnecessary. If
@@ -137,11 +140,12 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                       // directly.
                       auto copy_sender = [&]() {
                         if constexpr (bool(copy_from_destination)) {
-                          return whenAllLift(std::move(f_sender), std::cref(temp), std::cref(in)) |
-                                 copy(Policy<copy_backend>(thread_priority::high));
+                          return ex::make_unique_any_sender(
+                              whenAllLift(std::move(f_sender), std::cref(temp), std::cref(in)) |
+                              copy(Policy<copy_backend>(thread_priority::high)));
                         }
                         else {
-                          return std::move(f_sender);
+                          return ex::make_unique_any_sender(std::move(f_sender));
                         }
                       }();
                       // Send the input tile to continuations if the tile is

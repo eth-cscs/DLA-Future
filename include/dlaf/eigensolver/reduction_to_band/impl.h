@@ -9,8 +9,12 @@
 //
 #pragma once
 
+#include <array>
+#include <atomic>
 #include <cmath>
 #include <cstddef>
+#include <sstream>
+#include <utility>
 #include <vector>
 
 #include <pika/barrier.hpp>
@@ -41,6 +45,7 @@
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/copy_tile.h>
 #include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/hdf5.h>
 #include <dlaf/matrix/index.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/panel.h>
@@ -762,24 +767,26 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
   // panel Xt col-wise, by collecting all Xt results on the rank which can "mirror" the result on its
   // rows (i.e. diagonal). So, for each tile of the row panel, select who is the "diagonal" rank that can
   // mirror and reduce on it.
-  for (const auto& index_xt : xt.iteratorLocal()) {
-    const auto index_k = dist.template globalTileFromLocalTile<Coord::Col>(index_xt.col());
-    const auto rank_owner_row = dist.template rankGlobalTile<Coord::Row>(index_k);
+  if (mpi_col_chain.size() > 1) {
+    for (const auto& index_xt : xt.iteratorLocal()) {
+      const auto index_k = dist.template globalTileFromLocalTile<Coord::Col>(index_xt.col());
+      const auto rank_owner_row = dist.template rankGlobalTile<Coord::Row>(index_k);
 
-    if (rank_owner_row == rank.row()) {
-      // Note:
-      // Since it is the owner, it has to perform the "mirroring" of the results from columns to
-      // rows.
-      //
-      // Moreover, it reduces in place because the owner of the diagonal stores the partial result
-      // directly in x (without using xt)
-      const auto i = dist.template localTileFromGlobalTile<Coord::Row>(index_k);
-      ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_chain.exclusive(), MPI_SUM,
-                                                         x.readwrite({i, 0})));
-    }
-    else {
-      ex::start_detached(comm::scheduleReduceSend(mpi_col_chain.exclusive(), rank_owner_row, MPI_SUM,
-                                                  xt.read(index_xt)));
+      if (rank_owner_row == rank.row()) {
+        // Note:
+        // Since it is the owner, it has to perform the "mirroring" of the results from columns to
+        // rows.
+        //
+        // Moreover, it reduces in place because the owner of the diagonal stores the partial result
+        // directly in x (without using xt)
+        const auto i = dist.template localTileFromGlobalTile<Coord::Row>(index_k);
+        ex::start_detached(comm::schedule_reduce_recv_in_place(mpi_col_chain.exclusive(), MPI_SUM,
+                                                               x.readwrite({i, 0})));
+      }
+      else {
+        ex::start_detached(comm::schedule_reduce_send(mpi_col_chain.exclusive(), rank_owner_row, MPI_SUM,
+                                                      xt.read(index_xt)));
+      }
     }
   }
 
@@ -787,13 +794,15 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
   // At this point partial results are all collected in X (Xt has been embedded in previous step),
   // so the last step needed is to reduce these last partial results in the final results.
   // The result is needed just on the column with reflectors.
-  for (const auto& index_x : x.iteratorLocal()) {
-    if (reducer_col == rank.col())
-      ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_chain.exclusive(), MPI_SUM,
-                                                         x.readwrite(index_x)));
-    else
-      ex::start_detached(comm::scheduleReduceSend(mpi_row_chain.exclusive(), reducer_col, MPI_SUM,
-                                                  x.read(index_x)));
+  if (mpi_row_chain.size() > 1) {
+    for (const auto& index_x : x.iteratorLocal()) {
+      if (reducer_col == rank.col())
+        ex::start_detached(comm::schedule_reduce_recv_in_place(mpi_row_chain.exclusive(), MPI_SUM,
+                                                               x.readwrite(index_x)));
+      else
+        ex::start_detached(comm::schedule_reduce_send(mpi_row_chain.exclusive(), reducer_col, MPI_SUM,
+                                                      x.read(index_x)));
+    }
   }
 }
 
@@ -1125,6 +1134,19 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
   auto mpi_col_chain = grid.col_communicator_pipeline();
   auto mpi_col_chain_panel = grid.col_communicator_pipeline();
 
+#ifdef DLAF_WITH_HDF5
+  static std::atomic<size_t> num_reduction_to_band_calls = 0;
+  std::stringstream fname;
+  fname << "reduction_to_band-" << matrix::internal::TypeToString_v<T> << "-"
+        << std::to_string(num_reduction_to_band_calls) << ".h5";
+  std::optional<matrix::internal::FileHDF5> file;
+
+  if (getTuneParameters().debug_dump_reduction_to_band_data) {
+    file = matrix::internal::FileHDF5(grid.fullCommunicator(), fname.str());
+    file->write(mat_a, "/input");
+  }
+#endif
+
   const auto& dist = mat_a.distribution();
   const comm::Index2D rank = dist.rankIndex();
 
@@ -1140,8 +1162,17 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
                                                        comm::Index2D(mat_a.rankIndex().col(), 0),
                                                        comm::Index2D(mat_a.sourceRankIndex().col(), 0)));
 
-  if (nrefls == 0)
+  if (nrefls == 0) {
+#ifdef DLAF_WITH_HDF5
+    if (getTuneParameters().debug_dump_reduction_to_band_data) {
+      file->write(mat_a, "/band");
+    }
+
+    num_reduction_to_band_calls++;
+#endif
+
     return mat_taus;
+  }
 
   Matrix<T, Device::CPU> mat_taus_retiled =
       mat_taus.retiledSubPipeline(LocalTileSize(mat_a.blockSize().cols() / band_size, 1));
@@ -1275,8 +1306,10 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
       matrix::Matrix<T, D> w2 = std::move(t);
 
       red2band::local::gemmComputeW2<B, D>(w2, w, x);
-      ex::start_detached(comm::scheduleAllReduceInPlace(mpi_col_chain.exclusive(), MPI_SUM,
-                                                        w2.readwrite(LocalTileIndex(0, 0))));
+      if (mpi_col_chain.size() > 1) {
+        ex::start_detached(comm::schedule_all_reduce_in_place(mpi_col_chain.exclusive(), MPI_SUM,
+                                                              w2.readwrite(LocalTileIndex(0, 0))));
+      }
 
       red2band::local::gemmUpdateX<B, D>(x, w2, v);
     }
@@ -1328,7 +1361,8 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
     // * Why is it different between MC and GPU?
     // As said above, the problem is related to the communication. But the communication is not said
     // to be an atomic operation happening in a single task. It might have to create a copy to
-    // a buffer more suitable for the communication (e.g. GPU -> CPU if RDMA is not available).
+    // a buffer more suitable for the communication (e.g. GPU -> CPU if GPU-aware MPI is not
+    // available).
     //
     // And in order to not be blocked, it must be ensured that the actual communication task has
     // been scheduled.
@@ -1359,12 +1393,12 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
           xt.setTile(at, x.read(at));
 
           if (dist.commGridSize().rows() > 1)
-            ex::start_detached(comm::scheduleSendBcast(mpi_col_chain.exclusive(), xt.read(at)));
+            ex::start_detached(comm::schedule_bcast_send(mpi_col_chain.exclusive(), xt.read(at)));
         }
         else {
           if (dist.commGridSize().rows() > 1)
-            ex::start_detached(comm::scheduleRecvBcast(mpi_col_chain.exclusive(), owner,
-                                                       xt.readwrite(at)));
+            ex::start_detached(comm::schedule_bcast_recv(mpi_col_chain.exclusive(), owner,
+                                                         xt.readwrite(at)));
         }
       }
 
@@ -1415,6 +1449,14 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
     vt.reset();
     v.reset();
   }
+
+#ifdef DLAF_WITH_HDF5
+  if (getTuneParameters().debug_dump_reduction_to_band_data) {
+    file->write(mat_a, "/band");
+  }
+
+  num_reduction_to_band_calls++;
+#endif
 
   return mat_taus;
 }

@@ -12,6 +12,8 @@
 
 /// @file
 
+#include <iostream>
+#include <sstream>
 #include <string>
 
 #include <dlaf/common/index2d.h>

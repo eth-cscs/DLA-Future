@@ -9,7 +9,12 @@
 //
 
 #include <algorithm>
+#include <cstddef>
 #include <functional>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "gtest_mpi_listener.h"
 

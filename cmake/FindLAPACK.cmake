@@ -19,6 +19,9 @@
 #   LAPACK_LIBRARY
 #       ;-list of {lib name, lib filepath, -Llibrary_folder}
 #
+#   LAPACK_INCLUDE_DIR
+#       ;-list of include folders
+#
 # This module sets the following variables:
 #   LAPACK_FOUND - set to true if a library implementing the LAPACK interface is found
 #
@@ -54,7 +57,7 @@ endmacro()
 # Dependencies
 set(_DEPS "")
 
-if(LAPACK_LIBRARY STREQUAL "" OR NOT LAPACK_LIBRARY)
+if(NOT LAPACK_LIBRARY)
   set(LAPACK_LIBRARY "LAPACK_LIBRARIES-PLACEHOLDER-FOR-EMPTY-LIBRARIES")
 endif()
 
@@ -62,13 +65,25 @@ mark_as_advanced(LAPACK_LIBRARY)
 
 _lapack_check_is_working()
 
+if(NOT LAPACK_INCLUDE_DIR)
+  set(LAPACK_INCLUDE_DIR "LAPACK_INCLUDE_DIR-PLACEHOLDER-FOR-EMPTY-INCLUDE-DIR")
+endif()
+
+mark_as_advanced(LAPACK_INCLUDE_DIR)
+
 ### Package
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(LAPACK DEFAULT_MSG LAPACK_LIBRARY _LAPACK_CHECK _LAPACK_CHECK_BLAS)
+find_package_handle_standard_args(
+  LAPACK DEFAULT_MSG LAPACK_LIBRARY LAPACK_INCLUDE_DIR _LAPACK_CHECK _LAPACK_CHECK_BLAS
+)
 
-# Remove the placeholder
+# Remove the placeholders
 if(LAPACK_LIBRARY STREQUAL "LAPACK_LIBRARIES-PLACEHOLDER-FOR-EMPTY-LIBRARIES")
   set(LAPACK_LIBRARY "")
+endif()
+
+if(LAPACK_INCLUDE_DIR STREQUAL "LAPACK_INCLUDE_DIR-PLACEHOLDER-FOR-EMPTY-INCLUDE-DIR")
+  set(LAPACK_INCLUDE_DIR "")
 endif()
 
 if(LAPACK_FOUND)
@@ -77,4 +92,5 @@ if(LAPACK_FOUND)
   endif()
 
   target_link_libraries(DLAF::LAPACK INTERFACE "${LAPACK_LIBRARY}" "${_DEPS}")
+  target_include_directories(DLAF::LAPACK INTERFACE "${LAPACK_INCLUDE_DIR}")
 endif()

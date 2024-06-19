@@ -13,6 +13,7 @@
 /// @file
 
 #include <cstddef>
+#include <utility>
 
 #include <lapack.hh>
 // LAPACKPP includes complex.h which defines the macro I.

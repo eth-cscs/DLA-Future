@@ -12,6 +12,8 @@
 
 /// @file
 
+#include <utility>
+
 #include <dlaf/common/data.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/error.h>

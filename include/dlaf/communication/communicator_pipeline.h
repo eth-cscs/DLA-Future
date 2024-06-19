@@ -12,6 +12,8 @@
 
 #pragma once
 
+#include <utility>
+
 #include <dlaf/common/index2d.h>
 #include <dlaf/common/pipeline.h>
 #include <dlaf/common/round_robin.h>

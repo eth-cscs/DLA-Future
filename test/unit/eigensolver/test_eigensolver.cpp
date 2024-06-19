@@ -10,6 +10,8 @@
 
 #include <functional>
 #include <tuple>
+#include <utility>
+#include <vector>
 
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/eigensolver/eigensolver.h>
@@ -81,13 +83,12 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
   const TileElementSize block_size(mb, mb);
 
   Matrix<const T, Device::CPU> reference = [&]() {
-    auto reference = [&]() -> auto{
+    auto reference = [&]() -> auto {
       if constexpr (isDistributed)
         return Matrix<T, Device::CPU>(GlobalElementSize(m, m), block_size, grid...);
       else
         return Matrix<T, Device::CPU>(LocalElementSize(m, m), block_size);
-    }
-    ();
+    }();
     switch (type) {
       case MatrixType::identity:
         matrix::util::set_identity(reference);

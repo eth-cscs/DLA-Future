@@ -10,6 +10,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 
 #include <pika/runtime.hpp>

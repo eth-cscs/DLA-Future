@@ -10,7 +10,7 @@
 
 cmake_minimum_required(VERSION 3.22)
 
-project(DLAF VERSION 0.1.0)
+project(DLAF VERSION 0.5.0)
 
 # ---------------------------------------------------------------------------
 # CMake configurations
@@ -34,11 +34,15 @@ endif()
 
 option(BUILD_SHARED_LIBS "Build shared libraries." ON)
 option(DLAF_WITH_OPENMP "${DLAF_WITH_OPENMP_DESCRIPTION}" ${DLAF_WITH_OPENMP_DEFAULT})
-option(DLAF_WITH_MKL "Enable oneMKL as provider for BLAS and LAPACK" OFF)
-option(DLAF_WITH_MKL_LEGACY "Enable MKL as provider for BLAS and LAPACK" OFF)
 option(DLAF_WITH_CUDA "Enable CUDA support" OFF)
 option(DLAF_WITH_HIP "Enable HIP support" OFF)
-cmake_dependent_option(DLAF_WITH_CUDA_MPI_RDMA "Enable MPI CUDA RDMA" OFF "DLAF_WITH_CUDA" OFF)
+cmake_dependent_option(
+  DLAF_WITH_MPI_GPU_AWARE "Enable GPU-aware MPI" OFF "DLAF_WITH_CUDA OR DLAF_WITH_HIP" OFF
+)
+cmake_dependent_option(
+  DLAF_WITH_MPI_GPU_FORCE_CONTIGUOUS "Force GPU buffers to be contiguous before communicating" ON
+  "DLAF_WITH_MPI_GPU_AWARE" OFF
+)
 option(DLAF_WITH_HDF5 "Enable HDF5 support" OFF)
 mark_as_advanced(DLAF_WITH_HDF5)
 option(DLAF_WITH_COVERAGE "Enable coverage" OFF)
@@ -49,11 +53,30 @@ option(DLAF_BUILD_DOC "Build documentation" OFF)
 option(DLAF_WITH_PRECOMPILED_HEADERS "Use precompiled headers." OFF)
 option(DLAF_WITH_SCALAPACK "Build ScaLAPACK-like C API (requires ScaLAPACK)" OFF)
 
-if(DLAF_WITH_MKL AND DLAF_WITH_MKL_LEGACY)
-  message(SEND_ERROR "DLAF_WITH_MKL and DLAF_WITH_MKL_LEGACY are mutually exclusive.")
+if(DEFINED CACHE{DLAF_WITH_MKL})
+  if(DLAF_WITH_MKL)
+    message(STATUS "Intel MKL support: Enabled by user")
+  else()
+    message(STATUS "Intel MKL support: Disabled by user")
+  endif()
+  set(DLAF_WITH_MKL_INTERNAL ${DLAF_WITH_MKL} CACHE BOOL "" FORCE)
+else()
+  unset(DLAF_WITH_MKL_TRY_COMPILE CACHE)
+  try_compile(
+    DLAF_WITH_MKL_TRY_COMPILE "${PROJECT_BINARY_DIR}/cmake/tests"
+    "${PROJECT_SOURCE_DIR}/cmake/tests/mkl_set_num_threads.cpp"
+    CMAKE_FLAGS "-DINCLUDE_DIRECTORIES=${LAPACK_INCLUDE_DIR}"
+    LINK_LIBRARIES ${LAPACK_LIBRARY}
+  )
+  if(DLAF_WITH_MKL_TRY_COMPILE)
+    message(STATUS "Intel MKL support: Found")
+  else()
+    message(STATUS "Intel MKL support: Not found")
+  endif()
+  set(DLAF_WITH_MKL_INTERNAL ${DLAF_WITH_MKL_TRY_COMPILE} CACHE BOOL "" FORCE)
 endif()
 
-if(DLAF_WITH_MKL OR DLAF_WITH_MKL_LEGACY)
+if(DLAF_WITH_MKL)
   # When using MKL there is no need to set the number of threads with
   # omp_set_num_threads; it's sufficient to use MKL's own mechanisms.
   set(DLAF_WITH_OPENMP OFF CACHE BOOL "${DLAF_WITH_OPENMP_DESCRIPTION}" FORCE)
@@ -134,58 +157,9 @@ if(DLAF_WITH_OPENMP)
   find_package(OpenMP REQUIRED)
 endif()
 
-# ----- LAPACK/SCALAPACK
-if(DLAF_WITH_MKL) # oneMKL
-  set(MKL_INTERFACE "lp64" CACHE STRING "")
-  set(MKL_THREADING "sequential" CACHE STRING "")
-  set(MKL_MPI "mpich" CACHE STRING "")
-
-  find_package(MKL CONFIG REQUIRED)
-
-  set(LAPACK_FOUND TRUE)
-  add_library(DLAF::LAPACK INTERFACE IMPORTED GLOBAL)
-  target_link_libraries(DLAF::LAPACK INTERFACE MKL::MKL)
-
-  if(DLAF_WITH_SCALAPACK)
-    set(SCALAPACK_FOUND TRUE)
-    add_library(DLAF::SCALAPACK INTERFACE IMPORTED GLOBAL)
-  endif()
-elseif(DLAF_WITH_MKL_LEGACY) # MKL (deprecated)
-  find_package(MKL MODULE REQUIRED)
-
-  set(MKL_LAPACK_TARGET "mkl::mkl_intel_32bit_seq_dyn"
-      CACHE STRING "MKL LAPACK target (see FindMKL for details)"
-  )
-
-  # Note:
-  # If specified targets are found, "standardize" them
-
-  if(TARGET ${MKL_LAPACK_TARGET})
-    set(LAPACK_FOUND TRUE)
-    add_library(DLAF::LAPACK INTERFACE IMPORTED GLOBAL)
-    target_link_libraries(DLAF::LAPACK INTERFACE ${MKL_LAPACK_TARGET})
-  else()
-    message(FATAL_ERROR "${MKL_LAPACK_TARGET} as LAPACK target has not been found")
-  endif()
-
-  if(DLAF_WITH_SCALAPACK)
-    set(MKL_SCALAPACK_TARGET "mkl::scalapack_intel_32bit_seq_dyn"
-        CACHE STRING "MKL ScaLAPACK target (see FindMKL for details)"
-    )
-
-    if(TARGET ${MKL_SCALAPACK_TARGET})
-      set(SCALAPACK_FOUND TRUE)
-      add_library(DLAF::SCALAPACK INTERFACE IMPORTED GLOBAL)
-      target_link_libraries(DLAF::SCALAPACK INTERFACE ${MKL_SCALAPACK_TARGET})
-    else()
-      message(FATAL_ERROR "${MKL_SCALAPACK_TARGET} as ScaLAPACK target has not been found")
-    endif()
-  endif()
-else()
-  find_package(LAPACK REQUIRED)
-  if(DLAF_WITH_SCALAPACK)
-    find_package(SCALAPACK REQUIRED)
-  endif()
+find_package(LAPACK REQUIRED)
+if(DLAF_WITH_SCALAPACK)
+  find_package(SCALAPACK REQUIRED)
 endif()
 
 # ----- pika

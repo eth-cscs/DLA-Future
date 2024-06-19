@@ -9,6 +9,9 @@
 //
 #pragma once
 
+#include <cstddef>
+#include <utility>
+
 #include <pika/execution.hpp>
 #include <pika/thread.hpp>
 
@@ -344,9 +347,11 @@ void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
                       panelW2.readwrite(ij));
     }
 
-    for (const auto& kj_panel : panelW2.iteratorLocal())
-      ex::start_detached(dlaf::comm::scheduleAllReduceInPlace(mpi_col_task_chain.exclusive(), MPI_SUM,
-                                                              panelW2.readwrite(kj_panel)));
+    if (mpi_col_task_chain.size() > 1) {
+      for (const auto& kj_panel : panelW2.iteratorLocal())
+        ex::start_detached(dlaf::comm::schedule_all_reduce_in_place(
+            mpi_col_task_chain.exclusive(), MPI_SUM, panelW2.readwrite(kj_panel)));
+    }
 
     broadcast(k_rank_col, panelV, mpi_row_task_chain);
 

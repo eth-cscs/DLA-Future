@@ -12,7 +12,10 @@
 
 /// @file
 
+#include <cstddef>
 #include <cstdlib>
+#include <exception>
+#include <iostream>
 #include <memory>
 
 #include <umpire/Allocator.hpp>

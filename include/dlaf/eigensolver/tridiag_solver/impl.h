@@ -10,6 +10,11 @@
 #pragma once
 
 #include <algorithm>
+#include <atomic>
+#include <sstream>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 #include <pika/execution.hpp>
 #include <pika/thread.hpp>
@@ -27,6 +32,7 @@
 #include <dlaf/eigensolver/tridiag_solver/merge.h>
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/hdf5.h>
 #include <dlaf/permutations/general.h>
 #include <dlaf/permutations/general/impl.h>
 #include <dlaf/sender/make_sender_algorithm_overloads.h>
@@ -302,12 +308,14 @@ void solveDistLeaf(comm::CommunicatorPipeline<comm::CommunicatorType::Full>& ful
     const GlobalTileIndex id_tr(i, 0);
     if (ii_rank == this_rank) {
       stedcAsync(tridiag.readwrite(id_tr), evecs.readwrite(ii_tile));
-      ex::start_detached(comm::scheduleSendBcast(full_task_chain.exclusive(), tridiag.read(id_tr)));
+      if (full_task_chain.size() > 1) {
+        ex::start_detached(comm::schedule_bcast_send(full_task_chain.exclusive(), tridiag.read(id_tr)));
+      }
     }
     else {
       const comm::IndexT_MPI root_rank = full_task_chain.rank_full_communicator(ii_rank);
-      ex::start_detached(comm::scheduleRecvBcast(full_task_chain.exclusive(), root_rank,
-                                                 tridiag.readwrite(id_tr)));
+      ex::start_detached(comm::schedule_bcast_recv(full_task_chain.exclusive(), root_rank,
+                                                   tridiag.readwrite(id_tr)));
     }
   }
 }
@@ -335,12 +343,14 @@ void solveDistLeaf(comm::CommunicatorPipeline<comm::CommunicatorType::Full>& ful
       stedcAsync(tridiag.readwrite(id_tr), h_evecs.readwrite(ii_tile));
       ex::start_detached(ex::when_all(h_evecs.read(ii_tile), evecs.readwrite(ii_tile)) |
                          copy(cp_policy));
-      ex::start_detached(comm::scheduleSendBcast(full_task_chain.exclusive(), tridiag.read(id_tr)));
+      if (full_task_chain.size() > 1) {
+        ex::start_detached(comm::schedule_bcast_send(full_task_chain.exclusive(), tridiag.read(id_tr)));
+      }
     }
     else {
       const comm::IndexT_MPI root_rank = full_task_chain.rank_full_communicator(ii_rank);
-      ex::start_detached(comm::scheduleRecvBcast(full_task_chain.exclusive(), root_rank,
-                                                 tridiag.readwrite(id_tr)));
+      ex::start_detached(comm::schedule_bcast_recv(full_task_chain.exclusive(), root_rank,
+                                                   tridiag.readwrite(id_tr)));
     }
   }
 }
@@ -358,6 +368,19 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device
   // Quick return for empty matrix
   if (evecs.size().isEmpty())
     return;
+
+#ifdef DLAF_WITH_HDF5
+  static std::atomic<size_t> num_tridiag_solver_calls = 0;
+  std::stringstream fname;
+  fname << "tridiag_solver-"
+        << matrix::internal::TypeToString_v<T> << std::to_string(num_tridiag_solver_calls) << ".h5";
+  std::optional<matrix::internal::FileHDF5> file;
+
+  if (getTuneParameters().debug_dump_tridiag_solver_data) {
+    file = matrix::internal::FileHDF5(grid.fullCommunicator(), fname.str());
+    file->write(tridiag, "/input");
+  }
+#endif
 
   // If the matrix is composed by a single tile simply call stedc.
   if (evecs.nrTiles().linear_size() == 1) {
@@ -437,6 +460,15 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device
   dlaf::permutations::permute<Backend::MC, Device::CPU, T, Coord::Col>(row_task_chain, 0, n, ws_h.i1,
                                                                        ws_hm.e0, ws_hm.e2);
   copy(ws_hm.e2, evecs);
+
+#ifdef DLAF_WITH_HDF5
+  if (getTuneParameters().debug_dump_tridiag_solver_data) {
+    file->write(evecs, "/evecs");
+    file->write(evals, "/evals");
+  }
+
+  num_tridiag_solver_calls++;
+#endif
 }
 
 // \overload TridiagSolver<B, D, T>::call()

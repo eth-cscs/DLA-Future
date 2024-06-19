@@ -23,10 +23,8 @@ ARG NUM_PROCS
 # Note: we force spack to build in ${BUILD} creating a link to it
 RUN spack repo rm --scope site dlaf && \
     spack repo add ${SOURCE}/spack && \
-    spack -e ci develop --no-clone -p ${SOURCE} dla-future@master && \
+    spack -e ci develop --no-clone --path ${SOURCE} --build-directory ${BUILD} dla-future@master && \
     spack -e ci concretize -f && \
-    mkdir ${BUILD} && \
-    ln -s ${BUILD} `spack -e ci location -b dla-future` && \
     spack -e ci --config "config:flags:keep_werror:all" install --jobs ${NUM_PROCS} --keep-stage --verbose
 
 # Test deployment with miniapps as independent project
@@ -39,6 +37,8 @@ RUN pushd ${SOURCE}/miniapp && \
 # Prune and bundle binaries
 RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
     export TEST_BINARIES=`PATH=${SOURCE}/ci:$PATH ctest --show-only=json-v1 | jq '.tests | map(.command | .[] | select(contains("check-threads") | not)) | .[]' | tr -d \"` && \
+    LIBASAN=$(find /usr/lib -name libclang_rt.asan-x86_64.so) && \
+    if [[ -n "${LIBASAN}" ]]; then export LD_LIBRARY_PATH=$(dirname ${LIBASAN}):${LD_LIBRARY_PATH}; fi && \
     echo "Binary sizes:" && \
     ls -lh ${TEST_BINARIES} && \
     ls -lh src/lib* && \

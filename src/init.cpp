@@ -11,11 +11,13 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cstddef>
 #include <cstdlib>
 #include <exception>
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <string>
 
 #include <pika/runtime.hpp>
 
@@ -110,21 +112,21 @@ template <class T>
 struct parseFromString {
   static std::optional<T> call(const std::string& val) {
     return val;
-  };
+  }
 };
 
 template <>
 struct parseFromString<std::size_t> {
   static std::optional<std::size_t> call(const std::string& var) {
     return std::stoull(var);
-  };
+  }
 };
 
 template <>
 struct parseFromString<SizeType> {
   static std::optional<SizeType> call(const std::string& var) {
     return std::stoll(var);
-  };
+  }
 };
 
 template <>
@@ -135,7 +137,7 @@ struct parseFromString<bool> {
     if (is_one_of_ignore_case(var, {"OFF", "FALSE", "NO", "0"}))
       return false;
     return std::nullopt;
-  };
+  }
 
 private:
   static bool is_one_of_ignore_case(std::string value, const std::array<std::string, 4>& values) {
@@ -221,7 +223,13 @@ void updateConfiguration(const pika::program_options::variables_map& vm, configu
   updateConfigurationValue(vm, param.band_to_tridiag_1d_block_size_base,
                            "BAND_TO_TRIDIAG_1D_BLOCK_SIZE_BASE", "band-to-tridiag-1d-block-size-base");
 
-  updateConfigurationValue(vm, param.debug_dump_trisolver_data, "DEBUG_DUMP_TRISOLVER_DATA", "");
+  updateConfigurationValue(vm, param.debug_dump_eigensolver_data, "DEBUG_DUMP_EIGENSOLVER_DATA", "");
+  updateConfigurationValue(vm, param.debug_dump_reduction_to_band_data,
+                           "DEBUG_DUMP_REDUCTION_TO_BAND_DATA", "");
+  updateConfigurationValue(vm, param.debug_dump_band_to_tridiagonal_data,
+                           "DEBUG_DUMP_BAND_TO_TRIDIAGONAL_DATA", "");
+  updateConfigurationValue(vm, param.debug_dump_tridiag_solver_data, "DEBUG_DUMP_TRIDIAG_SOLVER_DATA",
+                           "");
 
   updateConfigurationValue(vm, param.tridiag_rank1_nworkers, "TRIDIAG_RANK1_NWORKERS",
                            "tridiag-rank1-nworkers");

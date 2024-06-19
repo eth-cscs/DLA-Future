@@ -10,7 +10,11 @@
 
 #pragma once
 
+#include <cstddef>
 #include <numeric>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 #include <mpi.h>
 

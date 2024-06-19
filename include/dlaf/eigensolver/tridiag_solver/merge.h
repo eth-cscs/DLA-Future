@@ -11,9 +11,12 @@
 
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <functional>
 #include <numeric>
 #include <tuple>
+#include <utility>
+#include <vector>
 
 #include <pika/barrier.hpp>
 #include <pika/execution.hpp>
@@ -25,6 +28,7 @@
 #include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/communication/index.h>
 #include <dlaf/communication/kernels.h>
+#include <dlaf/communication/kernels/internal/broadcast.h>
 #include <dlaf/eigensolver/internal/get_tridiag_rank1_barrier_busy_wait.h>
 #include <dlaf/eigensolver/internal/get_tridiag_rank1_nworkers.h>
 #include <dlaf/eigensolver/tridiag_solver/coltype.h>
@@ -1006,9 +1010,11 @@ void multiplyEigenvectors(const SizeType sub_offset, const SizeType n, const Siz
   // └───┴────────┴────┘  └────────────┴────┘
 
   namespace ex = pika::execution::experimental;
+  using pika::execution::thread_priority;
 
   ex::start_detached(
       ex::when_all(std::forward<KSender>(k), std::forward<UDLSenders>(n_udl)) |
+      ex::transfer(dlaf::internal::getBackendScheduler<Backend::MC>(thread_priority::high)) |
       ex::then([sub_offset, n, n_upper, n_lower, e0 = e0.subPipeline(), e1 = e1.subPipelineConst(),
                 e2 = e2.subPipelineConst()](const SizeType k, std::array<std::size_t, 3> n_udl) mutable {
         using dlaf::matrix::internal::MatrixRef;
@@ -1209,12 +1215,14 @@ void assembleDistZVec(comm::CommunicatorPipeline<comm::CommunicatorType::Full>& 
     if (evecs_tile_rank == this_rank) {
       // Copy the row into the column vector `z`
       assembleRank1UpdateVectorTileAsync<T, D>(top_tile, rho, evecs.read(idx_evecs), z.readwrite(z_idx));
-      ex::start_detached(comm::scheduleSendBcast(full_task_chain.exclusive(), z.read(z_idx)));
+      if (full_task_chain.size() > 1) {
+        ex::start_detached(comm::schedule_bcast_send(full_task_chain.exclusive(), z.read(z_idx)));
+      }
     }
     else {
       const comm::IndexT_MPI root_rank = full_task_chain.rank_full_communicator(evecs_tile_rank);
-      ex::start_detached(comm::scheduleRecvBcast(full_task_chain.exclusive(), root_rank,
-                                                 z.readwrite(z_idx)));
+      ex::start_detached(comm::schedule_bcast_recv(full_task_chain.exclusive(), root_rank,
+                                                   z.readwrite(z_idx)));
     }
   }
 }
@@ -1443,7 +1451,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
 
                  // Note: this ensures that evals broadcasting finishes before bulk releases resources
                  ScopedSenderWait bcast_barrier;
-                 if (thread_idx == 0)
+                 if (thread_idx == 0 && row_comm_chain.size() > 1)
                    bcast_barrier.sender_ = bcast_evals(row_comm_chain, eval_tiles);
 
                  // Note: laed4 handles k <= 2 cases differently
@@ -1546,9 +1554,11 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                      }
                    }
 
-                   tt::sync_wait(ex::when_all(row_comm_chain.exclusive(),
-                                              ex::just(MPI_PROD, common::make_data(w, m_el_lc))) |
-                                 transformMPI(all_reduce_in_place));
+                   if (row_comm_chain.size() > 1) {
+                     tt::sync_wait(ex::when_all(row_comm_chain.exclusive(),
+                                                ex::just(MPI_PROD, common::make_data(w, m_el_lc))) |
+                                   transformMPI(all_reduce_in_place));
+                   }
 
 #ifdef DLAF_ASSERT_HEAVY_ENABLE
                    // Note: all input for weights computation of non-deflated rows should be strictly less than 0
@@ -1623,7 +1633,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                  barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
                  // STEP 3b: Reduce to get the sum of all squares on all ranks
-                 if (thread_idx == 0)
+                 if (thread_idx == 0 && col_comm.size() > 1)
                    tt::sync_wait(ex::just(std::cref(col_comm), MPI_SUM,
                                           common::make_data(ws_row(), k_lc)) |
                                  transformMPI(all_reduce_in_place));

@@ -8,7 +8,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <cstddef>
 #include <cstdlib>
+#include <memory>
+#include <string>
+#include <utility>
 
 #include <pika/init.hpp>
 

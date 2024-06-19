@@ -10,6 +10,8 @@
 
 #include <functional>
 #include <tuple>
+#include <utility>
+#include <vector>
 
 #include <pika/init.hpp>
 

@@ -11,4 +11,4 @@
 // target.
 
 // Silences -Wpedantic: ISO C forbids an empty translation unit
-void dlaf_empty();
+void dlaf_empty(void);

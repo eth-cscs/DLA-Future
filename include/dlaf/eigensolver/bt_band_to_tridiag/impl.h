@@ -10,8 +10,11 @@
 
 #pragma once
 
+#include <cstddef>
 #include <tuple>
 #include <type_traits>
+#include <utility>
+#include <vector>
 
 #include <pika/execution.hpp>
 #include <pika/thread.hpp>
@@ -625,10 +628,12 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
   const SizeType group_size = getTuneParameters().bt_band_to_tridiag_hh_apply_group_size;
   const SizeType nsweeps = nrSweeps<T>(mat_hh.size().cols());
 
-  const LocalTileSize tiles_per_block(mat_e.blockSize().rows() / b, 1);
-  Matrix<T, D> mat_e_rt = mat_e.retiledSubPipeline(tiles_per_block);
+  const LocalTileSize tiles_per_block_hh(mat_hh.blockSize().rows() / b, mat_hh.blockSize().cols() / b);
+  Matrix<const T, Device::CPU> mat_hh_rt = mat_hh.retiledSubPipelineConst(tiles_per_block_hh);
+  const LocalTileSize tiles_per_block_e(mat_e.blockSize().rows() / b, 1);
+  Matrix<T, D> mat_e_rt = mat_e.retiledSubPipeline(tiles_per_block_e);
 
-  const auto& dist_hh = mat_hh.distribution();
+  const auto& dist_hh_rt = mat_hh_rt.distribution();
   const auto& dist_e_rt = mat_e_rt.distribution();
 
   // Note: w_tile_sz can store reflectors as they are actually applied, opposed to how they are
@@ -648,7 +653,7 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
 
   const SizeType dist_w_rows = mat_e_rt.nrTiles().rows() * w_tile_sz.rows();
   const matrix::Distribution dist_w({dist_w_rows, b}, w_tile_sz);
-  const matrix::Distribution dist_t({mat_hh.size().rows(), b}, {b, b});
+  const matrix::Distribution dist_t({mat_hh_rt.size().rows(), b}, {b, b});
   const matrix::Distribution dist_w2({b, mat_e_rt.size().cols()}, {b, mat_e_rt.blockSize().cols()});
 
   constexpr std::size_t n_workspaces = 2;
@@ -668,23 +673,23 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
     auto& mat_w2 = w2_panels.nextResource();
 
     // Note: apply the entire column (steps)
-    const SizeType steps = nrStepsForSweep(j * b, mat_hh.size().cols(), b);
+    const SizeType steps = nrStepsForSweep(j * b, mat_hh_rt.size().cols(), b);
     for (SizeType step = 0; step < steps; ++step) {
       const SizeType i = j + step;
 
       const GlobalElementIndex ij_el(i * b, j * b);
-      const LocalTileIndex ij(dist_hh.localTileIndex(dist_hh.globalTileIndex(ij_el)));
+      const LocalTileIndex ij(dist_hh_rt.localTileIndex(dist_hh_rt.globalTileIndex(ij_el)));
 
       // Note:  reflector with size = 1 must be ignored, except for the last step of the last sweep
       //        with complex type
       const SizeType nrefls = [&]() {
         const bool allowSize1 = isComplex_v<T> && j == j_last_sweep && step == steps - 1;
-        const GlobalElementSize delta(dist_hh.size().rows() - ij_el.row() - 1,
-                                      std::min(b, dist_hh.size().cols() - ij_el.col()));
+        const GlobalElementSize delta(dist_hh_rt.size().rows() - ij_el.row() - 1,
+                                      std::min(b, dist_hh_rt.size().cols() - ij_el.col()));
         return std::min(b, std::min(delta.rows() - (allowSize1 ? 0 : 1), delta.cols()));
       }();
 
-      const TileAccessHelper helper(b, nrefls, dist_hh, dist_e_rt, ij_el);
+      const TileAccessHelper helper(b, nrefls, dist_hh_rt, dist_e_rt, ij_el);
 
       if (nrefls < b) {
         mat_t.setWidth(nrefls);
@@ -695,7 +700,7 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
 
       auto [tile_v_unshared, tile_w_unshared] =
           helperBackend.computeVW(group_size, ij, helper,
-                                  splitTile(mat_hh.read(ij), helper.specHHCompact()), mat_v, mat_t,
+                                  splitTile(mat_hh_rt.read(ij), helper.specHHCompact()), mat_v, mat_t,
                                   mat_w);
       auto tile_v = matrix::shareReadWriteTile(ex::make_unique_any_sender(std::move(tile_v_unshared)));
       auto tile_w = matrix::shareReadWriteTile(ex::make_unique_any_sender(std::move(tile_w_unshared)));
@@ -890,13 +895,13 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid& grid, const Si
       // Broadcast on ROW
       if (grid.size().cols() > 1 && rank.row() == rankHH.row()) {
         if (rank.col() == rankHH.col()) {
-          ex::start_detached(comm::scheduleSendBcast(
+          ex::start_detached(comm::schedule_bcast_send(
               mpi_chain_row.exclusive(), splitTile(mat_hh.read(ij_g), helper.specHHCompact())));
         }
         else {
-          ex::start_detached(comm::scheduleRecvBcast(mpi_chain_row.exclusive(), rankHH.col(),
-                                                     splitTile(panel_hh.readwrite(ij_hh_panel),
-                                                               helper.specHHCompact(true))));
+          ex::start_detached(comm::schedule_bcast_recv(mpi_chain_row.exclusive(), rankHH.col(),
+                                                       splitTile(panel_hh.readwrite(ij_hh_panel),
+                                                                 helper.specHHCompact(true))));
         }
       }
 
@@ -914,12 +919,12 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid& grid, const Si
           auto tile_hh = rank.col() == rankHH.col()
                              ? splitTile(mat_hh.read(ij_g), helper.specHHCompact())
                              : splitTile(panel_hh.read(ij_hh_panel), helper.specHHCompact(true));
-          ex::start_detached(comm::scheduleSend(mpi_chain_col.exclusive(), rank_dst, 0,
-                                                std::move(tile_hh)));
+          ex::start_detached(comm::schedule_send(mpi_chain_col.exclusive(), rank_dst, 0,
+                                                 std::move(tile_hh)));
         }
         else if (rank.row() == rank_dst) {
-          ex::start_detached(comm::scheduleRecv(mpi_chain_col.exclusive(), rank_src, 0,
-                                                panel_hh.readwrite(ij_hh_panel)));
+          ex::start_detached(comm::schedule_recv(mpi_chain_col.exclusive(), rank_src, 0,
+                                                 panel_hh.readwrite(ij_hh_panel)));
         }
       }
 
@@ -998,9 +1003,9 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid& grid, const Si
 
             // Compute final W2 by adding the contribution from the partner rank
             ex::start_detached(  //
-                comm::scheduleAllSumP2P<B>(mpi_chain_col_p2p.shared(), rank_partner, tag,
-                                           splitTile(mat_w2tmp.read(idx_w2), helper.specW2(nb)),
-                                           splitTile(mat_w2.readwrite(idx_w2), helper.specW2(nb))));
+                comm::schedule_sum_p2p<B>(mpi_chain_col_p2p.shared(), rank_partner, tag,
+                                          splitTile(mat_w2tmp.read(idx_w2), helper.specW2(nb)),
+                                          splitTile(mat_w2.readwrite(idx_w2), helper.specW2(nb))));
 
             auto subtile_e = splitTile(mat_e_rt.readwrite(idx_e), spec_e);
             // E -= W . W2

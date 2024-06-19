@@ -11,6 +11,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <limits>
+#include <string>
 
 #include <pika/init.hpp>
 #include <pika/program_options.hpp>

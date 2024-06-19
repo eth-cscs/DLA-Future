@@ -10,6 +10,7 @@
 
 #include <whip.hpp>
 
+#include <dlaf/common/assert.h>
 #include <dlaf/gpu/assert.cu.h>
 #include <dlaf/gpu/blas/api.h>
 #include <dlaf/lapack/gpu/lacpy.h>
@@ -105,6 +106,82 @@ __global__ void lacpy(cublasFillMode_t uplo, const unsigned m, const unsigned n,
 }
 }
 
+static whip::memcpy_kind get_lacpy_memcpy_kind(const void* src, const void* dst) {
+// If HIP is version 5.6 or newer, avoid the use of hipMemcpyDefault as it is
+// buggy with 2D memcpy.  Instead try to infer the memory type using
+// hipPointerGetAttributes. See:
+// - https://github.com/ROCm/clr/commit/56daa6c4891b43ec233e9c63f755e3f7b45842b4
+// - https://github.com/ROCm/clr/commit/d3bfb55d7a934355257a72fab538a0a634b43cad
+//
+// Note that hipMemoryTypeManaged is not available in older versions, but it is
+// already available in 5.3 so we don't do a separate check for availability.
+#if defined(DLAF_WITH_HIP) && HIP_VERSION >= 50600000
+  constexpr auto get_memory_type = [](const void* p) {
+    hipPointerAttribute_t attributes{};
+    hipError_t status = hipPointerGetAttributes(&attributes, p);
+    if (status == hipErrorInvalidValue) {
+      // If HIP returns hipErrorInvalidValue we assume it's due
+      // to HIP not recognizing a non-HIP allocated pointer as
+      // host memory, and we assume the type is host.
+      return hipMemoryTypeHost;
+    }
+    else if (status != hipSuccess) {
+      throw whip::exception(status);
+    }
+
+    switch (attributes.type) {
+#if HIP_VERSION >= 60000000
+      case hipMemoryTypeUnregistered:
+        [[fallthrough]];
+#endif
+      case hipMemoryTypeHost:
+        return hipMemoryTypeHost;
+      case hipMemoryTypeArray:
+        [[fallthrough]];
+      case hipMemoryTypeDevice:
+        return hipMemoryTypeDevice;
+      case hipMemoryTypeUnified:
+        return hipMemoryTypeUnified;
+      case hipMemoryTypeManaged:
+        return hipMemoryTypeManaged;
+      default:
+        DLAF_UNREACHABLE_PLAIN;
+    }
+  };
+
+  hipMemoryType src_type = get_memory_type(src);
+  hipMemoryType dst_type = get_memory_type(dst);
+
+  if (src_type == hipMemoryTypeDevice && dst_type == hipMemoryTypeHost) {
+    return whip::memcpy_device_to_host;
+  }
+  else if (src_type == hipMemoryTypeHost && dst_type == hipMemoryTypeDevice) {
+    return whip::memcpy_host_to_device;
+  }
+  else if (src_type == hipMemoryTypeDevice && dst_type == hipMemoryTypeDevice) {
+    return whip::memcpy_device_to_device;
+  }
+  else if (src_type == hipMemoryTypeManaged || src_type == hipMemoryTypeUnified ||
+           dst_type == hipMemoryTypeManaged || dst_type == hipMemoryTypeUnified) {
+    return whip::memcpy_default;
+  }
+  else if (src_type == hipMemoryTypeHost && dst_type == hipMemoryTypeHost) {
+    DLAF_ASSERT(
+        false,
+        "Attempting to do a HIP lacpy with host source and destination, use the CPU lacpy instead");
+  }
+  else {
+    DLAF_ASSERT(false,
+                "Attempting to do a HIP lacpy with unsupported source and destination memory type",
+                src_type, dst_type);
+  }
+#else
+  dlaf::internal::silenceUnusedWarningFor(src, dst);
+#endif
+
+  return whip::memcpy_default;
+}
+
 template <class T>
 void lacpy(const blas::Uplo uplo, const SizeType m, const SizeType n, const T* a, const SizeType lda,
            T* b, const SizeType ldb, const whip::stream_t stream) {
@@ -118,7 +195,7 @@ void lacpy(const blas::Uplo uplo, const SizeType m, const SizeType n, const T* a
   constexpr unsigned kernel_tile_size_cols = kernels::LacpyParams::kernel_tile_size_cols;
 
   if (uplo == blas::Uplo::General) {
-    const whip::memcpy_kind kind = whip::memcpy_default;
+    whip::memcpy_kind kind = get_lacpy_memcpy_kind(a, b);
     whip::memcpy_2d_async(b, to_sizet(ldb) * sizeof(T), a, to_sizet(lda) * sizeof(T),
                           to_sizet(m) * sizeof(T), to_sizet(n), kind, stream);
   }

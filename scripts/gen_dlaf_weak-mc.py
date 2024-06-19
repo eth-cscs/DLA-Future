@@ -20,7 +20,7 @@ import systems
 
 system = systems.cscs["daint-mc"]
 
-dlafpath = "<path_to_dlaf_build_dir>"
+dlafpath = "<path_to_dlaf_miniapp_dir>"
 
 run_dir = "~/ws/runs/weak"
 
@@ -65,7 +65,7 @@ def createAndSubmitRun(run_dir, nodes_arr, dtype, **kwargs):
 
     full_kwargs = kwargs.copy()
     full_kwargs["lib"] = "dlaf"
-    full_kwargs["build_dir"] = dlafpath
+    full_kwargs["miniapp_dir"] = dlafpath
     full_kwargs["approx"] = approx
     full_kwargs["nruns"] = nruns
     full_kwargs["dtype"] = dtype

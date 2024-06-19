@@ -13,6 +13,7 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 
 #include <dlaf/common/index2d.h>
 #include <dlaf/communication/communicator.h>

@@ -10,6 +10,13 @@
 
 #pragma once
 
+#include <atomic>
+#include <cstddef>
+#include <memory>
+#include <sstream>
+#include <utility>
+#include <vector>
+
 #include <pika/execution.hpp>
 #include <pika/semaphore.hpp>
 
@@ -29,6 +36,7 @@
 #include <dlaf/lapack/gpu/laset.h>
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/hdf5.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/tile.h>
 #include <dlaf/memory/memory_view.h>
@@ -1034,6 +1042,19 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   // Should be dispatched to local implementation if (1x1) grid.
   DLAF_ASSERT(grid.size() != comm::Size2D(1, 1), grid);
 
+#ifdef DLAF_WITH_HDF5
+  static std::atomic<size_t> num_b2t_calls = 0;
+  std::stringstream fname;
+  fname << "band_to_tridiag-" << matrix::internal::TypeToString_v<T> << "-"
+        << std::to_string(num_b2t_calls) << ".h5";
+  std::optional<matrix::internal::FileHDF5> file;
+
+  if (getTuneParameters().debug_dump_band_to_tridiagonal_data) {
+    file = matrix::internal::FileHDF5(grid.fullCommunicator(), fname.str());
+    file->write(mat_a, "/input");
+  }
+#endif
+
   // note: A is square and has square blocksize
   SizeType size = mat_a.size().cols();
   SizeType n = mat_a.nrTiles().cols();
@@ -1189,9 +1210,9 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
           }
           else {
             auto& temp = temps.nextResource();
-            auto diag_tile = comm::scheduleRecv(mpi_chain.shared(), rank_diag, tag_diag,
-                                                splitTile(temp.readwrite(LocalTileIndex{0, 0}),
-                                                          {{0, 0}, dist_a.tileSize(index_diag)}));
+            auto diag_tile = comm::schedule_recv(mpi_chain.shared(), rank_diag, tag_diag,
+                                                 splitTile(temp.readwrite(LocalTileIndex{0, 0}),
+                                                           {{0, 0}, dist_a.tileSize(index_diag)}));
             dep = ex::ensure_started(copy_diag(a_ws[k_block_local], k * nb, std::move(diag_tile)));
           }
 
@@ -1203,9 +1224,9 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
             else {
               auto& temp = temps.nextResource();
               auto offdiag_tile =
-                  comm::scheduleRecv(mpi_chain.shared(), rank_offdiag, tag_offdiag,
-                                     splitTile(temp.readwrite(LocalTileIndex{0, 0}),
-                                               {{0, 0}, dist_a.tileSize(index_offdiag)}));
+                  comm::schedule_recv(mpi_chain.shared(), rank_offdiag, tag_offdiag,
+                                      splitTile(temp.readwrite(LocalTileIndex{0, 0}),
+                                                {{0, 0}, dist_a.tileSize(index_offdiag)}));
               dep = ex::ensure_started(copy_offdiag(
                   a_ws[k_block_local], k * nb, ex::when_all(std::move(dep), std::move(offdiag_tile))));
             }
@@ -1222,13 +1243,13 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
         }
         else {
           if (rank == rank_diag) {
-            ex::start_detached(comm::scheduleSend(mpi_chain.shared(), rank_block, tag_diag,
-                                                  mat_a.read(index_diag)));
+            ex::start_detached(comm::schedule_send(mpi_chain.shared(), rank_block, tag_diag,
+                                                   mat_a.read(index_diag)));
           }
           if (k < n - 1) {
             if (rank == rank_offdiag) {
-              ex::start_detached(comm::scheduleSend(mpi_chain.shared(), rank_block, tag_offdiag,
-                                                    mat_a.read(index_offdiag)));
+              ex::start_detached(comm::schedule_send(mpi_chain.shared(), rank_block, tag_offdiag,
+                                                     mat_a.read(index_offdiag)));
             }
           }
         }
@@ -1447,9 +1468,9 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
                                  copy(Policy<CopyBackend_v<Device::CPU, Device::CPU>>{}));
             }
             else {
-              ex::start_detached(comm::scheduleSend(mpi_chain.shared(), rank_v,
-                                                    compute_v_tag(index_v, spec_v_origin.col(), bottom),
-                                                    std::move(tile_v_panel)));
+              ex::start_detached(comm::schedule_send(mpi_chain.shared(), rank_v,
+                                                     compute_v_tag(index_v, spec_v_origin.col(), bottom),
+                                                     std::move(tile_v_panel)));
             }
           };
 
@@ -1474,7 +1495,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
               else
                 dep = ex::drop_value(mat_v.read(local_index_v - LocalTileSize{0, 1}));
 
-              ex::start_detached(comm::scheduleRecv(
+              ex::start_detached(comm::schedule_recv(
                   mpi_chain.shared(), rank_panel, compute_v_tag(index_v, spec_v_origin.col(), bottom),
                   matrix::ReadWriteTileSender<T, Device::CPU>(ex::when_all(std::move(tile_v),
                                                                            std::move(dep)))));
@@ -1518,11 +1539,19 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   // only Rank 0 has mat_trid -> bcast to everyone.
   for (const auto& index : iterate_range2d(mat_trid.nrTiles())) {
     if (rank == 0)
-      ex::start_detached(comm::scheduleSendBcast(mpi_chain_bcast.exclusive(), mat_trid.read(index)));
+      ex::start_detached(comm::schedule_bcast_send(mpi_chain_bcast.exclusive(), mat_trid.read(index)));
     else
-      ex::start_detached(comm::scheduleRecvBcast(mpi_chain_bcast.exclusive(), 0,
-                                                 mat_trid.readwrite(index)));
+      ex::start_detached(comm::schedule_bcast_recv(mpi_chain_bcast.exclusive(), 0,
+                                                   mat_trid.readwrite(index)));
   }
+
+#ifdef DLAF_WITH_HDF5
+  if (getTuneParameters().debug_dump_band_to_tridiagonal_data) {
+    file->write(mat_trid, "/tridiagonal");
+  }
+
+  num_b2t_calls++;
+#endif
 
   return {std::move(mat_trid), std::move(mat_v)};
 }

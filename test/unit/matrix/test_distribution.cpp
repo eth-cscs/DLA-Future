@@ -10,6 +10,9 @@
 
 #include <array>
 #include <stdexcept>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 #include <dlaf/matrix/distribution.h>
 

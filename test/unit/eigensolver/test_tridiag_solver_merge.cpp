@@ -8,8 +8,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <array>
 #include <cstddef>
 #include <numeric>
+#include <utility>
+#include <vector>
 
 #include <dlaf/eigensolver/tridiag_solver/coltype.h>
 #include <dlaf/eigensolver/tridiag_solver/merge.h>

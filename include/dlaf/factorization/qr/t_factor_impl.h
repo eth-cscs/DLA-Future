@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <utility>
+
 #include <blas.hh>
 
 #include <pika/execution.hpp>
@@ -159,7 +161,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 
         // This assumes that elements in taus are contiguous, i.e. that it is a column vector of size k
         whip::memcpy_2d_async(tile_t.ptr(), to_sizet(tile_t.ld() + 1) * sizeof(T), taus.ptr(), sizeof(T),
-                              sizeof(T), to_sizet(k), whip::memcpy_default, stream);
+                              sizeof(T), to_sizet(k), whip::memcpy_host_to_device, stream);
       }
 
       for (SizeType j = 0; j < k; ++j) {
@@ -324,9 +326,9 @@ void QR_Tfactor<backend, device, T>::call(
 
   // at this point each rank has its partial result for each column
   // so, let's reduce the results (on all ranks, so that everyone can independently compute T factor)
-  if (mpi_col_task_chain.size_2d().rows() > 0)
-    t_local = dlaf::comm::scheduleAllReduceInPlace(mpi_col_task_chain.exclusive(), MPI_SUM,
-                                                   std::move(t_local));
+  if (mpi_col_task_chain.size() > 1)
+    t_local = dlaf::comm::schedule_all_reduce_in_place(mpi_col_task_chain.exclusive(), MPI_SUM,
+                                                       std::move(t_local));
 
   // 2nd step: compute the T factor, by performing the last step on each column
   // each column depends on the previous part (all reflectors that comes before)

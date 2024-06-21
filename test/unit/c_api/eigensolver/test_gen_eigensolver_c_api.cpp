@@ -210,7 +210,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
       int info = -1;
       if constexpr (std::is_same_v<T, double>) {
         if (factorization == Factorization::do_factorization) {
-          C_dlaf_pdsygvx(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
+          C_dlaf_pdsygvd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
                          eigenvalues_ptr, local_eigenvectors_ptr, 1, 1, desc_z, &info);
         }
         else {
@@ -225,7 +225,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
       }
       else if constexpr (std::is_same_v<T, float>) {
         if (factorization == Factorization::do_factorization) {
-          C_dlaf_pssygvx(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
+          C_dlaf_pssygvd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
                          eigenvalues_ptr, local_eigenvectors_ptr, 1, 1, desc_z, &info);
         }
         else {
@@ -240,7 +240,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
       }
       else if constexpr (std::is_same_v<T, std::complex<double>>) {
         if (factorization == Factorization::do_factorization) {
-          C_dlaf_pzhegvx(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
+          C_dlaf_pzhegvd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
                          eigenvalues_ptr, local_eigenvectors_ptr, 1, 1, desc_z, &info);
         }
         else {
@@ -255,7 +255,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
       }
       else if constexpr (std::is_same_v<T, std::complex<float>>) {
         if (factorization == Factorization::do_factorization) {
-          C_dlaf_pchegvx(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
+          C_dlaf_pchegvd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
                          eigenvalues_ptr, local_eigenvectors_ptr, 1, 1, desc_z, &info);
         }
         else {

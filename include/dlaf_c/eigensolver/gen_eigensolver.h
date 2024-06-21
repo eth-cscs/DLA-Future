@@ -144,25 +144,25 @@ DLAF_EXTERN_C int dlaf_hermitian_generalized_eigensolver_factorized_z(
 /// submatrix \f$\mathbf{A}\f$, has to be 1
 /// @param descz ScaLAPACK array descriptor of the global matrix \f$\mathbf{Z}\f$
 /// @param[out] info 0 if the eigensolver completed normally
-DLAF_EXTERN_C void dlaf_pssygvx(const char uplo, const int n, float* a, const int ia, const int ja,
+DLAF_EXTERN_C void dlaf_pssygvd(const char uplo, const int n, float* a, const int ia, const int ja,
                                 const int desca[9], float* b, const int ib, const int jb,
                                 const int descb[9], float* w, float* z, const int iz, const int jz,
                                 const int descz[9], int* info) DLAF_NOEXCEPT;
 
-/// @copydoc dlaf_pssygvx
-DLAF_EXTERN_C void dlaf_pdsygvx(const char uplo, const int n, double* a, const int ia, const int ja,
+/// @copydoc dlaf_pssygvd
+DLAF_EXTERN_C void dlaf_pdsygvd(const char uplo, const int n, double* a, const int ia, const int ja,
                                 const int desca[9], double* b, const int ib, const int jb,
                                 const int descb[9], double* w, double* z, const int iz, const int jz,
                                 const int descz[9], int* info) DLAF_NOEXCEPT;
 
-/// @copydoc dlaf_pssygvx
-DLAF_EXTERN_C void dlaf_pchegvx(const char uplo, const int n, dlaf_complex_c* a, const int ia,
+/// @copydoc dlaf_pssygvd
+DLAF_EXTERN_C void dlaf_pchegvd(const char uplo, const int n, dlaf_complex_c* a, const int ia,
                                 const int ja, const int desca[9], dlaf_complex_c* b, const int ib,
                                 const int jb, const int descb[9], float* w, dlaf_complex_c* z,
                                 const int iz, const int jz, const int descz[9], int* info) DLAF_NOEXCEPT;
 
-/// @copydoc dlaf_pssygvx
-DLAF_EXTERN_C void dlaf_pzhegvx(const char uplo, const int n, dlaf_complex_z* a, const int ia,
+/// @copydoc dlaf_pssygvd
+DLAF_EXTERN_C void dlaf_pzhegvd(const char uplo, const int n, dlaf_complex_z* a, const int ia,
                                 const int ja, const int desca[9], dlaf_complex_z* b, const int ib,
                                 const int jb, const int descb[9], double* w, dlaf_complex_z* z,
                                 const int iz, const int jz, const int descz[9], int* info) DLAF_NOEXCEPT;

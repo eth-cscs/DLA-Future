@@ -54,31 +54,31 @@ int dlaf_hermitian_generalized_eigensolver_z(const int dlaf_context, const char 
 
 #ifdef DLAF_WITH_SCALAPACK
 
-void dlaf_pssygvx(const char uplo, const int m, float* a, const int ia, const int ja, const int desca[9],
+void dlaf_pssygvd(const char uplo, const int m, float* a, const int ia, const int ja, const int desca[9],
                   float* b, const int ib, const int jb, const int descb[9], float* w, float* z,
                   const int iz, const int jz, const int descz[9], int* info) noexcept {
-  pxhegvx<float>(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, *info);
+  pxhegvd<float>(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, *info);
 }
 
-void dlaf_pdsygvx(const char uplo, const int m, double* a, const int ia, const int ja,
+void dlaf_pdsygvd(const char uplo, const int m, double* a, const int ia, const int ja,
                   const int desca[9], double* b, const int ib, const int jb, const int descb[9],
                   double* w, double* z, const int iz, const int jz, const int descz[9],
                   int* info) noexcept {
-  pxhegvx<double>(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, *info);
+  pxhegvd<double>(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, *info);
 }
 
-void dlaf_pchegvx(const char uplo, const int m, dlaf_complex_c* a, const int ia, const int ja,
+void dlaf_pchegvd(const char uplo, const int m, dlaf_complex_c* a, const int ia, const int ja,
                   const int desca[9], dlaf_complex_c* b, const int ib, const int jb, const int descb[9],
                   float* w, dlaf_complex_c* z, const int iz, const int jz, const int descz[9],
                   int* info) noexcept {
-  pxhegvx<std::complex<float>>(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, *info);
+  pxhegvd<std::complex<float>>(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, *info);
 }
 
-void dlaf_pzhegvx(const char uplo, const int m, dlaf_complex_z* a, const int ia, const int ja,
+void dlaf_pzhegvd(const char uplo, const int m, dlaf_complex_z* a, const int ia, const int ja,
                   const int desca[9], dlaf_complex_z* b, const int ib, const int jb, const int descb[9],
                   double* w, dlaf_complex_z* z, const int iz, const int jz, const int descz[9],
                   int* info) noexcept {
-  pxhegvx<std::complex<double>>(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, *info);
+  pxhegvd<std::complex<double>>(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, *info);
 }
 
 #endif

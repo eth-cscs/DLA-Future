@@ -81,7 +81,7 @@ int hermitian_generalized_eigensolver(const int dlaf_context, const char uplo, T
 #ifdef DLAF_WITH_SCALAPACK
 
 template <typename T>
-void pxhegvx(const char uplo, const int m, T* a, const int ia, const int ja, const int desca[9], T* b,
+void pxhegvd(const char uplo, const int m, T* a, const int ia, const int ja, const int desca[9], T* b,
              const int ib, const int jb, const int descb[9], dlaf::BaseType<T>* w, T* z, const int iz,
              int jz, const int descz[9], int& info) {
   DLAF_ASSERT(desca[0] == 1, desca[0]);

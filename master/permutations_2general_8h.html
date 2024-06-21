@@ -255,7 +255,7 @@ template&lt;Backend B, Device D, class T , Coord coord&gt; </div>
 <p>Permutes the columns or rows of an input sub-matrix mat_in[i_begin:i_end][i_begin:i_end] into an output sub-matrix mat_out[i_begin:i_end][i_begin:i_end] using the index map of permutations perms[i_begin:i_end].</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">perms</td><td>is the index map of permutations represented as a tiled column vector. Indices are in the range [0, n) where <code>n</code> is the size of the submatrix (i.e. the indices are local to the submatrix, they are not global). Only tiles whose row tile coords are in the range [i_begin,i_end) are accessed in read-only mode. </td></tr>
+    <tr><td class="paramname">perms</td><td>is the index map of permutations represented as a tiled column vector. Indices are in the range [0, n) where <code>n</code> is the local size of the submatrix (i.e. the indices are local to the submatrix, they are not global). Only tiles whose row tile coords are in the range [i_begin,i_end) are accessed in read-only mode. </td></tr>
   </table>
   </dd>
 </dl>
@@ -270,9 +270,7 @@ template&lt;Backend B, Device D, class T , Coord coord&gt; </div>
   </table>
   </dd>
 </dl>
-<dl class="section pre"><dt>Precondition</dt><dd><code>mat_in</code> is not distributed </dd>
-<dd>
-<code>mat_in</code> has size (N x N) </dd>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_in</code> has size (N x N) </dd>
 <dd>
 <code>mat_in</code> has blocksize (NB x NB) </dd>
 <dd>

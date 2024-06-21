@@ -228,6 +228,7 @@ void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>&
                      Matrix<T, D>(vec_size, vec_tile_size),          // z1
                      Matrix<SizeType, D>(vec_size, vec_tile_size),   // i2
                      Matrix<SizeType, D>(vec_size, vec_tile_size),   // i5
+                     Matrix<SizeType, D>(vec_size, vec_tile_size),   // i5b
                      Matrix<SizeType, D>(vec_size, vec_tile_size)};  // i6
 
   WorkSpaceHost<T> ws_h{Matrix<T, Device::CPU>(vec_size, vec_tile_size),          // d0
@@ -398,6 +399,7 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device
   // Auxiliary matrix used for the D&C algorithm
   const matrix::Distribution& dist_evecs = evecs.distribution();
   const matrix::Distribution& dist_evals = evals.distribution();
+  const matrix::Distribution dist_local({dist_evecs.local_size().cols(), 1}, dist_evecs.tile_size());
 
   WorkSpace<T, D> ws{Matrix<T, D>(dist_evecs),          // e0
                      Matrix<T, D>(dist_evecs),          // e1
@@ -407,6 +409,7 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device
                      Matrix<T, D>(dist_evals),          // z1
                      Matrix<SizeType, D>(dist_evals),   // i2
                      Matrix<SizeType, D>(dist_evals),   // i5
+                     Matrix<SizeType, D>(dist_local),   // i5b
                      Matrix<SizeType, D>(dist_evals)};  // i6
 
   WorkSpaceHost<T> ws_h{Matrix<T, Device::CPU>(dist_evals),          // d0
@@ -419,7 +422,8 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device
   DistWorkSpaceHostMirror<T, D> ws_hm{initMirrorMatrix(ws.e0), initMirrorMatrix(ws.e2),
                                       initMirrorMatrix(ws.d1), initMirrorMatrix(ws.z0),
                                       initMirrorMatrix(ws.z1), initMirrorMatrix(ws.i2),
-                                      initMirrorMatrix(ws.i5), initMirrorMatrix(ws.i6)};
+                                      initMirrorMatrix(ws.i5), initMirrorMatrix(ws.i5b),
+                                      initMirrorMatrix(ws.i6)};
 
   // Set `ws.e0` to `zero` (needed for Given's rotation to make sure no random values are picked up)
   matrix::util::set0<B, T, D>(thread_priority::normal, ws.e0);

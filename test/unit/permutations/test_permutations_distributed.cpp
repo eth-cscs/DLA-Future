@@ -45,6 +45,13 @@ struct PermutationsDistTestMC : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(PermutationsDistTestMC, RealMatrixElementTypes);
 
+#ifdef DLAF_WITH_GPU
+template <class T>
+struct PermutationsDistTestGPU : public TestWithCommGrids {};
+
+TYPED_TEST_SUITE(PermutationsDistTestGPU, RealMatrixElementTypes);
+#endif
+
 // n, nb, i_begin, i_end, permutation
 // permutation has to be defined using element indices wrt to the range described by [i_begin, i_end)
 // tiles and not global indices.
@@ -75,7 +82,7 @@ testcase_t customPermutation(SizeType m, SizeType mb, SizeType i_begin_tile, Siz
                              std::vector<SizeType> perms) {
   const auto [i_begin, i_end] = tileToElementRange(m, mb, i_begin_tile, i_end_tile);
 
-  const std::size_t nperms = to_sizet(i_end - i_begin);
+  [[maybe_unused]] const std::size_t nperms = to_sizet(i_end - i_begin);
   DLAF_ASSERT(perms.size() == nperms, perms.size(), nperms);
 
   return {m, mb, i_begin_tile, i_end_tile, std::move(perms)};
@@ -147,7 +154,7 @@ void testDistPermutations(comm::CommunicatorGrid& grid, SizeType n, SizeType nb,
   }
 
   auto expected_out = [=, index_start = index_start](const GlobalElementIndex& i) {
-    const GlobalTileIndex i_tile = dist.globalTileIndex(i);
+    const GlobalTileIndex i_tile = dist.global_tile_index(i);
     if (i_begin <= i_tile.row() && i_tile.row() < i_end && i_begin <= i_tile.col() &&
         i_tile.col() < i_end) {
       const std::size_t i_window = to_sizet(i.get<C>() - index_start);
@@ -180,3 +187,133 @@ TYPED_TEST(PermutationsDistTestMC, Rows) {
     }
   }
 }
+
+template <class T, Device D, Coord C>
+void testDistPermutationsAsLocal(comm::CommunicatorGrid& grid, SizeType n, SizeType nb, SizeType i_begin,
+                                 SizeType i_end) {
+  const GlobalElementSize size(n, n);
+  const TileElementSize block_size(nb, nb);
+  const Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
+  const Distribution dist(size, block_size, grid.size(), grid.rank(), src_rank_index);
+
+  const SizeType max_perms_lc = dist.local_size().get<C>();
+  std::vector<SizeType> perms(to_sizet(max_perms_lc), -1);
+  const SizeType i_begin_lc = dist.next_local_tile_from_global_tile<C>(i_begin);
+  const SizeType i_end_lc = dist.next_local_tile_from_global_tile<C>(i_end);
+
+  const auto [i_start_el_lc, i_end_el_lc] = tileToElementRange(max_perms_lc, nb, i_begin_lc, i_end_lc);
+  const SizeType nperms_lc = i_end_el_lc - i_start_el_lc;
+
+  // Note: create a local "mirror" permutation
+  for (SizeType i_window_lc = 0; i_window_lc < nperms_lc; ++i_window_lc)
+    perms[to_sizet(i_start_el_lc + i_window_lc)] = nperms_lc - 1 - i_window_lc;
+
+  Matrix<const SizeType, Device::CPU> perms_h = [=] {
+    Matrix<SizeType, Device::CPU> perms_h(LocalElementSize(max_perms_lc, 1), TileElementSize(nb, 1));
+    const auto local_dist = perms_h.distribution();
+
+    dlaf::matrix::util::set(perms_h, [=](GlobalElementIndex i_el) {
+      const SizeType i_tl_lc = local_dist.local_tile_from_local_element<Coord::Row>(i_el.row());
+      if (i_tl_lc >= i_begin_lc && i_tl_lc < i_end_lc) {
+        const SizeType i_el_lc = i_el.row();
+        return perms[to_sizet(i_el_lc)];
+      }
+      return SizeType(-1);
+    });
+
+    return perms_h;
+  }();
+
+  auto value_in = [](GlobalElementIndex i) { return T(i.get<C>()) - T(i.get<orthogonal(C)>()) / T(8); };
+  Matrix<const T, Device::CPU> mat_in_h = [dist, value_in]() {
+    Matrix<T, Device::CPU> mat_in_h(dist);
+    dlaf::matrix::util::set(mat_in_h, value_in);
+    return mat_in_h;
+  }();
+
+  auto value_out = [](GlobalElementIndex i) { return T(i.get<orthogonal(C)>()) - T(i.get<C>()) / T(8); };
+  Matrix<T, Device::CPU> mat_out_h(dist);
+  dlaf::matrix::util::set(mat_out_h, value_out);
+
+  {
+    matrix::MatrixMirror<const SizeType, D, Device::CPU> perms(perms_h);
+    matrix::MatrixMirror<const T, D, Device::CPU> mat_in(mat_in_h);
+    matrix::MatrixMirror<T, D, Device::CPU> mat_out(mat_out_h);
+
+    constexpr auto B = DefaultBackend_v<D>;
+    permutations::permute<B, D, T, C>(i_begin, i_end, perms.get(), mat_in.get(), mat_out.get());
+  }
+
+  auto expected_out = [=, i_start_el_lc = i_start_el_lc](const GlobalElementIndex& i_el) {
+    const GlobalTileIndex i_tile = dist.global_tile_index(i_el);
+    if (i_begin <= i_tile.row() && i_tile.row() < i_end && i_begin <= i_tile.col() &&
+        i_tile.col() < i_end) {
+      const SizeType i_el_lc = dist.local_element_from_global_element<C>(i_el.get<C>());
+      const SizeType ii_el_lc = i_start_el_lc + perms[to_sizet(i_el_lc)];
+      const SizeType ii_el = dist.global_element_from_local_element<C>(ii_el_lc);
+      const GlobalElementIndex ii(C, ii_el, i_el.get<orthogonal(C)>());
+      return value_in(ii);
+    }
+    return value_out(i_el);
+  };
+
+  CHECK_MATRIX_EQ(expected_out, mat_out_h);
+}
+
+const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> params2 = {
+    {6, 2, 0, 3},  {36, 4, 0, 9},  // full matrix
+    {6, 2, 1, 3},  {36, 4, 2, 7},  // sub-matrix
+    {36, 5, 2, 8},                 // sub-matrix, with last tile incomplete
+};
+
+TYPED_TEST(PermutationsDistTestMC, ColumnsLocal) {
+  using T = TypeParam;
+  constexpr auto CPU = Device::CPU;
+
+  for (auto& comm_grid : this->commGrids()) {
+    for (const auto& [n, nb, i_begin, i_end] : params2) {
+      testDistPermutationsAsLocal<T, CPU, Coord::Col>(comm_grid, n, nb, i_begin, i_end);
+      pika::wait();
+    }
+  }
+}
+
+#ifdef DLAF_WITH_GPU
+TYPED_TEST(PermutationsDistTestGPU, ColumnsLocal) {
+  using T = TypeParam;
+  constexpr auto GPU = Device::GPU;
+
+  for (auto& comm_grid : this->commGrids()) {
+    for (const auto& [n, nb, i_begin, i_end] : params2) {
+      testDistPermutationsAsLocal<T, GPU, Coord::Col>(comm_grid, n, nb, i_begin, i_end);
+      pika::wait();
+    }
+  }
+}
+#endif
+
+TYPED_TEST(PermutationsDistTestMC, RowsLocal) {
+  using T = TypeParam;
+  constexpr auto CPU = Device::CPU;
+
+  for (auto& comm_grid : this->commGrids()) {
+    for (const auto& [n, nb, i_begin, i_end] : params2) {
+      testDistPermutationsAsLocal<T, CPU, Coord::Row>(comm_grid, n, nb, i_begin, i_end);
+      pika::wait();
+    }
+  }
+}
+
+#ifdef DLAF_WITH_GPU
+TYPED_TEST(PermutationsDistTestGPU, RowsLocal) {
+  using T = TypeParam;
+  constexpr auto GPU = Device::GPU;
+
+  for (auto& comm_grid : this->commGrids()) {
+    for (const auto& [n, nb, i_begin, i_end] : params2) {
+      testDistPermutationsAsLocal<T, GPU, Coord::Row>(comm_grid, n, nb, i_begin, i_end);
+      pika::wait();
+    }
+  }
+}
+#endif

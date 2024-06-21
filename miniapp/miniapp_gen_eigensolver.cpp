@@ -122,7 +122,9 @@ struct GenEigensolverMiniapp {
     GlobalElementSize matrix_size(opts.m, opts.m);
     TileElementSize block_size(opts.mb, opts.mb);
 
-    ConstHostMatrixType matrix_a_ref = [matrix_size, block_size, &comm_grid, &opts]() {
+    // Default capture & is needed to suppress warning of unused opts when DLAF_WITH_HDF5 is not defined.
+    // [[maybe_unused]] is not supported in lambda captures
+    ConstHostMatrixType matrix_a_ref = [&, matrix_size, block_size]() {
 #ifdef DLAF_WITH_HDF5
       if (!opts.input_file.empty()) {
         auto infile = FileHDF5(opts.input_file, FileHDF5::FileMode::readonly);
@@ -140,7 +142,9 @@ struct GenEigensolverMiniapp {
       return hermitian;
     }();
 
-    ConstHostMatrixType matrix_b_ref = [matrix_size, block_size, &comm_grid, &opts]() {
+    // Default capture & is needed to suppress warning of unused opts when DLAF_WITH_HDF5 is not defined.
+    // [[maybe_unused]] is not supported in lambda captures
+    ConstHostMatrixType matrix_b_ref = [&, matrix_size, block_size]() {
 #ifdef DLAF_WITH_HDF5
       if (!opts.input_file.empty()) {
         auto infile = FileHDF5(opts.input_file, FileHDF5::FileMode::readonly);

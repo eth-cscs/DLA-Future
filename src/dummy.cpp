@@ -7,5 +7,6 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
-// This file is intentionally empty. It is used for the precompiled headers
-// target.
+
+// It makes the linker happy.
+int main() {}

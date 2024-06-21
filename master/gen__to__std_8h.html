@@ -148,7 +148,7 @@ template&lt;Backend backend, Device device, class T &gt; </div>
 <code>mat_a</code> has tilesize (NB x NB)</dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">mat_b</td><td>contains the triangular matrix. It can be lower (L) or upper (U). Only the tiles of the matrix which contain the lower triangular or the upper triangular part are accessed. Note: B should be modifiable as the diagonal tiles might be temporarily modified during the calculation. </td></tr>
+    <tr><td class="paramname">mat_b</td><td>contains the Cholesky factorisation of the Hermitian positive definite matrix B The triangular matrix can be lower (L) or upper (U). Only the tiles of the matrix which contain the lower triangular or the upper triangular part are accessed. Note: B should be modifiable as the diagonal tiles might be temporarily modified during the calculation. </td></tr>
   </table>
   </dd>
 </dl>

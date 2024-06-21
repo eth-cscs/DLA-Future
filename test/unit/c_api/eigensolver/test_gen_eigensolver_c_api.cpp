@@ -134,7 +134,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
 
       int err = -1;
       if constexpr (std::is_same_v<T, double>) {
-        if (factorization == Factorization::do_factorization) {
+        if constexpr (factorization == Factorization::do_factorization) {
           err = C_dlaf_symmetric_generalized_eigensolver_d(dlaf_context, dlaf_uplo, local_a_ptr,
                                                            dlaf_desc_a, local_b_ptr, dlaf_desc_b,
                                                            eigenvalues_ptr, local_eigenvectors_ptr,
@@ -150,7 +150,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
         }
       }
       else if constexpr (std::is_same_v<T, float>) {
-        if (factorization == Factorization::do_factorization) {
+        if constexpr (factorization == Factorization::do_factorization) {
           err = C_dlaf_symmetric_generalized_eigensolver_s(dlaf_context, dlaf_uplo, local_a_ptr,
                                                            dlaf_desc_a, local_b_ptr, dlaf_desc_b,
                                                            eigenvalues_ptr, local_eigenvectors_ptr,
@@ -166,7 +166,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
         }
       }
       else if constexpr (std::is_same_v<T, std::complex<double>>) {
-        if (factorization == Factorization::do_factorization) {
+        if constexpr (factorization == Factorization::do_factorization) {
           err = C_dlaf_hermitian_generalized_eigensolver_z(dlaf_context, dlaf_uplo, local_a_ptr,
                                                            dlaf_desc_a, local_b_ptr, dlaf_desc_b,
                                                            eigenvalues_ptr, local_eigenvectors_ptr,
@@ -182,7 +182,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
         }
       }
       else if constexpr (std::is_same_v<T, std::complex<float>>) {
-        if (factorization == Factorization::do_factorization) {
+        if constexpr (factorization == Factorization::do_factorization) {
           err = C_dlaf_hermitian_generalized_eigensolver_c(dlaf_context, dlaf_uplo, local_a_ptr,
                                                            dlaf_desc_a, local_b_ptr, dlaf_desc_b,
                                                            eigenvalues_ptr, local_eigenvectors_ptr,
@@ -209,12 +209,12 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
       int desc_z[] = {1, dlaf_context, (int) m, (int) m, (int) mb, (int) mb, 0, 0, lld_eigenvectors};
       int info = -1;
       if constexpr (std::is_same_v<T, double>) {
-        if (factorization == Factorization::do_factorization) {
+        if constexpr (factorization == Factorization::do_factorization) {
           C_dlaf_pdsygvd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
                          eigenvalues_ptr, local_eigenvectors_ptr, 1, 1, desc_z, &info);
         }
         else {
-          C_dlaf_pdpotrf(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, &info);
+          C_dlaf_pdpotrf(dlaf_uplo, (int) m, local_b_ptr, 1, 1, desc_b, &info);
           DLAF_ASSERT(info == 0, info);
           info = -1;
 
@@ -224,12 +224,12 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
         }
       }
       else if constexpr (std::is_same_v<T, float>) {
-        if (factorization == Factorization::do_factorization) {
+        if constexpr (factorization == Factorization::do_factorization) {
           C_dlaf_pssygvd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
                          eigenvalues_ptr, local_eigenvectors_ptr, 1, 1, desc_z, &info);
         }
         else {
-          C_dlaf_pspotrf(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, &info);
+          C_dlaf_pspotrf(dlaf_uplo, (int) m, local_b_ptr, 1, 1, desc_b, &info);
           DLAF_ASSERT(info == 0, info);
           info = -1;
 
@@ -239,12 +239,12 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
         }
       }
       else if constexpr (std::is_same_v<T, std::complex<double>>) {
-        if (factorization == Factorization::do_factorization) {
+        if constexpr (factorization == Factorization::do_factorization) {
           C_dlaf_pzhegvd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
                          eigenvalues_ptr, local_eigenvectors_ptr, 1, 1, desc_z, &info);
         }
         else {
-          C_dlaf_pzpotrf(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, &info);
+          C_dlaf_pzpotrf(dlaf_uplo, (int) m, local_b_ptr, 1, 1, desc_b, &info);
           DLAF_ASSERT(info == 0, info);
           info = -1;
 
@@ -254,12 +254,12 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
         }
       }
       else if constexpr (std::is_same_v<T, std::complex<float>>) {
-        if (factorization == Factorization::do_factorization) {
+        if constexpr (factorization == Factorization::do_factorization) {
           C_dlaf_pchegvd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
                          eigenvalues_ptr, local_eigenvectors_ptr, 1, 1, desc_z, &info);
         }
         else {
-          C_dlaf_pcpotrf(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, &info);
+          C_dlaf_pcpotrf(dlaf_uplo, (int) m, local_b_ptr, 1, 1, desc_b, &info);
           DLAF_ASSERT(info == 0, info);
           info = -1;
 

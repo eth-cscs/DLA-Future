@@ -43,6 +43,33 @@ target_link_libraries(<your_target> PRIVATE DLAF::DLAF)
 
 See [DOCUMENTATION.md](DOCUMENTATION.md) for the documentation of older versions, or for the instructions to build it.
 
+## Citing
+
+If you are using DLA-Future, please cite the following paper in addition to this repository:
+
+```
+@InProceedings{10.1007/978-3-031-61763-8_13,
+    author="Solc{\`a}, Raffaele
+        and Simberg, Mikael
+        and Meli, Rocco
+        and Invernizzi, Alberto
+        and Reverdell, Auriane
+        and Biddiscombe, John",
+    editor="Diehl, Patrick
+        and Schuchart, Joseph
+        and Valero-Lara, Pedro
+        and Bosilca, George",
+    title="DLA-Future: A Task-Based Linear Algebra Library Which Provides a GPU-Enabled Distributed Eigensolver",
+    booktitle="Asynchronous Many-Task Systems and Applications",
+    year="2024",
+    publisher="Springer Nature Switzerland",
+    address="Cham",
+    pages="135--141",
+    isbn="978-3-031-61763-8"
+}
+
+```
+
 ## Acknowledgements
 
 The development of DLAF library would not be possible without support of the following organizations (in alphabetic order):

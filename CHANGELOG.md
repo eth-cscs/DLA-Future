@@ -9,7 +9,7 @@
 
 ### Performance improvements
 
-- Local eigenvector permutations in the distributed eigensolver tridiagonal eigensolver are executed directly in GPU memory. (#1118)
+- Local eigenvector permutations in the distributed tridiagonal eigensolver are executed directly in GPU memory. (#1118)
 
 ### Bug fixes
 

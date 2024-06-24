@@ -56,31 +56,3 @@ license: BSD-3-Clause
 license-url: https://opensource.org/license/bsd-3-clause
 version: 0.5.0
 date-released: '2024-05-31'
-references:
-  type: conference-paper
-  authors:
-  - given-names: Raffaele
-    family-names: Solcà
-    orcid: 'https://orcid.org/0009-0009-9346-4376'
-  - given-names: Mikael
-    family-names: Simberg
-    orcid: 'https://orcid.org/0000-0002-7238-8935'
-  - given-names: Rocco
-    family-names: Meli
-    orcid: 'https://orcid.org/0000-0002-2845-3410'
-  - given-names: Alberto
-    family-names: Invernizzi
-    orcid: 'https://orcid.org/0009-0004-4948-0313'
-  - given-names: Auriane
-    family-names: Reverdell
-    orcid: 'https://orcid.org/0000-0002-5531-0458'
-  - given-names: John
-    family-names: Biddiscombe
-    orcid: 'https://orcid.org/0000-0002-6552-2833'
-  doi: "https://doi.org/10.1007/978-3-031-61763-8_13"
-  title: "DLA-Future: A Task-Based Linear Algebra Library Which Provides a GPU-Enabled Distributed Eigensolver"
-  booktitle: "Asynchronous Many-Task Systems and Applications. WAMTA 2024."
-  series: "Lecture Notes in Computer Science"
-  year: 2024
-  pages: 135-141
-  volume: 14626

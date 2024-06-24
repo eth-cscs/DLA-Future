@@ -67,7 +67,6 @@ If you are using DLA-Future, please cite the following paper in addition to this
     pages="135--141",
     isbn="978-3-031-61763-8"
 }
-
 ```
 
 ## Acknowledgements

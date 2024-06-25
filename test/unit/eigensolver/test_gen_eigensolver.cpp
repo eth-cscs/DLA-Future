@@ -17,6 +17,7 @@
 
 #include <dlaf/common/single_threaded_blas.h>
 #include <dlaf/eigensolver/gen_eigensolver.h>
+#include <dlaf/factorization/cholesky.h>
 #include <dlaf/matrix/copy.h>
 #include <dlaf/matrix/index.h>
 #include <dlaf/matrix/matrix.h>
@@ -58,6 +59,7 @@ TYPED_TEST_SUITE(GenEigensolverTestGPU, MatrixElementTypes);
 #endif
 
 enum class Allocation { do_allocation, use_preallocated };
+using dlaf::eigensolver::internal::Factorization;
 
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
 
@@ -69,7 +71,8 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
     {34, 8, 3},  {32, 6, 3}                                   // m > mb, sub-band
 };
 
-template <class T, Backend B, Device D, Allocation allocation, class... GridIfDistributed>
+template <class T, Backend B, Device D, Allocation allocation, Factorization factorization,
+          class... GridIfDistributed>
 void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
                         GridIfDistributed&... grid) {
   constexpr bool isDistributed = (sizeof...(grid) == 1);
@@ -105,10 +108,23 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
     MatrixMirror<T, D, Device::CPU> mat_b(mat_b_h);
     if constexpr (allocation == Allocation::do_allocation) {
       if constexpr (isDistributed) {
-        return hermitian_generalized_eigensolver<B>(grid..., uplo, mat_a.get(), mat_b.get());
+        if constexpr (factorization == Factorization::do_factorization) {
+          return hermitian_generalized_eigensolver<B>(grid..., uplo, mat_a.get(), mat_b.get());
+        }
+        else {
+          cholesky_factorization<B, D, T>(grid..., uplo, mat_b.get());
+          return hermitian_generalized_eigensolver_factorized<B>(grid..., uplo, mat_a.get(),
+                                                                 mat_b.get());
+        }
       }
       else {
-        return hermitian_generalized_eigensolver<B>(uplo, mat_a.get(), mat_b.get());
+        if constexpr (factorization == Factorization::do_factorization) {
+          return hermitian_generalized_eigensolver<B>(uplo, mat_a.get(), mat_b.get());
+        }
+        else {
+          cholesky_factorization<B, D, T>(uplo, mat_b.get());
+          return hermitian_generalized_eigensolver_factorized<B>(uplo, mat_a.get(), mat_b.get());
+        }
       }
     }
     else if constexpr (allocation == Allocation::use_preallocated) {
@@ -117,13 +133,28 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
                                          TileElementSize(mat_a_h.blockSize().rows(), 1));
       if constexpr (isDistributed) {
         Matrix<T, D> eigenvectors(GlobalElementSize(size, size), mat_a_h.blockSize(), grid...);
-        hermitian_generalized_eigensolver<B>(grid..., uplo, mat_a.get(), mat_b.get(), eigenvalues,
-                                             eigenvectors);
+        if constexpr (factorization == Factorization::do_factorization) {
+          hermitian_generalized_eigensolver<B>(grid..., uplo, mat_a.get(), mat_b.get(), eigenvalues,
+                                               eigenvectors);
+        }
+        else {
+          cholesky_factorization<B, D, T>(grid..., uplo, mat_b.get());
+          hermitian_generalized_eigensolver_factorized<B>(grid..., uplo, mat_a.get(), mat_b.get(),
+                                                          eigenvalues, eigenvectors);
+        }
         return EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
       }
       else {
         Matrix<T, D> eigenvectors(LocalElementSize(size, size), mat_a_h.blockSize());
-        hermitian_generalized_eigensolver<B>(uplo, mat_a.get(), mat_b.get(), eigenvalues, eigenvectors);
+        if constexpr (factorization == Factorization::do_factorization) {
+          hermitian_generalized_eigensolver<B>(uplo, mat_a.get(), mat_b.get(), eigenvalues,
+                                               eigenvectors);
+        }
+        else {
+          cholesky_factorization<B, D, T>(uplo, mat_b.get());
+          hermitian_generalized_eigensolver_factorized<B>(uplo, mat_a.get(), mat_b.get(), eigenvalues,
+                                                          eigenvectors);
+        }
         return EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
       }
     }
@@ -139,8 +170,14 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessLocal) {
   for (auto uplo : blas_uplos) {
     for (auto [m, mb, b_min] : sizes) {
       getTuneParameters().eigensolver_min_band = b_min;
-      testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(uplo, m, mb);
-      testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::use_preallocated>(uplo, m, mb);
+      testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation,
+                         Factorization::do_factorization>(uplo, m, mb);
+      testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::use_preallocated,
+                         Factorization::do_factorization>(uplo, m, mb);
+      testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation,
+                         Factorization::already_factorized>(uplo, m, mb);
+      testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::use_preallocated,
+                         Factorization::already_factorized>(uplo, m, mb);
     }
   }
 }
@@ -150,10 +187,14 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributed) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
         getTuneParameters().eigensolver_min_band = b_min;
-        testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(uplo, m, mb,
-                                                                                           grid);
-        testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::use_preallocated>(uplo, m,
-                                                                                              mb, grid);
+        testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation,
+                           Factorization::do_factorization>(uplo, m, mb, grid);
+        testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::use_preallocated,
+                           Factorization::do_factorization>(uplo, m, mb, grid);
+        testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation,
+                           Factorization::already_factorized>(uplo, m, mb, grid);
+        testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::use_preallocated,
+                           Factorization::already_factorized>(uplo, m, mb, grid);
       }
     }
   }
@@ -164,9 +205,14 @@ TYPED_TEST(GenEigensolverTestGPU, CorrectnessLocal) {
   for (auto uplo : blas_uplos) {
     for (auto [m, mb, b_min] : sizes) {
       getTuneParameters().eigensolver_min_band = b_min;
-      testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(uplo, m, mb);
-      testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::use_preallocated>(uplo, m,
-                                                                                             mb);
+      testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation,
+                         Factorization::do_factorization>(uplo, m, mb);
+      testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::use_preallocated,
+                         Factorization::do_factorization>(uplo, m, mb);
+      testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation,
+                         Factorization::already_factorized>(uplo, m, mb);
+      testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::use_preallocated,
+                         Factorization::already_factorized>(uplo, m, mb);
     }
   }
 }
@@ -176,10 +222,14 @@ TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributed) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
         getTuneParameters().eigensolver_min_band = b_min;
-        testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(uplo, m, mb,
-                                                                                            grid);
-        testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::use_preallocated>(uplo, m,
-                                                                                               mb, grid);
+        testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation,
+                           Factorization::do_factorization>(uplo, m, mb, grid);
+        testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::use_preallocated,
+                           Factorization::do_factorization>(uplo, m, mb, grid);
+        testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation,
+                           Factorization::already_factorized>(uplo, m, mb, grid);
+        testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::use_preallocated,
+                           Factorization::already_factorized>(uplo, m, mb, grid);
       }
     }
   }

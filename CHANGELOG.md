@@ -1,5 +1,20 @@
 # Changelog
 
+## DLA-Future 0.6.0
+
+### Changes
+
+- Renamed ScaLAPACK-like generalized eigensolvers `pXsygvx`/`pXhegvx` to `pXsygvd`/`pXhegvd`. (#1168)
+- Introduced generalized eigensolver where the matrix B is already factorized. (#1167)
+
+### Performance improvements
+
+- Local eigenvector permutations in the distributed tridiagonal eigensolver are executed directly in GPU memory. (#1118)
+
+### Bug fixes
+
+- Fixed ScaLAPACK detection in CMake for specific uenv cases. (#1159)
+
 ## DLA-Future 0.5.0
 
 ### Changes

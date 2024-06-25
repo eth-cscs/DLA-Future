@@ -126,6 +126,7 @@ struct WorkSpace {
 
   Matrix<SizeType, D> i2;
   Matrix<SizeType, D> i5;
+  Matrix<SizeType, D> i5b;
   Matrix<SizeType, D> i6;
 };
 
@@ -169,6 +170,7 @@ struct DistWorkSpaceHostMirror {
 
   HostMirrorMatrix<SizeType, D> i2;
   HostMirrorMatrix<SizeType, D> i5;
+  HostMirrorMatrix<SizeType, D> i5b;
   HostMirrorMatrix<SizeType, D> i6;
 };
 
@@ -387,7 +389,8 @@ auto stablePartitionIndexForDeflationArrays(const SizeType n, const ColType* typ
 //
 // Both permutations are represented using global indices, but:
 // - @p index_sorted          sorts "globally", i.e. considering all evecs across ranks
-// - @p index_sorted_coltype  sorts "locally", i.e. consdering just evecs from the same rank
+// - @p index_sorted_coltype  sorts "locally", i.e. considering just evecs from the same rank (global indices)
+// - @p i5_lc                 sorts "locally", i.e. considering just evecs from current rank (local indices)
 //
 // In addition, even if all ranks have the full permutation, it is important to highlight that
 // thanks to how it is built, i.e. rank-independent permutations, @p index_sorted_coltype can be used as
@@ -397,11 +400,15 @@ auto stablePartitionIndexForDeflationArrays(const SizeType n, const ColType* typ
 // rank                   |     0     |     1     |     0     |
 // initial                | 0U| 1L| 2X| 3U| 4U| 5X| 6L| 7L| 8X|
 // index_sorted           | 0U| 1L| 3U| 4U| 6L| 7L| 2X| 5X| 8X| -> sort(non-deflated) | sort(deflated)
-// index_sorted_col_type  | 0U| 1L| 6L| 3U| 4U| 5X| 7L| 2X| 8X| -> rank0(ULLLXX) - rank1(UUX)
+// index_sorted_col_type  | 0U| 1L| 6L| 3U| 4U| 5X| 7L| 2X| 8X| -> rank0(ULLLXX) - rank1(UUX) (global indices)
+// i5_lc                  | 0U| 1L| 3L|...........| 4L| 2X| 5X| -> rank0(ULLLXX)  (local indices)
+// i5_lc                  |...........| 0U| 1U| 2X|...........| -> rank1(UUX)     (local indices)
 //
 // index_sorted_col_type can be used "locally":
 // on rank0               | 0U| 1L| 6L| --| --| --| 7L| 2X| 8X| -> ULLLXX
 // on rank1               | --| --| --| 3U| 4U| 5X| --| --| --| -> UUX
+//
+// i5_lc is just local to the current rank, and it is a view over index_sorted_col_type where indices are local.
 //
 // where U: Upper, D: Dense, L: Lower, X: Deflated
 //
@@ -409,11 +416,12 @@ auto stablePartitionIndexForDeflationArrays(const SizeType n, const ColType* typ
 // which is useful since eigenvectors are more expensive to permute, so we can keep them in their
 // initial order.
 //
-// @param types                 array[n] column type of each eigenvector after deflation (initial order)
-// @param evals                 array[n] of eigenvalues sorted as perm_sorted
-// @param perm_sorted           array[n] current -> initial (i.e. evals[i] -> types[perm_sorted[i]])
-// @param index_sorted          array[n] global(sort(non-deflated)|sort(deflated))) -> initial
-// @param index_sorted_coltype  array[n] local(sort(upper)|sort(dense)|sort(lower)|sort(deflated))) -> initial
+// @param types                 array[n]    column type of each eigenvector after deflation (initial order)
+// @param evals                 array[n]    of eigenvalues sorted as perm_sorted
+// @param perm_sorted           array[n]    current -> initial (i.e. evals[i] -> types[perm_sorted[i]])
+// @param index_sorted          array[n]    global(sort(non-deflated)|sort(deflated))) -> initial
+// @param index_sorted_coltype  array[n]    local(sort(upper)|sort(dense)|sort(lower)|sort(deflated))) -> initial
+// @param i5_lc                 array[n_lc] local(sort(upper)|sort(dense)|sort(lower)|sort(deflated))) -> initial
 //
 // @return k                    number of non-deflated eigenvectors
 // @return k_local              number of local non-deflated eigenvectors
@@ -422,7 +430,7 @@ template <class T>
 auto stablePartitionIndexForDeflationArrays(const matrix::Distribution& dist_sub, const ColType* types,
                                             const T* evals, SizeType* perm_sorted,
                                             SizeType* index_sorted, SizeType* index_sorted_coltype,
-                                            SizeType* i4, SizeType* i6) {
+                                            SizeType* i5_lc, SizeType* i4, SizeType* i6) {
   const SizeType n = dist_sub.size().cols();
   const SizeType k = std::count_if(types, types + n,
                                    [](const ColType coltype) { return ColType::Deflated != coltype; });
@@ -504,6 +512,12 @@ auto stablePartitionIndexForDeflationArrays(const matrix::Distribution& dist_sub
         global_element_from_local_element_on_rank<Coord::Col>(dist_sub, rank, jjj_el_lc);
 
     index_sorted_coltype[to_sizet(jjj_el)] = jj_el;
+  }
+
+  // This is the local version of the previous one, just for the current rank
+  for (SizeType i_lc = 0; i_lc < dist_sub.local_size().cols(); ++i_lc) {
+    const SizeType i = dist_sub.global_element_from_local_element<Coord::Col>(i_lc);
+    i5_lc[i_lc] = dist_sub.local_element_from_global_element<Coord::Col>(index_sorted_coltype[i]);
   }
 
   std::array<SizeType, 3> n_udl = [&]() {
@@ -611,8 +625,8 @@ auto stablePartitionIndexForDeflation(
     const matrix::Distribution& dist_evecs, const SizeType i_begin, const SizeType i_end,
     Matrix<const ColType, Device::CPU>& c, Matrix<const T, Device::CPU>& evals,
     Matrix<SizeType, Device::CPU>& in, Matrix<SizeType, Device::CPU>& out,
-    Matrix<SizeType, Device::CPU>& out_by_coltype, Matrix<SizeType, Device::CPU>& i4,
-    Matrix<SizeType, Device::CPU>& i6) {
+    Matrix<SizeType, Device::CPU>& out_by_coltype, Matrix<SizeType, Device::CPU>& i5_lc,
+    Matrix<SizeType, Device::CPU>& i4, Matrix<SizeType, Device::CPU>& i6) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
   using pika::execution::thread_stacksize;
@@ -624,25 +638,32 @@ auto stablePartitionIndexForDeflation(
 
   auto part_fn = [dist_evecs_sub](const auto& c_tiles, const auto& evals_tiles, const auto& in_tiles,
                                   const auto& out_tiles, const auto& out_coltype_tiles,
-                                  const auto& i4_tiles, const auto& i6_tiles) {
+                                  const auto& i5_lc_tiles, const auto& i4_tiles, const auto& i6_tiles) {
     const TileElementIndex zero_idx(0, 0);
     const ColType* c_ptr = c_tiles[0].get().ptr(zero_idx);
     const T* evals_ptr = evals_tiles[0].get().ptr(zero_idx);
     SizeType* in_ptr = in_tiles[0].ptr(zero_idx);
     SizeType* out_ptr = out_tiles[0].ptr(zero_idx);
     SizeType* out_coltype_ptr = out_coltype_tiles[0].ptr(zero_idx);
+    SizeType* i5_lc_ptr = i5_lc_tiles.size() > 0 ? i5_lc_tiles[0].ptr(zero_idx) : nullptr;
     SizeType* i4_ptr = i4_tiles[0].ptr(zero_idx);
     SizeType* i6_ptr = i6_tiles[0].ptr(zero_idx);
 
     return stablePartitionIndexForDeflationArrays(dist_evecs_sub, c_ptr, evals_ptr, in_ptr, out_ptr,
-                                                  out_coltype_ptr, i4_ptr, i6_ptr);
+                                                  out_coltype_ptr, i5_lc_ptr, i4_ptr, i6_ptr);
   };
+
+  const SizeType i_begin_lc = dist_evecs.next_local_tile_from_global_tile<Coord::Col>(i_begin);
+  const SizeType i_end_lc = dist_evecs.next_local_tile_from_global_tile<Coord::Col>(i_end);
+  auto i5_lc_snd =
+      select(i5_lc, common::iterate_range2d(LocalTileIndex(i_begin_lc, 0), LocalTileIndex(i_end_lc, 1)));
 
   TileCollector tc{i_begin, i_end};
   return ex::when_all(ex::when_all_vector(tc.read(c)), ex::when_all_vector(tc.read(evals)),
                       ex::when_all_vector(tc.readwrite(in)), ex::when_all_vector(tc.readwrite(out)),
                       ex::when_all_vector(tc.readwrite(out_by_coltype)),
-                      ex::when_all_vector(tc.readwrite(i4)), ex::when_all_vector(tc.readwrite(i6))) |
+                      ex::when_all_vector(std::move(i5_lc_snd)), ex::when_all_vector(tc.readwrite(i4)),
+                      ex::when_all_vector(tc.readwrite(i6))) |
          di::transform(di::Policy<Backend::MC>(thread_stacksize::nostack), std::move(part_fn));
 }
 
@@ -1802,12 +1823,11 @@ void mergeDistSubproblems(comm::CommunicatorPipeline<comm::CommunicatorType::Ful
 
   const GlobalElementIndex sub_offset{i_begin * dist.tile_size().rows(),
                                       i_begin * dist.tile_size().cols()};
-  const matrix::Distribution dist_sub(
-      dist, {sub_offset,
-             {
-                 global_tile_element_distance<Coord::Row>(dist, i_begin, i_end),
-                 global_tile_element_distance<Coord::Col>(dist, i_begin, i_end),
-             }});
+  const GlobalElementSize sub_size{
+      global_tile_element_distance<Coord::Row>(dist, i_begin, i_end),
+      global_tile_element_distance<Coord::Col>(dist, i_begin, i_end),
+  };
+  const matrix::Distribution dist_sub(dist, {sub_offset, sub_size});
 
   // Calculate the size of the upper subproblem
   const SizeType n_upper = global_tile_element_distance<Coord::Row>(dist, i_begin, i_split);
@@ -1882,22 +1902,15 @@ void mergeDistSubproblems(comm::CommunicatorPipeline<comm::CommunicatorType::Ful
   // - set deflated diagonal entries of `U` to 1 (temporary solution until optimized GEMM is implemented)
   auto [k_unique, k_lc_unique, n_udl] =
       ex::split_tuple(stablePartitionIndexForDeflation(dist, i_begin, i_end, ws_h.c, ws_h.d0, ws_hm.i2,
-                                                       ws_h.i3, ws_hm.i5, ws_h.i4, ws_hm.i6));
+                                                       ws_h.i3, ws_hm.i5, ws_hm.i5b, ws_h.i4, ws_hm.i6));
 
   auto k = ex::split(std::move(k_unique));
   auto k_lc = ex::split(std::move(k_lc_unique));
 
   // Reorder Eigenvectors
-  using dlaf::permutations::internal::permuteJustLocal;
-  if constexpr (Backend::MC == B) {
-    copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i5, ws.i5);
-    permuteJustLocal<T, Coord::Col>(i_begin, i_end, ws.i5, ws.e0, ws.e1);
-  }
-  else {
-    copy(idx_loc_begin, sz_loc_tiles, ws.e0, ws_hm.e0);
-    permuteJustLocal<T, Coord::Col>(i_begin, i_end, ws_hm.i5, ws_hm.e0, ws_hm.e2);
-    copy(idx_loc_begin, sz_loc_tiles, ws_hm.e2, ws.e1);
-  }
+  copy(LocalTileIndex(idx_loc_begin.col(), 0), LocalTileSize(idx_loc_end.col() - idx_loc_begin.col(), 1),
+       ws_hm.i5b, ws.i5b);
+  permutations::permute<B, D, T, Coord::Col>(i_begin, i_end, ws.i5b, ws.e0, ws.e1);
 
   // Reorder Eigenvalues
   applyIndex(i_begin, i_end, ws_h.i3, ws_h.d0, ws_hm.d1);

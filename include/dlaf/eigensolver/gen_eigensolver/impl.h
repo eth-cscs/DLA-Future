@@ -46,7 +46,6 @@ template <Backend B, Device D, class T>
 void GenEigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix<T, D>& mat_a,
                                    Matrix<T, D>& mat_b, Matrix<BaseType<T>, D>& eigenvalues,
                                    Matrix<T, D>& eigenvectors, const Factorization factorization) {
-
 #ifdef DLAF_WITH_HDF5
   static std::atomic<size_t> num_gen_eigensolver_calls = 0;
   std::stringstream fname;

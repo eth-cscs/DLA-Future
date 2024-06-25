@@ -145,10 +145,8 @@ fi
 
 # Extract the changelog for this version
 VERSION_DESCRIPTION=$(
-    # Find the correct heading and print everything until next heading
-    awk "/^## DLA-Future ${REGEX_VERSION_FULL}/{f=1; next} f==0{next} /## DLA-Future/{exit};1" CHANGELOG.md |
-        # Remove empty lines at the beginning
-        awk 'NF {p=1} p' |
+    # Find the correct heading and print everything (removing empty lines at the beginning) until next heading
+    awk "/^## DLA-Future ${REGEX_VERSION_FULL}/{f=1; next} f==0{next} /## DLA-Future/{exit} NF{p=1} p" CHANGELOG.md |
         # Move headings one level up, i.e. transform ### to ##, ## to #, etc. There should be no
         # top-level heading in the file except for "# Changelog".
         sed 's/^##/#/'

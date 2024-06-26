@@ -49,14 +49,24 @@ void GenEigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo
 #ifdef DLAF_WITH_HDF5
   static std::atomic<size_t> num_gen_eigensolver_calls = 0;
   std::stringstream fname;
-  fname << "generalized-eigensolver-" << matrix::internal::TypeToString_v<T> << "-"
-        << std::to_string(num_gen_eigensolver_calls) << ".h5";
+  fname << "generalized-eigensolver-";
+  if (factorization == Factorization::already_factorized) {
+    fname << "factorized-";
+  }
+  fname << matrix::internal::TypeToString_v<T> << "-" << std::to_string(num_gen_eigensolver_calls)
+        << ".h5";
+
   std::optional<matrix::internal::FileHDF5> file;
 
   if (getTuneParameters().debug_dump_generalized_eigensolver_data) {
     file = matrix::internal::FileHDF5(grid.fullCommunicator(), fname.str());
     file->write(mat_a, "/input-a");
-    file->write(mat_b, "/input-b");
+    if (factorization == Factorization::do_factorization) {
+      file->write(mat_b, "/input-b");
+    }
+    else {  // Already factorized
+      file->write(mat_b, "/input-b-factorized");
+    }
   }
 #endif
 
@@ -80,5 +90,4 @@ void GenEigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo
   num_gen_eigensolver_calls++;
 #endif
 }
-
 }

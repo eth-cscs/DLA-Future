@@ -13,6 +13,11 @@
 #include <cstddef>
 #include <utility>
 
+#ifdef DLAF_WITH_HDF5
+#include <atomic>
+#include <sstream>
+#endif
+
 #include <pika/execution.hpp>
 
 #include <dlaf/blas/tile.h>
@@ -26,6 +31,7 @@
 #include <dlaf/eigensolver/gen_to_std/api.h>
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/hdf5.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/panel.h>
 #include <dlaf/matrix/tile.h>
@@ -283,6 +289,20 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid& grid, Matrix<T
   using pika::execution::thread_priority;
   namespace ex = pika::execution::experimental;
 
+#ifdef DLAF_WITH_HDF5
+  static std::atomic<size_t> num_gen_to_std_calls = 0;
+  std::stringstream fname;
+  fname << "gen_to_std-" << matrix::internal::TypeToString_v<T> << "-"
+        << std::to_string(num_gen_to_std_calls) << ".h5";
+  std::optional<matrix::internal::FileHDF5> file;
+
+  if (getTuneParameters().debug_dump_generalized_to_standard_data) {
+    file = matrix::internal::FileHDF5(grid.fullCommunicator(), fname.str());
+    file->write(mat_a, "/input-a");
+    file->write(mat_l, "/cholesky");
+  }
+#endif
+
   // Set up MPI executor pipelines
   auto mpi_row_task_chain = grid.row_communicator_pipeline();
   auto mpi_col_task_chain = grid.col_communicator_pipeline();
@@ -474,6 +494,14 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid& grid, Matrix<T
       }
     }
   }
+
+#ifdef DLAF_WITH_HDF5
+  if (getTuneParameters().debug_dump_generalized_to_standard_data) {
+    file->write(mat_a, "/std");
+  }
+
+  num_gen_to_std_calls++;
+#endif
 }
 
 template <Backend backend, Device device, class T>

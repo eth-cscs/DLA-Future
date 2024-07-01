@@ -24,9 +24,24 @@ struct ReductionToBand {
                                      const SizeType band_size);
 };
 
+template <class T, Device D>
+struct CARed2BandResult {
+  Matrix<T, Device::CPU> taus_1st;
+  // hh_1st are stored in-place
+  Matrix<T, Device::CPU> taus_2nd;
+  Matrix<T, D> hh_2nd;
+};
+
+template <Backend B, Device D, class T>
+struct CAReductionToBand {
+  static CARed2BandResult<T, D> call(comm::CommunicatorGrid& grid, Matrix<T, D>& mat_a,
+                                     const SizeType band_size);
+};
+
 // ETI
 #define DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
-  KWORD template struct ReductionToBand<BACKEND, DEVICE, DATATYPE>;
+  KWORD template struct ReductionToBand<BACKEND, DEVICE, DATATYPE>;              \
+  KWORD template struct CAReductionToBand<BACKEND, DEVICE, DATATYPE>;
 
 DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(extern, Backend::MC, Device::CPU, float)
 DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(extern, Backend::MC, Device::CPU, double)

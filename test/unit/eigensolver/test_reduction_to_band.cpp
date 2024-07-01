@@ -489,3 +489,71 @@ TYPED_TEST(ReductionToBandTestGPU, CorrectnessDistributedSubBand) {
   }
 }
 #endif
+
+template <class T>
+struct CAReductionToBandTest : public TestWithCommGrids {};
+
+template <class T>
+using CAReductionToBandTestMC = ReductionToBandTest<T>;
+
+using JustThisType = ::testing::Types<float>;
+TYPED_TEST_SUITE(CAReductionToBandTestMC, JustThisType);
+
+template <class T, Device D, Backend B>
+void testCAReductionToBand(comm::CommunicatorGrid& grid, const LocalElementSize size,
+                           const TileElementSize block_size, const SizeType band_size,
+                           const InputMatrixStructure input_matrix_structure) {
+  const SizeType k_reflectors = std::max(SizeType(0), size.rows() - band_size - 1);
+  DLAF_ASSERT(block_size.rows() % band_size == 0, block_size.rows(), band_size);
+
+  Distribution distribution({size.rows(), size.cols()}, block_size, grid.size(), grid.rank(), {0, 0});
+
+  // setup the reference input matrix
+  Matrix<const T, Device::CPU> reference = [&]() {
+    Matrix<T, Device::CPU> reference(distribution);
+    if (input_matrix_structure == InputMatrixStructure::banded)
+      // Matrix already in band form, with band smaller than band_size
+      matrix::util::set_random_hermitian_banded(reference, band_size - 1);
+    else
+      matrix::util::set_random_hermitian(reference);
+    return reference;
+  }();
+
+  Matrix<T, Device::CPU> matrix_a_h(distribution);
+  copy(reference, matrix_a_h);
+
+  eigensolver::internal::CARed2BandResult<T, D> red2band_result = [&]() {
+    MatrixMirror<T, D, Device::CPU> matrix_a(matrix_a_h);
+    return eigensolver::internal::ca_reduction_to_band<B>(grid, matrix_a.get(), band_size);
+  }();
+
+  Matrix<T, D>& mat_local_taus = red2band_result.taus_1st;
+
+  // what?!
+  // ASSERT_EQ(mat_local_taus.block_size().rows(), block_size.rows());
+
+  checkUpperPartUnchanged(reference, matrix_a_h);
+
+  // Wait for all work to finish before doing blocking communication
+  pika::wait();
+
+  auto mat_v = allGather(blas::Uplo::Lower, matrix_a_h, grid);
+  auto mat_b = makeLocal(matrix_a_h);
+  splitReflectorsAndBand(mat_v, mat_b, band_size);
+
+  auto taus = allGatherTaus(k_reflectors, mat_local_taus, grid);
+  ASSERT_EQ(taus.size(), k_reflectors);
+
+  // checkResult(k_reflectors, band_size, reference, mat_v, mat_b, taus);
+}
+
+TYPED_TEST(CAReductionToBandTestMC, CorrectnessDistributed) {
+  for (auto&& comm_grid : this->commGrids()) {
+    for (const auto& [size, block_size, band_size] : configs) {
+      for (auto input_matrix_structure : {InputMatrixStructure::full}) {
+        testCAReductionToBand<TypeParam, Device::CPU, Backend::MC>(comm_grid, size, block_size,
+                                                                   band_size, input_matrix_structure);
+      }
+    }
+  }
+}

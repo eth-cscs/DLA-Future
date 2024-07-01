@@ -119,4 +119,18 @@ Matrix<T, Device::CPU> reduction_to_band(comm::CommunicatorGrid& grid, Matrix<T,
 
   return ReductionToBand<B, D, T>::call(grid, mat_a, band_size);
 }
+
+template <Backend B, Device D, class T>
+internal::CARed2BandResult<T, D> ca_reduction_to_band(comm::CommunicatorGrid& grid, Matrix<T, D>& mat_a,
+                                                      const SizeType band_size) {
+  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
+  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
+
+  DLAF_ASSERT(band_size >= 2, band_size);
+  DLAF_ASSERT(mat_a.blockSize().rows() % band_size == 0, mat_a.blockSize().rows(), band_size);
+
+  return CAReductionToBand<B, D, T>::call(grid, mat_a, band_size);
+}
 }

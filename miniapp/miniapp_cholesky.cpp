@@ -149,6 +149,11 @@ struct choleskyMiniapp {
 
         // wait and barrier for all ranks
         matrix.get().waitLocalTiles();
+        for (std::size_t i = 0; i < comm_grid.num_pipelines(); ++i) {
+          sync_wait(comm_grid.full_communicator_pipeline().exclusive());
+          sync_wait(comm_grid.row_communicator_pipeline().exclusive());
+          sync_wait(comm_grid.col_communicator_pipeline().exclusive());
+        }
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         elapsed_time = timeit.elapsed();

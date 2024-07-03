@@ -25,7 +25,7 @@ jobs:
         run: |
           # Need non buggy version of clang-format-18 (See #1176).
           wget -qO llvm.key https://apt.llvm.org/llvm-snapshot.gpg.key
-          echo "ce6eee4130298f79b0e0f09a89f93c1bc711cd68e7e3182d37c8e96c5227e2f1  llvm.key" > check.sha256
+          echo "ce6eee4130298f79b0e0f09a89f93c1bc711cd68e7e3182d37c8e96c5227e2f0  llvm.key" > check.sha256
           shasum -c check.sha256
           cat llvm.key > /etc/apt/trusted.gpg.d/apt.llvm.org.asc
           sudo echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-18 main" >> /etc/apt/sources.list

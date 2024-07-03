@@ -2,24 +2,26 @@
 
 # Distributed Linear Algebra from the Future
 
-DLA-Future is a distributed linear algebra library implemented using C++ proposal P2300 which provides:
+DLA-Future is a distributed linear algebra library implemented using using C++ `std::execution` [P2300](https://cplusplus.github.io/sender-receiver/execution.html) which provides:
 - An asynchronous C++ interface,
 - A synchronous C interface,
 - A synchronous ScaLAPACK-like C interface (ScaLAPACK drop-in with a subset of ScaLAPACK arguments. E.g. workspace arguments are not present),
 - A synchronous ScaLAPACK-like Fortran interface (See [DLA-Future-Fortran](https://github.com/eth-cscs/DLA-Future-Fortran)).
 
-Currently the asynchronous C++ interface provides the following algorithms :
-- Matrix Multiplication:
-  - Triangular (`P[S,D,C,Z]TRMM`)
-  - Hermitian (`P[C,Z]HEMM` and `P[S,D]SYMM`)
-- Triangular Solver (`P[S,D,C,Z]TRSM`)
-- Cholesky Decomposition
-- Symmetric / Hermitian eigenvalue solver (`P[C,Z]HEEVD` and `P[S,D]SYEVD`. Can replace any call to ScaLAPACK`P[C,Z]HEEV*` and `P[S,D]SYEV*`.)
-- Generalized Symmetric / Hermitian eigenvalue solver (`P[C,Z]HEGVD` and `P[S,D]SYGVD`.  Can replace any call to ScaLAPACK `P[C,Z]HEGV*` and `P[S,D]SYGV*`.)
+DLA-Future runs on x86 and ARM CPUs as well as NVIDIA and AMD GPUs.
+
+Currently DLA-Future provides the following algorithms which are available in the following interfaces:
+| ScaLAPACK Name | Algorithm | C++ API | C API | Scalapack C API |
+|----------------|-----------|:-------:|:-----:|:---------------:|
+| `P[S,D,C,Z]TRMM` | Triangular Matrix Multiplication | ✔️ | ❌ | ❌ |
+| `P[C,Z]HEMM`, `P[S,D]SYMM` | Hermitian Matrix Multiplication | ✔️ | ❌ | ❌ |
+| `P[S,D,C,Z]TRSM` | Triangular Solver | ✔️ | ❌ | ❌ |
+| `P[S,D,C,Z]POTRF` | Cholesky Decomposition | ✔️ | ✔️ | ✔️ |
+| `P[C,Z]HEEV*`, `P[S,D]SYEV*` | Symmetric / Hermitian eigenvalue solver | ✔️ | ✔️ | ✔️ |
+| `P[C,Z]HEGV*`, `P[S,D]SYGV*` | Generalized Symmetric / Hermitian eigenvalue solver | ✔️ | ✔️ | ✔️ |
 
 Notes:
 - The C++ interface provides a non distributed interface as well.
-- Eigensolvers which computes only a part of the eigenspectrum will be added in future releases.
 
 ## Getting started with DLAF
 

@@ -8,7 +8,7 @@ DLA-Future is a distributed linear algebra library implemented using C++ proposa
 - A synchronous ScaLAPACK-like C interface (ScaLAPACK drop-in with a subset of ScaLAPACK arguments. E.g. workspace arguments are not present),
 - A synchronous ScaLAPACK-like Fortran interface (See [DLA-Future-Fortran](https://github.com/eth-cscs/DLA-Future-Fortran)).
 
-Currently it provides the following algorithms :
+Currently the asynchronous C++ interface provides the following algorithms :
 - Matrix Multiplication:
   - Triangular (`P[S,D,C,Z]TRMM`)
   - Hermitian (`P[C,Z]HEMM` and `P[S,D]SYMM`)
@@ -18,7 +18,7 @@ Currently it provides the following algorithms :
 - Generalized Symmetric / Hermitian eigenvalue solver (`P[C,Z]HEGVD` and `P[S,D]SYGVD`.  Can replace any call to ScaLAPACK `P[C,Z]HEGV*` and `P[S,D]SYGV*`.)
 
 Notes:
-- C++ interface provides a non distributed interface as well.
+- The C++ interface provides a non distributed interface as well.
 - Eigensolvers which computes only a part of the eigenspectrum will be added in future releases.
 
 ## Getting started with DLAF

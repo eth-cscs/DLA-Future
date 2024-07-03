@@ -85,17 +85,6 @@ struct Options
   Options& operator=(const Options&) = default;
 };
 
-template <typename T>
-using matrix_values_t = std::function<T(const GlobalElementIndex&)>;
-
-template <typename T>
-using linear_system_t =
-    std::tuple<matrix_values_t<T>, matrix_values_t<T>, matrix_values_t<T>>;  // A, B, X
-
-template <typename T>
-linear_system_t<T> sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType m);
-}
-
 struct triangularMultiplicationMiniapp {
   template <Backend backend, typename T>
   static void run(const Options& opts) {

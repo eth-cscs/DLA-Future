@@ -174,6 +174,7 @@ struct triangularSolverMiniapp {
 
       sync_barrier();
 
+        
       // benchmark results
       if (0 == world.rank() && run_index >= 0) {
         auto elapsed_time = timeit.elapsed();

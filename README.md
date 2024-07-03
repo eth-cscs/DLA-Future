@@ -2,11 +2,11 @@
 
 # Distributed Linear Algebra from the Future
 
-DLA-Future is a distributed linear algebra library implemented using using C++ `std::execution` [P2300](https://cplusplus.github.io/sender-receiver/execution.html) which provides:
-- An asynchronous C++ interface,
-- A synchronous C interface,
-- A synchronous ScaLAPACK-like C interface (ScaLAPACK drop-in with a subset of ScaLAPACK arguments. E.g. workspace arguments are not present),
-- A synchronous ScaLAPACK-like Fortran interface (See [DLA-Future-Fortran](https://github.com/eth-cscs/DLA-Future-Fortran)).
+DLA-Future is a distributed linear algebra library implemented using C++ `std::execution` [P2300](https://cplusplus.github.io/sender-receiver/execution.html) which provides:
+- an asynchronous C++ interface,
+- a synchronous C interface,
+- a synchronous ScaLAPACK-like C interface (ScaLAPACK drop-in with a subset of ScaLAPACK arguments. E.g. workspace arguments are not present),
+- a synchronous ScaLAPACK-like Fortran interface (See [DLA-Future-Fortran](https://github.com/eth-cscs/DLA-Future-Fortran)).
 
 DLA-Future runs on x86 and ARM CPUs as well as NVIDIA and AMD GPUs.
 

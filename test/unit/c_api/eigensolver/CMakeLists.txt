@@ -19,6 +19,7 @@ DLAF_addTest(
 DLAF_addTest(
   test_gen_eigensolver_c_api
   SOURCES test_gen_eigensolver_c_api.cpp test_gen_eigensolver_c_api_wrapper.c
+          ../factorization/test_cholesky_c_api_wrapper.c
   LIBRARIES dlaf.c_api
   USE_MAIN CAPI
   MPIRANKS 6

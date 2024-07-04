@@ -28,7 +28,7 @@ namespace dlaf::permutations {
 /// perms[i_begin:i_end].
 ///
 /// @param perms is the index map of permutations represented as a tiled column vector. Indices are in
-///        the range [0, n) where `n` is the size of the submatrix (i.e. the indices are local to the
+///        the range [0, n) where `n` is the local size of the submatrix (i.e. the indices are local to the
 ///        submatrix, they are not global). Only tiles whose row tile coords are in the range
 ///        [i_begin,i_end) are accessed in read-only mode.
 /// @pre @p perms is not distributed
@@ -37,7 +37,6 @@ namespace dlaf::permutations {
 ///
 /// @param mat_in is the input matrix. Only tiles whose both row and col tile coords are in
 ///        the range [i_begin,i_end) are accessed in read-only mode.
-/// @pre @p mat_in is not distributed
 /// @pre @p mat_in has size (N x N)
 /// @pre @p mat_in has blocksize (NB x NB)
 /// @pre @p mat_in has tilesize (NB x NB)
@@ -51,15 +50,14 @@ template <Backend B, Device D, class T, Coord coord>
 void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
              Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {
   DLAF_ASSERT(matrix::local_matrix(perms), perms);
-  DLAF_ASSERT(matrix::local_matrix(mat_in), mat_in);
-  DLAF_ASSERT(matrix::local_matrix(mat_out), mat_out);
+  DLAF_ASSERT(matrix::same_process_grid(mat_in, mat_out), mat_in, mat_out);
 
   // Note:
   // These are not implementation constraints, but more logic constraints. Indeed, these ensure that
   // the range [i_begin, i_end] is square in terms of elements (it would not make sense to have it square
   // in terms of number of tiles). Moreover, by requiring mat_in and mat_out matrices to have the same
   // shape, it is ensured that range [i_begin, i_end] is actually the same on both sides.
-  DLAF_ASSERT(square_size(mat_in), mat_in);
+  DLAF_ASSERT(matrix::square_size(mat_in), mat_in);
   DLAF_ASSERT(matrix::square_blocksize(mat_in), mat_in);
   DLAF_ASSERT(matrix::equal_size(mat_in, mat_out), mat_in);
   DLAF_ASSERT(matrix::equal_blocksize(mat_in, mat_out), mat_in);
@@ -68,12 +66,17 @@ void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
   DLAF_ASSERT(matrix::single_tile_per_block(mat_in), mat_in);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_out), mat_out);
 
-  DLAF_ASSERT(perms.size().rows() == mat_in.size().rows(), perms, mat_in);
+  DLAF_ASSERT(perms.block_size().rows() == mat_in.block_size().rows(), mat_in, perms);
+
+  // Note:
+  // perms is a column vector with a number of elements equal to the local part of matrix involved
+  // in the permutation, i.e. [i_begin, i_end), along coord axis
   DLAF_ASSERT(perms.size().cols() == 1, perms);
-  DLAF_ASSERT(perms.blockSize().rows() == mat_in.blockSize().rows(), mat_in, perms);
+  DLAF_ASSERT(perms.size().rows() == mat_in.distribution().local_size().template get<coord>(), perms,
+              mat_in);
 
   DLAF_ASSERT(i_begin >= 0 && i_begin <= i_end, i_begin, i_end);
-  DLAF_ASSERT(i_end <= perms.nrTiles().rows(), i_end, perms);
+  DLAF_ASSERT(i_end <= mat_in.nr_tiles().rows(), i_end, perms);
 
   internal::Permutations<B, D, T, coord>::call(i_begin, i_end, perms, mat_in, mat_out);
 }

@@ -38,7 +38,8 @@ namespace dlaf::eigensolver::internal {
 /// @pre @p mat_a has blocksize (NB x NB)
 /// @pre @p mat_a has tilesize (NB x NB)
 ///
-/// @param mat_b contains the triangular matrix. It can be lower (L) or upper (U). Only the tiles of
+/// @param mat_b contains the Cholesky factorisation of the Hermitian positive definite matrix B
+/// The triangular matrix can be lower (L) or upper (U). Only the tiles of
 /// the matrix which contain the lower triangular or the upper triangular part are accessed.
 /// Note: B should be modifiable as the diagonal tiles might be temporarily modified during the calculation.
 /// @pre @p mat_b is not distributed

@@ -2,6 +2,27 @@
 
 # Distributed Linear Algebra from the Future
 
+DLA-Future is a distributed linear algebra library implemented using C++ `std::execution` [P2300](https://cplusplus.github.io/sender-receiver/execution.html) which provides:
+- an asynchronous C++ interface,
+- a synchronous C interface,
+- a synchronous ScaLAPACK-like C interface (ScaLAPACK drop-in with a subset of ScaLAPACK arguments. E.g. workspace arguments are not present),
+- a synchronous ScaLAPACK-like Fortran interface (See [DLA-Future-Fortran](https://github.com/eth-cscs/DLA-Future-Fortran)).
+
+DLA-Future runs on x86 and ARM CPUs as well as NVIDIA and AMD GPUs.
+
+Currently DLA-Future provides the following algorithms which are available in the following interfaces:
+| ScaLAPACK Name | Algorithm | C++ API | C API | Scalapack C API |
+|----------------|-----------|:-------:|:-----:|:---------------:|
+| `P[S,D,C,Z]TRMM` | Triangular Matrix Multiplication | ✔️ | ❌ | ❌ |
+| `P[C,Z]HEMM`, `P[S,D]SYMM` | Hermitian Matrix Multiplication | ✔️ | ❌ | ❌ |
+| `P[S,D,C,Z]TRSM` | Triangular Solver | ✔️ | ❌ | ❌ |
+| `P[S,D,C,Z]POTRF` | Cholesky Decomposition | ✔️ | ✔️ | ✔️ |
+| `P[C,Z]HEEV*`, `P[S,D]SYEV*` | Symmetric / Hermitian eigenvalue solver | ✔️ | ✔️ | ✔️ |
+| `P[C,Z]HEGV*`, `P[S,D]SYGV*` | Generalized Symmetric / Hermitian eigenvalue solver | ✔️ | ✔️ | ✔️ |
+
+Notes:
+- The C++ interface provides a non distributed interface as well.
+
 ## Getting started with DLAF
 
 ### Build
@@ -39,9 +60,35 @@ target_link_libraries(<your_target> PRIVATE DLAF::DLAF)
 ### Documentation
 
 - [Documentation of `master` branch](https://eth-cscs.github.io/DLA-Future/master/)
-- [Documentation of `v0.5.0`](https://eth-cscs.github.io/DLA-Future/v0.5.0/)
+- [Documentation of `v0.6.0`](https://eth-cscs.github.io/DLA-Future/v0.6.0/)
 
 See [DOCUMENTATION.md](DOCUMENTATION.md) for the documentation of older versions, or for the instructions to build it.
+
+## Citing
+
+If you are using DLA-Future, please cite the following paper in addition to this repository:
+
+```
+@InProceedings{10.1007/978-3-031-61763-8_13,
+    author="Solc{\`a}, Raffaele
+        and Simberg, Mikael
+        and Meli, Rocco
+        and Invernizzi, Alberto
+        and Reverdell, Auriane
+        and Biddiscombe, John",
+    editor="Diehl, Patrick
+        and Schuchart, Joseph
+        and Valero-Lara, Pedro
+        and Bosilca, George",
+    title="DLA-Future: A Task-Based Linear Algebra Library Which Provides a GPU-Enabled Distributed Eigensolver",
+    booktitle="Asynchronous Many-Task Systems and Applications",
+    year="2024",
+    publisher="Springer Nature Switzerland",
+    address="Cham",
+    pages="135--141",
+    isbn="978-3-031-61763-8"
+}
+```
 
 ## Acknowledgements
 

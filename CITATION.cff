@@ -1,5 +1,6 @@
 cff-version: 1.2.0
-title: DLA-Future 0.5.0
+title: DLA-Future 0.6.0
+repository-code: https://github.com/eth-cscs/DLA-Future
 message: >-
   If you use this software, please cite it using the
   metadata from this file.
@@ -52,5 +53,6 @@ keywords:
   - "linear algebra"
   - mpi
 license: BSD-3-Clause
-version: 0.5.0
-date-released: '2024-05-31'
+license-url: https://opensource.org/license/bsd-3-clause
+version: 0.6.0
+date-released: '2024-06-24'

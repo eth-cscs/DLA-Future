@@ -18,6 +18,7 @@
 #include <pika/runtime.hpp>
 
 #include <dlaf/auxiliary/norm.h>
+#include <dlaf/common/assert.h>
 #include <dlaf/common/format_short.h>
 #include <dlaf/common/index2d.h>
 #include <dlaf/common/range2d.h>
@@ -122,9 +123,7 @@ struct GenEigensolverMiniapp {
     GlobalElementSize matrix_size(opts.m, opts.m);
     TileElementSize block_size(opts.mb, opts.mb);
 
-    // Default capture & is needed to suppress warning of unused opts when DLAF_WITH_HDF5 is not defined.
-    // [[maybe_unused]] is not supported in lambda captures
-    ConstHostMatrixType matrix_a_ref = [&, matrix_size, block_size]() {
+    ConstHostMatrixType matrix_a_ref = [matrix_size, block_size, &comm_grid, &opts]() {
 #ifdef DLAF_WITH_HDF5
       if (!opts.input_file.empty()) {
         auto infile = FileHDF5(opts.input_file, FileHDF5::FileMode::readonly);
@@ -133,6 +132,8 @@ struct GenEigensolverMiniapp {
         else
           return infile.read<T>(opts.input_dataset_a, block_size, comm_grid, {0, 0});
       }
+#else
+      dlaf::internal::silenceUnusedWarningFor(opts);
 #endif
       using dlaf::matrix::util::set_random_hermitian;
 

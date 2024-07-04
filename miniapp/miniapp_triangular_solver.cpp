@@ -84,6 +84,7 @@ struct Options
   Options& operator=(Options&&) = default;
   Options& operator=(const Options&) = default;
 };
+}
 
 struct triangularSolverMiniapp {
   template <Backend backend, typename T>
@@ -168,8 +169,6 @@ struct triangularSolverMiniapp {
         auto elapsed_time = timeit.elapsed();
         double gigaflops = total_ops / elapsed_time / 1e9;
 
-        // clang-format off
-        // See Issue #1174
         std::cout << "[" << run_index << "]"
                   << " " << elapsed_time << "s"
                   << " " << gigaflops << "GFlop/s"
@@ -178,13 +177,9 @@ struct triangularSolverMiniapp {
                   << dlaf::internal::FormatShort{opts.op} << dlaf::internal::FormatShort{opts.diag}
                   << " " << bh.size() << " " << bh.blockSize() << " " << comm_grid.size() << " "
                   << pika::get_os_thread_count() << " " << backend << std::endl;
-        // clang-format on
         if (opts.csv_output) {
           // CSV formatted output with column names that can be read by pandas to simplify
           // post-processing CSVData{-version}, value_0, title_0, value_1, title_1
-
-          // clang-format off
-          // See Issue #1174
           std::cout << "CSVData-2, "
                     << "run, " << run_index << ", "
                     << "time, " << elapsed_time << ", "
@@ -200,7 +195,6 @@ struct triangularSolverMiniapp {
                     << "comm_cols, " << comm_grid.size().cols() << ", "
                     << "threads, " << pika::get_os_thread_count() << ", "
                     << "backend, " << backend << ", " << opts.info << std::endl;
-          // clang-format on
         }
       }
 

@@ -84,6 +84,7 @@ struct Options
   Options& operator=(Options&&) = default;
   Options& operator=(const Options&) = default;
 };
+}
 
 struct triangularMultiplicationMiniapp {
   template <Backend backend, typename T>
@@ -168,8 +169,6 @@ struct triangularMultiplicationMiniapp {
         auto elapsed_time = timeit.elapsed();
         double gigaflops = total_ops / elapsed_time / 1e9;
 
-        // clang-format off
-        // See Issue #1174
         std::cout << "[" << run_index << "]"
                   << " " << elapsed_time << "s"
                   << " " << gigaflops << "GFlop/s"
@@ -178,7 +177,6 @@ struct triangularMultiplicationMiniapp {
                   << dlaf::internal::FormatShort{opts.op} << dlaf::internal::FormatShort{opts.diag}
                   << " " << bh.size() << " " << bh.blockSize() << " " << comm_grid.size() << " "
                   << pika::get_os_thread_count() << " " << backend << std::endl;
-        // clang-format on
       }
 
       if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||

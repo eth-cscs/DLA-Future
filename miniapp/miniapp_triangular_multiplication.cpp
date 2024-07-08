@@ -49,6 +49,7 @@ using dlaf::TileElementSize;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
 using dlaf::common::Ordering;
+using pika::this_thread::experimental::sync_wait;
 
 struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::No> {
@@ -112,6 +113,11 @@ struct triangularMultiplicationMiniapp {
     auto sync_barrier = [&]() {
       a.get().waitLocalTiles();
       b.get().waitLocalTiles();
+      for (std::size_t i = 0; i < comm_grid.num_pipelines(); ++i) {
+        sync_wait(comm_grid.full_communicator_pipeline().exclusive());
+        sync_wait(comm_grid.row_communicator_pipeline().exclusive());
+        sync_wait(comm_grid.col_communicator_pipeline().exclusive());
+      }
       DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
     };
 

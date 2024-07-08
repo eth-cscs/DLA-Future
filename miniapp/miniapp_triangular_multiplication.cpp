@@ -49,9 +49,11 @@ using dlaf::TileElementSize;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
 using dlaf::common::Ordering;
+using dlaf::matrix::Matrix;
+using dlaf::matrix::MatrixMirror;
 
 struct Options
-    : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::No> {
+    : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
   SizeType m;
   SizeType n;
   SizeType mb;
@@ -82,32 +84,51 @@ struct Options
   Options& operator=(Options&&) = default;
   Options& operator=(const Options&) = default;
 };
-
-template <typename T>
-using matrix_values_t = std::function<T(const GlobalElementIndex&)>;
-
-template <typename T>
-using linear_system_t =
-    std::tuple<matrix_values_t<T>, matrix_values_t<T>, matrix_values_t<T>>;  // A, B, X
-
-template <typename T>
-linear_system_t<T> sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType m);
 }
 
 struct triangularMultiplicationMiniapp {
-  template <dlaf::Backend backend, typename T>
+  template <Backend backend, typename T>
   static void run(const Options& opts) {
+    using blas::Side;
+    using MatrixMirrorType = MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU>;
+    using ConstMatrixMirrorType = MatrixMirror<const T, DefaultDevice_v<backend>, Device::CPU>;
+    using HostMatrixType = Matrix<T, Device::CPU>;
+    using ConstHostMatrixType = Matrix<const T, Device::CPU>;
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
 
-    // Allocate memory for the matrices
-    dlaf::matrix::Matrix<T, Device::CPU> ah(GlobalElementSize{opts.m, opts.m},
-                                            TileElementSize{opts.mb, opts.mb}, comm_grid);
-    dlaf::matrix::Matrix<T, Device::CPU> bh(GlobalElementSize{opts.m, opts.n},
-                                            TileElementSize{opts.mb, opts.nb}, comm_grid);
+    const auto side = opts.side;
+    const auto uplo = opts.uplo;
+    const auto op = opts.op;
+    const auto diag = opts.diag;
+    const SizeType k = side == Side::Left ? opts.m : opts.n;
+    const SizeType kb = side == Side::Left ? opts.mb : opts.nb;
 
-    dlaf::matrix::MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU> a(ah);
-    dlaf::matrix::MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU> b(bh);
+    ConstHostMatrixType ah = [&comm_grid, k, kb]() {
+      using dlaf::matrix::util::set_random_non_zero_diagonal;
+
+      GlobalElementSize size(k, k);
+      TileElementSize block_size(kb, kb);
+      HostMatrixType matrix(size, block_size, comm_grid);
+      set_random_non_zero_diagonal(matrix);
+      return matrix;
+    }();
+
+    GlobalElementSize size_b{opts.m, opts.n};
+    TileElementSize block_size_b{opts.mb, opts.nb};
+
+    ConstHostMatrixType b_ref = [&comm_grid, &size_b, &block_size_b]() {
+      using dlaf::matrix::util::set_random;
+
+      HostMatrixType matrix(size_b, block_size_b, comm_grid);
+      set_random(matrix);
+      return matrix;
+    }();
+
+    HostMatrixType bh(size_b, block_size_b, comm_grid);
+
+    ConstMatrixMirrorType a(ah);
+    MatrixMirrorType b(bh);
 
     auto sync_barrier = [&]() {
       a.get().waitLocalTiles();
@@ -115,30 +136,19 @@ struct triangularMultiplicationMiniapp {
       DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
     };
 
-    const auto side = opts.side;
-    DLAF_ASSERT(side == blas::Side::Left, side);
-
-    const auto uplo = opts.uplo;
-    const auto op = opts.op;
-    const auto diag = opts.diag;
     const T alpha = 2.0;
 
-    double m = ah.size().rows();
-    double n = bh.size().cols();
-    auto add_mul = n * m * m / 2;
+    double m = size_b.rows();
+    double n = size_b.cols();
+    auto add_mul = n * m * (side == Side::Left ? m : n) / 2;
     const double total_ops = dlaf::total_ops<T>(add_mul, add_mul);
-
-    auto [in_op_a, out_b, in_b] = ::sampleLeftTr(uplo, op, diag, alpha, ah.size().rows());
 
     for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
       if (0 == world.rank() && run_index >= 0)
         std::cout << "[" << run_index << "]" << std::endl;
 
-      // setup matrix A and b
       using dlaf::matrix::util::set;
-      set(ah, in_op_a, op);
-      set(bh, in_b);
-      a.copySourceToTarget();
+      copy(b_ref, bh);
       b.copySourceToTarget();
 
       sync_barrier();
@@ -169,9 +179,6 @@ struct triangularMultiplicationMiniapp {
                   << pika::get_os_thread_count() << " " << backend << std::endl;
       }
 
-      b.copyTargetToSource();
-
-      // (optional) run test
       if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
           opts.do_check == dlaf::miniapp::CheckIterFreq::All) {
         DLAF_UNIMPLEMENTED("Check");
@@ -220,70 +227,4 @@ int main(int argc, char** argv) {
   p.desc_cmdline = desc_commandline;
   p.rp_callback = dlaf::initResourcePartitionerHandler;
   return pika::init(pika_main, argc, argv, p);
-}
-
-namespace {
-/// Returns a tuple of element generators of three matrices A(m x m), B (m x n), X (m x n), for which it
-/// holds op(A) X = alpha B (alpha can be any value).
-///
-/// The elements of op(A) (@p el_op_a) are chosen such that:
-///   op(A)_ik = (i+1) / (k+.5) * exp(I*(2*i-k)) for the referenced elements
-///   op(A)_ik = -9.9 otherwise,
-/// where I = 0 for real types or I is the complex unit for complex types.
-///
-/// The elements of X (@p el_x) are computed as
-///   X_kj = (k+.5) / (j+2) * exp(I*(k+j)).
-/// These data are typically used to check whether the result of the equation
-/// performed with any algorithm is consistent with the computed values.
-///
-/// Finally, the elements of B (@p el_b) should be:
-/// B_ij = (Sum_k op(A)_ik * X_kj) / alpha
-///      = (op(A)_ii * X_ij + (kk-1) * gamma) / alpha,
-/// where gamma = (i+1) / (j+2) * exp(I*(2*i+j)),
-///       kk = i+1 if op(a) is an lower triangular matrix, or
-///       kk = m-i if op(a) is an lower triangular matrix.
-/// Therefore
-/// B_ij = (X_ij + (kk-1) * gamma) / alpha, if diag == Unit
-/// B_ij = kk * gamma / alpha, otherwise.
-template <typename T>
-linear_system_t<T> sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType m) {
-  static_assert(std::is_arithmetic_v<T> && !std::is_integral_v<T>,
-                "it is valid just with floating point values");
-
-  bool op_a_lower = (uplo == blas::Uplo::Lower && op == blas::Op::NoTrans) ||
-                    (uplo == blas::Uplo::Upper && op != blas::Op::NoTrans);
-
-  auto el_op_a = [op_a_lower, diag](const GlobalElementIndex& index) -> T {
-    if ((op_a_lower && index.row() < index.col()) || (!op_a_lower && index.row() > index.col()) ||
-        (diag == blas::Diag::Unit && index.row() == index.col()))
-      return static_cast<T>(-9.9);
-
-    const T i = index.row();
-    const T k = index.col();
-
-    return (i + static_cast<T>(1)) / (k + static_cast<T>(.5));
-  };
-
-  auto el_x = [](const GlobalElementIndex& index) -> T {
-    const T k = index.row();
-    const T j = index.col();
-
-    return (k + static_cast<T>(.5)) / (j + static_cast<T>(2));
-  };
-
-  auto el_b = [m, alpha, diag, op_a_lower, el_x](const GlobalElementIndex& index) -> T {
-    const dlaf::BaseType<T> kk = op_a_lower ? index.row() + 1 : m - index.row();
-
-    const T i = index.row();
-    const T j = index.col();
-    const T gamma = (i + 1) / (j + 2);
-    if (diag == blas::Diag::Unit)
-      return ((kk - 1) * gamma + el_x(index)) / alpha;
-    else
-      return kk * gamma / alpha;
-  };
-
-  return {el_op_a, el_b, el_x};
-}
-
 }

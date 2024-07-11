@@ -12,10 +12,13 @@
 
 #include <pika/execution.hpp>
 
+#include <dlaf/communication/broadcast_panel.h>
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/kernels/all_reduce.h>
 #include <dlaf/communication/kernels/broadcast.h>
 #include <dlaf/eigensolver/reduction_to_band/api.h>
 #include <dlaf/eigensolver/reduction_to_band/common.h>
+#include <dlaf/factorization/qr.h>
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/copy_tile.h>
 #include <dlaf/matrix/matrix.h>
@@ -25,13 +28,198 @@
 #include <dlaf/sender/transform_mpi.h>
 
 //
-#include <iostream>
-
 #include <dlaf/matrix/print_numpy.h>
 
 namespace dlaf::eigensolver::internal {
 
-namespace ca_red2band {}
+namespace ca_red2band {
+template <Backend B, Device D, class T>
+void hemm(comm::Index2D rank_qr, matrix::Panel<Coord::Col, T, D>& W1,
+          matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>& W1T,
+          const matrix::SubMatrixView& at_view, matrix::Matrix<const T, D>& A,
+          matrix::Panel<Coord::Col, const T, D>& W0,
+          matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>& W0T,
+          comm::CommunicatorPipeline<comm::CommunicatorType::Row>& mpi_row_chain,
+          comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_chain) {
+  namespace ex = pika::execution::experimental;
+
+  using red2band::hemmDiag;
+  using red2band::hemmOffDiag;
+
+  using pika::execution::thread_priority;
+
+  const auto dist = A.distribution();
+  const auto rank = dist.rankIndex();
+
+  // Note:
+  // They have to be set to zero, because all tiles are going to be reduced, and some tiles may not get
+  // "initialized" during computation, so they should not contribute with any spurious value to final result.
+  matrix::util::set0<B>(thread_priority::high, W1);
+  matrix::util::set0<B>(thread_priority::high, W1T);
+
+  const LocalTileIndex at_offset = at_view.begin();
+
+  for (SizeType i_lc = at_offset.row(); i_lc < dist.local_nr_tiles().rows(); ++i_lc) {
+    // Note:
+    // diagonal included: get where the first upper tile is in local coordinates
+    const SizeType i = dist.template global_tile_from_local_tile<Coord::Row>(i_lc);
+    const auto j_end_lc = dist.template next_local_tile_from_global_tile<Coord::Col>(i + 1);
+
+    for (SizeType j_lc = j_end_lc - 1; j_lc >= at_offset.col(); --j_lc) {
+      const LocalTileIndex ij_lc{i_lc, j_lc};
+      const GlobalTileIndex ij = dist.global_tile_index(ij_lc);
+
+      const bool is_diagonal_tile = (ij.row() == ij.col());
+
+      auto getSubA = [&A, &at_view, ij_lc]() { return splitTile(A.read(ij_lc), at_view(ij_lc)); };
+
+      if (is_diagonal_tile) {
+        const comm::IndexT_MPI id_qr_R = dist.template rank_global_tile<Coord::Row>(ij.col());
+
+        // Note:
+        // Use W0 just if the tile belongs to the current local transformation.
+        if (id_qr_R != rank_qr.row())
+          continue;
+
+        hemmDiag<B>(thread_priority::high, getSubA(), W0.read(ij_lc), W1.readwrite(ij_lc));
+      }
+      else {
+        const GlobalTileIndex ijL = ij;
+        const comm::IndexT_MPI id_qr_lower_R = dist.template rank_global_tile<Coord::Row>(ijL.col());
+        if (id_qr_lower_R == rank_qr.row()) {
+          // Note:
+          // Since it is not a diagonal tile, otherwise it would have been managed in the previous
+          // branch, the second operand might not be available in W but it is accessible through the
+          // support panel W1T.
+          // However, since we are still computing the "straight" part, the result can be stored
+          // in the "local" panel W1.
+          hemmOffDiag<B>(thread_priority::high, blas::Op::NoTrans, getSubA(), W0T.read(ij_lc),
+                         W1.readwrite(ij_lc));
+        }
+
+        const GlobalTileIndex ijU = transposed(ij);
+        const comm::IndexT_MPI id_qr_upper_R = dist.template rank_global_tile<Coord::Row>(ijU.col());
+        if (id_qr_upper_R == rank_qr.row()) {
+          // Note:
+          // Here we are considering the hermitian part of A, so pretend to deal with transposed coordinate.
+          // Check if the result still belongs to the same rank, otherwise store it in the support panel.
+          const comm::IndexT_MPI owner_row = dist.template rank_global_tile<Coord::Row>(ijU.row());
+          const SizeType iU_lc = dist.template local_tile_from_global_tile<Coord::Row>(ij.col());
+          const LocalTileIndex i_w1_lc(iU_lc, 0);
+          const LocalTileIndex i_w1t_lc(0, ij_lc.col());
+          auto tile_w1 = (rank.row() == owner_row) ? W1.readwrite(i_w1_lc) : W1T.readwrite(i_w1t_lc);
+
+          hemmOffDiag<B>(thread_priority::high, blas::Op::ConjTrans, getSubA(), W0.read(ij_lc),
+                         std::move(tile_w1));
+        }
+      }
+    }
+  }
+
+  // Note:
+  // At this point, partial results of W1 are available in the panels, and they have to be reduced,
+  // both row-wise and col-wise. The final W1 result will be available just on Ai panel column.
+
+  // Note:
+  // The first step in reducing partial results distributed over W1 and W1T, it is to reduce the row
+  // panel W1T col-wise, by collecting all W1T results on the rank which can "mirror" the result on its
+  // rows (i.e. diagonal). So, for each tile of the row panel, select who is the "diagonal" rank that can
+  // mirror and reduce on it.
+  if (mpi_col_chain.size() > 1) {
+    for (const auto& i_wt_lc : W1T.iteratorLocal()) {
+      const auto i_diag = dist.template global_tile_from_local_tile<Coord::Col>(i_wt_lc.col());
+      const auto rank_owner_row = dist.template rank_global_tile<Coord::Row>(i_diag);
+
+      if (rank_owner_row == rank.row()) {
+        // Note:
+        // Since it is the owner, it has to perform the "mirroring" of the results from columns to
+        // rows.
+        // Moreover, it reduces in place because the owner of the diagonal stores the partial result
+        // directly in W1 (without using W1T)
+        const auto i_w1_lc = dist.template local_tile_from_global_tile<Coord::Row>(i_diag);
+        ex::start_detached(comm::schedule_reduce_recv_in_place(mpi_col_chain.exclusive(), MPI_SUM,
+                                                               W1.readwrite({i_w1_lc, 0})));
+      }
+      else {
+        ex::start_detached(comm::schedule_reduce_send(mpi_col_chain.exclusive(), rank_owner_row, MPI_SUM,
+                                                      W1T.read(i_wt_lc)));
+      }
+    }
+  }
+
+  // Note:
+  // At this point partial results are all collected in X (Xt has been embedded in previous step),
+  // so the last step needed is to reduce these last partial results in the final results.
+  if (mpi_row_chain.size() > 1) {
+    for (const auto& i_w1_lc : W1.iteratorLocal()) {
+      if (rank_qr.col() == rank.col())
+        ex::start_detached(comm::schedule_reduce_recv_in_place(mpi_row_chain.exclusive(), MPI_SUM,
+                                                               W1.readwrite(i_w1_lc)));
+      else
+        ex::start_detached(comm::schedule_reduce_send(mpi_row_chain.exclusive(), rank_qr.col(), MPI_SUM,
+                                                      W1.read(i_w1_lc)));
+    }
+  }
+}
+
+template <Backend B, Device D, class T>
+void her2kUpdateTrailingMatrix(comm::Index2D rank_qr, const matrix::SubMatrixView& at_view,
+                               matrix::Matrix<T, D>& a, matrix::Panel<Coord::Col, const T, D>& W3,
+                               matrix::Panel<Coord::Col, const T, D>& V) {
+  static_assert(std::is_signed_v<BaseType<T>>, "alpha in computations requires to be -1");
+
+  using pika::execution::thread_priority;
+  using red2band::her2kDiag;
+  using red2band::her2kOffDiag;
+
+  const auto dist = a.distribution();
+  const comm::Index2D rank = dist.rank_index();
+
+  const LocalTileIndex at_offset = at_view.begin();
+
+  if (rank_qr.row() != rank.row())
+    return;
+
+  for (SizeType i_lc = at_offset.row(); i_lc < dist.local_nr_tiles().rows(); ++i_lc) {
+    // Note:
+    // diagonal included: get where the first upper tile is in local coordinates
+    const SizeType i = dist.template global_tile_from_local_tile<Coord::Row>(i_lc);
+    const auto j_end_lc = dist.template next_local_tile_from_global_tile<Coord::Col>(i + 1);
+
+    for (SizeType j_lc = j_end_lc - 1; j_lc >= at_offset.col(); --j_lc) {
+      const LocalTileIndex ij_lc{i_lc, j_lc};
+      const GlobalTileIndex ij = dist.global_tile_index(ij_lc);
+
+      const comm::IndexT_MPI id_qr_L = dist.template rank_global_tile<Coord::Row>(ij.row());
+      const comm::IndexT_MPI id_qr_R = dist.template rank_global_tile<Coord::Row>(ij.col());
+
+      // Note: this computation applies just to tiles where transformation applies both from L and R
+      if (id_qr_L != id_qr_R)
+        continue;
+
+      const bool is_diagonal_tile = (ij.row() == ij.col());
+
+      auto getSubA = [&a, &at_view, ij_lc]() { return splitTile(a.readwrite(ij_lc), at_view(ij_lc)); };
+
+      // The first column of the trailing matrix (except for the very first global tile) has to be
+      // updated first, in order to unlock the next iteration as soon as possible.
+      const auto priority = (j_lc == at_offset.col()) ? thread_priority::high : thread_priority::normal;
+
+      if (is_diagonal_tile) {
+        her2kDiag<B>(priority, V.read(ij_lc), W3.read(ij_lc), getSubA());
+      }
+      else {
+        // TODO check and document why tranposed operand can be accessed with same index locally
+        // A -= W3 . V*
+        her2kOffDiag<B>(priority, W3.read(ij_lc), V.read(ij_lc), getSubA());
+        // A -= V . W3*
+        her2kOffDiag<B>(priority, V.read(ij_lc), W3.read(ij_lc), getSubA());
+      }
+    }
+  }
+}
+
+}
 
 // Distributed implementation of reduction to band
 template <Backend B, Device D, class T>
@@ -39,6 +227,10 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
                                                         Matrix<T, D>& mat_a, const SizeType band_size) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
+
+  using common::RoundRobin;
+  using matrix::Panel;
+  using matrix::StoreTransposed;
 
   const auto& dist = mat_a.distribution();
   const comm::Index2D rank = dist.rank_index();
@@ -74,6 +266,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
     return {std::move(mat_taus_1st), std::move(mat_taus_2nd), std::move(mat_hh_2nd)};
 
   auto mpi_col_chain = grid.col_communicator_pipeline();
+  auto mpi_row_chain = grid.row_communicator_pipeline();
 
   constexpr std::size_t n_workspaces = 2;
 
@@ -85,38 +278,223 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
   const matrix::Distribution dist_heads(
       LocalElementSize(dist.grid_size().rows() * dist.block_size().rows(), dist.block_size().cols()),
       dist.block_size());
-  common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panels_heads(n_workspaces, dist_heads);
+
+  RoundRobin<Panel<Coord::Col, T, D>> panels_heads(n_workspaces, dist_heads);
+
+  // update trailing matrix workspaces
+  RoundRobin<Panel<Coord::Col, T, D>> panels_v(n_workspaces, dist);
+  RoundRobin<Panel<Coord::Row, T, D, StoreTransposed::Yes>> panels_vt(n_workspaces, dist);
+
+  RoundRobin<Panel<Coord::Col, T, D>> panels_w0(n_workspaces, dist);
+  RoundRobin<Panel<Coord::Row, T, D, StoreTransposed::Yes>> panels_w0t(n_workspaces, dist);
+
+  RoundRobin<Panel<Coord::Col, T, D>> panels_w1(n_workspaces, dist);
+  RoundRobin<Panel<Coord::Row, T, D, StoreTransposed::Yes>> panels_w1t(n_workspaces, dist);
+
+  RoundRobin<Panel<Coord::Col, T, D>> panels_w3(n_workspaces, dist);
 
   DLAF_ASSERT(mat_a.block_size().cols() == band_size, mat_a.block_size().cols(), band_size);
   const SizeType ntiles = (nrefls - 1) / band_size + 1;
 
+  const bool is_full_band = (band_size == dist.blockSize().cols());
+
   for (SizeType j = 0; j < ntiles; ++j) {
     const SizeType i = j + 1;
-    // const SizeType j_lc = dist.template next_local_tile_from_global_tile<Coord::Col>(j);
+
+    const SizeType nrefls_step = dist_taus.tile_size_of({0, j}).rows();
 
     // panel
     const GlobalTileIndex panel_offset(i, j);
     const GlobalElementIndex panel_offset_el(panel_offset.row() * band_size,
                                              panel_offset.col() * band_size);
     matrix::SubPanelView panel_view(dist, panel_offset_el, band_size);
-    const comm::IndexT_MPI rank_panel = dist.template rank_global_tile<Coord::Col>(panel_offset.col());
+
+    const comm::IndexT_MPI rank_panel(dist.template rank_global_tile<Coord::Col>(panel_offset.col()));
+
+    const SizeType n_qr_heads =
+        std::min<SizeType>(panel_view.offset().row() + grid.size().rows(), dist.nr_tiles().rows()) -
+        panel_view.offset().row();
 
     // trailing
-    const GlobalTileIndex trailing_offset(i, j + 1);
-    const GlobalElementIndex trailing_offset_el(trailing_offset.row() * band_size,
-                                                trailing_offset.col() * band_size);
-    matrix::SubMatrixView(dist, trailing_offset_el);
+    const GlobalTileIndex at_offset(i, j + 1);
+    const GlobalElementIndex at_offset_el(at_offset.row() * band_size, at_offset.col() * band_size);
+    const LocalTileIndex at_offset_lc(
+        dist.template next_local_tile_from_global_tile<Coord::Row>(at_offset.row()),
+        dist.template next_local_tile_from_global_tile<Coord::Col>(at_offset.col()));
+    matrix::SubMatrixView at_view(dist, at_offset_el);
 
     // PANEL: just ranks in the current column
     // QR local (HH reflectors stored in-place)
-    if (rank_panel == rank.col()) {
-      // Note:  SubPanelView is (at most) band_size wide, but it may contain a smaller number of
-      //        reflectors (i.e. at the end when last reflector size is 1)
+    if (rank_panel == rank.col())
       red2band::local::computePanelReflectors(mat_a, mat_taus_1st, panel_offset.col(), panel_view);
-    }
 
     // TRAILING 1st pass
-    {}
+    if (at_offset_el.isIn(mat_a.size())) {
+      auto& ws_V = panels_v.nextResource();
+      auto& ws_VT = panels_vt.nextResource();
+
+      ws_V.setRangeStart(at_offset);
+      ws_V.setWidth(nrefls_step);
+
+      const LocalTileIndex zero_lc(0, 0);
+      matrix::Matrix<T, D> ws_T({nrefls_step, nrefls_step}, dist.block_size());
+
+      if (rank_panel == rank.col()) {
+        using factorization::internal::computeTFactor;
+        using red2band::local::setupReflectorPanelV;
+
+        constexpr bool has_head = true;  // Note: they are local, so every rank has its own head
+        setupReflectorPanelV<B, D, T>(has_head, panel_view, nrefls_step, ws_V, mat_a, !is_full_band);
+
+        const GlobalTileIndex j_tau(j, 0);
+        computeTFactor<B>(ws_V, mat_taus_1st.read(j_tau), ws_T.readwrite(zero_lc));
+      }
+
+      ws_VT.setRangeStart(at_offset);
+      ws_VT.setHeight(nrefls_step);
+
+      comm::broadcast(rank_panel, ws_V, ws_VT, mpi_row_chain, mpi_col_chain);
+
+      // W = V T
+      auto& ws_W0 = panels_w0.nextResource();
+      auto& ws_W0T = panels_w0t.nextResource();
+
+      ws_W0.setRangeStart(at_offset);
+      ws_W0T.setRangeStart(at_offset);
+
+      ws_W0.setWidth(nrefls_step);
+      ws_W0T.setHeight(nrefls_step);
+
+      if (rank_panel == rank.col())
+        red2band::local::trmmComputeW<B, D>(ws_W0, ws_V, ws_T.read(zero_lc));
+
+      comm::broadcast(rank_panel, ws_W0, ws_W0T, mpi_row_chain, mpi_col_chain);
+
+      // Note: apply local transformations, one after the other
+      auto& ws_W1 = panels_w1.nextResource();
+      auto& ws_W1T = panels_w1t.nextResource();
+      matrix::Matrix<T, D> ws_W2 = std::move(ws_T);
+
+      for (int idx_qr_head = 0; idx_qr_head < n_qr_heads; ++idx_qr_head) {
+        const SizeType head_qr = at_view.offset().row() + idx_qr_head;
+        const comm::Index2D rank_qr(dist.template rank_global_tile<Coord::Row>(head_qr), rank_panel);
+
+        ws_W1.setRangeStart(at_offset);
+        ws_W1.setWidth(nrefls_step);
+
+        ws_W1T.setRangeStart(at_offset);
+        ws_W1T.setHeight(nrefls_step);
+
+        // W1 = A W0
+        // Note:
+        // it will fill up all W1 (distributed) and it will read just part of A, i.e. columns where this
+        // local transformation should be applied from the right.
+        using ca_red2band::hemm;
+        hemm<B>(rank_qr, ws_W1, ws_W1T, at_view, mat_a, ws_W0, ws_W0T, mpi_row_chain, mpi_col_chain);
+
+        // Note:
+        // W1T has been used as support panel, so reset it again.
+        ws_W1T.reset();
+        ws_W1T.setRangeStart(at_offset);
+        ws_W1T.setHeight(nrefls_step);
+
+        comm::broadcast(rank_panel, ws_W1, ws_W1T, mpi_row_chain, mpi_col_chain);
+
+        // LR
+        // A -= V W1* + W1 V* - V W0* W1 V*
+        if (rank.row() == rank_qr.row()) {
+          // W2 = W0.T W1
+          red2band::local::gemmComputeW2<B, D>(ws_W2, ws_W0, ws_W1);
+
+          // Note:
+          // Next steps for L and R need W1, so we create a copy that we are going to update for this step.
+          auto& ws_W3 = panels_w3.nextResource();
+          ws_W3.setRangeStart(at_offset);
+          ws_W3.setWidth(nrefls_step);
+
+          for (const auto& idx : ws_W1.iteratorLocal())
+            ex::start_detached(ex::when_all(ws_W1.read(idx), ws_W3.readwrite(idx)) |
+                               dlaf::matrix::copy(di::Policy<Backend::MC>{}));
+
+          // W1 -= 0.5 V W2
+          red2band::local::gemmUpdateX<B, D>(ws_W3, ws_W2, ws_V);
+          // A -= W1 V.T + V W1.T
+          ca_red2band::her2kUpdateTrailingMatrix<B>(rank_qr, at_view, mat_a, ws_W3, ws_V);
+
+          ws_W3.reset();
+        }
+
+        // R (exclusively)
+        // A -= W1 V*
+        // Note: all rows, but just the columns that are in the local transformation rank
+        for (SizeType j_lc = at_offset_lc.col(); j_lc < dist.local_nr_tiles().cols(); ++j_lc) {
+          const SizeType j = dist.template global_tile_from_local_tile<Coord::Col>(j_lc);
+          const comm::IndexT_MPI id_qr_R = dist.template rank_global_tile<Coord::Row>(j);
+
+          if (rank_qr.row() != id_qr_R)
+            continue;
+
+          auto&& tile_vt = ws_VT.read({0, j_lc});
+
+          for (SizeType i_lc = at_offset_lc.row(); i_lc < dist.local_nr_tiles().rows(); ++i_lc) {
+            const LocalTileIndex ij_lc(i_lc, j_lc);
+            const GlobalTileIndex ij = dist.global_tile_index(ij_lc);
+
+            // TODO just lower part of trailing matrix
+            if (ij.row() < ij.col())
+              continue;
+
+            const comm::IndexT_MPI id_qr_L = dist.template rank_global_tile<Coord::Row>(ij.row());
+
+            // Note: exclusively from R, if it is an LR tile, it is computed elsewhere
+            if (id_qr_L == id_qr_R)
+              continue;
+
+            ex::start_detached(di::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
+                                               ws_W1.read(ij_lc), tile_vt, T(1),
+                                               mat_a.readwrite(ij_lc)) |
+                               tile::gemm(di::Policy<B>()));
+          }
+        }
+
+        // L (exclusively)
+        // A -= V W1*
+        // Note: all cols, but just the rows of current transformation
+        if (rank_qr.row() == rank.row()) {
+          for (SizeType i_lc = at_offset_lc.row(); i_lc < dist.local_nr_tiles().rows(); ++i_lc) {
+            const comm::IndexT_MPI id_qr_L = rank_qr.row();
+
+            for (SizeType j_lc = at_offset_lc.col(); j_lc < dist.local_nr_tiles().cols(); ++j_lc) {
+              const LocalTileIndex ij_lc(i_lc, j_lc);
+              const GlobalTileIndex ij = dist.global_tile_index(ij_lc);
+
+              // TODO just lower part of trailing matrix
+              if (ij.row() < ij.col())
+                continue;
+
+              const comm::IndexT_MPI id_qr_R = dist.template rank_global_tile<Coord::Row>(ij.col());
+
+              // Note: exclusively from L, if it is an LR tile, it is computed elsewhere
+              if (id_qr_L == id_qr_R)
+                continue;
+
+              ex::start_detached(di::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
+                                                 ws_V.read(ij_lc), ws_W1T.read(ij_lc), T(1),
+                                                 mat_a.readwrite(ij_lc)) |
+                                 tile::gemm(di::Policy<B>()));
+            }
+          }
+        }
+
+        ws_W1T.reset();
+        ws_W1.reset();
+      }
+
+      ws_W0T.reset();
+      ws_W0.reset();
+      ws_VT.reset();
+      ws_V.reset();
+    }
 
     // PANEL: just ranks in the current column
     // QR local with just heads (HH reflectors have to be computed elsewhere, 1st-pass in-place)

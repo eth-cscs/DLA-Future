@@ -500,21 +500,20 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
     // QR local with just heads (HH reflectors have to be computed elsewhere, 1st-pass in-place)
     if (rank_panel == rank.col()) {
       auto&& panel_heads = panels_heads.nextResource();
+      panel_heads.setRangeEnd({n_qr_heads, 0});
+      panel_heads.setWidth(nrefls_step);
 
-      const SizeType i_begin_head = i;
-      const SizeType i_end_head =
-          std::min((i_begin_head + dist.grid_size().rows() + 1), dist.nr_tiles().rows());
+      for (int idx_head = 0; idx_head < n_qr_heads; ++idx_head) {
+        using dlaf::comm::schedule_bcast_recv;
+        using dlaf::comm::schedule_bcast_send;
 
-      const SizeType nheads = i_end_head - i_begin_head;
-      panel_heads.setRangeEnd({nheads, 0});
+        const SizeType i_head = panel_view.offset().row() + idx_head;
+        const comm::Index2D rank_head(dist.template rank_global_tile<Coord::Row>(i_head), rank_panel);
 
-      for (SizeType i_head = i_begin_head, idx = 0; i_head < i_end_head; ++i_head, ++idx) {
-        const LocalTileIndex idx_panel_head(idx, 0);
         const GlobalTileIndex ij_head(i_head, j);
+        const LocalTileIndex idx_panel_head(idx_head, 0);
 
-        const comm::IndexT_MPI rank_owner = dist.template rank_global_tile<Coord::Row>(i_head);
-
-        if (rank.row() == rank_owner) {
+        if (rank.row() == rank_head.row()) {
           // copy - set - send
           ex::start_detached(ex::when_all(mat_a.read(ij_head), panel_heads.readwrite(idx_panel_head)) |
                              di::transform(di::Policy<B>(), [=](const auto& head_in, auto&& head) {
@@ -523,59 +522,48 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
                                              head.size().cols(), T(0), T(0), head.ptr({1, 0}),
                                              head.ld());
                              }));
-
-          ex::start_detached(dlaf::comm::schedule_bcast_send(mpi_col_chain.exclusive(),
-                                                             panel_heads.read(idx_panel_head)));
+          ex::start_detached(schedule_bcast_send(mpi_col_chain.exclusive(),
+                                                 panel_heads.read(idx_panel_head)));
         }
         else {
           // receive
-          ex::start_detached(dlaf::comm::schedule_bcast_recv(mpi_col_chain.exclusive(), rank_owner,
-                                                             panel_heads.readwrite(idx_panel_head)));
+          ex::start_detached(schedule_bcast_recv(mpi_col_chain.exclusive(), rank_head.row(),
+                                                 panel_heads.readwrite(idx_panel_head)));
         }
       }
 
-      // for (auto ij : panel_heads.iteratorLocal()) {
-      //   const auto& tile = pika::this_thread::experimental::sync_wait(panel_heads.read(ij)).get();
-      //   std::cout << "heads(" << ij << ") = ";
-      //   print(format::numpy{}, tile);
-      // }
-
       // QR local on heads
       // TODO check if some head tiles are not used and limit (or set to zero as a starting point)
-      matrix::SubPanelView panel_view(dist_heads, {0, 0}, band_size);
-      red2band::local::computePanelReflectors(panel_heads, mat_taus_2nd, 0, panel_view);
-
-      for (auto ij : panel_heads.iteratorLocal()) {
-        const auto& tile = pika::this_thread::experimental::sync_wait(panel_heads.read(ij)).get();
-        std::cout << "heads_u(" << ij << ") = ";
-        print(format::numpy{}, tile);
+      {
+        matrix::SubPanelView panel_heads_view(dist_heads, {0, 0}, band_size);
+        red2band::local::computePanelReflectors(panel_heads, mat_taus_2nd, 0, panel_heads_view);
       }
 
       // TODO copy back data
       // - just head of heads upper to mat_a
       // - reflectors to hh_2nd
 
-      const GlobalTileIndex ij_hoh(i_begin_head, j);
+      const GlobalTileIndex ij_hoh(panel_view.offset().row(), j);
       if (rank.row() == dist.template rank_global_tile<Coord::Row>(ij_hoh.row()))
         ex::start_detached(ex::when_all(panel_heads.read({0, 0}), mat_a.readwrite(ij_hoh)) |
                            di::transform(di::Policy<B>(), [](const auto& hoh, auto&& hoh_a) {
                              common::internal::SingleThreadedBlasScope single;
                              lapack::lacpy(blas::Uplo::Upper, hoh.size().rows(), hoh.size().cols(),
                                            hoh.ptr(), hoh.ld(), hoh_a.ptr(), hoh_a.ld());
-                             // std::cout << "hoh_a = ";
-                             // print(format::numpy{}, hoh_a);
                            }));
 
-      for (SizeType i_head = i_begin_head, idx = 0; i_head < i_end_head; ++i_head, ++idx) {
-        const comm::IndexT_MPI rank_owner = dist.template rank_global_tile<Coord::Row>(i_head);
+      for (int idx_qr_head = 0; idx_qr_head < n_qr_heads; ++idx_qr_head) {
+        const SizeType i_head = panel_view.offset().row() + idx_qr_head;
+        const comm::Index2D rank_head(dist.template rank_global_tile<Coord::Row>(i_head), rank_panel);
 
-        if (rank.row() == rank_owner) {
-          const LocalTileIndex idx_panel_head(idx, 0);
-          const GlobalTileIndex ij_hh_2nd(0, j);
-          const bool is_hoh = (idx == 0);
+        if (rank.row() == rank_head.row()) {
+          const LocalTileIndex idx_panel_head(idx_qr_head, 0);
+          const GlobalTileIndex ij_head(i_head, j);
+
+          const bool is_hoh = (i_head == panel_view.offset().row());
 
           auto sender_heads =
-              ex::when_all(panel_heads.read(idx_panel_head), mat_hh_2nd.readwrite(ij_hh_2nd));
+              ex::when_all(panel_heads.read(idx_panel_head), mat_hh_2nd.readwrite(ij_head));
 
           if (is_hoh)
             ex::start_detached(std::move(sender_heads) |

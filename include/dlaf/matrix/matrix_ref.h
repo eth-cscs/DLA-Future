@@ -55,6 +55,11 @@ public:
       : internal::MatrixBase(Distribution(mat.distribution(), spec)), mat_const_(mat),
         origin_(spec.origin) {}
 
+  /// Create a matrix reference of @p mat.
+  ///
+  /// @param[in] mat is the input matrix,
+  MatrixRef(Matrix<const T, D>& mat) : MatrixRef<const T, D>(mat, {{0, 0}, mat.distribution().size()}) {}
+
   MatrixRef() = delete;
   MatrixRef(MatrixRef&&) = delete;
   MatrixRef(const MatrixRef&) = delete;
@@ -126,6 +131,11 @@ public:
   /// @pre spec.origin + spec.size <= mat.size().
   MatrixRef(Matrix<T, D>& mat, const SubMatrixSpec& spec)
       : MatrixRef<const T, D>(mat, spec), mat_(mat) {}
+
+  /// Create a matrix reference of @p mat.
+  ///
+  /// @param[in] mat is the input matrix,
+  MatrixRef(Matrix<T, D>& mat) : MatrixRef<const T, D>(mat), mat_(mat) {}
 
   MatrixRef() = delete;
   MatrixRef(MatrixRef&&) = delete;

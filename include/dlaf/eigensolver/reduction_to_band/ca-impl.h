@@ -418,11 +418,10 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
   Matrix<T, Device::CPU> mat_taus_2nd(dist_taus);
 
   // Note:
-  // row-panel distributed over columns, but replicated over rows
-  const matrix::Distribution dist_hh_2nd(GlobalElementSize(dist.block_size().rows(), dist.size().cols()),
-                                         dist.block_size(), comm::Size2D(1, dist.grid_size().cols()),
-                                         comm::Index2D(0, rank.col()),
-                                         comm::Index2D(0, dist.source_rank_index().col()));
+  // Matrix distributed as the input one, but it has room for storing just one row per rank.
+  const matrix::Distribution dist_hh_2nd(
+      GlobalElementSize(dist.grid_size().rows() * dist.block_size().rows(), dist.size().cols()),
+      dist.block_size(), dist.grid_size(), rank, dist.source_rank_index());
   Matrix<T, D> mat_hh_2nd(dist_hh_2nd);
 
   if (nrefls == 0)
@@ -463,6 +462,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
 
   for (SizeType j = 0; j < ntiles; ++j) {
     const SizeType i = j + 1;
+    const SizeType j_lc = dist.template local_tile_from_global_tile<Coord::Col>(j);
 
     const SizeType nrefls_step = dist_taus.tile_size_of({j, 0}).rows();
 
@@ -730,7 +730,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
           const auto i_head = dist.template global_tile_from_local_tile<Coord::Row>(i_head_lc);
           const auto idx_head = i_head - panel_view.offset().row();
           const LocalTileIndex idx_panel_head(idx_head, 0);
-          const GlobalTileIndex ij_head(0, j);
+          const LocalTileIndex ij_head(0, j_lc);
 
           auto sender_heads =
               ex::when_all(panel_heads.read(idx_panel_head), mat_hh_2nd.readwrite(ij_head));
@@ -774,7 +774,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
 
       if (rank_panel == rank.col()) {
         // setup reflector panel
-        const GlobalTileIndex ij_head(0, j);
+        const LocalTileIndex ij_head(0, j_lc);
         const LocalTileIndex ij_vhh_lc(ws_V.rangeStartLocal(), 0);
 
         if (rank_has_head_row) {

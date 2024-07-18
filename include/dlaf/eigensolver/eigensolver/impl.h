@@ -13,7 +13,6 @@
 #include <cmath>
 #include <optional>
 #include <sstream>
-#include <vector>
 
 #include <dlaf/blas/tile.h>
 #include <dlaf/common/vector.h>
@@ -51,7 +50,7 @@ void Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<Bas
 
   matrix::internal::MatrixRef mat_e_ref(mat_e);
   bt_band_to_tridiagonal<B>(band_size, mat_e_ref, ret.hh_reflectors);
-  bt_reduction_to_band<B>(band_size, mat_e, mat_a, mat_taus);
+  bt_reduction_to_band<B>(band_size, mat_e_ref, mat_a, mat_taus);
 }
 
 template <Backend B, Device D, class T>
@@ -84,7 +83,7 @@ void Eigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo, M
 
   matrix::internal::MatrixRef mat_e_ref(mat_e);
   bt_band_to_tridiagonal<B>(grid, band_size, mat_e_ref, ret.hh_reflectors);
-  bt_reduction_to_band<B>(grid, band_size, mat_e, mat_a, mat_taus);
+  bt_reduction_to_band<B>(grid, band_size, mat_e_ref, mat_a, mat_taus);
 
 #ifdef DLAF_WITH_HDF5
   if (getTuneParameters().debug_dump_eigensolver_data) {

@@ -36,6 +36,7 @@
 #include <dlaf/matrix/index.h>
 #include <dlaf/matrix/layout_info.h>
 #include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_ref.h>
 #include <dlaf/matrix/panel.h>
 #include <dlaf/matrix/views.h>
 #include <dlaf/util_matrix.h>
@@ -130,7 +131,7 @@ void gemmTrailingMatrix(pika::execution::thread_priority priority, PanelTileSend
 
 template <Backend backend, Device device, class T>
 void BackTransformationReductionToBand<backend, device, T>::call(
-    const SizeType b, Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
+    const SizeType b, matrix::internal::MatrixRef<T, device>& mat_c, Matrix<const T, device>& mat_v,
     Matrix<const T, Device::CPU>& mat_taus) {
   using namespace bt_red_band;
 
@@ -237,7 +238,8 @@ void BackTransformationReductionToBand<backend, device, T>::call(
 
 template <Backend B, Device D, class T>
 void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid& grid, const SizeType b,
-                                                      Matrix<T, D>& mat_c, Matrix<const T, D>& mat_v,
+                                                      matrix::internal::MatrixRef<T, D>& mat_c,
+                                                      Matrix<const T, D>& mat_v,
                                                       Matrix<const T, Device::CPU>& mat_taus) {
   namespace ex = pika::execution::experimental;
   using namespace bt_red_band;

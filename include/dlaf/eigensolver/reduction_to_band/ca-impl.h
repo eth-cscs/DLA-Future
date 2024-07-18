@@ -219,6 +219,175 @@ void her2kUpdateTrailingMatrix(comm::Index2D rank_qr, const matrix::SubMatrixVie
   }
 }
 
+template <Backend B, Device D, class T>
+void hemm2nd(comm::IndexT_MPI rank_panel, matrix::Panel<Coord::Col, T, D>& W1,
+             matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>& W1T,
+             const matrix::SubMatrixView& at_view, const SizeType j_end, matrix::Matrix<const T, D>& A,
+             matrix::Panel<Coord::Col, const T, D>& W0,
+             matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>& W0T,
+             comm::CommunicatorPipeline<comm::CommunicatorType::Row>& mpi_row_chain,
+             comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_chain) {
+  namespace ex = pika::execution::experimental;
+
+  using red2band::hemmDiag;
+  using red2band::hemmOffDiag;
+
+  using pika::execution::thread_priority;
+
+  const auto dist = A.distribution();
+  const auto rank = dist.rankIndex();
+
+  // Note:
+  // They have to be set to zero, because all tiles are going to be reduced, and some tiles may not get
+  // "initialized" during computation, so they should not contribute with any spurious value to final result.
+  matrix::util::set0<B>(thread_priority::high, W1);
+  matrix::util::set0<B>(thread_priority::high, W1T);
+
+  const LocalTileIndex at_offset = at_view.begin();
+
+  const SizeType jR_end_lc = dist.template next_local_tile_from_global_tile<Coord::Col>(j_end);
+  for (SizeType i_lc = at_offset.row(); i_lc < dist.localNrTiles().rows(); ++i_lc) {
+    const auto j_end_lc =
+        std::min(jR_end_lc, dist.template next_local_tile_from_global_tile<Coord::Col>(
+                                dist.template global_tile_from_local_tile<Coord::Row>(i_lc) + 1));
+    for (SizeType j_lc = at_offset.col(); j_lc < j_end_lc; ++j_lc) {
+      const LocalTileIndex ij_lc(i_lc, j_lc);
+      const GlobalTileIndex ij = dist.global_tile_index(ij_lc);
+      std::cout << "hemm2nd @ " << ij << "\n";
+
+      // skip upper
+      if (ij.row() < ij.col()) {
+        std::cout << "hemm2nd-skipping " << ij << "\n";
+        continue;
+      }
+
+      const bool is_diag = (ij.row() == ij.col());
+
+      if (is_diag) {
+        std::cout << "hemm2nd-diag " << ij << "\n";
+        hemmDiag<B>(thread_priority::high, A.read(ij_lc), W0.read(ij_lc), W1.readwrite(ij_lc));
+      }
+      else {
+        std::cout << "hemm2nd-odL " << ij << "\n";
+        // Lower
+        hemmOffDiag<B>(thread_priority::high, blas::Op::NoTrans, A.read(ij_lc), W0T.read(ij_lc),
+                       W1.readwrite(ij_lc));
+
+        // Upper
+        const GlobalTileIndex ijU = transposed(ij);
+
+        // Note: if it is out of the "sub-matrix"
+        if (ijU.col() >= j_end)
+          continue;
+
+        std::cout << "hemm2nd-odU " << ij << "\n";
+
+        const comm::IndexT_MPI owner_row = dist.template rank_global_tile<Coord::Row>(ijU.row());
+        const SizeType iU_lc = dist.template local_tile_from_global_tile<Coord::Row>(ij.col());
+        const LocalTileIndex i_w1_lc(iU_lc, 0);
+        const LocalTileIndex i_w1t_lc(0, ij_lc.col());
+        auto tile_w1 = (rank.row() == owner_row) ? W1.readwrite(i_w1_lc) : W1T.readwrite(i_w1t_lc);
+
+        hemmOffDiag<B>(thread_priority::high, blas::Op::ConjTrans, A.read(ij_lc), W0.read(ij_lc),
+                       std::move(tile_w1));
+      }
+    }
+  }
+
+  // Note:
+  // At this point, partial results of W1 are available in the panels, and they have to be reduced,
+  // both row-wise and col-wise. The final W1 result will be available just on Ai panel column.
+
+  // Note:
+  // The first step in reducing partial results distributed over W1 and W1T, it is to reduce the row
+  // panel W1T col-wise, by collecting all W1T results on the rank which can "mirror" the result on its
+  // rows (i.e. diagonal). So, for each tile of the row panel, select who is the "diagonal" rank that can
+  // mirror and reduce on it.
+  if (mpi_col_chain.size() > 1) {
+    for (const auto& i_wt_lc : W1T.iteratorLocal()) {
+      const auto i_diag = dist.template global_tile_from_local_tile<Coord::Col>(i_wt_lc.col());
+      const auto rank_owner_row = dist.template rank_global_tile<Coord::Row>(i_diag);
+
+      if (rank_owner_row == rank.row()) {
+        // Note:
+        // Since it is the owner, it has to perform the "mirroring" of the results from columns to
+        // rows.
+        // Moreover, it reduces in place because the owner of the diagonal stores the partial result
+        // directly in W1 (without using W1T)
+        const auto i_w1_lc = dist.template local_tile_from_global_tile<Coord::Row>(i_diag);
+        ex::start_detached(comm::schedule_reduce_recv_in_place(mpi_col_chain.exclusive(), MPI_SUM,
+                                                               W1.readwrite({i_w1_lc, 0})));
+      }
+      else {
+        ex::start_detached(comm::schedule_reduce_send(mpi_col_chain.exclusive(), rank_owner_row, MPI_SUM,
+                                                      W1T.read(i_wt_lc)));
+      }
+    }
+  }
+
+  // Note:
+  // At this point partial results are all collected in X (Xt has been embedded in previous step),
+  // so the last step needed is to reduce these last partial results in the final results.
+  if (mpi_row_chain.size() > 1) {
+    for (const auto& i_w1_lc : W1.iteratorLocal()) {
+      if (rank_panel == rank.col())
+        ex::start_detached(comm::schedule_reduce_recv_in_place(mpi_row_chain.exclusive(), MPI_SUM,
+                                                               W1.readwrite(i_w1_lc)));
+      else
+        ex::start_detached(comm::schedule_reduce_send(mpi_row_chain.exclusive(), rank_panel, MPI_SUM,
+                                                      W1.read(i_w1_lc)));
+    }
+  }
+}
+
+template <Backend B, Device D, class T>
+void her2k_2nd(const SizeType j_end, const matrix::SubMatrixView& at_view, matrix::Matrix<T, D>& a,
+               matrix::Panel<Coord::Col, const T, D>& W1,
+               matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>& W1T,
+               matrix::Panel<Coord::Col, const T, D>& V,
+               matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>& VT) {
+  static_assert(std::is_signed_v<BaseType<T>>, "alpha in computations requires to be -1");
+
+  using pika::execution::thread_priority;
+  using red2band::her2kDiag;
+  using red2band::her2kOffDiag;
+
+  const auto dist = a.distribution();
+
+  const LocalTileIndex at_offset = at_view.begin();
+
+  const SizeType jR_end_lc = dist.template next_local_tile_from_global_tile<Coord::Col>(j_end);
+  for (SizeType i_lc = at_offset.row(); i_lc < dist.localNrTiles().rows(); ++i_lc) {
+    const auto j_end_lc =
+        std::min(jR_end_lc, dist.template next_local_tile_from_global_tile<Coord::Col>(
+                                dist.template global_tile_from_local_tile<Coord::Row>(i_lc) + 1));
+    for (SizeType j_lc = at_offset.col(); j_lc < j_end_lc; ++j_lc) {
+      const LocalTileIndex ij_local{i_lc, j_lc};
+      const GlobalTileIndex ij = dist.globalTileIndex(ij_local);
+
+      const bool is_diagonal_tile = (ij.row() == ij.col());
+
+      auto getSubA = [&a, &at_view, ij_local]() {
+        return splitTile(a.readwrite(ij_local), at_view(ij_local));
+      };
+
+      // The first column of the trailing matrix (except for the very first global tile) has to be
+      // updated first, in order to unlock the next iteration as soon as possible.
+      const auto priority = (j_lc == at_offset.col()) ? thread_priority::high : thread_priority::normal;
+
+      if (is_diagonal_tile) {
+        her2kDiag<B>(priority, V.read(ij_local), W1.read(ij_local), getSubA());
+      }
+      else {
+        // A -= X . V*
+        her2kOffDiag<B>(priority, W1.read(ij_local), VT.read(ij_local), getSubA());
+
+        // A -= V . X*
+        her2kOffDiag<B>(priority, V.read(ij_local), W1T.read(ij_local), getSubA());
+      }
+    }
+  }
+}
 }
 
 // Distributed implementation of reduction to band
@@ -301,7 +470,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
   for (SizeType j = 0; j < ntiles; ++j) {
     const SizeType i = j + 1;
 
-    const SizeType nrefls_step = dist_taus.tile_size_of({0, j}).rows();
+    const SizeType nrefls_step = dist_taus.tile_size_of({j, 0}).rows();
 
     // panel
     const GlobalTileIndex panel_offset(i, j);
@@ -331,7 +500,6 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
     // TRAILING 1st pass
     if (at_offset_el.isIn(mat_a.size())) {
       auto& ws_V = panels_v.nextResource();
-      auto& ws_VT = panels_vt.nextResource();
 
       ws_V.setRangeStart(at_offset);
       ws_V.setWidth(nrefls_step);
@@ -343,13 +511,14 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
         using factorization::internal::computeTFactor;
         using red2band::local::setupReflectorPanelV;
 
-        constexpr bool has_head = true;  // Note: they are local, so every rank has its own head
+        const bool has_head = !panel_view.iteratorLocal().empty();
         setupReflectorPanelV<B, D, T>(has_head, panel_view, nrefls_step, ws_V, mat_a, !is_full_band);
 
         const GlobalTileIndex j_tau(j, 0);
         computeTFactor<B>(ws_V, mat_taus_1st.read(j_tau), ws_T.readwrite(zero_lc));
       }
 
+      auto& ws_VT = panels_vt.nextResource();
       ws_VT.setRangeStart(at_offset);
       ws_VT.setHeight(nrefls_step);
 
@@ -414,7 +583,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
 
           for (const auto& idx : ws_W1.iteratorLocal())
             ex::start_detached(ex::when_all(ws_W1.read(idx), ws_W3.readwrite(idx)) |
-                               dlaf::matrix::copy(di::Policy<Backend::MC>{}));
+                               matrix::copy(di::Policy<Backend::MC>{}));
 
           // W1 -= 0.5 V W2
           red2band::local::gemmUpdateX<B, D>(ws_W3, ws_W2, ws_V);
@@ -496,28 +665,39 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
       ws_V.reset();
     }
 
+    // ===== 2nd pass
+
     // PANEL: just ranks in the current column
     // QR local with just heads (HH reflectors have to be computed elsewhere, 1st-pass in-place)
+    auto&& panel_heads = panels_heads.nextResource();
+    panel_heads.setRangeEnd({n_qr_heads, 0});
+    panel_heads.setWidth(nrefls_step);
+
+    const matrix::Distribution dist_heads_current(LocalElementSize(n_qr_heads * dist.block_size().rows(),
+                                                                   dist.block_size().cols()),
+                                                  dist.block_size());
+    const matrix::SubPanelView panel_heads_view(dist_heads_current, {0, 0}, nrefls_step);
+
     if (rank_panel == rank.col()) {
-      auto&& panel_heads = panels_heads.nextResource();
-      panel_heads.setRangeEnd({n_qr_heads, 0});
-      panel_heads.setWidth(nrefls_step);
+      const comm::IndexT_MPI rank_hoh = dist.template rank_global_tile<Coord::Row>(panel_offset.row());
 
       for (int idx_head = 0; idx_head < n_qr_heads; ++idx_head) {
         using dlaf::comm::schedule_bcast_recv;
         using dlaf::comm::schedule_bcast_send;
 
-        const SizeType i_head = panel_view.offset().row() + idx_head;
-        const comm::Index2D rank_head(dist.template rank_global_tile<Coord::Row>(i_head), rank_panel);
-
-        const GlobalTileIndex ij_head(i_head, j);
         const LocalTileIndex idx_panel_head(idx_head, 0);
 
-        if (rank.row() == rank_head.row()) {
+        const GlobalTileIndex ij_head(panel_view.offset().row() + idx_head, j);
+        const comm::IndexT_MPI rank_head = dist.template rank_global_tile<Coord::Row>(ij_head.row());
+
+        if (rank.row() == rank_head) {
           // copy - set - send
           ex::start_detached(ex::when_all(mat_a.read(ij_head), panel_heads.readwrite(idx_panel_head)) |
                              di::transform(di::Policy<B>(), [=](const auto& head_in, auto&& head) {
-                               matrix::internal::copy(head_in, head);
+                               // TODO FIXME change copy and if possible just lower
+                               // matrix::internal::copy(head_in, head);
+                               lapack::lacpy(blas::Uplo::General, head.size().rows(), head.size().cols(),
+                                             head_in.ptr(), head_in.ld(), head.ptr(), head.ld());
                                lapack::laset(blas::Uplo::Lower, head.size().rows() - 1,
                                              head.size().cols(), T(0), T(0), head.ptr({1, 0}),
                                              head.ld());
@@ -527,45 +707,40 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
         }
         else {
           // receive
-          ex::start_detached(schedule_bcast_recv(mpi_col_chain.exclusive(), rank_head.row(),
+          ex::start_detached(schedule_bcast_recv(mpi_col_chain.exclusive(), rank_head,
                                                  panel_heads.readwrite(idx_panel_head)));
         }
       }
 
       // QR local on heads
-      // TODO check if some head tiles are not used and limit (or set to zero as a starting point)
+      red2band::local::computePanelReflectors(panel_heads, mat_taus_2nd, j, panel_heads_view);
+
+      // copy back data
       {
-        matrix::SubPanelView panel_heads_view(dist_heads, {0, 0}, band_size);
-        red2band::local::computePanelReflectors(panel_heads, mat_taus_2nd, 0, panel_heads_view);
-      }
+        // - just head of heads upper to mat_a
+        // - reflectors to hh_2nd
+        const GlobalTileIndex ij_hoh(panel_view.offset().row(), j);
+        if (rank.row() == dist.template rank_global_tile<Coord::Row>(ij_hoh.row()))
+          ex::start_detached(ex::when_all(panel_heads.read({0, 0}), mat_a.readwrite(ij_hoh)) |
+                             di::transform(di::Policy<B>(), [](const auto& hoh, auto&& hoh_a) {
+                               common::internal::SingleThreadedBlasScope single;
+                               lapack::lacpy(blas::Uplo::Upper, hoh.size().rows(), hoh.size().cols(),
+                                             hoh.ptr(), hoh.ld(), hoh_a.ptr(), hoh_a.ld());
+                             }));
 
-      // TODO copy back data
-      // - just head of heads upper to mat_a
-      // - reflectors to hh_2nd
-
-      const GlobalTileIndex ij_hoh(panel_view.offset().row(), j);
-      if (rank.row() == dist.template rank_global_tile<Coord::Row>(ij_hoh.row()))
-        ex::start_detached(ex::when_all(panel_heads.read({0, 0}), mat_a.readwrite(ij_hoh)) |
-                           di::transform(di::Policy<B>(), [](const auto& hoh, auto&& hoh_a) {
-                             common::internal::SingleThreadedBlasScope single;
-                             lapack::lacpy(blas::Uplo::Upper, hoh.size().rows(), hoh.size().cols(),
-                                           hoh.ptr(), hoh.ld(), hoh_a.ptr(), hoh_a.ld());
-                           }));
-
-      for (int idx_qr_head = 0; idx_qr_head < n_qr_heads; ++idx_qr_head) {
-        const SizeType i_head = panel_view.offset().row() + idx_qr_head;
-        const comm::Index2D rank_head(dist.template rank_global_tile<Coord::Row>(i_head), rank_panel);
-
-        if (rank.row() == rank_head.row()) {
-          const LocalTileIndex idx_panel_head(idx_qr_head, 0);
-          const GlobalTileIndex ij_head(i_head, j);
-
-          const bool is_hoh = (i_head == panel_view.offset().row());
+        // Note: not all ranks might have an head
+        if (!panel_view.iteratorLocal().empty()) {
+          const auto i_head_lc =
+              dist.template next_local_tile_from_global_tile<Coord::Row>(panel_view.offset().row());
+          const auto i_head = dist.template global_tile_from_local_tile<Coord::Row>(i_head_lc);
+          const auto idx_head = i_head - panel_view.offset().row();
+          const LocalTileIndex idx_panel_head(idx_head, 0);
+          const GlobalTileIndex ij_head(0, j);
 
           auto sender_heads =
               ex::when_all(panel_heads.read(idx_panel_head), mat_hh_2nd.readwrite(ij_head));
 
-          if (is_hoh)
+          if (rank.row() == rank_hoh) {
             ex::start_detached(std::move(sender_heads) |
                                di::transform(di::Policy<B>(), [](const auto& head, auto&& head_a) {
                                  common::internal::SingleThreadedBlasScope single;
@@ -576,7 +751,8 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
                                                head.size().cols() - 1, head.ptr({1, 0}), head.ld(),
                                                head_a.ptr({1, 0}), head_a.ld());
                                }));
-          else
+          }
+          else {
             ex::start_detached(std::move(sender_heads) |
                                di::transform(di::Policy<B>(), [](const auto& head, auto&& head_a) {
                                  common::internal::SingleThreadedBlasScope single;
@@ -584,16 +760,146 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
                                                head.size().cols(), head.ptr(), head.ld(), head_a.ptr(),
                                                head_a.ld());
                                }));
+          }
         }
       }
-
-      panel_heads.reset();
     }
 
     // TRAILING 2nd pass
-    {}
+    {
+      const GlobalTileIndex at_end_L(at_offset.row() + n_qr_heads, 0);
+      const GlobalTileIndex at_end_R(0, at_offset.col() + n_qr_heads);
 
-    break;
+      const LocalTileIndex zero_lc(0, 0);
+      matrix::Matrix<T, D> ws_T({nrefls_step, nrefls_step}, dist.block_size());
+
+      auto& ws_V = panels_v.nextResource();
+      ws_V.setRange(at_offset, at_end_L);
+      ws_V.setWidth(nrefls_step);
+
+      if (rank_panel == rank.col()) {
+        // setup reflector panel
+        const GlobalTileIndex ij_head(0, j);
+        const LocalTileIndex ij_vhh_lc(ws_V.rangeStartLocal(), 0);
+
+        if (!ws_V.iteratorLocal().empty()) {
+          ex::start_detached(ex::when_all(mat_hh_2nd.read(ij_head), ws_V.readwrite(ij_vhh_lc)) |
+                             di::transform(di::Policy<B>(), [=](const auto& head_in, auto&& head) {
+                               lapack::lacpy(blas::Uplo::General, head.size().rows(), head.size().cols(),
+                                             head_in.ptr(), head_in.ld(), head.ptr(), head.ld());
+                             }));
+        }
+
+        for (const auto& i_lc : ws_V.iteratorLocal()) {
+          std::ostringstream ss;
+          ss << "V2nd(" << dist.global_tile_index(i_lc) << ")";
+          print_sync(ss.str(), ws_V.read(i_lc));
+        }
+
+        using factorization::internal::computeTFactor;
+        const GlobalTileIndex j_tau(j, 0);
+        computeTFactor<B>(ws_V, mat_taus_2nd.read(j_tau), ws_T.readwrite(zero_lc), mpi_col_chain);
+
+        print_sync("T2nd", ws_T.read(zero_lc));
+      }
+
+      auto& ws_VT = panels_vt.nextResource();
+      ws_VT.setRange(at_offset, at_end_R);
+      ws_VT.setHeight(nrefls_step);
+
+      comm::broadcast(rank_panel, ws_V, ws_VT, mpi_row_chain, mpi_col_chain);
+
+      for (const auto& i_lc : ws_VT.iteratorLocal()) {
+        std::ostringstream ss;
+        ss << "VT2nd(" << dist.global_tile_index(i_lc) << ")";
+        print_sync(ss.str(), ws_VT.read(i_lc));
+      }
+
+      // Note:
+      // Differently from 1st pass, where transformations are independent one from the other,
+      // this 2nd pass is a single QR transformation that has to be applied from L and R.
+
+      // W0 = V T
+      auto& ws_W0 = panels_w0.nextResource();
+      ws_W0.setRange(at_offset, at_end_L);
+      ws_W0.setWidth(nrefls_step);
+
+      if (rank.col() == rank_panel)
+        red2band::local::trmmComputeW<B, D>(ws_W0, ws_V, ws_T.read(zero_lc));
+
+      // distribute W0 -> W0T
+      auto& ws_W0T = panels_w0t.nextResource();
+      ws_W0T.setRange(at_offset, at_end_R);
+      ws_W0T.setHeight(nrefls_step);
+
+      comm::broadcast(rank_panel, ws_W0, ws_W0T, mpi_row_chain, mpi_col_chain);
+
+      for (const auto& idx : ws_W0.iteratorLocal()) {
+        std::ostringstream ss;
+        ss << "W0(" << dist.global_tile_index(idx) << ")";
+        print_sync(ss.str(), ws_W0.read(idx));
+      }
+
+      for (const auto& idx : ws_W0T.iteratorLocal()) {
+        std::ostringstream ss;
+        ss << "W0T(" << dist.global_tile_index(idx) << ")";
+        print_sync(ss.str(), ws_W0T.read(idx));
+      }
+
+      // W1 = A W0
+      auto& ws_W1 = panels_w1.nextResource();
+      ws_W1.setRange(at_offset, at_end_L);
+      ws_W1.setWidth(nrefls_step);
+
+      auto& ws_W1T = panels_w1t.nextResource();
+      ws_W1T.setRange(at_offset, at_end_R);
+      ws_W1T.setHeight(nrefls_step);
+
+      ca_red2band::hemm2nd<B, D>(rank_panel, ws_W1, ws_W1T, at_view, at_end_R.col(), mat_a, ws_W0,
+                                 ws_W0T, mpi_row_chain, mpi_col_chain);
+
+      for (const auto& idx : ws_W1.iteratorLocal()) {
+        std::ostringstream ss;
+        ss << "W1(" << dist.global_tile_index(idx) << ")";
+        print_sync(ss.str(), ws_W1.read(idx));
+      }
+
+      // W1 = W1 - 0.5 V W0* W1
+      if (rank.col() == rank_panel) {
+        matrix::Matrix<T, D> ws_W2 = std::move(ws_T);
+
+        // W2 = W0T W1
+        red2band::local::gemmComputeW2<B, D>(ws_W2, ws_W0, ws_W1);
+        if (mpi_col_chain.size() > 1) {
+          ex::start_detached(comm::schedule_all_reduce_in_place(mpi_col_chain.exclusive(), MPI_SUM,
+                                                                ws_W2.readwrite(zero_lc)));
+        }
+
+        print_sync("W2", ws_W2.read(zero_lc));
+
+        // W1 = W1 - 0.5 V W2
+        red2band::local::gemmUpdateX<B, D>(ws_W1, ws_W2, ws_V);
+      }
+
+      // distribute W1 -> W1T
+      ws_W1T.reset();
+      ws_W1T.setRange(at_offset, at_end_R);
+      ws_W1T.setHeight(nrefls_step);
+
+      comm::broadcast(rank_panel, ws_W1, ws_W1T, mpi_row_chain, mpi_col_chain);
+
+      // A -= W1 VT + V W1T
+      ca_red2band::her2k_2nd<B>(at_end_R.col(), at_view, mat_a, ws_W1, ws_W1T, ws_V, ws_VT);
+
+      ws_W1T.reset();
+      ws_W1.reset();
+      ws_W0T.reset();
+      ws_W0.reset();
+      ws_VT.reset();
+      ws_V.reset();
+    }
+
+    panel_heads.reset();
   }
 
   return {std::move(mat_taus_1st), std::move(mat_taus_2nd), std::move(mat_hh_2nd)};

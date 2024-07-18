@@ -105,8 +105,6 @@ struct Helpers<Backend::MC, Device::CPU, T> {
 
   template <typename TSender>
   static auto trmvUpdateColumn(TSender&& tile_t) noexcept {
-    namespace ex = pika::execution::experimental;
-
     // Update each column (in order) t = T . t
     // remember that T is upper triangular, so it is possible to use TRMV
     auto trmv_func = [](matrix::Tile<T, Device::CPU>&& tile_t) {
@@ -121,6 +119,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
       // TODO: Why return if the tile is unused?
       return std::move(tile_t);
     };
+
     return dlaf::internal::transform(
         dlaf::internal::Policy<Backend::MC>(pika::execution::thread_priority::high),
         std::move(trmv_func), std::forward<TSender>(tile_t));

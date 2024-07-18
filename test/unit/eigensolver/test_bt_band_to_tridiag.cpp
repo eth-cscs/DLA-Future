@@ -130,7 +130,8 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, co
 
   {
     MatrixMirror<T, D, Device::CPU> mat_e(mat_e_h);
-    eigensolver::internal::bt_band_to_tridiagonal<B>(b, mat_e.get(), mat_hh);
+    matrix::internal::MatrixRef mat_e_ref(mat_e.get());
+    eigensolver::internal::bt_band_to_tridiagonal<B>(b, mat_e_ref, mat_hh);
   }
 
   if (m == 0 || n == 0)
@@ -209,7 +210,8 @@ void testBacktransformation(comm::CommunicatorGrid& grid, SizeType m, SizeType n
 
   {
     MatrixMirror<T, D, Device::CPU> mat_e(mat_e_h);
-    eigensolver::internal::bt_band_to_tridiagonal<B>(grid, b, mat_e.get(), mat_hh);
+    matrix::internal::MatrixRef mat_e_ref(mat_e.get());
+    eigensolver::internal::bt_band_to_tridiagonal<B>(grid, b, mat_e_ref, mat_hh);
   }
 
   if (m == 0 || n == 0)

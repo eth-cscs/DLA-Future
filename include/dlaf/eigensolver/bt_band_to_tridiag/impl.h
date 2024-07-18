@@ -606,7 +606,8 @@ protected:
 }
 
 template <Backend B, Device D, class T>
-void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>& mat_e,
+void BackTransformationT2B<B, D, T>::call(const SizeType band_size,
+                                          matrix::internal::MatrixRef<T, D>& mat_e,
                                           Matrix<const T, Device::CPU>& mat_hh) {
   using pika::execution::thread_priority;
   using pika::execution::thread_stacksize;
@@ -737,7 +738,8 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
 
 template <Backend B, Device D, class T>
 void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid& grid, const SizeType band_size,
-                                          Matrix<T, D>& mat_e, Matrix<const T, Device::CPU>& mat_hh) {
+                                          matrix::internal::MatrixRef<T, D>& mat_e,
+                                          Matrix<const T, Device::CPU>& mat_hh) {
   using pika::execution::thread_priority;
   using pika::execution::thread_stacksize;
   namespace ex = pika::execution::experimental;

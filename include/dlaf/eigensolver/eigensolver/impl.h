@@ -49,7 +49,8 @@ void Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<Bas
 
   tridiagonal_eigensolver<B>(ret.tridiagonal, evals, mat_e);
 
-  bt_band_to_tridiagonal<B>(band_size, mat_e, ret.hh_reflectors);
+  matrix::internal::MatrixRef mat_e_ref(mat_e);
+  bt_band_to_tridiagonal<B>(band_size, mat_e_ref, ret.hh_reflectors);
   bt_reduction_to_band<B>(band_size, mat_e, mat_a, mat_taus);
 }
 
@@ -81,7 +82,8 @@ void Eigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo, M
 
   tridiagonal_eigensolver<B>(grid, ret.tridiagonal, evals, mat_e);
 
-  bt_band_to_tridiagonal<B>(grid, band_size, mat_e, ret.hh_reflectors);
+  matrix::internal::MatrixRef mat_e_ref(mat_e);
+  bt_band_to_tridiagonal<B>(grid, band_size, mat_e_ref, ret.hh_reflectors);
   bt_reduction_to_band<B>(grid, band_size, mat_e, mat_a, mat_taus);
 
 #ifdef DLAF_WITH_HDF5

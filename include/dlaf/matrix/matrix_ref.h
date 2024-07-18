@@ -66,6 +66,19 @@ public:
   MatrixRef& operator=(MatrixRef&&) = delete;
   MatrixRef& operator=(const MatrixRef&) = delete;
 
+  /// Create a sub-pipelined, retiled matrix which can be accessed thread-safely with respect to the
+  /// original matrix
+  ///
+  /// All accesses to the sub-pipelined matrix are sequenced after previous accesses and before later
+  /// accesses to the original matrix, independently of when tiles are accessed in the sub-pipelined
+  /// matrix.
+  ///
+  /// @pre blockSize() is divisible by @p tiles_per_block
+  /// @pre blockSize() == tile_size()
+  Matrix<const T, D> retiledSubPipelineConst(const LocalTileSize& tiles_per_block) {
+    return mat_const_.retiledSubPipelineConst(tiles_per_block);
+  }
+
   /// Returns a read-only sender of the Tile with local index @p index.
   ///
   /// @pre index.isIn(distribution().localNrTiles()).
@@ -142,6 +155,19 @@ public:
   MatrixRef(const MatrixRef&) = delete;
   MatrixRef& operator=(MatrixRef&&) = delete;
   MatrixRef& operator=(const MatrixRef&) = delete;
+
+  /// Create a sub-pipelined, retiled matrix which can be accessed thread-safely with respect to the
+  /// original matrix
+  ///
+  /// All accesses to the sub-pipelined matrix are sequenced after previous accesses and before later
+  /// accesses to the original matrix, independently of when tiles are accessed in the sub-pipelined
+  /// matrix.
+  ///
+  /// @pre blockSize() is divisible by @p tiles_per_block
+  /// @pre blockSize() == tile_size()
+  Matrix<T, D> retiledSubPipeline(const LocalTileSize& tiles_per_block) noexcept {
+    return mat_.retiledSubPipeline(tiles_per_block);
+  }
 
   /// Returns a sender of the Tile with local index @p index.
   ///

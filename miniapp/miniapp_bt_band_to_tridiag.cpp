@@ -10,7 +10,6 @@
 
 #include <cstdlib>
 #include <iostream>
-#include <limits>
 #include <string>
 
 #include <pika/init.hpp>
@@ -79,6 +78,7 @@ struct BacktransformBandToTridiagMiniapp {
     using MatrixMirrorType = MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU>;
     using HostMatrixType = Matrix<T, Device::CPU>;
     using ConstHostMatrixType = Matrix<const T, Device::CPU>;
+    using MatrixRefType = dlaf::matrix::internal::MatrixRef<T, DefaultDevice_v<backend>>;
 
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
@@ -128,13 +128,15 @@ struct BacktransformBandToTridiagMiniapp {
         mat_hh.waitLocalTiles();
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
+        MatrixRefType mat_e_ref(mat_e.get());
+
         dlaf::common::Timer<> timeit;
         if (opts.local)
           dlaf::eigensolver::internal::bt_band_to_tridiagonal<backend, DefaultDevice_v<backend>, T>(
-              opts.b, mat_e.get(), mat_hh);
+              opts.b, mat_e_ref, mat_hh);
         else
           dlaf::eigensolver::internal::bt_band_to_tridiagonal<backend, DefaultDevice_v<backend>, T>(
-              comm_grid, opts.b, mat_e.get(), mat_hh);
+              comm_grid, opts.b, mat_e_ref, mat_hh);
 
         // wait and barrier for all ranks
         mat_e.get().waitLocalTiles();
@@ -153,27 +155,22 @@ struct BacktransformBandToTridiagMiniapp {
 
       // print benchmark results
       if (0 == world.rank() && run_index >= 0) {
-        std::cout << "[" << run_index << "]"
-                  << " " << elapsed_time << "s"
-                  << " " << gigaflops << "GFlop/s"
-                  << " " << dlaf::internal::FormatShort{opts.type} << " " << mat_e_host.size() << " "
-                  << mat_e_host.blockSize() << " " << opts.b << " " << comm_grid.size() << " "
-                  << pika::get_os_thread_count() << " " << backend << std::endl;
+        std::cout << "[" << run_index << "]" << " " << elapsed_time << "s" << " " << gigaflops
+                  << "GFlop/s" << " " << dlaf::internal::FormatShort{opts.type} << " "
+                  << mat_e_host.size() << " " << mat_e_host.blockSize() << " " << opts.b << " "
+                  << comm_grid.size() << " " << pika::get_os_thread_count() << " " << backend
+                  << std::endl;
         if (opts.csv_output) {
           // CSV formatted output with column names that can be read by pandas to simplify
           // post-processing CSVData{-version}, value_0, title_0, value_1, title_1
-          std::cout << "CSVData-2, "
-                    << "run, " << run_index << ", "
-                    << "time, " << elapsed_time << ", "
-                    << "GFlops, " << gigaflops << ", "
-                    << "type, " << dlaf::internal::FormatShort{opts.type}.value << ", "
-                    << "matrixsize, " << mat_e_host.size().rows() << ", "
-                    << "blocksize, " << mat_e_host.blockSize().rows() << ", "
-                    << "band_size, " << opts.b << ", "
-                    << "comm_rows, " << comm_grid.size().rows() << ", "
-                    << "comm_cols, " << comm_grid.size().cols() << ", "
-                    << "threads, " << pika::get_os_thread_count() << ", "
-                    << "backend, " << backend << ", " << opts.info << std::endl;
+          std::cout << "CSVData-2, " << "run, " << run_index << ", " << "time, " << elapsed_time << ", "
+                    << "GFlops, " << gigaflops << ", " << "type, "
+                    << dlaf::internal::FormatShort{opts.type}.value << ", " << "matrixsize, "
+                    << mat_e_host.size().rows() << ", " << "blocksize, " << mat_e_host.blockSize().rows()
+                    << ", " << "band_size, " << opts.b << ", " << "comm_rows, "
+                    << comm_grid.size().rows() << ", " << "comm_cols, " << comm_grid.size().cols()
+                    << ", " << "threads, " << pika::get_os_thread_count() << ", " << "backend, "
+                    << backend << ", " << opts.info << std::endl;
         }
       }
 

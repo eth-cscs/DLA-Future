@@ -488,8 +488,10 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
 
     // PANEL: just ranks in the current column
     // QR local (HH reflectors stored in-place)
-    if (rank_panel == rank.col())
-      red2band::local::computePanelReflectors(mat_a, mat_taus_1st, panel_offset.col(), panel_view);
+    if (rank_panel == rank.col()) {
+      using red2band::local::computePanelReflectors;
+      computePanelReflectors(mat_a, mat_taus_1st.readwrite(LocalTileIndex(j_lc, 0)), panel_view);
+    }
 
     // TRAILING 1st pass
     if (at_offset_el.isIn(mat_a.size())) {
@@ -708,7 +710,9 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
       }
 
       // QR local on heads
-      red2band::local::computePanelReflectors(panel_heads, mat_taus_2nd, j, panel_heads_view);
+      using red2band::local::computePanelReflectors;
+      computePanelReflectors(panel_heads, mat_taus_2nd.readwrite(LocalTileIndex(j_lc, 0)),
+                             panel_heads_view);
 
       // copy back data
       {

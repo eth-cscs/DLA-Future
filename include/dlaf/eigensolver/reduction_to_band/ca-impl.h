@@ -253,22 +253,18 @@ void hemm2nd(comm::IndexT_MPI rank_panel, matrix::Panel<Coord::Col, T, D>& W1,
     for (SizeType j_lc = at_offset.col(); j_lc < j_end_lc; ++j_lc) {
       const LocalTileIndex ij_lc(i_lc, j_lc);
       const GlobalTileIndex ij = dist.global_tile_index(ij_lc);
-      std::cout << "hemm2nd @ " << ij << "\n";
 
       // skip upper
       if (ij.row() < ij.col()) {
-        std::cout << "hemm2nd-skipping " << ij << "\n";
         continue;
       }
 
       const bool is_diag = (ij.row() == ij.col());
 
       if (is_diag) {
-        std::cout << "hemm2nd-diag " << ij << "\n";
         hemmDiag<B>(thread_priority::high, A.read(ij_lc), W0.read(ij_lc), W1.readwrite(ij_lc));
       }
       else {
-        std::cout << "hemm2nd-odL " << ij << "\n";
         // Lower
         hemmOffDiag<B>(thread_priority::high, blas::Op::NoTrans, A.read(ij_lc), W0T.read(ij_lc),
                        W1.readwrite(ij_lc));
@@ -279,8 +275,6 @@ void hemm2nd(comm::IndexT_MPI rank_panel, matrix::Panel<Coord::Col, T, D>& W1,
         // Note: if it is out of the "sub-matrix"
         if (ijU.col() >= j_end)
           continue;
-
-        std::cout << "hemm2nd-odU " << ij << "\n";
 
         const comm::IndexT_MPI owner_row = dist.template rank_global_tile<Coord::Row>(ijU.row());
         const SizeType iU_lc = dist.template local_tile_from_global_tile<Coord::Row>(ij.col());
@@ -678,6 +672,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
                                                   dist.block_size());
     const matrix::SubPanelView panel_heads_view(dist_heads_current, {0, 0}, nrefls_step);
 
+    const bool rank_has_head_row = !panel_view.iteratorLocal().empty();
     if (rank_panel == rank.col()) {
       const comm::IndexT_MPI rank_hoh = dist.template rank_global_tile<Coord::Row>(panel_offset.row());
 
@@ -729,7 +724,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
                              }));
 
         // Note: not all ranks might have an head
-        if (!panel_view.iteratorLocal().empty()) {
+        if (rank_has_head_row) {
           const auto i_head_lc =
               dist.template next_local_tile_from_global_tile<Coord::Row>(panel_view.offset().row());
           const auto i_head = dist.template global_tile_from_local_tile<Coord::Row>(i_head_lc);
@@ -782,7 +777,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
         const GlobalTileIndex ij_head(0, j);
         const LocalTileIndex ij_vhh_lc(ws_V.rangeStartLocal(), 0);
 
-        if (!ws_V.iteratorLocal().empty()) {
+        if (rank_has_head_row) {
           ex::start_detached(ex::when_all(mat_hh_2nd.read(ij_head), ws_V.readwrite(ij_vhh_lc)) |
                              di::transform(di::Policy<B>(), [=](const auto& head_in, auto&& head) {
                                lapack::lacpy(blas::Uplo::General, head.size().rows(), head.size().cols(),
@@ -798,7 +793,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
 
         using factorization::internal::computeTFactor;
         const GlobalTileIndex j_tau(j, 0);
-        computeTFactor<B>(ws_V, mat_taus_2nd.read(j_tau), ws_T.readwrite(zero_lc), mpi_col_chain);
+        computeTFactor<B>(panel_heads, mat_taus_2nd.read(j_tau), ws_T.readwrite(zero_lc));
 
         print_sync("T2nd", ws_T.read(zero_lc));
       }

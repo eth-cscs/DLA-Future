@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <type_traits>
 #include <vector>
 
 #include <pika/barrier.hpp>
@@ -268,11 +269,12 @@ T computeReflector(const std::vector<matrix::Tile<T, D>>& panel, SizeType j) {
   return tau;
 }
 
-template <class MatrixLikeA, class MatrixLikeTaus>
-void computePanelReflectors(MatrixLikeA& mat_a, MatrixLikeTaus& mat_taus, const SizeType j_sub,
+template <class T, Device D, class MatrixLikeA>
+void computePanelReflectors(MatrixLikeA& mat_a, matrix::ReadWriteTileSender<T, D> tile_tau,
                             const matrix::SubPanelView& panel_view) {
-  static Device constexpr D = MatrixLikeA::device;
-  using T = typename MatrixLikeA::ElementType;
+  static_assert(D == MatrixLikeA::device);
+  static_assert(std::is_same_v<T, typename MatrixLikeA::ElementType>);
+
   using pika::execution::thread_priority;
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
@@ -295,8 +297,7 @@ void computePanelReflectors(MatrixLikeA& mat_a, MatrixLikeTaus& mat_taus, const 
   ex::start_detached(
       ex::when_all(ex::just(std::make_unique<pika::barrier<>>(nthreads),
                             std::vector<common::internal::vector<T>>{}),  // w (internally required)
-                   mat_taus.readwrite(LocalTileIndex(j_sub, 0)),
-                   ex::when_all_vector(std::move(panel_tiles))) |
+                   std::move(tile_tau), ex::when_all_vector(std::move(panel_tiles))) |
       ex::transfer(di::getBackendScheduler<Backend::MC>(thread_priority::high)) |
       ex::bulk(nthreads, [nthreads, cols = panel_view.cols()](const std::size_t index, auto& barrier_ptr,
                                                               auto& w, auto& taus, auto& tiles) {

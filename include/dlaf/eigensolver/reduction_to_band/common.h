@@ -281,9 +281,9 @@ void computePanelReflectors(MatrixLikeA& mat_a, MatrixLikeTaus& mat_taus, const 
   const auto panel_range = panel_view.iteratorLocal();
   const std::size_t panel_ntiles = to_sizet(std::distance(panel_range.begin(), panel_range.end()));
 
-  // if (panel_ntiles == 0) {
-  //   return;
-  // }
+  if (panel_ntiles == 0) {
+    return;
+  }
 
   panel_tiles.reserve(panel_ntiles);
   for (const auto& i : panel_range) {

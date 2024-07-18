@@ -434,10 +434,10 @@ template <class T>
 struct ComputePanelHelper<Backend::MC, Device::CPU, T> {
   ComputePanelHelper(const std::size_t, matrix::Distribution) {}
 
-  void call(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_taus, const SizeType j_sub,
+  void call(Matrix<T, Device::CPU>& mat_a, matrix::ReadWriteTileSender<T, Device::CPU> tile_tau,
             const matrix::SubPanelView& panel_view) {
     using red2band::local::computePanelReflectors;
-    computePanelReflectors(mat_a, mat_taus, j_sub, panel_view);
+    computePanelReflectors(mat_a, std::move(tile_tau), panel_view);
   }
 
   template <Device D, class CommSender, class TriggerSender>
@@ -471,7 +471,7 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
     auto& v = panels_v.nextResource();
 
     copyToCPU(panel_view, mat_a, v);
-    computePanelReflectors(v, mat_taus, j_sub, panel_view);
+    computePanelReflectors(v, mat_taus.readwrite(GlobalTileIndex(j_sub, 0)), panel_view);
     copyFromCPU(panel_view, v, mat_a);
   }
 
@@ -614,7 +614,7 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
       v.setWidth(nrefls_tile);
 
     // PANEL
-    compute_panel_helper.call(mat_a, mat_taus_retiled, j_sub, panel_view);
+    compute_panel_helper.call(mat_a, mat_taus_retiled.readwrite(GlobalTileIndex(j_sub, 0)), panel_view);
 
     // Note:
     // - has_reflector_head tells if this rank owns the first tile of the panel (being local, always true)

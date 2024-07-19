@@ -20,6 +20,7 @@
 using namespace dlaf;
 using namespace testing;
 
+// size, block_size, ld, row_offset, col_offset, min_memory
 const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, SizeType, SizeType, SizeType>>
     values({{{31, 17}, {7, 11}, 31, 7, 341, 527},      // Scalapack like layout
             {{31, 17}, {32, 11}, 31, 31, 341, 527},    // only one row of tiles
@@ -53,12 +54,7 @@ const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, SizeTy
 
 TEST(LayoutInfoTest, Constructor) {
   for (const auto& v : values) {
-    auto size = std::get<0>(v);
-    auto block_size = std::get<1>(v);
-    auto ld = std::get<2>(v);
-    auto row_offset = std::get<3>(v);
-    auto col_offset = std::get<4>(v);
-    auto min_memory = std::get<5>(v);
+    auto [size, block_size, ld, row_offset, col_offset, min_memory] = v;
 
     matrix::LayoutInfo layout(size, block_size, ld, row_offset, col_offset);
 
@@ -102,12 +98,7 @@ TEST(LayoutInfoTest, ComparisonOperator) {
   matrix::LayoutInfo layout0({25, 25}, {5, 5}, 50, 8, 1000);
 
   for (const auto& v : comp_values) {
-    auto size = std::get<0>(v);
-    auto block_size = std::get<1>(v);
-    auto ld = std::get<2>(v);
-    auto row_offset = std::get<3>(v);
-    auto col_offset = std::get<4>(v);
-    auto is_equal = std::get<5>(v);
+    auto [size, block_size, ld, row_offset, col_offset, is_equal] = v;
 
     matrix::LayoutInfo layout(size, block_size, ld, row_offset, col_offset);
 
@@ -135,12 +126,7 @@ const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, SizeTy
 
 TEST(LayoutInfoTest, ColMajorLayout) {
   for (const auto& v : col_major_values) {
-    auto size = std::get<0>(v);
-    auto block_size = std::get<1>(v);
-    auto ld = std::get<2>(v);
-    auto row_offset = std::get<3>(v);
-    auto col_offset = std::get<4>(v);
-    auto min_memory = std::get<5>(v);
+    auto [size, block_size, ld, row_offset, col_offset, min_memory] = v;
 
     matrix::LayoutInfo exp_layout(size, block_size, ld, row_offset, col_offset);
     matrix::LayoutInfo layout = colMajorLayout(size, block_size, ld);

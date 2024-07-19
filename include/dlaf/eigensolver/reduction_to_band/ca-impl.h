@@ -398,31 +398,35 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
   const auto& dist = mat_a.distribution();
   const comm::Index2D rank = dist.rank_index();
 
+  // Note:
+  // Reflector of size = 1 is not considered whatever T is (i.e. neither real nor complex)
   const SizeType nrefls = std::max<SizeType>(0, dist.size().cols() - band_size - 1);
 
   // Note:
-  // Reflector of size = 1 is not considered whatever T is (i.e. neither real
-  // nor complex)
+  // Each rank has space for storing taus for one tile. It is distributed as the input matrix (i.e. 2D)
+  // Note:
+  // It is distributed "transposed" because of implicit assumptions in functions, i.e.
+  // computePanelReflectors and computeTFactor, which expect a column vector.
   DLAF_ASSERT(dist.block_size().cols() % band_size == 0, dist.block_size().cols(), band_size);
+  Matrix<T, Device::CPU> mat_taus_1st(matrix::Distribution(
+      GlobalElementSize(nrefls, dist.grid_size().rows()), TileElementSize(dist.block_size().cols(), 1),
+      transposed(dist.grid_size()), transposed(rank), transposed(dist.source_rank_index())));
 
   // Note:
-  // row-vector that is distributed over columns, but replicated over rows.
-  // for historical reason it is stored and accessed as a column-vector.
-  DLAF_ASSERT(dist.block_size().cols() % band_size == 0, dist.block_size().cols(), band_size);
-  const matrix::Distribution dist_taus(GlobalElementSize(nrefls, 1),
-                                       TileElementSize(dist.block_size().cols(), 1),
-                                       comm::Size2D(dist.grid_size().cols(), 1),
-                                       comm::Index2D(rank.col(), 0),
-                                       comm::Index2D(dist.source_rank_index().col(), 0));
-  Matrix<T, Device::CPU> mat_taus_1st(dist_taus);
-  Matrix<T, Device::CPU> mat_taus_2nd(dist_taus);
-
-  // Note:
-  // Matrix distributed as the input one, but it has room for storing just one row per rank.
+  // It has room for storing one tile per rank and it is distributed as the input matrix (i.e. 2D)
   const matrix::Distribution dist_hh_2nd(
       GlobalElementSize(dist.grid_size().rows() * dist.block_size().rows(), dist.size().cols()),
       dist.block_size(), dist.grid_size(), rank, dist.source_rank_index());
   Matrix<T, D> mat_hh_2nd(dist_hh_2nd);
+
+  // Note:
+  // Is stored as a column but it acts as a row vector. It is replicated over rows and it is distributed
+  // over columns (i.e. 1D distributed)
+  DLAF_ASSERT(dist.block_size().cols() % band_size == 0, dist.block_size().cols(), band_size);
+  Matrix<T, Device::CPU> mat_taus_2nd(
+      matrix::Distribution(GlobalElementSize(nrefls, 1), TileElementSize(dist.block_size().cols(), 1),
+                           comm::Size2D(dist.grid_size().cols(), 1), comm::Index2D(rank.col(), 0),
+                           comm::Index2D(dist.source_rank_index().col(), 0)));
 
   if (nrefls == 0)
     return {std::move(mat_taus_1st), std::move(mat_taus_2nd), std::move(mat_hh_2nd)};
@@ -464,7 +468,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
     const SizeType i = j + 1;
     const SizeType j_lc = dist.template local_tile_from_global_tile<Coord::Col>(j);
 
-    const SizeType nrefls_step = dist_taus.tile_size_of({j, 0}).rows();
+    const SizeType nrefls_step = mat_taus_1st.tile_size_of(GlobalTileIndex(j, rank.row())).rows();
 
     // panel
     const GlobalTileIndex panel_offset(i, j);
@@ -510,8 +514,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
         const bool has_head = !panel_view.iteratorLocal().empty();
         setupReflectorPanelV<B, D, T>(has_head, panel_view, nrefls_step, ws_V, mat_a, !is_full_band);
 
-        const GlobalTileIndex j_tau(j, 0);
-        computeTFactor<B>(ws_V, mat_taus_1st.read(j_tau), ws_T.readwrite(zero_lc));
+        computeTFactor<B>(ws_V, mat_taus_1st.read(LocalTileIndex{j_lc, 0}), ws_T.readwrite(zero_lc));
       }
 
       auto& ws_VT = panels_vt.nextResource();

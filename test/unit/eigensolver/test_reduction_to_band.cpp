@@ -499,6 +499,95 @@ using CAReductionToBandTestMC = ReductionToBandTest<T>;
 using JustThisType = ::testing::Types<float>;
 TYPED_TEST_SUITE(CAReductionToBandTestMC, JustThisType);
 
+template <class T>
+MatrixLocal<T> allGatherT(Matrix<const T, Device::CPU>& source, comm::CommunicatorGrid& comm_grid) {
+  // TODO tranposed distribution
+  // DLAF_ASSERT(matrix::equal_process_grid(source, comm_grid), source, comm_grid);
+
+  namespace tt = pika::this_thread::experimental;
+
+  MatrixLocal<std::remove_const_t<T>> dest(source.size(), source.baseTileSize());
+
+  const auto& dist_source = source.distribution();
+  const auto rank = transposed(dist_source.rank_index());
+
+  for (const auto& ij : iterate_range2d(dist_source.nr_tiles())) {
+    const comm::Index2D owner = transposed(dist_source.rank_global_tile(ij));
+
+    auto& dest_tile = dest.tile(ij);
+
+    if (owner == rank) {
+      const auto source_tile_holder = tt::sync_wait(source.read(ij));
+      const auto& source_tile = source_tile_holder.get();
+      comm::sync::broadcast::send(comm_grid.fullCommunicator(), source_tile);
+      matrix::internal::copy(source_tile, dest_tile);
+    }
+    else {
+      comm::sync::broadcast::receive_from(comm_grid.rankFullCommunicator(owner),
+                                          comm_grid.fullCommunicator(), dest_tile);
+    }
+  }
+
+  return MatrixLocal<T>(std::move(dest));
+}
+
+template <class T>
+auto checkResult(const SizeType k, const SizeType band_size, Matrix<const T, Device::CPU>& reference,
+                 const MatrixLocal<T>& mat_b, const MatrixLocal<T>& mat_hh_1st,
+                 const MatrixLocal<T>& taus_1st, const MatrixLocal<T>& mat_hh_2nd,
+                 const std::vector<T>& taus_2nd) {
+  dlaf::internal::silenceUnusedWarningFor(k, band_size, reference, mat_b);
+
+  const GlobalElementIndex offset(band_size, 0);
+  // Now that all input are collected locally, it's time to apply the transformation,
+  // ...but just if there is any
+  if (offset.isIn(mat_hh_1st.size())) {
+    // Reduction to band returns a sequence of transformations applied from left and right to A
+    // allowing to reduce the matrix A to a band matrix B
+    //
+    // Hn* ... H2* H1* A H1 H2 ... Hn
+    // Q* A Q = B
+    //
+    // Applying the inverse of the same transformations, we can go from B to A
+    // Q B Q* = A
+    // Q = H1 H2 ... Hn
+    // H1 H2 ... Hn B Hn* ... H2* H1*
+
+    dlaf::common::internal::SingleThreadedBlasScope single;
+
+    // apply from left...
+    // const GlobalElementIndex left_offset = offset;
+    // const GlobalElementSize left_size{mat_b.size().rows() - band_size, mat_b.size().cols()};
+    // lapack::unmqr(lapack::Side::Left, lapack::Op::NoTrans, left_size.rows(), left_size.cols(), k,
+    //               mat_hh_1st.ptr(offset), mat_hh_1st.ld(), taus_1st.data(), mat_b.ptr(left_offset),
+    //               mat_b.ld());
+
+    // ... and from right
+    // const GlobalElementIndex right_offset = common::transposed(left_offset);
+    // const GlobalElementSize right_size = common::transposed(left_size);
+
+    // lapack::unmqr(lapack::Side::Right, lapack::Op::ConjTrans, right_size.rows(), right_size.cols(), k,
+    //               mat_hh_1st.ptr(offset), mat_hh_1st.ld(), taus_1st.data(), mat_b.ptr(right_offset),
+    //               mat_b.ld());
+  }
+
+  dlaf::internal::silenceUnusedWarningFor(mat_hh_1st, taus_1st);
+
+  // Eventually, check the result obtained by applying the inverse transformation equals the original matrix
+  auto result = [&dist = reference.distribution(),
+                 &mat_local = mat_b](const GlobalElementIndex& element) {
+    const auto tile_index = dist.globalTileIndex(element);
+    const auto tile_element = dist.tileElementIndex(element);
+    return mat_local.tile_read(tile_index)(tile_element);
+  };
+  // TODO FIXME
+  dlaf::internal::silenceUnusedWarningFor(result);
+  // CHECK_MATRIX_NEAR(result, reference, 0,
+  //                   std::max<SizeType>(1, mat_b.size().linear_size()) * TypeUtilities<T>::error);
+
+  dlaf::internal::silenceUnusedWarningFor(mat_hh_2nd, taus_2nd);
+}
+
 template <class T, Device D, Backend B>
 void testCAReductionToBand(comm::CommunicatorGrid& grid, const LocalElementSize size,
                            const TileElementSize block_size, const SizeType band_size,
@@ -522,29 +611,48 @@ void testCAReductionToBand(comm::CommunicatorGrid& grid, const LocalElementSize 
   Matrix<T, Device::CPU> matrix_a_h(distribution);
   copy(reference, matrix_a_h);
 
+  print(format::numpy{}, "A", matrix_a_h);
+
   eigensolver::internal::CARed2BandResult<T, D> red2band_result = [&]() {
     MatrixMirror<T, D, Device::CPU> matrix_a(matrix_a_h);
     return eigensolver::internal::ca_reduction_to_band<B>(grid, matrix_a.get(), band_size);
   }();
 
-  Matrix<T, D>& mat_local_taus = red2band_result.taus_1st;
+  // print(format::numpy{}, "R", matrix_a_h);
+  // print(format::numpy{}, "taus_1st", red2band_result.taus_1st);
+  // print(format::numpy{}, "mat_hh_2nd", red2band_result.hh_2nd);
+  // print(format::numpy{}, "taus_2nd", red2band_result.taus_2nd);
 
-  // what?!
-  // ASSERT_EQ(mat_local_taus.block_size().rows(), block_size.rows());
+  ASSERT_EQ(red2band_result.taus_1st.block_size().rows(), block_size.rows());
+  ASSERT_EQ(red2band_result.taus_2nd.block_size().rows(), block_size.rows());
 
   checkUpperPartUnchanged(reference, matrix_a_h);
 
   // Wait for all work to finish before doing blocking communication
   pika::wait();
 
-  auto mat_v = allGather(blas::Uplo::Lower, matrix_a_h, grid);
-  auto mat_b = makeLocal(matrix_a_h);
-  splitReflectorsAndBand(mat_v, mat_b, band_size);
+  auto mat_hh_1st = allGather(blas::Uplo::Lower, matrix_a_h, grid);
 
-  auto taus = allGatherTaus(k_reflectors, mat_local_taus, grid);
-  ASSERT_EQ(taus.size(), k_reflectors);
+  auto taus_1st = allGatherT(red2band_result.taus_1st, grid);
+  ASSERT_EQ(taus_1st.size().rows(), k_reflectors);
+  ASSERT_EQ(taus_1st.size().cols(), grid.size().rows());
 
-  // checkResult(k_reflectors, band_size, reference, mat_v, mat_b, taus);
+  auto mat_hh_2nd = allGather(blas::Uplo::General, red2band_result.hh_2nd, grid);
+
+  auto taus_2nd = allGatherTaus(k_reflectors, red2band_result.taus_2nd, grid);
+  ASSERT_EQ(taus_2nd.size(), k_reflectors);
+
+  print(format::numpy{}, "mat_hh_2nd", mat_hh_2nd);
+  print(format::numpy{}, "mat_taus_1st", taus_1st);
+  std::cout << "taus_2nd = ";
+  for (auto tau : taus_2nd)
+    std::cout << tau << ", ";
+  std::cout << std::endl;
+
+  auto mat_band = makeLocal(matrix_a_h);
+  splitReflectorsAndBand(mat_hh_1st, mat_band, band_size);
+
+  checkResult(k_reflectors, band_size, reference, mat_band, mat_hh_1st, taus_1st, mat_hh_2nd, taus_2nd);
 }
 
 TYPED_TEST(CAReductionToBandTestMC, CorrectnessDistributed) {

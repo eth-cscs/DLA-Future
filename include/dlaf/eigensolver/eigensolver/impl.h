@@ -11,6 +11,7 @@
 
 #include <atomic>
 #include <cmath>
+#include <filesystem>
 #include <optional>
 #include <sstream>
 
@@ -36,7 +37,8 @@ namespace dlaf::eigensolver::internal {
 
 template <Backend B, Device D, class T>
 void Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<BaseType<T>, D>& evals,
-                                Matrix<T, D>& mat_e) {
+                                Matrix<T, D>& mat_e, SizeType first_eigenvalue_index,
+                                SizeType last_eigenvalue_index) {
   const SizeType band_size = getBandSize(mat_a.blockSize().rows());
 
   // need uplo check as reduction to band doesn't have the uplo argument yet.
@@ -48,14 +50,16 @@ void Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<Bas
 
   tridiagonal_eigensolver<B>(ret.tridiagonal, evals, mat_e);
 
-  matrix::internal::MatrixRef mat_e_ref(mat_e);
+  auto spec = matrix::util::internal::sub_matrix_spec_slice_cols(mat_a, first_eigenvalue_index, last_eigenvalue_index);
+  
+  matrix::internal::MatrixRef mat_e_ref(mat_e, spec);
   bt_band_to_tridiagonal<B>(band_size, mat_e_ref, ret.hh_reflectors);
   bt_reduction_to_band<B>(band_size, mat_e_ref, mat_a, mat_taus);
 }
 
 template <Backend B, Device D, class T>
 void Eigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix<T, D>& mat_a,
-                                Matrix<BaseType<T>, D>& evals, Matrix<T, D>& mat_e) {
+                                Matrix<BaseType<T>, D>& evals, Matrix<T, D>& mat_e, SizeType first_eigenvalue_index, SizeType last_eigenvalue_index) {
   const SizeType band_size = getBandSize(mat_a.blockSize().rows());
 
   // need uplo check as reduction to band doesn't have the uplo argument yet.
@@ -80,8 +84,10 @@ void Eigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo, M
   auto ret = band_to_tridiagonal<Backend::MC>(grid, uplo, band_size, mat_a);
 
   tridiagonal_eigensolver<B>(grid, ret.tridiagonal, evals, mat_e);
+  
+  auto spec = matrix::util::internal::sub_matrix_spec_slice_cols(mat_a, first_eigenvalue_index, last_eigenvalue_index);
+  matrix::internal::MatrixRef mat_e_ref(mat_e, spec);
 
-  matrix::internal::MatrixRef mat_e_ref(mat_e);
   bt_band_to_tridiagonal<B>(grid, band_size, mat_e_ref, ret.hh_reflectors);
   bt_reduction_to_band<B>(grid, band_size, mat_e_ref, mat_a, mat_taus);
 

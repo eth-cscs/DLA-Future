@@ -439,6 +439,12 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const Size
   }
 }
 
+template <class T, Device D>
+dlaf::matrix::internal::SubMatrixSpec sub_matrix_spec_slice_cols(const Matrix<T, D>& matrix, SizeType fist_col_index,
+                                SizeType last_col_index) {
+  return dlaf::matrix::internal::SubMatrixSpec({{0, fist_col_index}, {matrix.size().rows(), last_col_index - fist_col_index + 1}});
+}
+
 }
 
 /// Set a matrix with random values assuring it will be hermitian

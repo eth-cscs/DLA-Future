@@ -123,7 +123,7 @@ template <typename F, typename Sender,
   namespace mpi = pika::mpi::experimental;
   namespace mpid = pika::mpi::experimental::detail;
 
-  if (mpi::get_completion_mode() >= static_cast<int>(mpid::handler_mode::unspecified)) {
+  if (mpi::get_completion_mode() >= static_cast<int>(mpid::handler_method::unspecified)) {
     auto snd1 =
         ex::continues_on(std::forward<Sender>(sender), dlaf::internal::getMPIScheduler()) |
         ex::then(dlaf::common::internal::ConsumeRvalues{MPIYieldWhileCallHelper{std::forward<F>(f)}});

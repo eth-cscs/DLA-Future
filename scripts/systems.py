@@ -195,7 +195,7 @@ printenv > env_{bs_name}.txt
 
 # NOTE: Here is assumed that `gpu2ranks_slurm_cuda` is in PATH!
 #       modify "Run command" if it is not the case.
-cscs["santis"] = {
+cscs["todi"] = {
     "Cores": 288,
     "Threads per core": 1,
     "Allowed rpns": [4],

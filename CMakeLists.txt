@@ -159,7 +159,7 @@ endif()
 
 find_package(LAPACK REQUIRED)
 if(DLAF_WITH_SCALAPACK)
-  find_package(SCALAPACK REQUIRED)
+  find_package(SCALAPACK REQUIRED MODULE)
 endif()
 
 # ----- pika

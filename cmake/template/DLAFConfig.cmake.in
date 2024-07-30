@@ -59,7 +59,7 @@ find_dependency(LAPACK)
 if(DLAF_WITH_SCALAPACK)
   set(SCALAPACK_LIBRARY "@SCALAPACK_LIBRARY@")
   set(SCALAPACK_INCLUDE_DIR "@SCALAPACK_INCLUDE_DIR@")
-  find_dependency(SCALAPACK)
+  find_dependency(SCALAPACK MODULE)
 endif()
 
 # ----- pika

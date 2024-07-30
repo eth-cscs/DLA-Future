@@ -209,6 +209,7 @@ cscs["todi"] = {
 #SBATCH --hint=multithread
 #SBATCH --output=output.txt
 #SBATCH --error=error.txt
+#SBATCH --reservation=todi
 
 # Env
 export DLAF_BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE=128

@@ -167,8 +167,9 @@ class JobText:
 
 
 def _checkAppExec(fname):
-    if not isfile(Path(fname).expanduser()):
-        raise RuntimeError(f"Executable {fname} doesn't exist")
+    pass
+    # if not isfile(Path(fname).expanduser()):
+    #     raise RuntimeError(f"Executable {fname} doesn't exist")
 
 
 def _checkBand(mb_sz, band):

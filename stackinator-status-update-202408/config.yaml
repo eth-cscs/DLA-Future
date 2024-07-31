@@ -1,0 +1,9 @@
+name: dlaf-env
+store: /user-environment
+spack:
+    repo: https://github.com/spack/spack.git
+    commit: 4a088f717ecdb049f436658c3981bcb950e9d803
+mirror:
+    enable: false
+modules: false
+description: "DLA-Future for 202408 status update"

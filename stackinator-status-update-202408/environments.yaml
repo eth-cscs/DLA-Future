@@ -1,0 +1,17 @@
+gcc-env:
+  compiler:
+      - toolchain: gcc
+        spec: gcc@13
+  unify: true
+  specs:
+  # Alternatively: 202408-develop-stable for a version without pika's MPI polling
+  - dla-future@git.202408-develop=0.6.0 +miniapps +hdf5 +mpi_gpu_aware +mpi_gpu_force_contiguous
+  - nvpl-blas
+  - nvpl-lapack
+  mpi:
+    spec: cray-mpich
+    gpu: cuda
+  variants:
+    - +mpi
+    - +cuda
+    - cuda_arch=90

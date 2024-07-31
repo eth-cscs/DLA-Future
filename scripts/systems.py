@@ -199,7 +199,7 @@ cscs["todi"] = {
     "Allowed rpns": [4],
     "Multiple rpn in same job": True,
     "GPU": True,
-    "Run command": "srun -u {srun_args} -n {total_ranks} --gpus-per-task=1 --cpu-bind=core -c {threads_per_rank}",
+    "Run command": "srun --uenv=/capstor/scratch/cscs/simbergm/uenv-images/dlaf-status-update-202408.squashfs -u {srun_args} -n {total_ranks} --gpus-per-task=1 --cpu-bind=core -c {threads_per_rank} timeout 1800",
     "Launch command": "sbatch --chdir={job_path} {job_file}",
     "Batch preamble": """
 #!/bin/bash -l
@@ -210,6 +210,7 @@ cscs["todi"] = {
 #SBATCH --output=output.txt
 #SBATCH --error=error.txt
 #SBATCH --reservation=todi
+#SBATCH --verbose
 
 # Env
 export DLAF_BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE=128

@@ -18,25 +18,24 @@ import argparse
 import miniapps as mp
 import systems
 
-system = systems.cscs["daint-gpu"]
+system = systems.cscs["todi"]
 
-dlafpath = "<path_to_dlaf_miniapp_dir>"
-
-run_dir = "~/ws/runs/weak"
+dlafpath = "/user-environment/linux-sles15-neoverse_v2/gcc-13.3.0/dla-future-git.202408-develop_0.6.0-iqm3lnzbffriwwwpyd3helfsfsb5oybc/bin"
+run_dir = ""
 
 # Note: job time is computed as time0 + sqrt(nodes) * time
-time0 = 120  # minutes
+time0 = 12 * 60  # minutes
 time = 0  # minutes
-nruns = 5
-nodes_arr = [1, 2, 4, 8, 16]
+nruns = 3
+nodes_arr = [0.25, 0.5, 1, 2, 4, 8, 16, 32, 64]
 
-rpn = 1
-m_szs_d = [10240, 20480, 30097, 40960]
-mb_szs_d = 512
+rpn = 4
+m_szs_d = [10240, 20480, 40960]
+mb_szs_d = [1024]
 m_szs_z = [10240, 20480]
-mb_szs_z = 512
+mb_szs_z = [1024]
 
-extra_flags = "--dlaf:bt-band-to-tridiag-hh-apply-group-size=128"
+extra_flags = "--pika:threads=64 --nwarmups=0"
 
 approx = 512  # the sizes used in weak scaling are chosen to be the nearest multiple of approx.
 

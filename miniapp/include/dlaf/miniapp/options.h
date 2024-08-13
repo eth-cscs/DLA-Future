@@ -317,35 +317,35 @@ inline pika::program_options::options_description getMiniappKernelOptionsDescrip
 inline void addLayoutOption(pika::program_options::options_description& desc,
                             const blas::Layout def = blas::Layout::ColMajor) {
   desc.add_options()(
-      "layout", pika::program_options::value<std::string>()->default_value({blas::layout2char(def)}),
+      "layout", pika::program_options::value<std::string>()->default_value({blas::to_char(def)}),
       "'C' (ColMajor), 'R' (RowMajor)");
 }
 
 inline void addOpOption(pika::program_options::options_description& desc,
                         const blas::Op def = blas::Op::NoTrans) {
   desc.add_options()("op",
-                     pika::program_options::value<std::string>()->default_value({blas::op2char(def)}),
+                     pika::program_options::value<std::string>()->default_value({blas::to_char(def)}),
                      "'N' (NoTrans), 'T' (Trans), 'C' (ConjTrans)");
 }
 
 inline void addUploOption(pika::program_options::options_description& desc,
                           const blas::Uplo def = blas::Uplo::Lower) {
   desc.add_options()("uplo",
-                     pika::program_options::value<std::string>()->default_value({blas::uplo2char(def)}),
+                     pika::program_options::value<std::string>()->default_value({blas::to_char(def)}),
                      "'L' (Lower), 'U' (Upper), 'G' (General)");
 }
 
 inline void addDiagOption(pika::program_options::options_description& desc,
                           const blas::Diag def = blas::Diag::NonUnit) {
   desc.add_options()("diag",
-                     pika::program_options::value<std::string>()->default_value({blas::diag2char(def)}),
+                     pika::program_options::value<std::string>()->default_value({blas::to_char(def)}),
                      "'N' (NonUnit), 'U' (Unit)");
 }
 
 inline void addSideOption(pika::program_options::options_description& desc,
                           const blas::Side def = blas::Side::Left) {
   desc.add_options()("side",
-                     pika::program_options::value<std::string>()->default_value({blas::side2char(def)}),
+                     pika::program_options::value<std::string>()->default_value({blas::to_char(def)}),
                      "'L' (Left), 'R' (Right)");
 }
 }

@@ -181,14 +181,10 @@ void testBackTransformationReductionToBand(SizeType m, SizeType n, SizeType mb, 
 
   auto mat_taus = setUpTest(mb, b, c_loc, v_loc);
 
-  matrix::internal::SubMatrixSpec subdist = {{0, 0},
-                                             {mat_c_h.size().rows(),
-                                              std::max(mat_c_h.size().cols() - 2, 0l)}};
-
   {
     MatrixMirror<T, D, Device::CPU> mat_c(mat_c_h);
     MatrixMirror<const T, D, Device::CPU> mat_v(mat_v_h);
-    matrix::internal::MatrixRef mat_c_ref(mat_c.get(), subdist);
+    matrix::internal::MatrixRef mat_c_ref(mat_c.get());
     eigensolver::internal::bt_reduction_to_band<B, D, T>(b, mat_c_ref, mat_v.get(), mat_taus);
   }
 
@@ -224,14 +220,10 @@ void testBackTransformationReductionToBand(comm::CommunicatorGrid& grid, SizeTyp
 
   auto mat_taus = setUpTest(mb, b, c_loc, v_loc, std::optional(std::ref(grid)), src_rank_index);
 
-  matrix::internal::SubMatrixSpec subdist = {{0, 0},
-                                             {mat_c_h.size().rows(),
-                                              std::max(mat_c_h.size().cols() - 2, 0l)}};
-
   {
     MatrixMirror<T, D, Device::CPU> mat_c(mat_c_h);
     MatrixMirror<const T, D, Device::CPU> mat_v(mat_v_h);
-    matrix::internal::MatrixRef mat_c_ref(mat_c.get(), subdist);
+    matrix::internal::MatrixRef mat_c_ref(mat_c.get());
     eigensolver::internal::bt_reduction_to_band<B, D, T>(grid, b, mat_c_ref, mat_v.get(), mat_taus);
   }
 

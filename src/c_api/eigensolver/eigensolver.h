@@ -59,8 +59,12 @@ int hermitian_eigensolver(const int dlaf_context, const char uplo, T* a,
     MatrixMirror eigenvectors(eigenvectors_host);
     MatrixBaseMirror eigenvalues(eigenvalues_host);
 
+    // https://github.com/icl-utk-edu/blaspp/pull/82
+    blas::Uplo uplo_;
+    blas::from_string(std::string(1, uplo), &uplo_);
+
     dlaf::hermitian_eigensolver<dlaf::Backend::Default, dlaf::Device::Default, T>(
-        communicator_grid, blas::char2uplo(uplo), matrix.get(), eigenvalues.get(), eigenvectors.get());
+        communicator_grid, uplo_, matrix.get(), eigenvalues.get(), eigenvectors.get());
   }  // Destroy mirror
 
   // Ensure data is copied back to the host

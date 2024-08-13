@@ -47,9 +47,12 @@ int cholesky_factorization(const int dlaf_context, const char uplo, T* a,
   {
     MatrixMirror matrix(matrix_host);
 
+    // https://github.com/icl-utk-edu/blaspp/pull/82
+    blas::Uplo uplo_;
+    blas::from_string(std::string(1, uplo), &uplo_);
+
     dlaf::cholesky_factorization<dlaf::Backend::Default, dlaf::Device::Default, T>(communicator_grid,
-                                                                                   blas::char2uplo(uplo),
-                                                                                   matrix.get());
+                                                                                   uplo_, matrix.get());
   }  // Destroy mirror
 
   matrix_host.waitLocalTiles();

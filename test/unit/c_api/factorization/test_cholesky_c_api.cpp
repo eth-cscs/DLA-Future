@@ -80,7 +80,7 @@ void testCholesky(comm::CommunicatorGrid& grid, const blas::Uplo uplo, const Siz
   set(mat_h, el);
   mat_h.waitLocalTiles();
 
-  char dlaf_uplo = blas::uplo2char(uplo);
+  char dlaf_uplo = blas::to_char(uplo);
 
   // Get pointer to first element of local matrix
   auto [local_a_ptr, lld] = top_left_tile(mat_h);

@@ -30,13 +30,15 @@ namespace dlaf::eigensolver::internal {
 template <Backend B, Device D, class T>
 void GenEigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
                                    Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors,
-                                   const Factorization factorization) {
+                                   const Factorization factorization, SizeType first_eigenvalue_index,
+                                   SizeType last_eigenvalue_index) {
   if (factorization == Factorization::do_factorization) {
     cholesky_factorization<B>(uplo, mat_b);
   }
   generalized_to_standard<B>(uplo, mat_a, mat_b);
 
-  hermitian_eigensolver<B>(uplo, mat_a, eigenvalues, eigenvectors);
+  hermitian_eigensolver<B>(uplo, mat_a, eigenvalues, eigenvectors, first_eigenvalue_index,
+                           last_eigenvalue_index);
 
   triangular_solver<B>(blas::Side::Left, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1), mat_b,
                        eigenvectors);
@@ -45,7 +47,8 @@ void GenEigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<
 template <Backend B, Device D, class T>
 void GenEigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix<T, D>& mat_a,
                                    Matrix<T, D>& mat_b, Matrix<BaseType<T>, D>& eigenvalues,
-                                   Matrix<T, D>& eigenvectors, const Factorization factorization) {
+                                   Matrix<T, D>& eigenvectors, const Factorization factorization,
+                                   SizeType first_eigenvalue_index, SizeType last_eigenvalue_index) {
 #ifdef DLAF_WITH_HDF5
   static std::atomic<size_t> num_gen_eigensolver_calls = 0;
   std::stringstream fname;
@@ -76,7 +79,8 @@ void GenEigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo
 
   generalized_to_standard<B>(grid, uplo, mat_a, mat_b);
 
-  hermitian_eigensolver<B>(grid, uplo, mat_a, eigenvalues, eigenvectors);
+  hermitian_eigensolver<B>(grid, uplo, mat_a, eigenvalues, eigenvectors, first_eigenvalue_index,
+                           last_eigenvalue_index);
 
   triangular_solver<B>(grid, blas::Side::Left, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1),
                        mat_b, eigenvectors);

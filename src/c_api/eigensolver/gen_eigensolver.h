@@ -65,14 +65,19 @@ int hermitian_generalized_eigensolver_helper(const int dlaf_context, const char 
     MatrixMirror eigenvectors(eigenvectors_host);
     MatrixBaseMirror eigenvalues(eigenvalues_host);
 
+    // https://github.com/icl-utk-edu/blaspp/pull/82
+    blas::Uplo uplo_;
+    blas::from_string(std::string(1, uplo), &uplo_);
+
     if (!factorized) {
       dlaf::hermitian_generalized_eigensolver<dlaf::Backend::Default, dlaf::Device::Default, T>(
-          communicator_grid, blas::char2uplo(uplo), matrix_a.get(), matrix_b.get(), eigenvalues.get(),
-          eigenvectors.get());
+          communicator_grid, uplo_, matrix_a.get(), matrix_b.get(),
+          eigenvalues.get(), eigenvectors.get());
     }
     else {
       dlaf::hermitian_generalized_eigensolver_factorized<dlaf::Backend::Default, dlaf::Device::Default,
-                                                         T>(communicator_grid, blas::char2uplo(uplo),
+                                                         T>(communicator_grid,
+                                                            uplo_,
                                                             matrix_a.get(), matrix_b.get(),
                                                             eigenvalues.get(), eigenvectors.get());
     }

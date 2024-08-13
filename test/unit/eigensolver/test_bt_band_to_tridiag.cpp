@@ -128,17 +128,13 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, co
 
   MatrixLocal<T> mat_hh_local = allGather(blas::Uplo::Lower, mat_hh);
 
-  matrix::internal::SubMatrixSpec subdist = {{0, 0},
-                                             {mat_e_h.size().rows(),
-                                              std::max(mat_e_h.size().cols() - 2, 0l)}};
-
   {
     MatrixMirror<T, D, Device::CPU> mat_e(mat_e_h);
-    matrix::internal::MatrixRef mat_e_ref(mat_e.get(), subdist);
+    matrix::internal::MatrixRef mat_e_ref(mat_e.get());
     eigensolver::internal::bt_band_to_tridiagonal<B>(b, mat_e_ref, mat_hh);
   }
 
-  if (m == 0 || subdist.size.cols() == 0)
+  if (m == 0 || n == 0)
     return;
 
   {
@@ -164,9 +160,7 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, co
     }
   }
 
-  matrix::internal::MatrixRef mat_e_h_ref(mat_e_h, subdist);
-
-  auto result = [&dist = mat_e_h_ref.distribution(),
+  auto result = [&dist = mat_e_h.distribution(),
                  &mat_local = mat_e_local](const GlobalElementIndex& element) {
     const auto tile_index = dist.globalTileIndex(element);
     const auto tile_element = dist.tileElementIndex(element);
@@ -214,17 +208,13 @@ void testBacktransformation(comm::CommunicatorGrid& grid, SizeType m, SizeType n
 
   MatrixLocal<T> mat_hh_local = allGather(blas::Uplo::Lower, mat_hh, grid);
 
-  matrix::internal::SubMatrixSpec subdist = {{0, 0},
-                                             {mat_e_h.size().rows(),
-                                              std::max(mat_e_h.size().cols() - 2, 0l)}};
-
   {
     MatrixMirror<T, D, Device::CPU> mat_e(mat_e_h);
-    matrix::internal::MatrixRef mat_e_ref(mat_e.get(), subdist);
+    matrix::internal::MatrixRef mat_e_ref(mat_e.get());
     eigensolver::internal::bt_band_to_tridiagonal<B>(grid, b, mat_e_ref, mat_hh);
   }
 
-  if (m == 0 || subdist.size.cols() == 0)
+  if (m == 0 || n == 0)
     return;
 
   {
@@ -250,9 +240,7 @@ void testBacktransformation(comm::CommunicatorGrid& grid, SizeType m, SizeType n
     }
   }
 
-  matrix::internal::MatrixRef mat_e_h_ref(mat_e_h, subdist);
-
-  auto result = [&dist = mat_e_h_ref.distribution(),
+  auto result = [&dist = mat_e_h.distribution(),
                  &mat_local = mat_e_local](const GlobalElementIndex& element) {
     const auto tile_index = dist.globalTileIndex(element);
     const auto tile_element = dist.tileElementIndex(element);

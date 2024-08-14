@@ -58,9 +58,9 @@ struct Helpers<Backend::MC, Device::CPU, T> {
         std::forward<TSender>(t));
   }
 
-  template <class VISender, class TSender>
-  static auto gemvColumnT(SizeType first_row_tile, VISender tile_vi,
-                          matrix::ReadOnlyTileSender<T, Device::CPU> taus, TSender&& tile_t) {
+  static auto gemvColumnT(SizeType first_row_tile, matrix::ReadOnlyTileSender<T, Device::CPU> tile_vi,
+                          matrix::ReadOnlyTileSender<T, Device::CPU> taus,
+                          matrix::ReadWriteTileSender<T, Device::CPU>&& tile_t) {
     namespace ex = pika::execution::experimental;
 
     auto gemv_func = [first_row_tile](const auto& tile_v, const auto& taus, auto&& tile_t) noexcept {
@@ -76,11 +76,12 @@ struct Helpers<Backend::MC, Device::CPU, T> {
 
         // Position of the 1 in the diagonal in the current column.
         SizeType i_diag = j - first_row_tile;
-        const SizeType first_element_in_col = std::max<SizeType>(0, i_diag);
 
         // Break if the reflector starts in the next tile.
         if (i_diag >= tile_v.size().rows())
           break;
+
+        const SizeType first_element_in_col = std::max<SizeType>(0, i_diag);
 
         // T(0:j, j) = -tau . V(j:, 0:j)* . V(j:, j)
         // [j x 1] = [(n-j) x j]* . [(n-j) x 1]
@@ -93,14 +94,14 @@ struct Helpers<Backend::MC, Device::CPU, T> {
         }
 
         blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, va_size.rows(), va_size.cols(), -tau,
-                   tile_v.ptr(va_start), tile_v.ld(), tile_v.ptr(vb_start), 1, 1, tile_t.ptr(t_start),
+                   tile_v.ptr(va_start), tile_v.ld(), tile_v.ptr(vb_start), 1, T(1), tile_t.ptr(t_start),
                    1);
       }
       return std::move(tile_t);
     };
     return dlaf::internal::transform(
         dlaf::internal::Policy<Backend::MC>(pika::execution::thread_priority::high),
-        std::move(gemv_func), ex::when_all(tile_vi, std::move(taus), std::forward<TSender>(tile_t)));
+        std::move(gemv_func), ex::when_all(tile_vi, std::move(taus), std::move(tile_t)));
   }
 
   template <typename TSender>

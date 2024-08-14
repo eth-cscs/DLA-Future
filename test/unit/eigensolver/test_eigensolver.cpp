@@ -134,7 +134,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
   if (mat_a_h.size().isEmpty())
     return;
 
-  testEigensolverCorrectness(uplo, reference, ret.eigenvalues, ret.eigenvectors, grid...);
+  testEigensolverCorrectness(uplo, reference, ret.eigenvalues, ret.eigenvectors, 0l, reference.size().cols(), grid...);
 }
 
 TYPED_TEST(EigensolverTestMC, CorrectnessLocal) {

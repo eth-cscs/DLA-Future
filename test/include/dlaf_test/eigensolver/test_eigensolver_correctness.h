@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <filesystem>
 #include <functional>
 #include <tuple>
 
@@ -36,7 +37,9 @@ namespace dlaf::test {
 template <class T, Device D, class... GridIfDistributed>
 void testEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::CPU>& reference,
                                 Matrix<const BaseType<T>, D>& eigenvalues,
-                                Matrix<const T, D>& eigenvectors, GridIfDistributed&... grid) {
+                                Matrix<const T, D>& eigenvectors,
+                                [[maybe_unused]] SizeType fist_eigenvalue_index,
+                                SizeType last_eigenvalue_index, GridIfDistributed&... grid) {
   using dlaf::matrix::MatrixMirror;
   using dlaf::matrix::test::allGather;
   using dlaf::matrix::test::MatrixLocal;
@@ -52,11 +55,16 @@ void testEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::C
   auto mat_a_local = allGather(blas::Uplo::General, reference, grid...);
   auto mat_evalues_local = [&]() {
     MatrixMirror<const BaseType<T>, Device::CPU, D> mat_evals(eigenvalues);
+
     return allGather(blas::Uplo::General, mat_evals.get());
   }();
   auto mat_e_local = [&]() {
     MatrixMirror<const T, Device::CPU, D> mat_e(eigenvectors);
-    return allGather(blas::Uplo::General, mat_e.get(), grid...);
+    // Reference to sub-matrix representing only valid (i.e. back-transformed) eigenvectors
+    matrix::internal::SubMatrixSpec subdist = {{0, 0}, {m, last_eigenvalue_index}};
+    matrix::internal::MatrixRef mat_e_ref(mat_e.get(), subdist);
+
+    return allGather(blas::Uplo::General, mat_e_ref, grid...);
   }();
 
   // eigenvalues are contiguous in the mat_local buffer
@@ -64,6 +72,7 @@ void testEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::C
   EXPECT_TRUE(std::is_sorted(evals_start, evals_start + m));
 
   MatrixLocal<T> workspace({m, m}, reference.blockSize());
+
 
   dlaf::common::internal::SingleThreadedBlasScope single;
 

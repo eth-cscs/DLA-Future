@@ -67,41 +67,45 @@ void testEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::C
     return allGather(blas::Uplo::General, mat_e_ref, grid...);
   }();
 
+  // Number of valid eigenvectors
+  const SizeType n = mat_e_local.size().cols();
+
   // eigenvalues are contiguous in the mat_local buffer
   const BaseType<T>* evals_start = mat_evalues_local.ptr({0, 0});
   EXPECT_TRUE(std::is_sorted(evals_start, evals_start + m));
 
-  MatrixLocal<T> workspace({m, m}, reference.blockSize());
-
+  MatrixLocal<T> workspace1({n, n}, reference.blockSize());
 
   dlaf::common::internal::SingleThreadedBlasScope single;
 
   // Check eigenvectors orthogonality (E^H E == Id)
-  blas::gemm(blas::Layout::ColMajor, blas::Op::ConjTrans, blas::Op::NoTrans, m, m, m, T{1},
+  blas::gemm(blas::Layout::ColMajor, blas::Op::ConjTrans, blas::Op::NoTrans, n, n, m, T{1},
              mat_e_local.ptr(), mat_e_local.ld(), mat_e_local.ptr(), mat_e_local.ld(), T{0},
-             workspace.ptr(), workspace.ld());
+             workspace1.ptr(), workspace1.ld());
 
   auto id = [](GlobalElementIndex index) {
     if (index.row() == index.col())
       return T{1};
     return T{0};
   };
-  CHECK_MATRIX_NEAR(id, workspace, m * TypeUtilities<T>::error, 10 * m * TypeUtilities<T>::error);
+  CHECK_MATRIX_NEAR(id, workspace1, m * TypeUtilities<T>::error, 10 * m * TypeUtilities<T>::error);
+  
+  MatrixLocal<T> workspace2({m, n}, reference.blockSize());
 
   // Check Ax = lambda x
   // Compute A E
-  blas::hemm(blas::Layout::ColMajor, blas::Side::Left, uplo, m, m, T{1}, mat_a_local.ptr(),
-             mat_a_local.ld(), mat_e_local.ptr(), mat_e_local.ld(), T{0}, workspace.ptr(),
-             workspace.ld());
+  blas::hemm(blas::Layout::ColMajor, blas::Side::Left, uplo, m, n, T{1}, mat_a_local.ptr(),
+             mat_a_local.ld(), mat_e_local.ptr(), mat_e_local.ld(), T{0}, workspace2.ptr(),
+             workspace2.ld());
 
   // Compute Lambda E (in place in mat_e_local)
-  for (SizeType j = 0; j < m; ++j) {
+  for (SizeType j = 0; j < n; ++j) {
     blas::scal(m, mat_evalues_local({j, 0}), mat_e_local.ptr({0, j}), 1);
   }
 
   // Check A E == Lambda E
   auto res = [&mat_e_local](GlobalElementIndex index) { return mat_e_local(index); };
-  CHECK_MATRIX_NEAR(res, workspace, 2 * m * TypeUtilities<T>::error, 2 * m * TypeUtilities<T>::error);
+  CHECK_MATRIX_NEAR(res, workspace2, 2 * m * TypeUtilities<T>::error, 2 * m * TypeUtilities<T>::error);
 }
 
 }

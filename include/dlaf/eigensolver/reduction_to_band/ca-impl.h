@@ -835,21 +835,15 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
 
       // W1 = A W0
       auto& ws_W1 = panels_w1.nextResource();
-      ws_W1.setRange(at_offset, at_end_L);
+      ws_W1.setRangeStart(at_offset);
       ws_W1.setWidth(nrefls_step);
 
       auto& ws_W1T = panels_w1t.nextResource();
-      ws_W1T.setRange(at_offset, at_end_R);
+      ws_W1T.setRangeStart(at_offset);
       ws_W1T.setHeight(nrefls_step);
 
       ca_red2band::hemm2nd<B, D>(rank_panel, ws_W1, ws_W1T, at_view, at_end_R.col(), mat_a, ws_W0,
                                  ws_W0T, mpi_row_chain, mpi_col_chain);
-
-      for (const auto& idx : ws_W1.iteratorLocal()) {
-        std::ostringstream ss;
-        ss << "W1(" << dist.global_tile_index(idx) << ")";
-        print_sync(ss.str(), ws_W1.read(idx));
-      }
 
       // W1 = W1 - 0.5 V W0* W1
       if (rank.col() == rank_panel) {
@@ -870,7 +864,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
 
       // distribute W1 -> W1T
       ws_W1T.reset();
-      ws_W1T.setRange(at_offset, at_end_R);
+      ws_W1T.setRangeStart(at_offset);
       ws_W1T.setHeight(nrefls_step);
 
       comm::broadcast(rank_panel, ws_W1, ws_W1T, mpi_row_chain, mpi_col_chain);

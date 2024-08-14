@@ -340,8 +340,8 @@ void hemm2nd(comm::IndexT_MPI rank_panel, matrix::Panel<Coord::Col, T, D>& W1,
 }
 
 template <Backend B, Device D, class T>
-void her2k_2nd(const SizeType j_end, const matrix::SubMatrixView& at_view, matrix::Matrix<T, D>& a,
-               matrix::Panel<Coord::Col, const T, D>& W1,
+void her2k_2nd(const SizeType i_end, const SizeType j_end, const matrix::SubMatrixView& at_view,
+               matrix::Matrix<T, D>& a, matrix::Panel<Coord::Col, const T, D>& W1,
                matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>& W1T,
                matrix::Panel<Coord::Col, const T, D>& V,
                matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>& VT) {
@@ -353,14 +353,15 @@ void her2k_2nd(const SizeType j_end, const matrix::SubMatrixView& at_view, matri
 
   const auto dist = a.distribution();
 
-  const LocalTileIndex at_offset = at_view.begin();
+  const LocalTileIndex at_offset_lc = at_view.begin();
 
+  const SizeType iL_end_lc = dist.template next_local_tile_from_global_tile<Coord::Row>(i_end);
   const SizeType jR_end_lc = dist.template next_local_tile_from_global_tile<Coord::Col>(j_end);
-  for (SizeType i_lc = at_offset.row(); i_lc < dist.localNrTiles().rows(); ++i_lc) {
+  for (SizeType i_lc = at_offset_lc.row(); i_lc < iL_end_lc; ++i_lc) {
     const auto j_end_lc =
         std::min(jR_end_lc, dist.template next_local_tile_from_global_tile<Coord::Col>(
                                 dist.template global_tile_from_local_tile<Coord::Row>(i_lc) + 1));
-    for (SizeType j_lc = at_offset.col(); j_lc < j_end_lc; ++j_lc) {
+    for (SizeType j_lc = at_offset_lc.col(); j_lc < j_end_lc; ++j_lc) {
       const LocalTileIndex ij_local{i_lc, j_lc};
       const GlobalTileIndex ij = dist.globalTileIndex(ij_local);
 
@@ -372,7 +373,8 @@ void her2k_2nd(const SizeType j_end, const matrix::SubMatrixView& at_view, matri
 
       // The first column of the trailing matrix (except for the very first global tile) has to be
       // updated first, in order to unlock the next iteration as soon as possible.
-      const auto priority = (j_lc == at_offset.col()) ? thread_priority::high : thread_priority::normal;
+      const auto priority =
+          (j_lc == at_offset_lc.col()) ? thread_priority::high : thread_priority::normal;
 
       if (is_diagonal_tile) {
         her2kDiag<B>(priority, V.read(ij_local), W1.read(ij_local), getSubA());
@@ -384,6 +386,29 @@ void her2k_2nd(const SizeType j_end, const matrix::SubMatrixView& at_view, matri
         // A -= V . X*
         her2kOffDiag<B>(priority, V.read(ij_local), W1T.read(ij_local), getSubA());
       }
+    }
+  }
+
+  // This is just going to update rows that are going to be updated just from right.
+  for (SizeType i_lc = iL_end_lc; i_lc < dist.local_nr_tiles().rows(); ++i_lc) {
+    const auto j_end_lc =
+        std::min(jR_end_lc, dist.template next_local_tile_from_global_tile<Coord::Col>(
+                                dist.template global_tile_from_local_tile<Coord::Row>(i_lc) + 1));
+    for (SizeType j_lc = at_offset_lc.col(); j_lc < j_end_lc; ++j_lc) {
+      const LocalTileIndex ij_lc{i_lc, j_lc};
+
+      auto getSubA = [&a, &at_view, ij_lc]() { return splitTile(a.readwrite(ij_lc), at_view(ij_lc)); };
+
+      // The first column of the trailing matrix (except for the very first global tile) has to be
+      // updated first, in order to unlock the next iteration as soon as possible.
+      const auto priority =
+          (j_lc == at_offset_lc.col()) ? thread_priority::high : thread_priority::normal;
+
+      std::cout << "HER2K-EXTRA" << dist.global_tile_index(ij_lc) << std::endl;
+      print_sync("tile_w1", W1.read(ij_lc));
+      print_sync("tile_v", VT.read(ij_lc));
+      // A -= X . V*
+      her2kOffDiag<B>(priority, W1.read(ij_lc), VT.read(ij_lc), getSubA());
     }
   }
 }
@@ -872,8 +897,10 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
 
       comm::broadcast(rank_panel, ws_W1, ws_W1T, mpi_row_chain, mpi_col_chain);
 
-      // A -= W1 VT + V W1T
-      ca_red2band::her2k_2nd<B>(at_end_R.col(), at_view, mat_a, ws_W1, ws_W1T, ws_V, ws_VT);
+      // LR: A -= W1 VT + V W1T
+      // R : [at_end_L.row():, :at_endR_col()] A = A - W1 V.T
+      ca_red2band::her2k_2nd<B>(at_end_L.row(), at_end_R.col(), at_view, mat_a, ws_W1, ws_W1T, ws_V,
+                                ws_VT);
 
       ws_W1T.reset();
       ws_W1.reset();

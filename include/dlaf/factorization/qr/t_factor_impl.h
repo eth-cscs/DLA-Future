@@ -237,8 +237,6 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
   if (hh_panel.getWidth() == 0)
     return;
 
-  const auto v_start = hh_panel.offsetElement();
-
   matrix::ReadWriteTileSender<T, device> t_local = Helpers::set0(std::move(t));
 
   // Note:
@@ -259,15 +257,15 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
   // 1st step: compute the column partial result `t`
   // First we compute the matrix vector multiplication for each column
   // -tau(j) . V(j:, 0:j)* . V(j:, j)
-  for (const auto& v_i : hh_panel.iteratorLocal()) {
+  for (const auto& i_lc : hh_panel.iteratorLocal()) {
     const SizeType first_row_tile =
-        std::max<SizeType>(0, v_i.row() * hh_panel.parentDistribution().blockSize().rows() - v_start);
+        (i_lc.row() - hh_panel.rangeStartLocal()) * hh_panel.parentDistribution().tile_size().rows();
 
     // Note:
     // Since we are writing always on the same t, the gemv are serialized
     // A possible solution to this would be to have multiple places where to store partial
     // results, and then locally reduce them just before the reduce over ranks
-    t_local = Helpers::gemvColumnT(first_row_tile, hh_panel.read(v_i), taus, std::move(t_local));
+    t_local = Helpers::gemvColumnT(first_row_tile, hh_panel.read(i_lc), taus, std::move(t_local));
   }
 
   // 2nd step: compute the T factor, by performing the last step on each column

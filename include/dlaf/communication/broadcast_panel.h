@@ -105,9 +105,6 @@ auto& get_taskchain(comm::CommunicatorPipeline<comm::CommunicatorType::Row>& row
 /// - linking as external tile, if the tile is already available locally for the rank
 /// - receiving the tile from the owning rank (via a broadcast)
 ///
-/// Be aware that the last tile will just be available on @p panel, but it won't be transposed to
-/// @p panelT.
-///
 /// @param rank_root specifies on which rank the @p panel is the source of the data
 /// @param panel
 ///   on rank_root it is the source panel (a)
@@ -183,14 +180,7 @@ void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& p
 
   auto& chain_step2 = internal::get_taskchain<comm_dir_step2>(row_task_chain, col_task_chain);
 
-  const SizeType last_tile = std::max(panelT.rangeStart(), panelT.rangeEnd() - 1);
-  const auto owner = dist.template rankGlobalTile<coordT>(last_tile);
-  const auto range = dist.rankIndex().get(coordT) == owner
-                         ? common::iterate_range2d(*panelT.iteratorLocal().begin(),
-                                                   LocalTileIndex(coordT, panelT.rangeEndLocal() - 1, 1))
-                         : panelT.iteratorLocal();
-
-  for (const auto& indexT : range) {
+  for (const auto& indexT : panelT.iteratorLocal()) {
     auto [index_diag, owner_diag] = internal::transposedOwner<coordT>(dist, indexT);
 
     namespace ex = pika::execution::experimental;

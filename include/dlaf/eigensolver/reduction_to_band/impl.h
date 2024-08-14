@@ -953,30 +953,6 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
           dist.template nextLocalTileFromGlobalElement<Coord::Col>(at_offset.col()),
       };
 
-      // Note:
-      // This additional communication of the last tile is a workaround for supporting following trigger
-      // when b < mb.
-      // Indeed, if b < mb the last column have (at least) a panel to compute, but differently from
-      // other columns, broadcast transposed doesn't communicate the last tile, which is an assumption
-      // needed to make the following trigger work correctly.
-      const SizeType at_tile_col =
-          dist.template globalTileFromGlobalElement<Coord::Col>(at_offset.col());
-
-      if (at_tile_col == dist.nrTiles().cols() - 1) {
-        const comm::IndexT_MPI owner = rank_v0.row();
-        if (rank.row() == owner) {
-          xt.setTile(at, x.read(at));
-
-          if (dist.commGridSize().rows() > 1)
-            ex::start_detached(comm::schedule_bcast_send(mpi_col_chain.exclusive(), xt.read(at)));
-        }
-        else {
-          if (dist.commGridSize().rows() > 1)
-            ex::start_detached(comm::schedule_bcast_recv(mpi_col_chain.exclusive(), owner,
-                                                         xt.readwrite(at)));
-        }
-      }
-
       if constexpr (dlaf::comm::CommunicationDevice_v<D> == D) {
         // Note:
         // if there is no need for additional buffers, we can just wait that xt[0] is ready for

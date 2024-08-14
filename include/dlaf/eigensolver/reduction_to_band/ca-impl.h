@@ -525,16 +525,15 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
 
       // W = V T
       auto& ws_W0 = panels_w0.nextResource();
-      auto& ws_W0T = panels_w0t.nextResource();
-
       ws_W0.setRangeStart(at_offset);
-      ws_W0T.setRangeStart(at_offset);
-
       ws_W0.setWidth(nrefls_step);
-      ws_W0T.setHeight(nrefls_step);
 
       if (rank_panel == rank.col())
         red2band::local::trmmComputeW<B, D>(ws_W0, ws_V, ws_T.read(zero_lc));
+
+      auto& ws_W0T = panels_w0t.nextResource();
+      ws_W0T.setRangeStart(at_offset);
+      ws_W0T.setHeight(nrefls_step);
 
       comm::broadcast(rank_panel, ws_W0, ws_W0T, mpi_row_chain, mpi_col_chain);
 
@@ -670,12 +669,11 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
     // QR local with just heads (HH reflectors have to be computed elsewhere, 1st-pass in-place)
     auto&& panel_heads = panels_heads.nextResource();
     panel_heads.setRangeEnd({n_qr_heads, 0});
-    panel_heads.setWidth(nrefls_step);
 
     const matrix::Distribution dist_heads_current(LocalElementSize(n_qr_heads * dist.block_size().rows(),
                                                                    dist.block_size().cols()),
                                                   dist.block_size());
-    const matrix::SubPanelView panel_heads_view(dist_heads_current, {0, 0}, nrefls_step);
+    const matrix::SubPanelView panel_heads_view(dist_heads_current, {0, 0}, band_size);
 
     const bool rank_has_head_row = !panel_view.iteratorLocal().empty();
     if (rank_panel == rank.col()) {
@@ -765,10 +763,15 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
           }
         }
       }
+
+      panel_heads.reset();
     }
 
     // TRAILING 2nd pass
     {
+      panel_heads.setRangeEnd({n_qr_heads, 0});
+      panel_heads.setWidth(nrefls_step);
+
       const GlobalTileIndex at_end_L(at_offset.row() + n_qr_heads, 0);
       const GlobalTileIndex at_end_R(0, at_offset.col() + n_qr_heads);
 
@@ -811,12 +814,6 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
 
       comm::broadcast(rank_panel, ws_V, ws_VT, mpi_row_chain, mpi_col_chain);
 
-      for (const auto& i_lc : ws_VT.iteratorLocal()) {
-        std::ostringstream ss;
-        ss << "VT2nd(" << dist.global_tile_index(i_lc) << ")";
-        print_sync(ss.str(), ws_VT.read(i_lc));
-      }
-
       // Note:
       // Differently from 1st pass, where transformations are independent one from the other,
       // this 2nd pass is a single QR transformation that has to be applied from L and R.
@@ -835,18 +832,6 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
       ws_W0T.setHeight(nrefls_step);
 
       comm::broadcast(rank_panel, ws_W0, ws_W0T, mpi_row_chain, mpi_col_chain);
-
-      for (const auto& idx : ws_W0.iteratorLocal()) {
-        std::ostringstream ss;
-        ss << "W0(" << dist.global_tile_index(idx) << ")";
-        print_sync(ss.str(), ws_W0.read(idx));
-      }
-
-      for (const auto& idx : ws_W0T.iteratorLocal()) {
-        std::ostringstream ss;
-        ss << "W0T(" << dist.global_tile_index(idx) << ")";
-        print_sync(ss.str(), ws_W0T.read(idx));
-      }
 
       // W1 = A W0
       auto& ws_W1 = panels_w1.nextResource();

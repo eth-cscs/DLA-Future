@@ -210,10 +210,14 @@ void her2kUpdateTrailingMatrix(comm::Index2D rank_qr, const matrix::SubMatrixVie
       }
       else {
         // TODO check and document why tranposed operand can be accessed with same index locally
+
+        const GlobalTileIndex ijT = transposed(ij);
+        const LocalTileIndex ijT_lc = dist.local_tile_index(ijT);
+
         // A -= W3 . V*
-        her2kOffDiag<B>(priority, W3.read(ij_lc), V.read(ij_lc), getSubA());
+        her2kOffDiag<B>(priority, W3.read(ij_lc), V.read(ijT_lc), getSubA());
         // A -= V . W3*
-        her2kOffDiag<B>(priority, V.read(ij_lc), W3.read(ij_lc), getSubA());
+        her2kOffDiag<B>(priority, V.read(ij_lc), W3.read(ijT_lc), getSubA());
       }
     }
   }
@@ -246,6 +250,7 @@ void hemm2nd(comm::IndexT_MPI rank_panel, matrix::Panel<Coord::Col, T, D>& W1,
   const LocalTileIndex at_offset = at_view.begin();
 
   const SizeType jR_end_lc = dist.template next_local_tile_from_global_tile<Coord::Col>(j_end);
+
   for (SizeType i_lc = at_offset.row(); i_lc < dist.localNrTiles().rows(); ++i_lc) {
     const auto j_end_lc =
         std::min(jR_end_lc, dist.template next_local_tile_from_global_tile<Coord::Col>(

@@ -601,8 +601,6 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
           if (rank_qr.row() != id_qr_R)
             continue;
 
-          auto&& tile_vt = ws_VT.read({0, j_lc});
-
           for (SizeType i_lc = at_offset_lc.row(); i_lc < dist.local_nr_tiles().rows(); ++i_lc) {
             const LocalTileIndex ij_lc(i_lc, j_lc);
             const GlobalTileIndex ij = dist.global_tile_index(ij_lc);
@@ -618,7 +616,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
               continue;
 
             ex::start_detached(di::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
-                                               ws_W1.read(ij_lc), tile_vt, T(1),
+                                               ws_W1.read(ij_lc), ws_VT.read(ij_lc), T(1),
                                                mat_a.readwrite(ij_lc)) |
                                tile::gemm(di::Policy<B>()));
           }

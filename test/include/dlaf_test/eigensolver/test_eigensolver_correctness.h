@@ -24,6 +24,7 @@
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_mirror.h>
 #include <dlaf/types.h>
+#include <dlaf/util_matrix.h>
 
 #include <gtest/gtest.h>
 
@@ -37,8 +38,7 @@ namespace dlaf::test {
 template <class T, Device D, class... GridIfDistributed>
 void testEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::CPU>& reference,
                                 Matrix<const BaseType<T>, D>& eigenvalues,
-                                Matrix<const T, D>& eigenvectors,
-                                [[maybe_unused]] SizeType fist_eigenvalue_index,
+                                Matrix<const T, D>& eigenvectors, SizeType first_eigenvalue_index,
                                 SizeType last_eigenvalue_index, GridIfDistributed&... grid) {
   using dlaf::matrix::MatrixMirror;
   using dlaf::matrix::test::allGather;
@@ -61,8 +61,9 @@ void testEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::C
   auto mat_e_local = [&]() {
     MatrixMirror<const T, Device::CPU, D> mat_e(eigenvectors);
     // Reference to sub-matrix representing only valid (i.e. back-transformed) eigenvectors
-    matrix::internal::SubMatrixSpec subdist = {{0, 0}, {m, last_eigenvalue_index}};
-    matrix::internal::MatrixRef mat_e_ref(mat_e.get(), subdist);
+    auto spec = matrix::util::internal::sub_matrix_spec_slice_cols(reference, first_eigenvalue_index,
+                                                                   last_eigenvalue_index);
+    matrix::internal::MatrixRef mat_e_ref(mat_e.get(), spec);
 
     return allGather(blas::Uplo::General, mat_e_ref, grid...);
   }();
@@ -89,7 +90,7 @@ void testEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::C
     return T{0};
   };
   CHECK_MATRIX_NEAR(id, workspace1, m * TypeUtilities<T>::error, 10 * m * TypeUtilities<T>::error);
-  
+
   MatrixLocal<T> workspace2({m, n}, reference.blockSize());
 
   // Check Ax = lambda x

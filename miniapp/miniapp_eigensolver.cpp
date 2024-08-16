@@ -66,6 +66,7 @@ struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
   SizeType m;
   SizeType mb;
+  SizeType last_eval_idx;
   blas::Uplo uplo;
 #ifdef DLAF_WITH_HDF5
   std::filesystem::path input_file;
@@ -78,6 +79,13 @@ struct Options
         uplo(dlaf::miniapp::parseUplo(vm["uplo"].as<std::string>())) {
     DLAF_ASSERT(m > 0, m);
     DLAF_ASSERT(mb > 0, mb);
+
+    if (vm.count("last-eval-index") == 1) {
+      last_eval_idx = vm["last-eval-index"].as<SizeType>();
+    }
+    else {
+      last_eval_idx = m - 1;
+    }
 
 #ifdef DLAF_WITH_HDF5
     if (vm.count("input-file") == 1) {
@@ -153,9 +161,10 @@ struct EigensolverMiniapp {
       dlaf::common::Timer<> timeit;
       auto bench = [&]() {
         if (opts.local)
-          return dlaf::hermitian_eigensolver<backend>(opts.uplo, matrix->get());
+          return dlaf::hermitian_eigensolver<backend>(opts.uplo, matrix->get(), 0l, opts.last_eval_idx);
         else
-          return dlaf::hermitian_eigensolver<backend>(comm_grid, opts.uplo, matrix->get());
+          return dlaf::hermitian_eigensolver<backend>(comm_grid, opts.uplo, matrix->get(), 0l,
+                                                      opts.last_eval_idx);
       };
       auto [eigenvalues, eigenvectors] = bench();
 
@@ -184,30 +193,27 @@ struct EigensolverMiniapp {
 
       // print benchmark results
       if (0 == world.rank() && run_index >= 0) {
-        std::cout << "[" << run_index << "]"
-                  << " " << elapsed_time << "s"
-                  << " " << dlaf::internal::FormatShort{opts.type}
-                  << dlaf::internal::FormatShort{opts.uplo} << " " << matrix_host.size() << " "
-                  << matrix_host.blockSize() << " "
+        // TODO: Add eigenvalues range
+        std::cout << "[" << run_index << "]" << " " << elapsed_time << "s" << " "
+                  << dlaf::internal::FormatShort{opts.type} << dlaf::internal::FormatShort{opts.uplo}
+                  << " " << matrix_host.size() << " " << matrix_host.blockSize() << " "
                   << dlaf::eigensolver::internal::getBandSize(matrix_host.blockSize().rows()) << " "
-                  << comm_grid.size() << " " << pika::get_os_thread_count() << " " << backend
-                  << std::endl;
+                  << comm_grid.size() << " " << pika::get_os_thread_count() << " " << backend << " ("
+                  << 0l << ", " << opts.last_eval_idx << ")" << std::endl;
         if (opts.csv_output) {
           // CSV formatted output with column names that can be read by pandas to simplify
           // post-processing CSVData{-version}, value_0, title_0, value_1, title_1
-          std::cout << "CSVData-2, "
-                    << "run, " << run_index << ", "
-                    << "time, " << elapsed_time << ", "
-                    << "type, " << dlaf::internal::FormatShort{opts.type}.value << ", "
-                    << "uplo, " << dlaf::internal::FormatShort{opts.uplo}.value << ", "
-                    << "matrixsize, " << matrix_host.size().rows() << ", "
-                    << "blocksize, " << matrix_host.blockSize().rows() << ", "
-                    << "bandsize, "
+          std::cout << "CSVData-2, " << "run, " << run_index << ", " << "time, " << elapsed_time << ", "
+                    << "type, " << dlaf::internal::FormatShort{opts.type}.value << ", " << "uplo, "
+                    << dlaf::internal::FormatShort{opts.uplo}.value << ", " << "matrixsize, "
+                    << matrix_host.size().rows() << ", " << "blocksize, "
+                    << matrix_host.blockSize().rows() << ", " << "bandsize, "
                     << dlaf::eigensolver::internal::getBandSize(matrix_host.blockSize().rows()) << ", "
-                    << "comm_rows, " << comm_grid.size().rows() << ", "
-                    << "comm_cols, " << comm_grid.size().cols() << ", "
-                    << "threads, " << pika::get_os_thread_count() << ", "
-                    << "backend, " << backend << ", " << opts.info << std::endl;
+                    << "comm_rows, " << comm_grid.size().rows() << ", " << "comm_cols, "
+                    << comm_grid.size().cols() << ", " << "threads, " << pika::get_os_thread_count()
+                    << ", " << "backend, " << backend << ", " << opts.info << ", "
+                    << "first eigenvalue index, " << 0l << ", " << "last eigenvalue index, "
+                    << opts.last_eval_idx << std::endl;
         }
       }
       // (optional) run test
@@ -246,6 +252,7 @@ int main(int argc, char** argv) {
   desc_commandline.add_options()
     ("matrix-size",   value<SizeType>()   ->default_value(4096), "Matrix size")
     ("block-size",    value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
+    ("last-eval-index",     value<SizeType>()                  , "Index of last eigenvalue of interest/eigenvector to transform")
 #ifdef DLAF_WITH_HDF5
     ("input-file",    value<std::filesystem::path>()                            , "Load matrix from given HDF5 file")
     ("input-dataset", value<std::string>()           -> default_value("/input") , "Name of HDF5 dataset to load as matrix")

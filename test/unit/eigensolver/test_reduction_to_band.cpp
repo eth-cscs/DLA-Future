@@ -8,7 +8,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <algorithm>
 #include <cmath>
+#include <functional>
 #include <vector>
 
 #include <pika/execution.hpp>
@@ -24,6 +26,7 @@
 #include <dlaf/eigensolver/reduction_to_band.h>
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/copy.h>
+#include <dlaf/matrix/copy_tile.h>
 #include <dlaf/matrix/index.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_mirror.h>
@@ -496,8 +499,7 @@ struct CAReductionToBandTest : public TestWithCommGrids {};
 template <class T>
 using CAReductionToBandTestMC = ReductionToBandTest<T>;
 
-using JustThisType = ::testing::Types<float>;
-TYPED_TEST_SUITE(CAReductionToBandTestMC, JustThisType);
+TYPED_TEST_SUITE(CAReductionToBandTestMC, MatrixElementTypes);
 
 template <class T>
 MatrixLocal<T> allGatherT(Matrix<const T, Device::CPU>& source, comm::CommunicatorGrid& comm_grid) {
@@ -532,46 +534,138 @@ MatrixLocal<T> allGatherT(Matrix<const T, Device::CPU>& source, comm::Communicat
 }
 
 template <class T>
-auto checkResult(const SizeType k, const SizeType band_size, Matrix<const T, Device::CPU>& reference,
-                 const MatrixLocal<T>& mat_b, const MatrixLocal<T>& mat_hh_1st,
-                 const MatrixLocal<T>& taus_1st, const MatrixLocal<T>& mat_hh_2nd,
-                 const std::vector<T>& taus_2nd) {
-  dlaf::internal::silenceUnusedWarningFor(k, band_size, reference, mat_b);
-
+auto checkResult(const Distribution dist, const SizeType band_size,
+                 Matrix<const T, Device::CPU>& reference, const MatrixLocal<T>& mat_b,
+                 const MatrixLocal<T>& mat_hh_1st, const MatrixLocal<T>& taus_1st,
+                 const MatrixLocal<T>& mat_hh_2nd, const std::vector<T>& taus_2nd) {
   const GlobalElementIndex offset(band_size, 0);
   // Now that all input are collected locally, it's time to apply the transformation,
   // ...but just if there is any
   if (offset.isIn(mat_hh_1st.size())) {
-    // Reduction to band returns a sequence of transformations applied from left and right to A
-    // allowing to reduce the matrix A to a band matrix B
-    //
-    // Hn* ... H2* H1* A H1 H2 ... Hn
-    // Q* A Q = B
-    //
-    // Applying the inverse of the same transformations, we can go from B to A
-    // Q B Q* = A
-    // Q = H1 H2 ... Hn
-    // H1 H2 ... Hn B Hn* ... H2* H1*
-
     dlaf::common::internal::SingleThreadedBlasScope single;
 
-    // apply from left...
-    // const GlobalElementIndex left_offset = offset;
-    // const GlobalElementSize left_size{mat_b.size().rows() - band_size, mat_b.size().cols()};
-    // lapack::unmqr(lapack::Side::Left, lapack::Op::NoTrans, left_size.rows(), left_size.cols(), k,
-    //               mat_hh_1st.ptr(offset), mat_hh_1st.ld(), taus_1st.data(), mat_b.ptr(left_offset),
-    //               mat_b.ld());
+    const SizeType ntiles = mat_b.nrTiles().cols() - 1;
 
-    // ... and from right
-    // const GlobalElementIndex right_offset = common::transposed(left_offset);
-    // const GlobalElementSize right_size = common::transposed(left_size);
+    // Apply in reverse order (blocked algorithm), which means both from last to first, inverting
+    // intra-step too, i.e. 2nd first and 1st last.
+    for (SizeType j = ntiles - 1; j >= 0; --j) {
+      const SizeType i = j + 1;
+      const SizeType i_el =
+          dist.template global_element_from_global_tile_and_tile_element<Coord::Row>(i, 0);
 
-    // lapack::unmqr(lapack::Side::Right, lapack::Op::ConjTrans, right_size.rows(), right_size.cols(), k,
-    //               mat_hh_1st.ptr(offset), mat_hh_1st.ld(), taus_1st.data(), mat_b.ptr(right_offset),
-    //               mat_b.ld());
+      const std::size_t nranks_with_data =
+          to_sizet(std::min<SizeType>(mat_b.nrTiles().rows() - i, dist.grid_size().rows()));
+
+      // === 2nd pass
+
+      // prepare workspace (height = max(nranks)) + reorder heads
+      std::vector<comm::IndexT_MPI> col_rank_order(nranks_with_data, -1);
+      const comm::IndexT_MPI first_rank = dist.template rank_global_tile<Coord::Row>(i);
+      std::iota(col_rank_order.begin(), col_rank_order.end(), first_rank);
+      std::transform(col_rank_order.begin(), col_rank_order.end(), col_rank_order.begin(),
+                     [size = dist.grid_size().rows()](const comm::IndexT_MPI& value) {
+                       return std::modulus<comm::IndexT_MPI>{}(value, size);
+                     });
+
+      // HH2
+      // TODO it does not deal with incomplete tiles yet
+      MatrixLocal<T> hh_2nd({to_SizeType(nranks_with_data) * mat_b.blockSize().rows(),
+                             mat_b.blockSize().cols()},
+                            mat_b.blockSize());
+
+      for (SizeType i = 0; i < to_SizeType(col_rank_order.size()); ++i) {
+        const SizeType ii = to_SizeType(col_rank_order[to_sizet(i)]);
+        matrix::internal::copy(mat_hh_2nd.tile({ii, j}), hh_2nd.tile({i, 0}));
+      }
+
+      const SizeType nrefls = [&]() {
+        // TODO workaround (j == ntiles - 1 ? 1 : 0)
+        return std::min(dist.template tile_size_of<Coord::Col>(j),
+                        hh_2nd.size().rows() - (j == ntiles - 1 ? 1 : 0));
+      }();
+
+      // T2
+      const SizeType j_el =
+          dist.template global_element_from_global_tile_and_tile_element<Coord::Col>(j, 0);
+      MatrixLocal<T> T_2nd({nrefls, nrefls}, mat_b.blockSize());
+      lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise, hh_2nd.size().rows(), nrefls,
+                    hh_2nd.ptr(), hh_2nd.ld(), taus_2nd.data() + j_el, T_2nd.ptr(), T_2nd.ld());
+
+      // Apply HH2 from L and R
+      lapack::larfb(lapack::Side::Left, lapack::Op::NoTrans, lapack::Direction::Forward,
+                    lapack::StoreV::Columnwise, hh_2nd.size().rows(), mat_b.size().cols() - j_el, nrefls,
+                    hh_2nd.ptr(), hh_2nd.ld(), T_2nd.ptr(), T_2nd.ld(), mat_b.ptr({i_el, j_el}),
+                    mat_b.ld());
+      lapack::larfb(lapack::Side::Right, lapack::Op::ConjTrans, lapack::Direction::Forward,
+                    lapack::StoreV::Columnwise, mat_b.size().rows() - j_el, hh_2nd.size().rows(), nrefls,
+                    hh_2nd.ptr(), hh_2nd.ld(), T_2nd.ptr(), T_2nd.ld(), mat_b.ptr({j_el, i_el}),
+                    mat_b.ld());
+
+      // === 1st pass
+
+      // HH1 (for all ranks)
+      // prepare workspace (height = local matrix for each rank) with zeros to fill voids
+      // Note: HH_1st workspaces is stored as a matrix where each column of tiles is for a specific rank.
+      MatrixLocal<T> hh_1st({dist.size().rows() - i_el,
+                             to_SizeType(nranks_with_data) * dist.tile_size().cols()},
+                            dist.tile_size());
+
+      std::size_t col_rank_current = 0;
+      for (SizeType i_a = i; i_a < dist.nr_tiles().rows(); ++i_a, ++col_rank_current) {
+        col_rank_current %= col_rank_order.size();
+
+        const SizeType i_hh = i_a - i;
+
+        for (SizeType j_hh = 0; j_hh < hh_1st.nrTiles().cols(); ++j_hh) {
+          const auto& tile_hh = hh_1st.tile({i_hh, j_hh});
+
+          if (j_hh == to_SizeType(col_rank_current)) {
+            dlaf::matrix::internal::copy(mat_hh_1st.tile({i_a, j}), tile_hh);
+          }
+          else {
+            dlaf::tile::internal::set0(tile_hh);
+          }
+        }
+      }
+
+      // Note: well-formed heads
+      for (SizeType j = 0; j < hh_1st.nrTiles().cols(); ++j) {
+        const auto& tile_hh = hh_1st.tile({j, j});
+        dlaf::tile::internal::laset(blas::Uplo::Upper, T(0), T(1), tile_hh);
+      }
+
+      // Note: apply one HH1 per time, independently, order not relevant
+      for (SizeType col_rank = 0; col_rank < to_SizeType(col_rank_order.size()); ++col_rank) {
+        const SizeType rank = to_SizeType(col_rank_order[to_sizet(col_rank)]);
+
+        // Compute T1
+        const auto& tile_taus = taus_1st.tile({j, rank});
+        const SizeType nrefls = tile_taus.size().rows();
+        const auto& hh_1st_head = hh_1st.tile({col_rank, col_rank});
+
+        MatrixLocal<T> T_1st({nrefls, nrefls}, mat_b.blockSize());
+        lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise,
+                      hh_1st.size().rows() - col_rank * dist.tile_size().rows(), nrefls,
+                      hh_1st_head.ptr(), hh_1st.ld(), tile_taus.ptr(), T_1st.ptr(), T_1st.ld());
+
+        // Apply HH1 (of a rank) from L and R
+        {
+          const SizeType m = dist.size().rows() - (i + col_rank) * dist.tile_size().rows();
+          const SizeType n = dist.size().cols() - j * dist.tile_size().cols();
+          lapack::larfb(lapack::Side::Left, lapack::Op::NoTrans, lapack::Direction::Forward,
+                        lapack::StoreV::Columnwise, m, n, nrefls, hh_1st_head.ptr(), hh_1st.ld(),
+                        T_1st.ptr(), T_1st.ld(), mat_b.tile({i + col_rank, j}).ptr(), mat_b.ld());
+        }
+        {
+          const SizeType m = dist.size().rows() - j * dist.tile_size().rows();
+          const SizeType n = dist.size().cols() - (i + col_rank) * dist.tile_size().cols();
+          lapack::larfb(lapack::Side::Right, lapack::Op::ConjTrans, lapack::Direction::Forward,
+                        lapack::StoreV::Columnwise, m, n, nrefls, hh_1st_head.ptr(), hh_1st.ld(),
+                        T_1st.ptr(), T_1st.ld(), mat_b.tile({j, i + col_rank}).ptr(), mat_b.ld());
+        }
+      }
+    }
   }
-
-  dlaf::internal::silenceUnusedWarningFor(mat_hh_1st, taus_1st);
 
   // Eventually, check the result obtained by applying the inverse transformation equals the original matrix
   auto result = [&dist = reference.distribution(),
@@ -580,12 +674,9 @@ auto checkResult(const SizeType k, const SizeType band_size, Matrix<const T, Dev
     const auto tile_element = dist.tileElementIndex(element);
     return mat_local.tile_read(tile_index)(tile_element);
   };
-  // TODO FIXME
-  dlaf::internal::silenceUnusedWarningFor(result);
-  // CHECK_MATRIX_NEAR(result, reference, 0,
-  //                   std::max<SizeType>(1, mat_b.size().linear_size()) * TypeUtilities<T>::error);
 
-  dlaf::internal::silenceUnusedWarningFor(mat_hh_2nd, taus_2nd);
+  CHECK_MATRIX_NEAR(result, reference, 0,
+                    std::max<SizeType>(1, mat_b.size().linear_size()) * TypeUtilities<T>::error);
 }
 
 template <class T, Device D, Backend B>
@@ -595,11 +686,11 @@ void testCAReductionToBand(comm::CommunicatorGrid& grid, const LocalElementSize 
   const SizeType k_reflectors = std::max(SizeType(0), size.rows() - band_size - 1);
   DLAF_ASSERT(block_size.rows() % band_size == 0, block_size.rows(), band_size);
 
-  Distribution distribution({size.rows(), size.cols()}, block_size, grid.size(), grid.rank(), {0, 0});
+  const Distribution dist({size.rows(), size.cols()}, block_size, grid.size(), grid.rank(), {0, 0});
 
   // setup the reference input matrix
   Matrix<const T, Device::CPU> reference = [&]() {
-    Matrix<T, Device::CPU> reference(distribution);
+    Matrix<T, Device::CPU> reference(dist);
     if (input_matrix_structure == InputMatrixStructure::banded)
       // Matrix already in band form, with band smaller than band_size
       matrix::util::set_random_hermitian_banded(reference, band_size - 1);
@@ -608,20 +699,13 @@ void testCAReductionToBand(comm::CommunicatorGrid& grid, const LocalElementSize 
     return reference;
   }();
 
-  Matrix<T, Device::CPU> matrix_a_h(distribution);
+  Matrix<T, Device::CPU> matrix_a_h(dist);
   copy(reference, matrix_a_h);
-
-  print(format::numpy{}, "A", matrix_a_h);
 
   eigensolver::internal::CARed2BandResult<T, D> red2band_result = [&]() {
     MatrixMirror<T, D, Device::CPU> matrix_a(matrix_a_h);
     return eigensolver::internal::ca_reduction_to_band<B>(grid, matrix_a.get(), band_size);
   }();
-
-  // print(format::numpy{}, "R", matrix_a_h);
-  // print(format::numpy{}, "taus_1st", red2band_result.taus_1st);
-  // print(format::numpy{}, "mat_hh_2nd", red2band_result.hh_2nd);
-  // print(format::numpy{}, "taus_2nd", red2band_result.taus_2nd);
 
   ASSERT_EQ(red2band_result.taus_1st.block_size().rows(), block_size.rows());
   ASSERT_EQ(red2band_result.taus_2nd.block_size().rows(), block_size.rows());
@@ -642,17 +726,10 @@ void testCAReductionToBand(comm::CommunicatorGrid& grid, const LocalElementSize 
   auto taus_2nd = allGatherTaus(k_reflectors, red2band_result.taus_2nd, grid);
   ASSERT_EQ(taus_2nd.size(), k_reflectors);
 
-  print(format::numpy{}, "mat_hh_2nd", mat_hh_2nd);
-  print(format::numpy{}, "mat_taus_1st", taus_1st);
-  std::cout << "taus_2nd = ";
-  for (auto tau : taus_2nd)
-    std::cout << tau << ", ";
-  std::cout << std::endl;
-
   auto mat_band = makeLocal(matrix_a_h);
   splitReflectorsAndBand(mat_hh_1st, mat_band, band_size);
 
-  checkResult(k_reflectors, band_size, reference, mat_band, mat_hh_1st, taus_1st, mat_hh_2nd, taus_2nd);
+  checkResult(dist, band_size, reference, mat_band, mat_hh_1st, taus_1st, mat_hh_2nd, taus_2nd);
 }
 
 TYPED_TEST(CAReductionToBandTestMC, CorrectnessDistributed) {

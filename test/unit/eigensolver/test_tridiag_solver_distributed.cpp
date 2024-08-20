@@ -251,7 +251,7 @@ void solveRandomTridiagMatrix(comm::CommunicatorGrid& grid, SizeType n, SizeType
   });
   tridiag_full.waitLocalTiles();  // makes sure that diag_arr and offdiag_arr don't go out of scope
 
-  testEigensolverCorrectness(blas::Uplo::Lower, tridiag_full, evals, evecs, 0l, n - 1, grid);
+  testEigensolverCorrectness(blas::Uplo::Lower, tridiag_full, evals, evecs, 0l, n, grid);
 }
 
 TYPED_TEST(TridiagSolverDistTestMC, Laplace1D) {

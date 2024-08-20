@@ -145,7 +145,6 @@ TYPED_TEST(EigensolverTestMC, CorrectnessLocal) {
   for (auto uplo : blas_uplos) {
     for (auto [m, mb, b_min] : sizes) {
       getTuneParameters().eigensolver_min_band = b_min;
-
       testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(uplo, m, mb,
                                                                                       MatrixType::random,
                                                                                       m - 1);
@@ -161,7 +160,6 @@ TYPED_TEST(EigensolverTestMC, CorrectnessLocal) {
     }
     for (auto [m, mb, b_min] : sizes_id) {
       getTuneParameters().eigensolver_min_band = b_min;
-
       testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(
           uplo, m, mb, MatrixType::identity, m - 1);
     }
@@ -173,7 +171,6 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributed) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
         getTuneParameters().eigensolver_min_band = b_min;
-
         testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(
             uplo, m, mb, MatrixType::random, m - 1, grid);
         testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::use_preallocated>(
@@ -188,7 +185,6 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributed) {
       }
       for (auto [m, mb, b_min] : sizes_id) {
         getTuneParameters().eigensolver_min_band = b_min;
-
         testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(
             uplo, m, mb, MatrixType::identity, m - 1, grid);
       }

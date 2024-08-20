@@ -251,9 +251,9 @@ int main(int argc, char** argv) {
 
   // clang-format off
   desc_commandline.add_options()
-    ("matrix-size",     value<SizeType>() ->default_value(4096), "Matrix size")
-    ("block-size",      value<SizeType>() ->default_value( 256), "Block cyclic distribution size")
-    ("last-eval-index", value<SizeType>()                      , "Index of last eigenvalue of interest/eigenvector to transform")
+    ("matrix-size",   value<SizeType>()   ->default_value(4096), "Matrix size")
+    ("block-size",    value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
+    ("last-eval-index",     value<SizeType>()                  , "Index of last eigenvalue of interest/eigenvector to transform")
 #ifdef DLAF_WITH_HDF5
     ("input-file",    value<std::filesystem::path>()                            , "Load matrix from given HDF5 file")
     ("input-dataset", value<std::string>()           -> default_value("/input") , "Name of HDF5 dataset to load as matrix")

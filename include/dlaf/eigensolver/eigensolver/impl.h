@@ -87,7 +87,7 @@ void Eigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo, M
 
   tridiagonal_eigensolver<B>(grid, ret.tridiagonal, evals, mat_e);
 
-  auto spec = matrix::util::internal::sub_matrix_spec_slice_cols(mat_e, first_eigenvalue_index,
+  auto spec = matrix::util::internal::sub_matrix_spec_slice_cols(mat_a, first_eigenvalue_index,
                                                                  last_eigenvalue_index);
   matrix::internal::MatrixRef mat_e_ref(mat_e, spec);
 

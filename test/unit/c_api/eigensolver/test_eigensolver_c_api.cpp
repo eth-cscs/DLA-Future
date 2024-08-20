@@ -179,7 +179,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
   pika::resume();
 
   if (!mat_a_h.size().isEmpty())
-    testEigensolverCorrectness(uplo, reference, ret.eigenvalues, ret.eigenvectors, 0l, m - 1, grid);
+    testEigensolverCorrectness(uplo, reference, ret.eigenvalues, ret.eigenvectors, 0l, m, grid);
 
   // Suspend pika to make sure dlaf_finalize resumes it
   pika::suspend();

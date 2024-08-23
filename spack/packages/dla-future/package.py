@@ -243,7 +243,6 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                         )
                     )
         else:
-
             args.append(self.define("DLAF_WITH_MKL", spec["lapack"].name in INTEL_MATH_LIBRARIES))
             add_dlaf_prefix = lambda x: x if spec.version <= Version("0.6") else "DLAF_" + x
             args.append(

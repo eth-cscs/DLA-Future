@@ -65,8 +65,8 @@ else()
   try_compile(
     DLAF_WITH_MKL_TRY_COMPILE "${PROJECT_BINARY_DIR}/cmake/tests"
     "${PROJECT_SOURCE_DIR}/cmake/tests/mkl_set_num_threads.cpp"
-    CMAKE_FLAGS "-DINCLUDE_DIRECTORIES=${LAPACK_INCLUDE_DIR}"
-    LINK_LIBRARIES ${LAPACK_LIBRARY}
+    CMAKE_FLAGS "-DINCLUDE_DIRECTORIES=${DLAF_LAPACK_INCLUDE_DIR}"
+    LINK_LIBRARIES ${DLAF_LAPACK_LIBRARY}
   )
   if(DLAF_WITH_MKL_TRY_COMPILE)
     message(STATUS "Intel MKL support: Found")
@@ -157,9 +157,9 @@ if(DLAF_WITH_OPENMP)
   find_package(OpenMP REQUIRED)
 endif()
 
-find_package(LAPACK REQUIRED)
+find_package(DLAF_LAPACK REQUIRED)
 if(DLAF_WITH_SCALAPACK)
-  find_package(SCALAPACK REQUIRED)
+  find_package(DLAF_SCALAPACK REQUIRED)
 endif()
 
 # ----- pika

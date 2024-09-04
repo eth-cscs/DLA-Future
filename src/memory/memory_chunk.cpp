@@ -34,6 +34,14 @@ umpire::Allocator& getUmpireHostAllocator() {
 }
 #endif
 
+// Coalesce when pool is empty. When coalescing, allocate 10% more than the
+// previous high water mark. Work around
+// https://github.com/LLNL/Umpire/issues/906?
+std::size_t coalesce_heuristic(const umpire::strategy::QuickPool& pool) {
+  return pool.getActualSize() == pool.getReleasableSize() ?
+	  std::size_t(pool.getHighWatermark() * 1.1) : 0;
+}
+
 void initializeUmpireHostAllocator(std::size_t initial_bytes) {
 #ifdef DLAF_WITH_GPU
   static bool initialized = false;
@@ -45,7 +53,8 @@ void initializeUmpireHostAllocator(std::size_t initial_bytes) {
     auto pooled_host_allocator =
         umpire::ResourceManager::getInstance().makeAllocator<umpire::strategy::QuickPool>("PINNED_pool",
                                                                                           host_allocator,
-                                                                                          initial_bytes, std::size_t(1) << 30, std::size_t(1) << 21);
+                                                                                          initial_bytes, std::size_t(1) << 30, std::size_t(1) << 21,
+                                                                                          umpire::strategy::PoolCoalesceHeuristic<umpire::strategy::QuickPool>(&coalesce_heuristic));
     auto thread_safe_pooled_host_allocator =
         umpire::ResourceManager::getInstance().makeAllocator<umpire::strategy::ThreadSafeAllocator>(
             "PINNED_thread_safe_pool", pooled_host_allocator);
@@ -71,7 +80,8 @@ void initializeUmpireDeviceAllocator(std::size_t initial_bytes) {
     auto device_allocator = umpire::ResourceManager::getInstance().getAllocator("DEVICE");
     auto pooled_device_allocator =
         umpire::ResourceManager::getInstance().makeAllocator<umpire::strategy::QuickPool>(
-            "DEVICE_pool", device_allocator, initial_bytes, std::size_t(1) << 30, std::size_t(1) << 21);
+            "DEVICE_pool", device_allocator, initial_bytes, std::size_t(1) << 30, std::size_t(1) << 21,
+            umpire::strategy::PoolCoalesceHeuristic<umpire::strategy::QuickPool>(&coalesce_heuristic));
     auto thread_safe_pooled_device_allocator =
         umpire::ResourceManager::getInstance().makeAllocator<umpire::strategy::ThreadSafeAllocator>(
             "DEVICE_thread_safe_pool", pooled_device_allocator);

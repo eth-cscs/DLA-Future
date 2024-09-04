@@ -26,6 +26,8 @@ namespace dlaf {
 namespace memory {
 
 namespace internal {
+void print_cuda_stats(std::string_view label);
+
 umpire::Allocator& getUmpireHostAllocator();
 void initializeUmpireHostAllocator(std::size_t initial_bytes);
 void finalizeUmpireHostAllocator();

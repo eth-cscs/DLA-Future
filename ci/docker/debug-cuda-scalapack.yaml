@@ -35,5 +35,6 @@ spack:
         - '+fortran'
     pika:
       require:
+        - '@0.19.1'
         - 'build_type=Debug'
         - 'malloc=system'

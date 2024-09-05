@@ -100,11 +100,13 @@ struct TuneParameters {
     // Some parameters require the pika runtime to be initialized since they depend on the number of
     // threads used by the runtime. We initialize them separately in the constructor after checking that
     // pika is initialized.
+#if PIKA_VERSION_FULL >= 0x001600  // >= 0.22.0
     if (!pika::is_runtime_initialized()) {
       std::cerr
           << "[ERROR] Trying to initialize DLA-Future tune parameters but the pika runtime is not initialized. Make sure pika is initialized first.\n";
       std::terminate();
     }
+#endif
 
     const auto default_pool_thread_count =
         pika::resource::get_thread_pool("default").get_os_thread_count();

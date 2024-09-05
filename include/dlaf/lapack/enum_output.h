@@ -37,7 +37,7 @@ inline std::ostream& operator<<(std::ostream& out, const Norm& norm) {
 }
 
 inline std::ostream& operator<<(std::ostream& out, const lapack::MatrixType& mtype) {
-  out << lapack::matrixtype2str(mtype);
+  out << to_c_string(mtype);
   return out;
 }
 

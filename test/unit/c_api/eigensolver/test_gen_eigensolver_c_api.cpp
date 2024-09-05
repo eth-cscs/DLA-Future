@@ -115,7 +115,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
     eigenvalues.waitLocalTiles();
     eigenvectors.waitLocalTiles();
 
-    char dlaf_uplo = blas::uplo2char(uplo);
+    char dlaf_uplo = blas::to_char(uplo);
 
     // Get top left local tiles
     auto [local_a_ptr, lld_a] = top_left_tile(mat_a_h);

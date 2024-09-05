@@ -14,7 +14,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <iosfwd>
+#include <iostream>
 
+#include <pika/init.hpp>
 #include <pika/runtime.hpp>
 
 #include <dlaf/types.h>
@@ -97,10 +99,12 @@ struct TuneParameters {
     // Some parameters require the pika runtime to be initialized since they depend on the number of
     // threads used by the runtime. We initialize them separately in the constructor after checking that
     // pika is initialized.
+    if (!pika::is_runtime_initialized()) {
+      std::cerr
+          << "[ERROR] Trying to initialize DLA-Future tune parameters but the pika runtime is not initialized. Make sure pika is initialized first.\n";
+      std::terminate();
+    }
 
-    // TODO: Check upfront whether pika has been initialized to be able to give a better error message.
-    // If pika has not been initialized getting the default thread pool will either trigger an assertion
-    // or a segfault.
     const auto default_pool_thread_count =
         pika::resource::get_thread_pool("default").get_os_thread_count();
     red2band_panel_nworkers = std::max<std::size_t>(1, default_pool_thread_count / 2);

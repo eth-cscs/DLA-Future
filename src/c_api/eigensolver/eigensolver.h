@@ -15,6 +15,7 @@
 
 #include <pika/init.hpp>
 
+#include <dlaf/blas/enum_parse.h>
 #include <dlaf/common/assert.h>
 #include <dlaf/eigensolver/eigensolver.h>
 #include <dlaf/matrix/create_matrix.h>
@@ -60,7 +61,8 @@ int hermitian_eigensolver(const int dlaf_context, const char uplo, T* a,
     MatrixBaseMirror eigenvalues(eigenvalues_host);
 
     dlaf::hermitian_eigensolver<dlaf::Backend::Default, dlaf::Device::Default, T>(
-        communicator_grid, blas::char2uplo(uplo), matrix.get(), eigenvalues.get(), eigenvectors.get());
+        communicator_grid, dlaf::internal::char2uplo(uplo), matrix.get(), eigenvalues.get(),
+        eigenvectors.get());
   }  // Destroy mirror
 
   // Ensure data is copied back to the host

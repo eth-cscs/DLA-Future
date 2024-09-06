@@ -68,7 +68,13 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("blas")
     depends_on("lapack")
     depends_on("scalapack", when="+scalapack")
+
     depends_on("blaspp@2022.05.00:")
+
+    # see https://github.com/eth-cscs/DLA-Future/pull/1181
+    depends_on("blaspp@2024.05.31:", when="@0.6.1:")
+    conflicts("^blasspp@2025.05:", when="@:0.6.0")
+
     depends_on("lapackpp@2022.05.00:")
     depends_on("intel-oneapi-mkl +cluster", when="^[virtuals=scalapack] intel-oneapi-mkl")
 

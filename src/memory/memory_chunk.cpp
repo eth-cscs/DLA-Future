@@ -15,6 +15,7 @@
 #include <umpire/strategy/QuickPool.hpp>
 #include <umpire/strategy/ThreadSafeAllocator.hpp>
 
+#include <dlaf/common/assert.h>
 #include <dlaf/memory/memory_chunk.h>
 
 namespace dlaf {
@@ -91,7 +92,7 @@ void initializeUmpireHostAllocator(std::size_t initial_bytes, std::size_t next_b
     initialized = true;
   }
 #else
-  (void) initial_bytes;
+  dlaf::internal::silenceUnusedWarningFor(initial_bytes, next_bytes, alignment_bytes, coalesce_free_ratio, coalesce_reallocation_ratio);
 #endif
 }
 

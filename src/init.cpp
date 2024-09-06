@@ -30,15 +30,22 @@
 
 namespace dlaf {
 std::ostream& operator<<(std::ostream& os, const configuration& cfg) {
+  // clang-format off
   os << "  num_np_gpu_streams_per_thread = " << cfg.num_np_gpu_streams_per_thread << std::endl;
   os << "  num_hp_gpu_streams_per_thread = " << cfg.num_hp_gpu_streams_per_thread << std::endl;
   os << "  num_gpu_blas_handles = " << cfg.num_gpu_blas_handles << std::endl;
   os << "  num_gpu_lapack_handles = " << cfg.num_gpu_lapack_handles << std::endl;
-  os << "  umpire_host_memory_pool_initial_bytes = " << cfg.umpire_host_memory_pool_initial_bytes
-     << std::endl;
-  os << "  umpire_device_memory_pool_initial_bytes = " << cfg.umpire_device_memory_pool_initial_bytes
-     << std::endl;
-  os << "  mpi_pool = " << pika::mpi::experimental::get_pool_name() << std::endl;
+  os << "  umpire_host_memory_pool_initial_bytes = " << cfg.umpire_host_memory_pool_initial_bytes << std::endl;
+  os << "  umpire_host_memory_pool_next_bytes = " << cfg.umpire_host_memory_pool_next_bytes << std::endl;
+  os << "  umpire_host_memory_pool_alignment_bytes = " << cfg.umpire_host_memory_pool_alignment_bytes << std::endl;
+  os << "  umpire_host_memory_pool_coalescing_free_ratio = " << cfg.umpire_host_memory_pool_coalescing_free_ratio << std::endl;
+  os << "  umpire_host_memory_pool_coalescing_reallocation_ratio = " << cfg.umpire_host_memory_pool_coalescing_reallocation_ratio << std::endl;
+  os << "  umpire_device_memory_pool_initial_bytes = " << cfg.umpire_device_memory_pool_initial_bytes << std::endl;
+  os << "  umpire_device_memory_pool_next_bytes = " << cfg.umpire_device_memory_pool_next_bytes << std::endl;
+  os << "  umpire_device_memory_pool_alignment_bytes = " << cfg.umpire_device_memory_pool_alignment_bytes << std::endl;
+  os << "  umpire_device_memory_pool_coalescing_free_ratio = " << cfg.umpire_device_memory_pool_coalescing_free_ratio << std::endl;
+  os << "  umpire_device_memory_pool_coalescing_reallocation_ratio = " << cfg.umpire_device_memory_pool_coalescing_reallocation_ratio << std::endl;
+  // clang-format on
   return os;
 }
 
@@ -59,7 +66,7 @@ struct Init {
 template <>
 struct Init<Backend::MC> {
   static void initialize(const configuration& cfg) {
-    memory::internal::initializeUmpireHostAllocator(cfg.umpire_host_memory_pool_initial_bytes);
+    memory::internal::initializeUmpireHostAllocator(cfg.umpire_host_memory_pool_initial_bytes, cfg.umpire_host_memory_pool_next_bytes, cfg.umpire_host_memory_pool_alignment_bytes, cfg.umpire_host_memory_pool_coalescing_free_ratio, cfg.umpire_host_memory_pool_coalescing_reallocation_ratio);
     // install mpi polling loop
     // pika::mpi::experimental::init(false);
     pika::mpi::experimental::init(false, true);
@@ -115,7 +122,7 @@ struct Init<Backend::GPU> {
     pika::mpi::experimental::init(false, true);
     pika::mpi::experimental::register_polling();
 
-    memory::internal::initializeUmpireDeviceAllocator(cfg.umpire_device_memory_pool_initial_bytes);
+    memory::internal::initializeUmpireDeviceAllocator(cfg.umpire_device_memory_pool_initial_bytes, cfg.umpire_device_memory_pool_initial_bytes, cfg.umpire_device_memory_pool_alignment_bytes, cfg.umpire_host_memory_pool_coalescing_free_ratio, cfg.umpire_host_memory_pool_coalescing_reallocation_ratio);
     initializeGpuPool(device, cfg.num_np_gpu_streams_per_thread, cfg.num_hp_gpu_streams_per_thread,
                       cfg.num_gpu_blas_handles, cfg.num_gpu_lapack_handles);
     pika::cuda::experimental::detail::register_polling(
@@ -147,6 +154,13 @@ template <>
 struct parseFromString<SizeType> {
   static std::optional<SizeType> call(const std::string& var) {
     return std::stoll(var);
+  }
+};
+
+template <>
+struct parseFromString<double> {
+  static std::optional<SizeType> call(const std::string& var) {
+    return std::stod(var);
   }
 };
 
@@ -221,10 +235,6 @@ void warnUnusedConfigurationOption(const pika::program_options::variables_map& v
 }
 
 void updateConfiguration(const pika::program_options::variables_map& vm, configuration& cfg) {
-  updateConfigurationValue(vm, cfg.num_np_gpu_streams_per_thread, "NUM_NP_GPU_STREAMS_PER_THREAD",
-                           "num-np-gpu-streams-per-thread");
-  updateConfigurationValue(vm, cfg.num_hp_gpu_streams_per_thread, "NUM_HP_GPU_STREAMS_PER_THREAD",
-                           "num-hp-gpu-streams-per-thread");
   updateConfigurationValue(vm, cfg.num_gpu_blas_handles, "NUM_GPU_BLAS_HANDLES", "num-gpu-blas-handles");
   updateConfigurationValue(vm, cfg.num_gpu_lapack_handles, "NUM_GPU_LAPACK_HANDLES",
                            "num-gpu-lapack-handles");
@@ -234,13 +244,18 @@ void updateConfiguration(const pika::program_options::variables_map& vm, configu
   warnUnusedConfigurationOption(vm, "NUM_GPU_LAPACK_HANDLES", "num-gpu-lapack-handles",
                                 "only supported with pika 0.29.0 or newer");
 #endif
-  updateConfigurationValue(vm, cfg.umpire_host_memory_pool_initial_bytes,
-                           "UMPIRE_HOST_MEMORY_POOL_INITIAL_BYTES",
-                           "umpire-host-memory-pool-initial-bytes");
-  updateConfigurationValue(vm, cfg.umpire_device_memory_pool_initial_bytes,
-                           "UMPIRE_DEVICE_MEMORY_POOL_INITIAL_BYTES",
-                           "umpire-device-memory-pool-initial-bytes");
-  //  cfg.mpi_pool = (pika::resource::pool_exists("mpi")) ? "mpi" : "default";
+  updateConfigurationValue(vm, cfg.num_np_gpu_streams_per_thread, "NUM_NP_GPU_STREAMS_PER_THREAD", "num-np-gpu-streams-per-thread");
+  updateConfigurationValue(vm, cfg.num_hp_gpu_streams_per_thread, "NUM_HP_GPU_STREAMS_PER_THREAD", "num-hp-gpu-streams-per-thread");
+  updateConfigurationValue(vm, cfg.umpire_host_memory_pool_initial_bytes, "UMPIRE_HOST_MEMORY_POOL_INITIAL_BYTES", "umpire-host-memory-pool-initial-bytes");
+  updateConfigurationValue(vm, cfg.umpire_host_memory_pool_next_bytes, "UMPIRE_HOST_MEMORY_POOL_NEXT_BYTES", "umpire-host-memory-pool-next-bytes");
+  updateConfigurationValue(vm, cfg.umpire_host_memory_pool_alignment_bytes, "UMPIRE_HOST_MEMORY_POOL_ALIGNMENT_BYTES", "umpire-host-memory-pool-alignment-bytes");
+  updateConfigurationValue(vm, cfg.umpire_host_memory_pool_coalescing_free_ratio, "UMPIRE_HOST_MEMORY_POOL_COALESCING_FREE_RATIO", "umpire-host-memory-pool-coalescing-free-ratio");
+  updateConfigurationValue(vm, cfg.umpire_host_memory_pool_coalescing_reallocation_ratio, "UMPIRE_HOST_MEMORY_POOL_COALESCING_REALLOCATION_RATIO", "umpire-host-memory-pool-coalescing-reallocation-ratio");
+  updateConfigurationValue(vm, cfg.umpire_device_memory_pool_initial_bytes, "UMPIRE_DEVICE_MEMORY_POOL_INITIAL_BYTES", "umpire-device-memory-pool-initial-bytes");
+  updateConfigurationValue(vm, cfg.umpire_device_memory_pool_next_bytes, "UMPIRE_DEVICE_MEMORY_POOL_NEXT_BYTES", "umpire-device-memory-pool-next-bytes");
+  updateConfigurationValue(vm, cfg.umpire_device_memory_pool_alignment_bytes, "UMPIRE_DEVICE_MEMORY_POOL_ALIGNMENT_BYTES", "umpire-device-memory-pool-alignment-bytes");
+  updateConfigurationValue(vm, cfg.umpire_device_memory_pool_coalescing_free_ratio, "UMPIRE_DEVICE_MEMORY_POOL_COALESCING_FREE_RATIO", "umpire-device-memory-pool-coalescing-free-ratio");
+  updateConfigurationValue(vm, cfg.umpire_device_memory_pool_coalescing_reallocation_ratio, "UMPIRE_DEVICE_MEMORY_POOL_COALESCING_REALLOCATION_RATIO", "umpire-device-memory-pool-coalescing-reallocation-ratio");
 
   // Warn if not using MPI pool without --dlaf:no-mpi-pool
   // int mpi_initialized;
@@ -312,20 +327,20 @@ pika::program_options::options_description getOptionsDescription() {
 
   desc.add_options()("dlaf:help", "Print help message");
   desc.add_options()("dlaf:print-config", "Print the DLA-Future configuration");
-  desc.add_options()("dlaf:num-np-gpu-streams-per-thread", pika::program_options::value<std::size_t>(),
-                     "Number of normal priority GPU streams per worker thread");
-  desc.add_options()("dlaf:num-hp-gpu-streams-per-thread", pika::program_options::value<std::size_t>(),
-                     "Number of high priority GPU streams per worker thread");
-  desc.add_options()("dlaf:num-gpu-blas-handles", pika::program_options::value<std::size_t>(),
-                     "Number of GPU BLAS (cuBLAS/rocBLAS) handles");
-  desc.add_options()("dlaf:num-gpu-lapack-handles", pika::program_options::value<std::size_t>(),
-                     "Number of GPU LAPACK (cuSOLVER/rocSOLVER) handles");
-  desc.add_options()("dlaf:umpire-host-memory-pool-initial-bytes",
-                     pika::program_options::value<std::size_t>(),
-                     "Number of bytes to preallocate for pinned host memory pool");
-  desc.add_options()("dlaf:umpire-device-memory-pool-initial-bytes",
-                     pika::program_options::value<std::size_t>(),
-                     "Number of bytes to preallocate for device memory pool");
+  desc.add_options()("dlaf:num-gpu-blas-handles", pika::program_options::value<std::size_t>(), "Number of GPU BLAS (cuBLAS/rocBLAS) handles");
+  desc.add_options()("dlaf:num-gpu-lapack-handles", pika::program_options::value<std::size_t>(), "Number of GPU LAPACK (cuSOLVER/rocSOLVER) handles");
+  desc.add_options()("dlaf:num-np-gpu-streams-per-thread", pika::program_options::value<std::size_t>(), "Number of normal priority GPU streams per worker thread");
+  desc.add_options()("dlaf:num-hp-gpu-streams-per-thread", pika::program_options::value<std::size_t>(), "Number of high priority GPU streams per worker thread");
+  desc.add_options()("dlaf:umpire-host-memory-pool-initial-bytes", pika::program_options::value<std::size_t>(), "Number of bytes to preallocate for pinned host memory pool");
+  desc.add_options()("dlaf:umpire-host-memory-pool-next-bytes", pika::program_options::value<std::size_t>(), "Number of bytes to allocate in blocks after the first block for pinned host memory pool");
+  desc.add_options()("dlaf:umpire-host-memory-pool-alignment-bytes", pika::program_options::value<std::size_t>(), "Alignment of allocations in bytes in pinned host memory pool");
+  desc.add_options()("dlaf:umpire-host-memory-pool-coalescing-free-ratio", pika::program_options::value<double>(), "Required ratio of free memory in pinned host memory pool before performing coalescing of free blocks");
+  desc.add_options()("dlaf:umpire-host-memory-pool-coalescing-reallocation-ratio", pika::program_options::value<double>(), "Ratio of current used memory in pinned host memory pool to use for reallocation of new blocks when coalescing free blocks");
+  desc.add_options()("dlaf:umpire-device-memory-pool-initial-bytes", pika::program_options::value<std::size_t>(), "Number of bytes to preallocate for device memory pool");
+  desc.add_options()("dlaf:umpire-device-memory-pool-next-bytes", pika::program_options::value<std::size_t>(), "Number of bytes to allocate in blocks after the first block for device memory pool");
+  desc.add_options()("dlaf:umpire-device-memory-pool-alignment-bytes", pika::program_options::value<std::size_t>(), "Alignment of allocations in bytes in device memory pool");
+  desc.add_options()("dlaf:umpire-device-memory-pool-coalescing-free-ratio", pika::program_options::value<double>(), "Required ratio of free memory in device memory pool before performing coalescing of free blocks");
+  desc.add_options()("dlaf:umpire-device-memory-pool-coalescing-reallocation-ratio", pika::program_options::value<double>(), "Ratio of current used memory in device memory pool to use for reallocation of new blocks when coalescing free blocks");
   desc.add_options()("dlaf:no-mpi-pool", pika::program_options::bool_switch(), "Disable the MPI pool.");
 
   // Tune parameters command line options

@@ -31,5 +31,5 @@ spack:
         - 'malloc=system'
     stdexec:
       require:
-        - '@git.nvhpc-23.09.rc4=main'
+        - '@git.8bc7c7f06fe39831dea6852407ebe7f6be8fa9fd=main'
         - 'build_type=Debug'

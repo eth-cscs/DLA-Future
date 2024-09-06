@@ -31,7 +31,7 @@ spack:
         - '+stdexec'
     stdexec:
       require:
-        - '@git.48c52df0f81c6151eecf4f39fa5eed2dc0216204=main'
+        - '@git.8bc7c7f06fe39831dea6852407ebe7f6be8fa9fd=main'
     blas:
       require:: openblas
     lapack:

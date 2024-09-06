@@ -38,7 +38,11 @@ struct configuration {
   std::size_t num_np_gpu_streams_per_thread = 3;
   std::size_t num_hp_gpu_streams_per_thread = 3;
   std::size_t umpire_host_memory_pool_initial_bytes = 1 << 30;
+  std::size_t umpire_host_memory_pool_next_bytes = 1 << 30;
+  std::size_t umpire_host_memory_pool_alignment_bytes = 16;
   std::size_t umpire_device_memory_pool_initial_bytes = 1 << 30;
+  std::size_t umpire_device_memory_pool_next_bytes = 1 << 30;
+  std::size_t umpire_device_memory_pool_alignment_bytes = 16;
   std::string mpi_pool = "mpi";
 };
 

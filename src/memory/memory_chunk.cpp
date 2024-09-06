@@ -60,18 +60,22 @@ using CoalesceHeuristicType = umpire::strategy::PoolCoalesceHeuristic<PoolType>;
 // this can lead to strange reallocations, so we simply avoid that case. Two or
 // more blocks are always coalesced to one block, so no reallocation will
 // happen immediately after coalescing two or more blocks.
-static CoalesceHeuristicType get_coalesce_heuristic(double coalesce_free_ratio, double coalesce_reallocation_ratio) {
+static CoalesceHeuristicType get_coalesce_heuristic(double coalesce_free_ratio,
+                                                    double coalesce_reallocation_ratio) {
   return [=](const PoolType& pool) {
     std::size_t threshold = static_cast<std::size_t>(coalesce_free_ratio * pool.getActualSize());
     if (pool.getReleasableBlocks() >= 2 && pool.getReleasableSize() >= threshold) {
       return static_cast<std::size_t>(coalesce_reallocation_ratio * pool.getActualSize());
-    } else {
+    }
+    else {
       return static_cast<std::size_t>(0);
     }
   };
 }
 
-void initializeUmpireHostAllocator(std::size_t initial_bytes, std::size_t next_bytes, std::size_t alignment_bytes, double coalesce_free_ratio, double coalesce_reallocation_ratio) {
+void initializeUmpireHostAllocator(std::size_t initial_bytes, std::size_t next_bytes,
+                                   std::size_t alignment_bytes, double coalesce_free_ratio,
+                                   double coalesce_reallocation_ratio) {
 #ifdef DLAF_WITH_GPU
   static bool initialized = false;
 
@@ -80,9 +84,9 @@ void initializeUmpireHostAllocator(std::size_t initial_bytes, std::size_t next_b
   if (!initialized) {
     auto host_allocator = umpire::ResourceManager::getInstance().getAllocator("PINNED");
     auto pooled_host_allocator =
-        umpire::ResourceManager::getInstance().makeAllocator<umpire::strategy::QuickPool>("DLAF_PINNED_pool",
-                                                                                          host_allocator,
-                                                                                          initial_bytes, next_bytes, alignment_bytes, get_coalesce_heuristic(coalesce_free_ratio, coalesce_reallocation_ratio));
+        umpire::ResourceManager::getInstance().makeAllocator<umpire::strategy::QuickPool>(
+            "DLAF_PINNED_pool", host_allocator, initial_bytes, next_bytes, alignment_bytes,
+            get_coalesce_heuristic(coalesce_free_ratio, coalesce_reallocation_ratio));
     auto thread_safe_pooled_host_allocator =
         umpire::ResourceManager::getInstance().makeAllocator<umpire::strategy::ThreadSafeAllocator>(
             "DLAF_PINNED_thread_safe_pool", pooled_host_allocator);
@@ -92,14 +96,17 @@ void initializeUmpireHostAllocator(std::size_t initial_bytes, std::size_t next_b
     initialized = true;
   }
 #else
-  dlaf::internal::silenceUnusedWarningFor(initial_bytes, next_bytes, alignment_bytes, coalesce_free_ratio, coalesce_reallocation_ratio);
+  dlaf::internal::silenceUnusedWarningFor(initial_bytes, next_bytes, alignment_bytes,
+                                          coalesce_free_ratio, coalesce_reallocation_ratio);
 #endif
 }
 
 void finalizeUmpireHostAllocator() {}
 
 #ifdef DLAF_WITH_GPU
-void initializeUmpireDeviceAllocator(std::size_t initial_bytes, std::size_t next_bytes, std::size_t alignment_bytes, double coalesce_free_ratio, double coalesce_reallocation_ratio) {
+void initializeUmpireDeviceAllocator(std::size_t initial_bytes, std::size_t next_bytes,
+                                     std::size_t alignment_bytes, double coalesce_free_ratio,
+                                     double coalesce_reallocation_ratio) {
   static bool initialized = false;
 
   // Umpire pools cannot be released, so we keep the pools around even when
@@ -108,7 +115,8 @@ void initializeUmpireDeviceAllocator(std::size_t initial_bytes, std::size_t next
     auto device_allocator = umpire::ResourceManager::getInstance().getAllocator("DEVICE");
     auto pooled_device_allocator =
         umpire::ResourceManager::getInstance().makeAllocator<umpire::strategy::QuickPool>(
-            "DLAF_DEVICE_pool", device_allocator, initial_bytes, next_bytes, alignment_bytes, get_coalesce_heuristic(coalesce_free_ratio, coalesce_reallocation_ratio));
+            "DLAF_DEVICE_pool", device_allocator, initial_bytes, next_bytes, alignment_bytes,
+            get_coalesce_heuristic(coalesce_free_ratio, coalesce_reallocation_ratio));
     auto thread_safe_pooled_device_allocator =
         umpire::ResourceManager::getInstance().makeAllocator<umpire::strategy::ThreadSafeAllocator>(
             "DLAF_DEVICE_thread_safe_pool", pooled_device_allocator);

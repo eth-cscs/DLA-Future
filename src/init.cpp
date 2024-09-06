@@ -66,7 +66,10 @@ struct Init {
 template <>
 struct Init<Backend::MC> {
   static void initialize(const configuration& cfg) {
-    memory::internal::initializeUmpireHostAllocator(cfg.umpire_host_memory_pool_initial_bytes, cfg.umpire_host_memory_pool_next_bytes, cfg.umpire_host_memory_pool_alignment_bytes, cfg.umpire_host_memory_pool_coalescing_free_ratio, cfg.umpire_host_memory_pool_coalescing_reallocation_ratio);
+    memory::internal::initializeUmpireHostAllocator(
+        cfg.umpire_host_memory_pool_initial_bytes, cfg.umpire_host_memory_pool_next_bytes,
+        cfg.umpire_host_memory_pool_alignment_bytes, cfg.umpire_host_memory_pool_coalescing_free_ratio,
+        cfg.umpire_host_memory_pool_coalescing_reallocation_ratio);
     // install mpi polling loop
     // pika::mpi::experimental::init(false);
     pika::mpi::experimental::init(false, true);
@@ -122,6 +125,10 @@ struct Init<Backend::GPU> {
     pika::mpi::experimental::init(false, true);
     pika::mpi::experimental::register_polling();
 
+    memory::internal::initializeUmpireDeviceAllocator(
+        cfg.umpire_device_memory_pool_initial_bytes, cfg.umpire_device_memory_pool_initial_bytes,
+        cfg.umpire_device_memory_pool_alignment_bytes, cfg.umpire_host_memory_pool_coalescing_free_ratio,
+        cfg.umpire_host_memory_pool_coalescing_reallocation_ratio);
     memory::internal::initializeUmpireDeviceAllocator(cfg.umpire_device_memory_pool_initial_bytes, cfg.umpire_device_memory_pool_initial_bytes, cfg.umpire_device_memory_pool_alignment_bytes, cfg.umpire_host_memory_pool_coalescing_free_ratio, cfg.umpire_host_memory_pool_coalescing_reallocation_ratio);
     initializeGpuPool(device, cfg.num_np_gpu_streams_per_thread, cfg.num_hp_gpu_streams_per_thread,
                       cfg.num_gpu_blas_handles, cfg.num_gpu_lapack_handles);
@@ -235,14 +242,12 @@ void warnUnusedConfigurationOption(const pika::program_options::variables_map& v
 }
 
 void updateConfiguration(const pika::program_options::variables_map& vm, configuration& cfg) {
+  // clang-format off
   updateConfigurationValue(vm, cfg.num_gpu_blas_handles, "NUM_GPU_BLAS_HANDLES", "num-gpu-blas-handles");
-  updateConfigurationValue(vm, cfg.num_gpu_lapack_handles, "NUM_GPU_LAPACK_HANDLES",
-                           "num-gpu-lapack-handles");
+  updateConfigurationValue(vm, cfg.num_gpu_lapack_handles, "NUM_GPU_LAPACK_HANDLES", "num-gpu-lapack-handles");
 #if PIKA_VERSION_FULL < 0x001D00  // < 0.29.0
-  warnUnusedConfigurationOption(vm, "NUM_GPU_BLAS_HANDLES", "num-gpu-blas-handles",
-                                "only supported with pika 0.29.0 or newer");
-  warnUnusedConfigurationOption(vm, "NUM_GPU_LAPACK_HANDLES", "num-gpu-lapack-handles",
-                                "only supported with pika 0.29.0 or newer");
+  warnUnusedConfigurationOption(vm, "NUM_GPU_BLAS_HANDLES", "num-gpu-blas-handles", "only supported with pika 0.29.0 or newer");
+  warnUnusedConfigurationOption(vm, "NUM_GPU_LAPACK_HANDLES", "num-gpu-lapack-handles", "only supported with pika 0.29.0 or newer");
 #endif
   updateConfigurationValue(vm, cfg.num_np_gpu_streams_per_thread, "NUM_NP_GPU_STREAMS_PER_THREAD", "num-np-gpu-streams-per-thread");
   updateConfigurationValue(vm, cfg.num_hp_gpu_streams_per_thread, "NUM_HP_GPU_STREAMS_PER_THREAD", "num-hp-gpu-streams-per-thread");
@@ -256,6 +261,7 @@ void updateConfiguration(const pika::program_options::variables_map& vm, configu
   updateConfigurationValue(vm, cfg.umpire_device_memory_pool_alignment_bytes, "UMPIRE_DEVICE_MEMORY_POOL_ALIGNMENT_BYTES", "umpire-device-memory-pool-alignment-bytes");
   updateConfigurationValue(vm, cfg.umpire_device_memory_pool_coalescing_free_ratio, "UMPIRE_DEVICE_MEMORY_POOL_COALESCING_FREE_RATIO", "umpire-device-memory-pool-coalescing-free-ratio");
   updateConfigurationValue(vm, cfg.umpire_device_memory_pool_coalescing_reallocation_ratio, "UMPIRE_DEVICE_MEMORY_POOL_COALESCING_REALLOCATION_RATIO", "umpire-device-memory-pool-coalescing-reallocation-ratio");
+  // clang-format on
 
   // Warn if not using MPI pool without --dlaf:no-mpi-pool
   // int mpi_initialized;

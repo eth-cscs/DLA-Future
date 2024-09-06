@@ -35,9 +35,13 @@ std::ostream& operator<<(std::ostream& os, const configuration& cfg) {
   os << "  umpire_host_memory_pool_initial_bytes = " << cfg.umpire_host_memory_pool_initial_bytes << std::endl;
   os << "  umpire_host_memory_pool_next_bytes = " << cfg.umpire_host_memory_pool_next_bytes << std::endl;
   os << "  umpire_host_memory_pool_alignment_bytes = " << cfg.umpire_host_memory_pool_alignment_bytes << std::endl;
+  os << "  umpire_host_memory_pool_coalescing_free_ratio = " << cfg.umpire_host_memory_pool_coalescing_free_ratio << std::endl;
+  os << "  umpire_host_memory_pool_coalescing_reallocation_ratio = " << cfg.umpire_host_memory_pool_coalescing_reallocation_ratio << std::endl;
   os << "  umpire_device_memory_pool_initial_bytes = " << cfg.umpire_device_memory_pool_initial_bytes << std::endl;
-  os << "  umpire_device_memory_pool_next_bytes = " << cfg.umpire_host_memory_pool_next_bytes << std::endl;
-  os << "  umpire_device_memory_pool_alignment_bytes = " << cfg.umpire_host_memory_pool_alignment_bytes << std::endl;
+  os << "  umpire_device_memory_pool_next_bytes = " << cfg.umpire_device_memory_pool_next_bytes << std::endl;
+  os << "  umpire_device_memory_pool_alignment_bytes = " << cfg.umpire_device_memory_pool_alignment_bytes << std::endl;
+  os << "  umpire_device_memory_pool_coalescing_free_ratio = " << cfg.umpire_device_memory_pool_coalescing_free_ratio << std::endl;
+  os << "  umpire_device_memory_pool_coalescing_reallocation_ratio = " << cfg.umpire_device_memory_pool_coalescing_reallocation_ratio << std::endl;
   os << "  mpi_pool = " << cfg.mpi_pool << std::endl;
   // clang-format on
   return os;
@@ -60,7 +64,7 @@ struct Init {
 template <>
 struct Init<Backend::MC> {
   static void initialize(const configuration& cfg) {
-    memory::internal::initializeUmpireHostAllocator(cfg.umpire_host_memory_pool_initial_bytes, cfg.umpire_host_memory_pool_next_bytes, cfg.umpire_host_memory_pool_alignment_bytes);
+    memory::internal::initializeUmpireHostAllocator(cfg.umpire_host_memory_pool_initial_bytes, cfg.umpire_host_memory_pool_next_bytes, cfg.umpire_host_memory_pool_alignment_bytes, cfg.umpire_host_memory_pool_coalescing_free_ratio, cfg.umpire_host_memory_pool_coalescing_reallocation_ratio);
   }
 
   static void finalize() {
@@ -100,7 +104,7 @@ template <>
 struct Init<Backend::GPU> {
   static void initialize(const configuration& cfg) {
     const int device = 0;
-    memory::internal::initializeUmpireDeviceAllocator(cfg.umpire_device_memory_pool_initial_bytes, cfg.umpire_device_memory_pool_initial_bytes, cfg.umpire_device_memory_pool_alignment_bytes);
+    memory::internal::initializeUmpireDeviceAllocator(cfg.umpire_device_memory_pool_initial_bytes, cfg.umpire_device_memory_pool_initial_bytes, cfg.umpire_device_memory_pool_alignment_bytes, cfg.umpire_host_memory_pool_coalescing_free_ratio, cfg.umpire_host_memory_pool_coalescing_reallocation_ratio);
     initializeGpuPool(device, cfg.num_np_gpu_streams_per_thread, cfg.num_hp_gpu_streams_per_thread);
     pika::cuda::experimental::detail::register_polling(pika::resource::get_thread_pool("default"));
   }
@@ -130,6 +134,13 @@ template <>
 struct parseFromString<SizeType> {
   static std::optional<SizeType> call(const std::string& var) {
     return std::stoll(var);
+  }
+};
+
+template <>
+struct parseFromString<double> {
+  static std::optional<SizeType> call(const std::string& var) {
+    return std::stod(var);
   }
 };
 
@@ -189,9 +200,13 @@ void updateConfiguration(const pika::program_options::variables_map& vm, configu
   updateConfigurationValue(vm, cfg.umpire_host_memory_pool_initial_bytes, "UMPIRE_HOST_MEMORY_POOL_INITIAL_BYTES", "umpire-host-memory-pool-initial-bytes");
   updateConfigurationValue(vm, cfg.umpire_host_memory_pool_next_bytes, "UMPIRE_HOST_MEMORY_POOL_NEXT_BYTES", "umpire-host-memory-pool-next-bytes");
   updateConfigurationValue(vm, cfg.umpire_host_memory_pool_alignment_bytes, "UMPIRE_HOST_MEMORY_POOL_ALIGNMENT_BYTES", "umpire-host-memory-pool-alignment-bytes");
+  updateConfigurationValue(vm, cfg.umpire_host_memory_pool_coalescing_free_ratio, "UMPIRE_HOST_MEMORY_POOL_COALESCING_FREE_RATIO", "umpire-host-memory-pool-coalescing-free-ratio");
+  updateConfigurationValue(vm, cfg.umpire_host_memory_pool_coalescing_reallocation_ratio, "UMPIRE_HOST_MEMORY_POOL_COALESCING_REALLOCATION_RATIO", "umpire-host-memory-pool-coalescing-reallocation-ratio");
   updateConfigurationValue(vm, cfg.umpire_device_memory_pool_initial_bytes, "UMPIRE_DEVICE_MEMORY_POOL_INITIAL_BYTES", "umpire-device-memory-pool-initial-bytes");
   updateConfigurationValue(vm, cfg.umpire_device_memory_pool_next_bytes, "UMPIRE_DEVICE_MEMORY_POOL_NEXT_BYTES", "umpire-device-memory-pool-next-bytes");
   updateConfigurationValue(vm, cfg.umpire_device_memory_pool_alignment_bytes, "UMPIRE_DEVICE_MEMORY_POOL_ALIGNMENT_BYTES", "umpire-device-memory-pool-alignment-bytes");
+  updateConfigurationValue(vm, cfg.umpire_device_memory_pool_coalescing_free_ratio, "UMPIRE_DEVICE_MEMORY_POOL_COALESCING_FREE_RATIO", "umpire-device-memory-pool-coalescing-free-ratio");
+  updateConfigurationValue(vm, cfg.umpire_device_memory_pool_coalescing_reallocation_ratio, "UMPIRE_DEVICE_MEMORY_POOL_COALESCING_REALLOCATION_RATIO", "umpire-device-memory-pool-coalescing-reallocation-ratio");
   cfg.mpi_pool = (pika::resource::pool_exists("mpi")) ? "mpi" : "default";
 
   // Warn if not using MPI pool without --dlaf:no-mpi-pool
@@ -254,9 +269,13 @@ pika::program_options::options_description getOptionsDescription() {
   desc.add_options()("dlaf:umpire-host-memory-pool-initial-bytes", pika::program_options::value<std::size_t>(), "Number of bytes to preallocate for pinned host memory pool");
   desc.add_options()("dlaf:umpire-host-memory-pool-next-bytes", pika::program_options::value<std::size_t>(), "Number of bytes to allocate in blocks after the first block for pinned host memory pool");
   desc.add_options()("dlaf:umpire-host-memory-pool-alignment-bytes", pika::program_options::value<std::size_t>(), "Alignment of allocations in bytes in pinned host memory pool");
+  desc.add_options()("dlaf:umpire-host-memory-pool-coalescing-free-ratio", pika::program_options::value<double>(), "Required ratio of free memory in pinned host memory pool before performing coalescing of free blocks");
+  desc.add_options()("dlaf:umpire-host-memory-pool-coalescing-reallocation-ratio", pika::program_options::value<double>(), "Ratio of current used memory in pinned host memory pool to use for reallocation of new blocks when coalescing free blocks");
   desc.add_options()("dlaf:umpire-device-memory-pool-initial-bytes", pika::program_options::value<std::size_t>(), "Number of bytes to preallocate for device memory pool");
   desc.add_options()("dlaf:umpire-device-memory-pool-next-bytes", pika::program_options::value<std::size_t>(), "Number of bytes to allocate in blocks after the first block for device memory pool");
   desc.add_options()("dlaf:umpire-device-memory-pool-alignment-bytes", pika::program_options::value<std::size_t>(), "Alignment of allocations in bytes in device memory pool");
+  desc.add_options()("dlaf:umpire-device-memory-pool-coalescing-free-ratio", pika::program_options::value<double>(), "Required ratio of free memory in device memory pool before performing coalescing of free blocks");
+  desc.add_options()("dlaf:umpire-device-memory-pool-coalescing-reallocation-ratio", pika::program_options::value<double>(), "Ratio of current used memory in device memory pool to use for reallocation of new blocks when coalescing free blocks");
   desc.add_options()("dlaf:no-mpi-pool", pika::program_options::bool_switch(), "Disable the MPI pool.");
 
   // Tune parameters command line options

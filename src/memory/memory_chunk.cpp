@@ -79,12 +79,12 @@ void initializeUmpireHostAllocator(std::size_t initial_bytes, std::size_t next_b
   if (!initialized) {
     auto host_allocator = umpire::ResourceManager::getInstance().getAllocator("PINNED");
     auto pooled_host_allocator =
-        umpire::ResourceManager::getInstance().makeAllocator<umpire::strategy::QuickPool>("PINNED_pool",
+        umpire::ResourceManager::getInstance().makeAllocator<umpire::strategy::QuickPool>("DLAF_PINNED_pool",
                                                                                           host_allocator,
                                                                                           initial_bytes, next_bytes, alignment_bytes, get_coalesce_heuristic(coalesce_free_ratio, coalesce_reallocation_ratio));
     auto thread_safe_pooled_host_allocator =
         umpire::ResourceManager::getInstance().makeAllocator<umpire::strategy::ThreadSafeAllocator>(
-            "PINNED_thread_safe_pool", pooled_host_allocator);
+            "DLAF_PINNED_thread_safe_pool", pooled_host_allocator);
 
     memory::internal::getUmpireHostAllocator() = thread_safe_pooled_host_allocator;
 
@@ -107,10 +107,10 @@ void initializeUmpireDeviceAllocator(std::size_t initial_bytes, std::size_t next
     auto device_allocator = umpire::ResourceManager::getInstance().getAllocator("DEVICE");
     auto pooled_device_allocator =
         umpire::ResourceManager::getInstance().makeAllocator<umpire::strategy::QuickPool>(
-            "DEVICE_pool", device_allocator, initial_bytes, next_bytes, alignment_bytes, get_coalesce_heuristic(coalesce_free_ratio, coalesce_reallocation_ratio));
+            "DLAF_DEVICE_pool", device_allocator, initial_bytes, next_bytes, alignment_bytes, get_coalesce_heuristic(coalesce_free_ratio, coalesce_reallocation_ratio));
     auto thread_safe_pooled_device_allocator =
         umpire::ResourceManager::getInstance().makeAllocator<umpire::strategy::ThreadSafeAllocator>(
-            "DEVICE_thread_safe_pool", pooled_device_allocator);
+            "DLAF_DEVICE_thread_safe_pool", pooled_device_allocator);
 
     memory::internal::getUmpireDeviceAllocator() = thread_safe_pooled_device_allocator;
 

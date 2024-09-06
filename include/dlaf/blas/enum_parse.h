@@ -12,13 +12,15 @@
 
 /// @file
 
+#include <string>
+
 #include <blas/util.hh>
 
 namespace dlaf::internal {
 
 inline blas::Uplo char2uplo(const char uplo_c) {
   blas::Uplo uplo;
-  blas::from_string(std::to_string(uplo_c), &uplo);
+  blas::from_string(std::string(&uplo_c, 1), &uplo);
   return uplo;
 }
 

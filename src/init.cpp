@@ -166,7 +166,7 @@ struct parseFromString<SizeType> {
 
 template <>
 struct parseFromString<double> {
-  static std::optional<SizeType> call(const std::string& var) {
+  static std::optional<double> call(const std::string& var) {
     return std::stod(var);
   }
 };

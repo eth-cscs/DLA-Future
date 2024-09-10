@@ -33,9 +33,6 @@ spack:
     mpich:
       require:
         - '+fortran'
-    fmt:
-      require:
-        - '@10'
     pika:
       require:
         - '@0.19.1'

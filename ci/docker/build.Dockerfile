@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=ubuntu:20.04
+ARG BASE_IMAGE=ubuntu:24.04
 
 FROM $BASE_IMAGE
 
@@ -18,7 +18,7 @@ RUN apt-get -yqq update && \
     autoconf automake libssl-dev ninja-build pkg-config \
     ${EXTRA_APTGET} \
     gawk \
-    python3 python3-distutils \
+    python3 python3-setuptools \
     git tar wget curl ca-certificates gpg-agent jq tzdata \
     patchelf unzip file gnupg2 libncurses-dev && \
     rm -rf /var/lib/apt/lists/*

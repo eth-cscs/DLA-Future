@@ -4,8 +4,8 @@ gcc-env:
         spec: gcc@13
   unify: true
   specs:
-  # Alternatively: 202408-develop-stable for a version without pika's MPI polling
-  - dla-future@git.202408-develop=0.6.0 +miniapps +hdf5 +mpi_gpu_aware +mpi_gpu_force_contiguous
+  - dla-future@git.202410-develop=0.7.0 +miniapps +hdf5 +mpi_gpu_aware +mpi_gpu_force_contiguous
+  - pika@git.42b27fa3d827b622bf8a0b990859ba29b5a125fa=0.29.0
   - nvpl-blas
   - nvpl-lapack
   mpi:

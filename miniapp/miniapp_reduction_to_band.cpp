@@ -47,6 +47,7 @@ struct Options
   SizeType m;
   SizeType mb;
   SizeType b;
+  bool use_ca_algo;
 #ifdef DLAF_WITH_HDF5
   std::filesystem::path input_file;
   std::string input_dataset;
@@ -55,7 +56,7 @@ struct Options
 
   Options(const pika::program_options::variables_map& vm)
       : MiniappOptions(vm), m(vm["matrix-size"].as<SizeType>()), mb(vm["block-size"].as<SizeType>()),
-        b(vm["band-size"].as<SizeType>()) {
+        b(vm["band-size"].as<SizeType>()), use_ca_algo(vm["ca"].as<bool>()) {
     DLAF_ASSERT(m > 0, m);
     DLAF_ASSERT(mb > 0, mb);
 
@@ -148,17 +149,20 @@ struct reductionToBandMiniapp {
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         dlaf::common::Timer<> timeit;
-        auto bench = [&]() {
-          if (opts.local)
-            return dlaf::eigensolver::internal::reduction_to_band<backend>(matrix, opts.b);
-          else
-            return dlaf::eigensolver::internal::reduction_to_band<backend>(comm_grid, matrix, opts.b);
-        };
-        auto taus = bench();
+        if (opts.use_ca_algo) {
+          auto res =
+              dlaf::eigensolver::internal::ca_reduction_to_band<backend>(comm_grid, matrix, opts.b);
+          res.taus_1st.waitLocalTiles();
+          res.taus_2nd.waitLocalTiles();
+          res.hh_2nd.waitLocalTiles();
+        }
+        else {
+          auto taus = dlaf::eigensolver::internal::reduction_to_band<backend>(comm_grid, matrix, opts.b);
+          taus.waitLocalTiles();
+        }
 
         // wait and barrier for all ranks
         matrix.waitLocalTiles();
-        taus.waitLocalTiles();
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         elapsed_time = timeit.elapsed();
@@ -244,9 +248,10 @@ int main(int argc, char** argv) {
 
   // clang-format off
   desc_commandline.add_options()
-    ("matrix-size", value<SizeType>()   ->default_value(4096), "Matrix rows")
-    ("block-size",  value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
-    ("band-size",   value<SizeType>()   ->default_value(  -1), "Band size (a negative value implies band-size=block-size")
+    ("matrix-size", value<SizeType>()   ->default_value(4096),  "Matrix rows")
+    ("block-size",  value<SizeType>()   ->default_value( 256),  "Block cyclic distribution size")
+    ("band-size",   value<SizeType>()   ->default_value(  -1),  "Band size (a negative value implies band-size=block-size")
+    ("ca",          bool_switch()       ->default_value(false), "Use communication avoiding")
 #ifdef DLAF_WITH_HDF5
     ("input-file",    value<std::filesystem::path>()                 , "Load matrix from given HDF5 file")
     ("output-file",   value<std::filesystem::path>()                 , "Save band matrix to given HDF5 file")

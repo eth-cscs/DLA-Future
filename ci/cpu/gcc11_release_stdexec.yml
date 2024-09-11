@@ -4,6 +4,7 @@ include:
 cpu gcc11 stdexec release deps:
   extends: .build_deps_common
   variables:
+    EXTRA_APTGET: "gcc-11 g++11 gfortran-11"
     COMPILER: gcc@11
     CXXSTD: 20
     USE_MKL: "ON"

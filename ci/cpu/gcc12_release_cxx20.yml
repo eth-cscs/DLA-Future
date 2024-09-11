@@ -4,7 +4,7 @@ include:
 cpu gcc12 cxx20 release deps:
   extends: .build_deps_common
   variables:
-    EXTRA_APTGET: "g++-12 gfortran-12"
+    EXTRA_APTGET: "gcc-12 g++-12 gfortran-12"
     COMPILER: gcc@12
     CXXSTD: 20
     SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml

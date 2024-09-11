@@ -316,9 +316,9 @@ inline pika::program_options::options_description getMiniappKernelOptionsDescrip
 
 inline void addLayoutOption(pika::program_options::options_description& desc,
                             const blas::Layout def = blas::Layout::ColMajor) {
-  desc.add_options()(
-      "layout", pika::program_options::value<std::string>()->default_value({blas::to_char(def)}),
-      "'C' (ColMajor), 'R' (RowMajor)");
+  desc.add_options()("layout",
+                     pika::program_options::value<std::string>()->default_value({blas::to_char(def)}),
+                     "'C' (ColMajor), 'R' (RowMajor)");
 }
 
 inline void addOpOption(pika::program_options::options_description& desc,

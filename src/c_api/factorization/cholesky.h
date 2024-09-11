@@ -18,6 +18,7 @@
 
 #include <pika/init.hpp>
 
+#include <dlaf/blas/enum_parse.h>
 #include <dlaf/factorization/cholesky.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_mirror.h>
@@ -47,12 +48,8 @@ int cholesky_factorization(const int dlaf_context, const char uplo, T* a,
   {
     MatrixMirror matrix(matrix_host);
 
-    // https://github.com/icl-utk-edu/blaspp/pull/82
-    blas::Uplo uplo_;
-    blas::from_string(std::string(1, uplo), &uplo_);
-
-    dlaf::cholesky_factorization<dlaf::Backend::Default, dlaf::Device::Default, T>(communicator_grid,
-                                                                                   uplo_, matrix.get());
+    dlaf::cholesky_factorization<dlaf::Backend::Default, dlaf::Device::Default, T>(
+        communicator_grid, dlaf::internal::char2uplo(uplo), matrix.get());
   }  // Destroy mirror
 
   matrix_host.waitLocalTiles();

@@ -15,6 +15,7 @@ stages:
   stage: build_deps
   timeout: 6 hours
   before_script:
+    - echo $DOCKERHUB_TOKEN | podman login docker.io -u $DOCKERHUB_USERNAME --password-stdin
     - TAG_IMAGE=`echo ${BASE_IMAGE##*/} | sed 's/[:]//g'`
     - TAG_APTGET=`echo ${EXTRA_APTGET} | sha256sum - | head -c 6`
     - TAG_COMPILER=`echo ${COMPILER}_CXX${CXXSTD} | sed 's/[@]//g'`
@@ -65,6 +66,7 @@ stages:
   stage: build
   timeout: 2 hours
   before_script:
+    - 'echo $DOCKERHUB_TOKEN | podman login docker.io -u $DOCKERHUB_USERNAME --password-stdin'
     - 'echo "INFO: Using NUM_CORES_BUILD_DLAF=$NUM_CORES_BUILD_DLAF"'
   after_script:
     - podman run -v $PWD/ci/ctest_to_gitlab.sh:/ctest_to_gitlab.sh $DEPLOY_IMAGE /ctest_to_gitlab.sh "$DEPLOY_IMAGE" "$USE_CODECOV" "$THREADS_PER_NODE" "$SLURM_CONSTRAINT" > pipeline.yml

@@ -112,13 +112,9 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_G(comm::CommunicatorGri
 
   const auto& distribution = matrix.distribution();
 
-  DLAF_ASSERT(square_size(matrix), matrix);
-  DLAF_ASSERT(square_blocksize(matrix), matrix);
-
   vector<ex::unique_any_sender<NormT>> tiles_max;
   tiles_max.reserve(distribution.localNrTiles().rows() * distribution.localNrTiles().cols());
 
-  // for each local tile in the (global) lower triangular matrix, create a task that finds the max element in the tile
   for (auto tile_wrt_local : iterate_range2d(distribution.localNrTiles())) {
     auto norm_max_f = [](const matrix::Tile<const T, Device::CPU>& tile) noexcept -> NormT {
       return lange(lapack::Norm::Max, tile);

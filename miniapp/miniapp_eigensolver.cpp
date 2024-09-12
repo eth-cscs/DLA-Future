@@ -197,24 +197,24 @@ struct EigensolverMiniapp {
         // TODO: Add eigenvalues range
         std::cout << "[" << run_index << "]" << " " << elapsed_time << "s" << " "
                   << dlaf::internal::FormatShort{opts.type} << dlaf::internal::FormatShort{opts.uplo}
-                  << " " << matrix_host.size() << " " << matrix_host.blockSize() << " "
+                  << " " << matrix_host.size() << " (" << 0l << ", " << opts.last_eval_idx << ")" << " "
+                  << matrix_host.blockSize() << " "
                   << dlaf::eigensolver::internal::getBandSize(matrix_host.blockSize().rows()) << " "
-                  << comm_grid.size() << " " << pika::get_os_thread_count() << " " << backend << " ("
-                  << 0l << ", " << opts.last_eval_idx << ")" << std::endl;
+                  << comm_grid.size() << " " << pika::get_os_thread_count() << " " << backend
+                  << std::endl;
         if (opts.csv_output) {
           // CSV formatted output with column names that can be read by pandas to simplify
           // post-processing CSVData{-version}, value_0, title_0, value_1, title_1
           std::cout << "CSVData-2, " << "run, " << run_index << ", " << "time, " << elapsed_time << ", "
                     << "type, " << dlaf::internal::FormatShort{opts.type}.value << ", " << "uplo, "
                     << dlaf::internal::FormatShort{opts.uplo}.value << ", " << "matrixsize, "
-                    << matrix_host.size().rows() << ", " << "blocksize, "
+                    << matrix_host.size().rows() << ", " << "first eigenvalue index, " << 0l << ", "
+                    << "last eigenvalue index, " << ", " << opts.last_eval_idx << ", " << "blocksize, "
                     << matrix_host.blockSize().rows() << ", " << "bandsize, "
                     << dlaf::eigensolver::internal::getBandSize(matrix_host.blockSize().rows()) << ", "
                     << "comm_rows, " << comm_grid.size().rows() << ", " << "comm_cols, "
                     << comm_grid.size().cols() << ", " << "threads, " << pika::get_os_thread_count()
-                    << ", " << "backend, " << backend << ", " << opts.info << ", "
-                    << "first eigenvalue index, " << 0l << ", " << "last eigenvalue index, "
-                    << opts.last_eval_idx << std::endl;
+                    << ", " << "backend, " << backend << ", " << opts.info << std::endl;
         }
       }
       // (optional) run test
@@ -300,12 +300,12 @@ void checkEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<const
 
   // 2.
   // Compute C = E D - A E
-
-  dlaf::matrix::internal::MatrixRef<const T, Device::CPU> E_ref(E);
-  dlaf::matrix::internal::MatrixRef<const BaseType<T>, Device::CPU> evalues_ref(evalues);
+  auto spec = dlaf::matrix::util::internal::sub_matrix_spec_slice_cols(E, 0l, last_eval_idx);
+  dlaf::matrix::internal::MatrixRef<const T, Device::CPU> E_ref(E, spec);
+  dlaf::matrix::internal::MatrixRef<const BaseType<T>, Device::CPU> evalues_ref(
+      evalues, {{0, 0}, {last_eval_idx + 1, 1}});
 
   Matrix<T, Device::CPU> C(E_ref.distribution());
-
   dlaf::miniapp::scaleEigenvectors(evalues_ref, E_ref, C);
   dlaf::internal::hermitian_multiplication<Backend::MC>(comm_grid, blas::Side::Left, uplo, T{-1}, A,
                                                         E_ref, T{1}, C);

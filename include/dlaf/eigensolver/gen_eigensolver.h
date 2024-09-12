@@ -676,7 +676,7 @@ template <Backend B, Device D, class T>
 EigensolverResult<T, D> hermitian_generalized_eigensolver(comm::CommunicatorGrid& grid, blas::Uplo uplo,
                                                           Matrix<T, D>& mat_a, Matrix<T, D>& mat_b) {
   return hermitian_generalized_eigensolver<B, D, T>(grid, uplo, mat_a, mat_b, 0,
-                                                                mat_a.size().rows() - 1);
+                                                    mat_a.size().rows() - 1);
 }
 
 /// Generalized Eigensolver.

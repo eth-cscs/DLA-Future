@@ -157,7 +157,7 @@ void hermitian_multiplication(comm::CommunicatorGrid& grid, blas::Side side, bla
                               const T beta, Matrix<T, D>& mat_c) {
   matrix::internal::MatrixRef<const T, D> mat_b_ref(mat_b);
 
-  internal::hermitian_multiplication<B,D,T>(grid, side, uplo, alpha, mat_a, mat_b_ref, beta, mat_c);
+  internal::hermitian_multiplication<B, D, T>(grid, side, uplo, alpha, mat_a, mat_b_ref, beta, mat_c);
 }
 
 }

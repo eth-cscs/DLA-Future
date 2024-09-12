@@ -66,7 +66,7 @@ struct Options
     else {
       last_eval_idx = m - 1;
     }
-    
+
     DLAF_ASSERT(last_eval_idx >= 0 && last_eval_idx < m, last_eval_idx);
 
     if (do_check != dlaf::miniapp::CheckIterFreq::None) {
@@ -138,7 +138,8 @@ struct BacktransformBandToTridiagMiniapp {
         mat_hh.waitLocalTiles();
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
-        auto spec = dlaf::matrix::util::internal::sub_matrix_spec_slice_cols(mat_e_host, 0, opts.last_eval_idx);
+        auto spec =
+            dlaf::matrix::util::internal::sub_matrix_spec_slice_cols(mat_e_host, 0, opts.last_eval_idx);
         MatrixRefType mat_e_ref(mat_e.get(), spec);
 
         dlaf::common::Timer<> timeit;

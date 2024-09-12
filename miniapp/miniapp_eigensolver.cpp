@@ -60,7 +60,8 @@ using dlaf::matrix::internal::FileHDF5;
 /// Check results of the eigensolver
 template <typename T>
 void checkEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
-                      Matrix<const BaseType<T>, Device::CPU>& evalues, Matrix<const T, Device::CPU>& E);
+                      Matrix<const BaseType<T>, Device::CPU>& evalues, Matrix<const T, Device::CPU>& E,
+                      SizeType last_eval_idx);
 
 struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
@@ -222,7 +223,7 @@ struct EigensolverMiniapp {
         MatrixMirrorEvalsType eigenvalues_host(eigenvalues);
         MatrixMirrorEvectsType eigenvectors_host(eigenvectors);
         checkEigensolver(comm_grid, opts.uplo, matrix_ref, eigenvalues_host.get(),
-                         eigenvectors_host.get());
+                         eigenvectors_host.get(), opts.last_eval_idx);
       }
     }
   }
@@ -278,7 +279,7 @@ using dlaf::matrix::Tile;
 
 /// Procedure to evaluate the result of the Eigensolver
 ///
-/// 1. Check the value of | E D - A E | / | A |
+/// 1. Check the value of | E D - A E | / | lambda_max |
 ///
 /// Prints a message with the ratio and a note about the error:
 /// "":        check ok
@@ -286,11 +287,12 @@ using dlaf::matrix::Tile;
 /// "WARNING": error is slightly high, there can be an error in the result
 template <typename T>
 void checkEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
-                      Matrix<const BaseType<T>, Device::CPU>& evalues, Matrix<const T, Device::CPU>& E) {
+                      Matrix<const BaseType<T>, Device::CPU>& evalues, Matrix<const T, Device::CPU>& E,
+                      SizeType last_eval_idx) {
   const Index2D rank_result{0, 0};
 
-  // 1. Compute the norm of the original matrix in A (largest eigenvalue)
-  const GlobalElementIndex last_ev(evalues.size().rows() - 1, 0);
+  // 1. Get largest eigenvalue (amongst computed eigenvalues)
+  const GlobalElementIndex last_ev(last_eval_idx, 0);
   const GlobalTileIndex last_ev_tile = evalues.distribution().globalTileIndex(last_ev);
   const TileElementIndex last_ev_el_tile = evalues.distribution().tileElementIndex(last_ev);
   const auto norm_A = std::max(std::norm(sync_wait(evalues.read(GlobalTileIndex{0, 0})).get()({0, 0})),
@@ -298,9 +300,15 @@ void checkEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<const
 
   // 2.
   // Compute C = E D - A E
-  Matrix<T, Device::CPU> C(E.distribution());
-  dlaf::miniapp::scaleEigenvectors(evalues, E, C);
-  dlaf::hermitian_multiplication<Backend::MC>(comm_grid, blas::Side::Left, uplo, T{-1}, A, E, T{1}, C);
+
+  dlaf::matrix::internal::MatrixRef<const T, Device::CPU> E_ref(E);
+  dlaf::matrix::internal::MatrixRef<const BaseType<T>, Device::CPU> evalues_ref(evalues);
+
+  Matrix<T, Device::CPU> C(E_ref.distribution());
+
+  dlaf::miniapp::scaleEigenvectors(evalues_ref, E_ref, C);
+  dlaf::internal::hermitian_multiplication<Backend::MC>(comm_grid, blas::Side::Left, uplo, T{-1}, A,
+                                                        E_ref, T{1}, C);
 
   // 3. Compute the max norm of the difference
   const auto norm_diff =
@@ -312,7 +320,7 @@ void checkEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<const
     return;
 
   constexpr auto eps = std::numeric_limits<dlaf::BaseType<T>>::epsilon();
-  const auto n = A.size().rows();
+  const auto n = last_eval_idx + 1;  // Number of valid eigenvectors
 
   const auto diff_ratio = norm_diff / norm_A;
 

@@ -35,10 +35,11 @@ void scaleTile(const Tile<const BaseType<T>, Device::CPU>& lambda, const Tile<T,
 }
 
 template <typename T>
-void scaleEigenvectors(Matrix<const BaseType<T>, Device::CPU>& evalues,
-                       Matrix<const T, Device::CPU>& evectors, Matrix<T, Device::CPU>& result) {
+void scaleEigenvectors(matrix::internal::MatrixRef<const BaseType<T>, Device::CPU>& evalues,
+                       matrix::internal::MatrixRef<const T, Device::CPU>& evectors,
+                       Matrix<T, Device::CPU>& result) {
   using pika::execution::thread_priority;
-  copy(evectors, result);
+  matrix::internal::copy(evectors, result);
 
   const auto& dist = result.distribution();
 
@@ -49,5 +50,14 @@ void scaleEigenvectors(Matrix<const BaseType<T>, Device::CPU>& evalues,
         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(thread_priority::normal),
                                   scaleTile<T>));
   }
+}
+
+template <typename T>
+void scaleEigenvectors(Matrix<const BaseType<T>, Device::CPU>& evalues,
+                       Matrix<const T, Device::CPU>& evectors, Matrix<T, Device::CPU>& result) {
+  matrix::internal::MatrixRef<const BaseType<T>, Device::CPU> evalues_ref(evalues);
+  matrix::internal::MatrixRef<const T, Device::CPU> evectors_ref(evectors);
+
+  scaleEigenvectors<T>(evalues_ref, evectors_ref, result);
 }
 }

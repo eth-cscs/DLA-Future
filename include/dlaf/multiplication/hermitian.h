@@ -21,6 +21,47 @@
 
 namespace dlaf {
 
+namespace internal {
+
+template <Backend B, Device D, class T>
+void hermitian_multiplication(comm::CommunicatorGrid& grid, blas::Side side, blas::Uplo uplo,
+                              const T alpha, Matrix<const T, D>& mat_a,
+                              matrix::internal::MatrixRef<const T, D>& mat_b, const T beta,
+                              Matrix<T, D>& mat_c) {
+  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
+  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_c), mat_c);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_b, grid), mat_b, grid);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_c, grid), mat_c, grid);
+
+  if (side == blas::Side::Left) {
+    DLAF_ASSERT(matrix::multipliable(mat_a, mat_b, mat_c, blas::Op::NoTrans, blas::Op::NoTrans), mat_a,
+                mat_b, mat_c);
+    switch (uplo) {
+      case blas::Uplo::Lower:
+        return multiplication::internal::Hermitian<B, D, T>::call_LL(grid, alpha, mat_a, mat_b, beta,
+                                                                     mat_c);
+        break;
+      case blas::Uplo::Upper:
+        DLAF_UNIMPLEMENTED(uplo);
+        break;
+      case blas::Uplo::General:
+        DLAF_UNIMPLEMENTED(uplo);
+        break;
+    }
+  }
+  else {
+    DLAF_ASSERT(matrix::multipliable(mat_b, mat_a, mat_c, blas::Op::NoTrans, blas::Op::NoTrans), mat_a,
+                mat_b, mat_c);
+    DLAF_UNIMPLEMENTED(side);
+  }
+}
+
+}
+
 /// Hermitian Matrix multiplication implementation on local memory, computing C = beta C + alpha A B
 /// (when side == Left) or C + alpha B A (when side == Right), where A is a Hermitian matrix.
 ///
@@ -31,10 +72,10 @@ namespace dlaf {
 /// @param mat_a contains the hermitian matrix A. Only the tiles of the matrix which contain the upper or
 /// the lower triangular part which represent the Hermitian matrix (depending on the value of uplo)
 /// are accessed in read-only mode (the elements are not modified),
-/// @pre @p mat_b is not distributed
-/// @pre @p mat_b has size (N x M)
-/// @pre @p mat_b has blocksize (NB x NB)
-/// @pre @p mat_b has tilesize (NB x NB)
+/// @pre @p mat_a is not distributed
+/// @pre @p mat_a has size (N x M)
+/// @pre @p mat_a has blocksize (NB x NB)
+/// @pre @p mat_a has tilesize (NB x NB)
 ///
 /// @param mat_b contains the matrix B accessed in read-only mode (the elements are not modified),
 /// @pre @p mat_b is not distributed
@@ -44,10 +85,10 @@ namespace dlaf {
 ///
 /// @param mat_c on entry it contains the matrix C, on exit the matrix elements are overwritten with the
 /// elements of the result.
-/// @pre @p mat_b is not distributed
-/// @pre @p mat_b has size (N x K)
-/// @pre @p mat_b has blocksize (NB x NB)
-/// @pre @p mat_b has tilesize (NB x NB)
+/// @pre @p mat_c is not distributed
+/// @pre @p mat_c has size (N x K)
+/// @pre @p mat_c has blocksize (NB x NB)
+/// @pre @p mat_c has tilesize (NB x NB)
 template <Backend B, Device D, class T>
 void hermitian_multiplication(blas::Side side, blas::Uplo uplo, const T alpha, Matrix<const T, D>& mat_a,
                               Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
@@ -93,10 +134,10 @@ void hermitian_multiplication(blas::Side side, blas::Uplo uplo, const T alpha, M
 /// @param mat_a contains the hermitian matrix A. Only the tiles of the matrix which contain the upper or
 /// the lower triangular part which represent the Hermitian matrix (depending on the value of uplo)
 /// are accessed in read-only mode (the elements are not modified),
-/// @pre @p mat_b is distributed according to @p grid
-/// @pre @p mat_b has size (N x M)
-/// @pre @p mat_b has blocksize (NB x NB)
-/// @pre @p mat_b has tilesize (NB x NB)
+/// @pre @p mat_a is distributed according to @p grid
+/// @pre @p mat_a has size (N x M)
+/// @pre @p mat_a has blocksize (NB x NB)
+/// @pre @p mat_a has tilesize (NB x NB)
 ///
 /// @param mat_b contains the matrix B accessed in read-only mode (the elements are not modified),
 /// @pre @p mat_b is distributed according to @p grid
@@ -106,44 +147,17 @@ void hermitian_multiplication(blas::Side side, blas::Uplo uplo, const T alpha, M
 ///
 /// @param mat_c on entry it contains the matrix C, on exit the matrix elements are overwritten with the
 /// elements of the result.
-/// @pre @p mat_b is distributed according to @p grid
-/// @pre @p mat_b has size (N x K)
-/// @pre @p mat_b has blocksize (NB x NB)
-/// @pre @p mat_b has tilesize (NB x NB)
+/// @pre @p mat_c is distributed according to @p grid
+/// @pre @p mat_c has size (N x K)
+/// @pre @p mat_c has blocksize (NB x NB)
+/// @pre @p mat_c has tilesize (NB x NB)
 template <Backend B, Device D, class T>
 void hermitian_multiplication(comm::CommunicatorGrid& grid, blas::Side side, blas::Uplo uplo,
                               const T alpha, Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b,
                               const T beta, Matrix<T, D>& mat_c) {
-  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
-  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
-  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
-  DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);
-  DLAF_ASSERT(matrix::single_tile_per_block(mat_c), mat_c);
-  DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
-  DLAF_ASSERT(matrix::equal_process_grid(mat_b, grid), mat_b, grid);
-  DLAF_ASSERT(matrix::equal_process_grid(mat_c, grid), mat_c, grid);
+  matrix::internal::MatrixRef<const T, D> mat_b_ref(mat_b);
 
-  if (side == blas::Side::Left) {
-    DLAF_ASSERT(matrix::multipliable(mat_a, mat_b, mat_c, blas::Op::NoTrans, blas::Op::NoTrans), mat_a,
-                mat_b, mat_c);
-    switch (uplo) {
-      case blas::Uplo::Lower:
-        return multiplication::internal::Hermitian<B, D, T>::call_LL(grid, alpha, mat_a, mat_b, beta,
-                                                                     mat_c);
-        break;
-      case blas::Uplo::Upper:
-        DLAF_UNIMPLEMENTED(uplo);
-        break;
-      case blas::Uplo::General:
-        DLAF_UNIMPLEMENTED(uplo);
-        break;
-    }
-  }
-  else {
-    DLAF_ASSERT(matrix::multipliable(mat_b, mat_a, mat_c, blas::Op::NoTrans, blas::Op::NoTrans), mat_a,
-                mat_b, mat_c);
-    DLAF_UNIMPLEMENTED(side);
-  }
+  internal::hermitian_multiplication<B,D,T>(grid, side, uplo, alpha, mat_a, mat_b_ref, beta, mat_c);
 }
 
 }

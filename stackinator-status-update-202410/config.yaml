@@ -1,8 +1,9 @@
 name: dlaf-env
 store: /user-environment
 spack:
-    repo: https://github.com/spack/spack.git
-    commit: develop-2024-09-08
+    # https://github.com/spack/spack/compare/develop...msimberg:spack:dlaf-lapack-library-prefix
+    repo: https://github.com/msimberg/spack.git
+    commit: 660d5593ba7f49ca9d87fa9709f44399f6aac867
 mirror:
     enable: false
 modules: false

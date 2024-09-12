@@ -20,7 +20,7 @@ import systems
 
 system = systems.cscs["todi"]
 
-dlafpath = "/user-environment/linux-sles15-neoverse_v2/gcc-13.3.0/dla-future-git.202408-develop_0.6.0-iqm3lnzbffriwwwpyd3helfsfsb5oybc/bin"
+dlafpath = "/user-environment/linux-sles15-neoverse_v2/gcc-13.3.0/dla-future-git.202410-develop_0.7.0-virbeq6o47zeihzraiblbc5zfxzafrpw/bin"
 matrixrefpath = ""
 run_dir = ""
 

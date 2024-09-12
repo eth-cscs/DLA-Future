@@ -61,7 +61,7 @@ using dlaf::matrix::internal::FileHDF5;
 template <typename T>
 void checkEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
                       Matrix<const BaseType<T>, Device::CPU>& evalues, Matrix<const T, Device::CPU>& E,
-                      SizeType last_eval_idx);
+                      const SizeType last_eval_idx);
 
 struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
@@ -291,7 +291,7 @@ using dlaf::matrix::Tile;
 template <typename T>
 void checkEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
                       Matrix<const BaseType<T>, Device::CPU>& evalues, Matrix<const T, Device::CPU>& E,
-                      SizeType last_eval_idx) {
+                      const SizeType last_eval_idx) {
   const Index2D rank_result{0, 0};
 
   // 1. Get largest eigenvalue (amongst computed eigenvalues)

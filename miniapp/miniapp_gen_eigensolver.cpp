@@ -62,7 +62,7 @@ template <typename T>
 void checkGenEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
                          Matrix<const T, Device::CPU>& B,
                          Matrix<const BaseType<T>, Device::CPU>& evalues,
-                         Matrix<const T, Device::CPU>& E, SizeType last_eval_idx);
+                         Matrix<const T, Device::CPU>& E, const SizeType last_eval_idx);
 
 struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
@@ -325,7 +325,7 @@ template <typename T>
 void checkGenEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
                          Matrix<const T, Device::CPU>& B,
                          Matrix<const BaseType<T>, Device::CPU>& evalues,
-                         Matrix<const T, Device::CPU>& E, SizeType last_eval_idx) {
+                         Matrix<const T, Device::CPU>& E, const SizeType last_eval_idx) {
   const Index2D rank_result{0, 0};
 
   const auto norm_A = dlaf::auxiliary::max_norm<dlaf::Backend::MC>(comm_grid, rank_result, uplo, A);

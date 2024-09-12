@@ -43,6 +43,9 @@ void testEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::C
   using dlaf::matrix::MatrixMirror;
   using dlaf::matrix::test::allGather;
   using dlaf::matrix::test::MatrixLocal;
+
+  DLAF_ASSERT(first_eigenvalue_index == 0l, first_eigenvalue_index);
+
   // Note:
   // Wait for the algorithm to finish all scheduled tasks, because verification has MPI blocking
   // calls that might lead to deadlocks.

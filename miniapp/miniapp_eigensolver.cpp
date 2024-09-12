@@ -88,6 +88,9 @@ struct Options
       last_eval_idx = m - 1;
     }
 
+    DLAF_ASSERT(last_eval_idx < m, last_eval_idx);
+    DLAF_ASSERT(last_eval_idx >= 0, last_eval_idx);
+
 #ifdef DLAF_WITH_HDF5
     if (vm.count("input-file") == 1) {
       input_file = vm["input-file"].as<std::filesystem::path>();
@@ -292,11 +295,7 @@ void checkEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<const
   const Index2D rank_result{0, 0};
 
   // 1. Get largest eigenvalue (amongst computed eigenvalues)
-  const GlobalElementIndex last_ev(last_eval_idx, 0);
-  const GlobalTileIndex last_ev_tile = evalues.distribution().globalTileIndex(last_ev);
-  const TileElementIndex last_ev_el_tile = evalues.distribution().tileElementIndex(last_ev);
-  const auto norm_A = std::max(std::norm(sync_wait(evalues.read(GlobalTileIndex{0, 0})).get()({0, 0})),
-                               std::norm(sync_wait(evalues.read(last_ev_tile)).get()(last_ev_el_tile)));
+  const auto norm_A = dlaf::auxiliary::max_norm<dlaf::Backend::MC>(comm_grid, rank_result, uplo, A);
 
   // 2.
   // Compute C = E D - A E

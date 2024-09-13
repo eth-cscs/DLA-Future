@@ -76,6 +76,7 @@ stages:
         "BUILD_IMAGE",
         "DEPLOY_BASE_IMAGE",
         "EXTRA_APTGET_DEPLOY",
+        "PIP_OPTS",
         "USE_MKL",
         "USE_ROCBLAS",
         "NUM_PROCS=$NUM_CORES_BUILD_DLAF"
@@ -85,6 +86,7 @@ stages:
     DOCKERFILE: ci/docker/deploy.Dockerfile
     DEPLOY_BASE_IMAGE: docker.io/ubuntu:24.04
     EXTRA_APTGET_DEPLOY: ""
+    PIP_OPTS: ""
   artifacts:
     paths:
       - pipeline.yml

@@ -18,6 +18,7 @@ cpu gcc13 codecov build:
   variables:
     DOCKERFILE: ci/docker/codecov.Dockerfile
     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc13-codecov/deploy:$CI_COMMIT_SHA
+    PIP_OPTS: "--break-system-packages"
 
 cpu gcc13 codecov test:
   extends: .run_common

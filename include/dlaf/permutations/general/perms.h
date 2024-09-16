@@ -16,25 +16,28 @@
 
 #include <whip.hpp>
 
-#include <dlaf/matrix/distribution.h>
-#include <dlaf/matrix/tile.h>
+#include <dlaf/matrix/index.h>
 #include <dlaf/types.h>
 
 namespace dlaf::permutations::internal {
 
-template <class T, Coord coord>
-void applyPermutationsOnDevice(
-    GlobalElementIndex out_begin, GlobalElementSize sz, SizeType in_offset,
-    const matrix::Distribution& distr, const SizeType* perms,
-    const std::vector<matrix::internal::TileAsyncRwMutexReadOnlyWrapper<T, Device::GPU>>& in_tiles,
-    const std::vector<matrix::Tile<T, Device::GPU>>& out_tiles, whip::stream_t stream);
+struct MatrixLayout {
+  SizeType nb;          // square tile size
+  SizeType ld;          // tile leading dimension
+  SizeType row_offset;  // tile offset to first element of tile on the next row
+  SizeType col_offset;  // tile offset to first element of tile on the next column
+};
 
-#define DLAF_CUDA_PERMUTE_ON_DEVICE(kword, Type, Coord)                                                  \
-  kword template void applyPermutationsOnDevice<Type, Coord>(                                            \
-      GlobalElementIndex out_begin, GlobalElementSize sz, SizeType in_offset,                            \
-      const matrix::Distribution& distr, const SizeType* perms,                                          \
-      const std::vector<matrix::internal::TileAsyncRwMutexReadOnlyWrapper<Type, Device::GPU>>& in_tiles, \
-      const std::vector<matrix::Tile<Type, Device::GPU>>& out_tiles, whip::stream_t stream)
+template <class T, Coord coord>
+void applyPermutationsOnDevice(GlobalElementIndex out_begin, GlobalElementSize sz, SizeType in_offset,
+                               const SizeType* perms, MatrixLayout in_layout, const T* in,
+                               MatrixLayout out_layout, T* out, whip::stream_t stream);
+
+#define DLAF_CUDA_PERMUTE_ON_DEVICE(kword, Type, Coord)                                              \
+  kword template void applyPermutationsOnDevice<Type, Coord>(                                        \
+      GlobalElementIndex out_begin, GlobalElementSize sz, SizeType in_offset, const SizeType* perms, \
+      MatrixLayout in_layout, const Type* in, MatrixLayout out_layout, Type* out,                    \
+      whip::stream_t stream)
 
 DLAF_CUDA_PERMUTE_ON_DEVICE(extern, float, Coord::Col);
 DLAF_CUDA_PERMUTE_ON_DEVICE(extern, double, Coord::Col);

@@ -131,6 +131,51 @@ void applyPermutationOnCPU(
   }
 }
 
+#if defined(DLAF_WITH_GPU)
+
+template <class T>
+MatrixLayout getMatrixLayout(const matrix::Distribution& distr,
+                             const std::vector<matrix::Tile<T, Device::GPU>>& tiles) {
+  LocalTileSize tile_sz = distr.localNrTiles();
+  MatrixLayout layout;
+  layout.nb = distr.blockSize().rows();
+  layout.ld = tiles[0].ld();
+  layout.row_offset = (tile_sz.rows() > 1) ? tiles[1].ptr() - tiles[0].ptr() : 0;
+  layout.col_offset = (tile_sz.cols() > 1) ? tiles[to_sizet(tile_sz.rows())].ptr() - tiles[0].ptr() : 0;
+  return layout;
+}
+
+template <class T>
+MatrixLayout getMatrixLayout(
+    const matrix::Distribution& distr,
+    const std::vector<matrix::internal::TileAsyncRwMutexReadOnlyWrapper<T, Device::GPU>>& tiles) {
+  const LocalTileSize tile_sz = distr.localNrTiles();
+  MatrixLayout layout;
+  layout.nb = distr.blockSize().rows();
+  layout.ld = tiles[0].get().ld();
+  layout.row_offset = (tile_sz.rows() > 1) ? tiles[1].get().ptr() - tiles[0].get().ptr() : 0;
+  layout.col_offset =
+      (tile_sz.cols() > 1) ? tiles[to_sizet(tile_sz.rows())].get().ptr() - tiles[0].get().ptr() : 0;
+  return layout;
+}
+
+template <class T, Coord coord>
+void applyPermutationsOnDeviceWrapper(
+    GlobalElementIndex out_begin, GlobalElementSize sz, SizeType in_offset,
+    const matrix::Distribution& distr, const SizeType* perms,
+    const std::vector<matrix::internal::TileAsyncRwMutexReadOnlyWrapper<T, Device::GPU>>& in_tiles,
+    const std::vector<matrix::Tile<T, Device::GPU>>& out_tiles, whip::stream_t stream) {
+  MatrixLayout in_layout = getMatrixLayout(distr, in_tiles);
+  MatrixLayout out_layout = getMatrixLayout(distr, out_tiles);
+  const T* in = in_tiles[0].get().ptr();
+  T* out = out_tiles[0].ptr();
+
+  applyPermutationsOnDevice<T, coord>(out_begin, sz, in_offset, perms, in_layout, in, out_layout, out,
+                                      stream);
+}
+
+#endif
+
 template <Backend B, Device D, class T, Coord C>
 void Permutations<B, D, T, C>::call(const SizeType i_begin, const SizeType i_end,
                                     Matrix<const SizeType, D>& perms, Matrix<const T, D>& mat_in,
@@ -188,8 +233,8 @@ void Permutations<B, D, T, C>::call(const SizeType i_begin, const SizeType i_end
       TileElementIndex zero(0, 0);
       const SizeType* i_ptr = index_tile_futs[0].get().ptr(zero);
 
-      applyPermutationsOnDevice<T, C>(GlobalElementIndex(0, 0), subm_dist.size(), 0, subm_dist, i_ptr,
-                                      mat_in_tiles, mat_out_tiles, stream);
+      applyPermutationsOnDeviceWrapper<T, C>(GlobalElementIndex(0, 0), subm_dist.size(), 0, subm_dist,
+                                             i_ptr, mat_in_tiles, mat_out_tiles, stream);
     };
 
     ex::start_detached(std::move(sender) |
@@ -408,8 +453,8 @@ void applyPackingIndex(const matrix::Distribution& subm_dist, IndexMapSender&& i
       TileElementIndex zero(0, 0);
       const SizeType* i_ptr = index_tile_futs[0].get().ptr(zero);
 
-      applyPermutationsOnDevice<T, C>(GlobalElementIndex(0, 0), subm_dist.size(), 0, subm_dist, i_ptr,
-                                      mat_in_tiles, mat_out_tiles, stream);
+      applyPermutationsOnDeviceWrapper<T, C>(GlobalElementIndex(0, 0), subm_dist.size(), 0, subm_dist,
+                                             i_ptr, mat_in_tiles, mat_out_tiles, stream);
     };
 
     ex::start_detached(std::move(sender) |

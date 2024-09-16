@@ -398,6 +398,10 @@ void initResourcePartitionerHandler(pika::resource::partitioner& rp,
   // Create a thread pool with a single core that we will use for all
   // communication related tasks
   rp.create_thread_pool("mpi", pika::resource::scheduling_policy::static_priority, mode);
+#if PIKA_VERSION_FULL >= 0x001C00  // >= 0.28.0
+  rp.add_resource(rp.sockets()[0].cores()[0].pus()[0], "mpi");
+#else
   rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], "mpi");
+#endif
 }
 }

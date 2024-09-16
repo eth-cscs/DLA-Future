@@ -4,7 +4,7 @@ include:
 cpu asan ubsan lsan deps:
   extends: .build_deps_common
   variables:
-    EXTRA_APTGET: "clang-18 libomp-18-dev"
+    EXTRA_APTGET: "clang-18 libclang-rt-18-dev libomp-18-dev"
     COMPILER: clang@18
     USE_MKL: "ON"
     SPACK_ENVIRONMENT: ci/docker/asan-ubsan-lsan.yaml

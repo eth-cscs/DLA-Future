@@ -19,12 +19,3 @@ cuda gcc13 stdexec release build:
     - cuda gcc13 stdexec release deps
   variables:
     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc13-release/deploy:$CI_COMMIT_SHA
-
-cuda gcc13 release test:
-  extends: .run_common
-  needs:
-    - cuda gcc13 release build
-  trigger:
-    include:
-      - artifact: pipeline.yml
-        job: cuda gcc13 release build

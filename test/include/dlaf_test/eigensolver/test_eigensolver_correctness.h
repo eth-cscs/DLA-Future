@@ -10,10 +10,6 @@
 
 #pragma once
 
-#include <filesystem>
-#include <functional>
-#include <tuple>
-
 #include <blas.hh>
 
 #include <pika/init.hpp>

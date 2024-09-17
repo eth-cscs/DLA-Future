@@ -1,0 +1,28 @@
+include:
+  - local: 'ci/common-ci.yml'
+
+cpu gcc13 release deps:
+  extends: .build_deps_common
+  variables:
+    COMPILER: gcc@13
+    USE_MKL: "ON"
+    SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc13-release/build
+
+cpu gcc13 release build:
+  extends:
+    - .build_common
+    - .build_for_daint-mc
+  needs:
+    - cpu gcc13 release deps
+  variables:
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc13-release/deploy:$CI_COMMIT_SHA
+
+cpu gcc13 release test:
+  extends: .run_common
+  needs:
+    - cpu gcc13 release build
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cpu gcc13 release build

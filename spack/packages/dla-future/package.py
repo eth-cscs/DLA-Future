@@ -159,7 +159,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         values=cxxstds,
         description="Use the specified C++ standard when building",
     )
-    conflicts("cxxstd=20", when="+cuda")
+    conflicts("cxxstd=20", when="+cuda ^cuda@:11")
 
     for cxxstd in cxxstds:
         depends_on(f"pika cxxstd={cxxstd}", when=f"cxxstd={cxxstd}")

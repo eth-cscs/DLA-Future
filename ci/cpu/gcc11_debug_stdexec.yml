@@ -14,7 +14,7 @@ cpu gcc11 stdexec debug deps:
 cpu gcc11 stdexec debug build:
   extends:
     - .build_common
-    - .build_for_daint-mc
+    - .build_for_eiger
   needs:
     - cpu gcc11 stdexec debug deps
   variables:

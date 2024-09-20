@@ -16,6 +16,7 @@
 #include <pika/execution.hpp>
 #include <pika/init.hpp>
 
+#include <dlaf/common/assert.h>
 #include <dlaf/common/index2d.h>
 #include <dlaf/common/pipeline.h>
 #include <dlaf/common/single_threaded_blas.h>
@@ -87,10 +88,14 @@ std::vector<config_t> configs{
     {{0, 0}, {3, 3}},
     // full-tile band
     {{3, 3}, {3, 3}},    // single tile (nothing to do)
+    {{6, 6}, {3, 3}},    // tile always full size (less room for distribution over ranks)
+    {{9, 9}, {3, 3}},    // tile always full size (less room for distribution over ranks)
     {{12, 12}, {3, 3}},  // tile always full size (less room for distribution over ranks)
-    {{13, 13}, {3, 3}},  // tile incomplete
     {{24, 24}, {3, 3}},  // tile always full size (more room for distribution)
     {{40, 40}, {5, 5}},
+    // tile incomplete
+    {{8, 8}, {3, 3}},
+    {{13, 13}, {3, 3}},
 };
 
 std::vector<config_t> configs_subband{
@@ -557,7 +562,6 @@ auto checkResult(const Distribution dist, const SizeType band_size,
           to_sizet(std::min<SizeType>(mat_b.nrTiles().rows() - i, dist.grid_size().rows()));
 
       // === 2nd pass
-
       // prepare workspace (height = max(nranks)) + reorder heads
       std::vector<comm::IndexT_MPI> col_rank_order(nranks_with_data, -1);
       const comm::IndexT_MPI first_rank = dist.template rank_global_tile<Coord::Row>(i);
@@ -568,47 +572,64 @@ auto checkResult(const Distribution dist, const SizeType band_size,
                      });
 
       // HH2
-      // TODO it does not deal with incomplete tiles yet
-      MatrixLocal<T> hh_2nd({to_SizeType(nranks_with_data) * mat_b.blockSize().rows(),
-                             mat_b.blockSize().cols()},
-                            mat_b.blockSize());
-
-      for (SizeType i = 0; i < to_SizeType(col_rank_order.size()); ++i) {
-        const SizeType ii = to_SizeType(col_rank_order[to_sizet(i)]);
-        matrix::internal::copy(mat_hh_2nd.tile({ii, j}), hh_2nd.tile({i, 0}));
-      }
+      const matrix::Distribution dist_hh_2nd = [&]() {
+        using matrix::internal::distribution::global_tile_element_distance;
+        const SizeType i_begin = i;
+        const SizeType i_end = std::min<SizeType>(i + dist.grid_size().rows(), dist.nr_tiles().rows());
+        const SizeType nrows = global_tile_element_distance<Coord::Row>(dist, i_begin, i_end);
+        return matrix::Distribution({nrows, mat_b.blockSize().cols()}, mat_b.blockSize());
+      }();
+      MatrixLocal<T> hh_2nd(dist_hh_2nd.size(), dist_hh_2nd.block_size());
 
       const SizeType nrefls = [&]() {
-        // TODO workaround (j == ntiles - 1 ? 1 : 0)
-        return std::min(dist.template tile_size_of<Coord::Col>(j),
-                        hh_2nd.size().rows() - (j == ntiles - 1 ? 1 : 0));
+        const SizeType reflector_size = hh_2nd.size().rows();
+        return std::min(hh_2nd.size().cols(), reflector_size - 1);
       }();
 
-      // T2
-      const SizeType j_el =
-          dist.template global_element_from_global_tile_and_tile_element<Coord::Col>(j, 0);
-      MatrixLocal<T> T_2nd({nrefls, nrefls}, mat_b.blockSize());
-      lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise, hh_2nd.size().rows(), nrefls,
-                    hh_2nd.ptr(), hh_2nd.ld(), taus_2nd.data() + j_el, T_2nd.ptr(), T_2nd.ld());
+      if (nrefls > 0) {
+        for (SizeType i = 0; i < to_SizeType(col_rank_order.size()); ++i) {
+          const SizeType ii = to_SizeType(col_rank_order[to_sizet(i)]);
 
-      // Apply HH2 from L and R
-      lapack::larfb(lapack::Side::Left, lapack::Op::NoTrans, lapack::Direction::Forward,
-                    lapack::StoreV::Columnwise, hh_2nd.size().rows(), mat_b.size().cols() - j_el, nrefls,
-                    hh_2nd.ptr(), hh_2nd.ld(), T_2nd.ptr(), T_2nd.ld(), mat_b.ptr({i_el, j_el}),
-                    mat_b.ld());
-      lapack::larfb(lapack::Side::Right, lapack::Op::ConjTrans, lapack::Direction::Forward,
-                    lapack::StoreV::Columnwise, mat_b.size().rows() - j_el, hh_2nd.size().rows(), nrefls,
-                    hh_2nd.ptr(), hh_2nd.ld(), T_2nd.ptr(), T_2nd.ld(), mat_b.ptr({j_el, i_el}),
-                    mat_b.ld());
+          const bool is_last = i == (to_SizeType(col_rank_order.size()) - 1);
+          const SizeType last_rows = hh_2nd.size().rows() % dist.block_size().rows();
+          if (!is_last || last_rows == 0) {
+            matrix::internal::copy(mat_hh_2nd.tile({ii, j}), hh_2nd.tile({i, 0}));
+          }
+          else {
+            const auto& tile = mat_hh_2nd.tile({ii, j}).subTileReference(
+                {{0, 0}, {last_rows, dist.block_size().cols()}});
+            matrix::internal::copy(tile, hh_2nd.tile({i, 0}));
+          }
+        }
+
+        // T2
+        const SizeType j_el =
+            dist.template global_element_from_global_tile_and_tile_element<Coord::Col>(j, 0);
+
+        MatrixLocal<T> T_2nd({nrefls, nrefls}, mat_b.blockSize());
+        lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise, hh_2nd.size().rows(),
+                      nrefls, hh_2nd.ptr(), hh_2nd.ld(), taus_2nd.data() + j_el, T_2nd.ptr(),
+                      T_2nd.ld());
+
+        // Apply HH2 from L and R
+        lapack::larfb(lapack::Side::Left, lapack::Op::NoTrans, lapack::Direction::Forward,
+                      lapack::StoreV::Columnwise, hh_2nd.size().rows(), mat_b.size().cols() - j_el,
+                      nrefls, hh_2nd.ptr(), hh_2nd.ld(), T_2nd.ptr(), T_2nd.ld(),
+                      mat_b.ptr({i_el, j_el}), mat_b.ld());
+        lapack::larfb(lapack::Side::Right, lapack::Op::ConjTrans, lapack::Direction::Forward,
+                      lapack::StoreV::Columnwise, mat_b.size().rows() - j_el, hh_2nd.size().rows(),
+                      nrefls, hh_2nd.ptr(), hh_2nd.ld(), T_2nd.ptr(), T_2nd.ld(),
+                      mat_b.ptr({j_el, i_el}), mat_b.ld());
+      }
 
       // === 1st pass
-
       // HH1 (for all ranks)
       // prepare workspace (height = local matrix for each rank) with zeros to fill voids
       // Note: HH_1st workspaces is stored as a matrix where each column of tiles is for a specific rank.
-      MatrixLocal<T> hh_1st({dist.size().rows() - i_el,
-                             to_SizeType(nranks_with_data) * dist.tile_size().cols()},
-                            dist.tile_size());
+      const matrix::Distribution dist_hh_1st({dist.size().rows() - i_el,
+                                              to_SizeType(nranks_with_data) * dist.tile_size().cols()},
+                                             dist.tile_size());
+      MatrixLocal<T> hh_1st(dist_hh_1st.size(), dist_hh_1st.tile_size());
 
       std::size_t col_rank_current = 0;
       for (SizeType i_a = i; i_a < dist.nr_tiles().rows(); ++i_a, ++col_rank_current) {
@@ -638,15 +659,29 @@ auto checkResult(const Distribution dist, const SizeType band_size,
       for (SizeType col_rank = 0; col_rank < to_SizeType(col_rank_order.size()); ++col_rank) {
         const SizeType rank = to_SizeType(col_rank_order[to_sizet(col_rank)]);
 
+        const SizeType i_begin = col_rank;
+        const SizeType i_end_gap = dist_hh_1st.nr_tiles().rows();
+        const SizeType i_end = i_begin + dlaf::util::ceilDiv(dist_hh_1st.nr_tiles().rows() - i_begin,
+                                                             to_SizeType(col_rank_order.size()));
+        using matrix::internal::distribution::global_tile_element_distance;
+
+        const SizeType refl_size = global_tile_element_distance<Coord::Row>(dist_hh_1st, i_begin, i_end);
+
+        const auto& hh_1st_head = hh_1st.tile({col_rank, col_rank});
+        const SizeType nrefls = std::min(refl_size - 1, hh_1st_head.size().cols());
+
+        if (nrefls <= 0)
+          continue;
+
         // Compute T1
         const auto& tile_taus = taus_1st.tile({j, rank});
-        const SizeType nrefls = tile_taus.size().rows();
-        const auto& hh_1st_head = hh_1st.tile({col_rank, col_rank});
+
+        const SizeType refl_size_gap =
+            global_tile_element_distance<Coord::Row>(dist_hh_1st, i_begin, i_end_gap);
 
         MatrixLocal<T> T_1st({nrefls, nrefls}, mat_b.blockSize());
-        lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise,
-                      hh_1st.size().rows() - col_rank * dist.tile_size().rows(), nrefls,
-                      hh_1st_head.ptr(), hh_1st.ld(), tile_taus.ptr(), T_1st.ptr(), T_1st.ld());
+        lapack::larft(lapack::Direction::Forward, lapack::StoreV::Columnwise, refl_size_gap, nrefls,
+                      hh_1st_head.ptr(), hh_1st_head.ld(), tile_taus.ptr(), T_1st.ptr(), T_1st.ld());
 
         // Apply HH1 (of a rank) from L and R
         {

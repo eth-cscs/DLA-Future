@@ -12,8 +12,10 @@
 
 #include <pika/execution.hpp>
 
+#include <dlaf/common/index2d.h>
 #include <dlaf/communication/broadcast_panel.h>
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/index.h>
 #include <dlaf/communication/kernels/all_reduce.h>
 #include <dlaf/communication/kernels/broadcast.h>
 #include <dlaf/eigensolver/reduction_to_band/api.h>
@@ -21,6 +23,9 @@
 #include <dlaf/factorization/qr.h>
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/distribution_extensions.h>
+#include <dlaf/matrix/index.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/panel.h>
 #include <dlaf/schedulers.h>
@@ -491,12 +496,39 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
   const SizeType ntiles = (nrefls - 1) / band_size + 1;
 
   const bool is_full_band = (band_size == dist.blockSize().cols());
+  DLAF_ASSERT(is_full_band, is_full_band);
 
   for (SizeType j = 0; j < ntiles; ++j) {
     const SizeType i = j + 1;
     const SizeType j_lc = dist.template local_tile_from_global_tile<Coord::Col>(j);
 
-    const SizeType nrefls_step = mat_taus_1st.tile_size_of(GlobalTileIndex(j, rank.row())).rows();
+    const SizeType nrefls_1st = [&]() -> SizeType {
+      const SizeType i_head_lc = dist.template next_local_tile_from_global_tile<Coord::Row>(i);
+
+      if (i_head_lc >= dist.local_nr_tiles().rows())
+        return 0;
+
+      const SizeType i_head = dist.template global_tile_from_local_tile<Coord::Row>(i_head_lc);
+      const GlobalTileIndex ij_head(i_head, j);
+      const TileElementSize head_size = mat_a.tile_size_of(ij_head);
+
+      if (i_head_lc == dist.local_nr_tiles().rows() - 1)
+        return head_size.rows() - 1;
+      else
+        return head_size.rows();
+    }();
+
+    auto get_tile_tau = [&]() {
+      if (nrefls_1st == band_size)
+        return mat_taus_1st.readwrite(LocalTileIndex(j_lc, 0));
+      return splitTile(mat_taus_1st.readwrite(LocalTileIndex(j_lc, 0)), {{0, 0}, {nrefls_1st, 1}});
+    };
+
+    auto get_tile_tau_ro = [&]() {
+      if (nrefls_1st == band_size)
+        return mat_taus_1st.read(LocalTileIndex(j_lc, 0));
+      return splitTile(mat_taus_1st.read(LocalTileIndex(j_lc, 0)), {{0, 0}, {nrefls_1st, 1}});
+    };
 
     // panel
     const GlobalTileIndex panel_offset(i, j);
@@ -522,68 +554,141 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
     // QR local (HH reflectors stored in-place)
     if (rank_panel == rank.col()) {
       using red2band::local::computePanelReflectors;
-      computePanelReflectors(mat_a, mat_taus_1st.readwrite(LocalTileIndex(j_lc, 0)), panel_view);
+      computePanelReflectors(mat_a, get_tile_tau(), panel_view);
     }
 
     // TRAILING 1st pass
     if (at_offset_el.isIn(mat_a.size())) {
-      auto& ws_V = panels_v.nextResource();
-
-      ws_V.setRangeStart(at_offset);
-      ws_V.setWidth(nrefls_step);
+      // TODO FIXME workaround for possibly non-participating ranks (they cannot have width = 0)
+      const SizeType nrefls_1st_min = std::max<SizeType>(nrefls_1st, 1);
 
       const LocalTileIndex zero_lc(0, 0);
-      matrix::Matrix<T, D> ws_T({nrefls_step, nrefls_step}, dist.block_size());
+      matrix::Matrix<T, D> ws_T({nrefls_1st_min, nrefls_1st_min}, dist.block_size());
 
-      if (rank_panel == rank.col()) {
+      auto& ws_V = panels_v.nextResource();
+      ws_V.setRangeStart(at_offset);
+      ws_V.setWidth(nrefls_1st_min);
+
+      auto& ws_W0 = panels_w0.nextResource();
+      ws_W0.setRangeStart(at_offset);
+      ws_W0.setWidth(nrefls_1st_min);
+
+      if (rank_panel == rank.col() && nrefls_1st != 0) {
         using factorization::internal::computeTFactor;
         using red2band::local::setupReflectorPanelV;
 
         const bool has_head = !panel_view.iteratorLocal().empty();
-        setupReflectorPanelV<B, D, T>(has_head, panel_view, nrefls_step, ws_V, mat_a, !is_full_band);
+        setupReflectorPanelV<B, D, T>(has_head, panel_view, nrefls_1st_min, ws_V, mat_a, !is_full_band);
 
-        computeTFactor<B>(ws_V, mat_taus_1st.read(LocalTileIndex{j_lc, 0}), ws_T.readwrite(zero_lc));
+        computeTFactor<B>(ws_V, get_tile_tau_ro(), ws_T.readwrite(zero_lc));
+
+        // W = V T
+        red2band::local::trmmComputeW<B, D>(ws_W0, ws_V, ws_T.read(zero_lc));
       }
 
-      auto& ws_VT = panels_vt.nextResource();
-      ws_VT.setRangeStart(at_offset);
-      ws_VT.setHeight(nrefls_step);
-
-      comm::broadcast(rank_panel, ws_V, ws_VT, mpi_row_chain, mpi_col_chain);
-
-      // W = V T
-      auto& ws_W0 = panels_w0.nextResource();
-      ws_W0.setRangeStart(at_offset);
-      ws_W0.setWidth(nrefls_step);
-
-      if (rank_panel == rank.col())
-        red2band::local::trmmComputeW<B, D>(ws_W0, ws_V, ws_T.read(zero_lc));
-
-      auto& ws_W0T = panels_w0t.nextResource();
-      ws_W0T.setRangeStart(at_offset);
-      ws_W0T.setHeight(nrefls_step);
-
-      comm::broadcast(rank_panel, ws_W0, ws_W0T, mpi_row_chain, mpi_col_chain);
-
       // Note: apply local transformations, one after the other
-      auto& ws_W1 = panels_w1.nextResource();
-      auto& ws_W1T = panels_w1t.nextResource();
-      matrix::Matrix<T, D> ws_W2 = std::move(ws_T);
+      // matrix::Matrix<T, D> ws_W2 = std::move(ws_T);
 
       for (int idx_qr_head = 0; idx_qr_head < n_qr_heads; ++idx_qr_head) {
         const SizeType head_qr = at_view.offset().row() + idx_qr_head;
         const comm::Index2D rank_qr(dist.template rank_global_tile<Coord::Row>(head_qr), rank_panel);
 
-        ws_W1.setRangeStart(at_offset);
-        ws_W1.setWidth(nrefls_step);
+        const bool is_row_involved = rank_qr.row() == rank.row();
+        const bool is_col_involved = [head_qr, dist, rank]() {
+          for (SizeType k = head_qr; k < dist.nr_tiles().rows(); k += dist.grid_size().rows()) {
+            const comm::IndexT_MPI rank_owner_col = dist.template rank_global_tile<Coord::Col>(k);
+            if (rank_owner_col == rank.col())
+              return true;
+          }
+          return false;
+        }();
 
-        ws_W1T.setRangeStart(at_offset);
-        ws_W1T.setHeight(nrefls_step);
+        const SizeType nrtiles_transf =
+            util::ceilDiv<SizeType>(dist.nr_tiles().rows() - head_qr, dist.grid_size().rows());
+
+        // TODO FIXME cannot skip because otherwise no W1 reduction if any rank skip?!
+        // // this rank is not involved at all
+        // if (!is_row_involved && !is_col_involved)
+        //   continue;
+
+        // number of reflectors of this "local" transformation
+        const SizeType nrefls_this = [&]() {
+          using matrix::internal::distribution::global_tile_from_local_tile_on_rank;
+          const SizeType i_head = head_qr;
+          if (nrtiles_transf == 1) {
+            const TileElementSize tile_size = dist.tile_size_of({i_head, j});
+            return std::min<SizeType>(tile_size.rows() - 1, tile_size.cols());
+          }
+          return dist.block_size().cols();
+        }();
+
+        if (nrefls_this == 0)
+          continue;
+
+        // "local" broadcast along rows involved in this local transformation
+        if (is_row_involved) {
+          comm::broadcast(rank_panel, ws_V, mpi_row_chain);
+          comm::broadcast(rank_panel, ws_W0, mpi_row_chain);
+        }
+
+        auto& ws_VT = panels_vt.nextResource();
+        // TODO FIXME workaround for panel problem on reset about range
+        ws_VT.setRange(at_offset, common::indexFromOrigin(dist.nr_tiles()));
+        ws_VT.setHeight(nrefls_this);
+
+        auto& ws_W0T = panels_w0t.nextResource();
+        // TODO FIXME workaround for panel problem on reset about range
+        ws_W0T.setRange(at_offset, common::indexFromOrigin(dist.nr_tiles()));
+        ws_W0T.setHeight(nrefls_this);
+
+        // broadcast along cols involved in this local transformation
+        if (is_col_involved) {  // diagonal
+          // set diagonal tiles
+          for (const auto ij_lc : ws_VT.iteratorLocal()) {
+            const SizeType k = dist.template global_tile_from_local_tile<Coord::Col>(ij_lc.col());
+            const comm::IndexT_MPI rank_src = dist.template rank_global_tile<Coord::Row>(k);
+
+            if (rank_qr.row() != rank_src)
+              continue;
+
+            using comm::schedule_bcast_recv;
+            using comm::schedule_bcast_send;
+
+            if (rank_src == rank.row()) {
+              const SizeType i_lc = dist.template local_tile_from_global_tile<Coord::Row>(k);
+
+              ws_VT.setTile(ij_lc, ws_V.read({i_lc, 0}));
+              ws_W0T.setTile(ij_lc, ws_W0.read({i_lc, 0}));
+
+              // if (nrtiles_transf > 1) {
+              ex::start_detached(schedule_bcast_send(mpi_col_chain.exclusive(), ws_V.read({i_lc, 0})));
+              ex::start_detached(schedule_bcast_send(mpi_col_chain.exclusive(), ws_W0.read({i_lc, 0})));
+              // }
+            }
+            else {
+              // if (nrtiles_transf > 1) {
+              ex::start_detached(schedule_bcast_recv(mpi_col_chain.exclusive(), rank_src,
+                                                     ws_VT.readwrite(ij_lc)));
+              ex::start_detached(schedule_bcast_recv(mpi_col_chain.exclusive(), rank_src,
+                                                     ws_W0T.readwrite(ij_lc)));
+              // }
+            }
+          }
+        }
 
         // W1 = A W0
         // Note:
-        // it will fill up all W1 (distributed) and it will read just part of A, i.e. columns where this
-        // local transformation should be applied from the right.
+        // it will fill up all W1 (distributed) and it will read just part of A, i.e. columns where
+        // this local transformation should be applied from the right.
+        auto& ws_W1 = panels_w1.nextResource();
+        auto& ws_W1T = panels_w1t.nextResource();
+        ws_W1.setRangeStart(at_offset);
+        ws_W1.setWidth(nrefls_this);
+
+        ws_W1T.setRangeStart(at_offset);
+        ws_W1T.setHeight(nrefls_this);
+
+        // TODO FIXME restrict communication to just interested ones
         using ca_red2band::hemm;
         hemm<B>(rank_qr, ws_W1, ws_W1T, at_view, mat_a, ws_W0, ws_W0T, mpi_row_chain, mpi_col_chain);
 
@@ -591,13 +696,15 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
         // W1T has been used as support panel, so reset it again.
         ws_W1T.reset();
         ws_W1T.setRangeStart(at_offset);
-        ws_W1T.setHeight(nrefls_step);
+        ws_W1T.setHeight(nrefls_this);
 
+        // TODO FIXME restrict communication to just interested ones
         comm::broadcast(rank_panel, ws_W1, ws_W1T, mpi_row_chain, mpi_col_chain);
 
         // LR
         // A -= V W1* + W1 V* - V W0* W1 V*
         if (rank.row() == rank_qr.row()) {
+          matrix::Matrix<T, D> ws_W2({nrefls_this, nrefls_this}, dist.block_size());
           // W2 = W0.T W1
           red2band::local::gemmComputeW2<B, D>(ws_W2, ws_W0, ws_W1);
 
@@ -605,7 +712,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
           // Next steps for L and R need W1, so we create a copy that we are going to update for this step.
           auto& ws_W3 = panels_w3.nextResource();
           ws_W3.setRangeStart(at_offset);
-          ws_W3.setWidth(nrefls_step);
+          ws_W3.setWidth(nrefls_this);
 
           for (const auto& idx : ws_W1.iteratorLocal())
             ex::start_detached(ex::when_all(ws_W1.read(idx), ws_W3.readwrite(idx)) |
@@ -681,23 +788,46 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
 
         ws_W1T.reset();
         ws_W1.reset();
+
+        ws_W0T.reset();
+        ws_VT.reset();
       }
 
-      ws_W0T.reset();
       ws_W0.reset();
-      ws_VT.reset();
       ws_V.reset();
     }
 
     // ===== 2nd pass
+    const matrix::Distribution dist_heads_current = [&]() {
+      using matrix::internal::distribution::global_tile_element_distance;
+      const SizeType i_begin = i;
+      const SizeType i_end = std::min<SizeType>(i + dist.grid_size().rows(), dist.nr_tiles().rows());
+      const SizeType nrows = global_tile_element_distance<Coord::Row>(dist, i_begin, i_end);
+      return matrix::Distribution{LocalElementSize(nrows, band_size), dist.block_size()};
+    }();
+
+    const SizeType nrefls_step = [&]() {
+      const SizeType reflector_size = dist_heads_current.size().rows();
+      return std::min(dist_heads_current.size().cols(), reflector_size - 1);
+    }();
+
+    auto get_tile_tau2 = [&]() {
+      if (nrefls_step == band_size)
+        return mat_taus_2nd.readwrite(LocalTileIndex(j_lc, 0));
+      return splitTile(mat_taus_2nd.readwrite(LocalTileIndex(j_lc, 0)), {{0, 0}, {nrefls_step, 1}});
+    };
+
+    auto get_tile_tau2_ro = [&]() {
+      if (nrefls_step == band_size)
+        return mat_taus_2nd.read(LocalTileIndex(j_lc, 0));
+      return splitTile(mat_taus_2nd.read(LocalTileIndex(j_lc, 0)), {{0, 0}, {nrefls_step, 1}});
+    };
 
     // PANEL: just ranks in the current column
     // QR local with just heads (HH reflectors have to be computed elsewhere, 1st-pass in-place)
     auto&& panel_heads = panels_heads.nextResource();
     panel_heads.setRangeEnd({n_qr_heads, 0});
 
-    const matrix::Distribution dist_heads_current(
-        LocalElementSize(n_qr_heads * dist.block_size().rows(), band_size), dist.block_size());
     const matrix::SubPanelView panel_heads_view(dist_heads_current, {0, 0}, band_size);
 
     const bool rank_has_head_row = !panel_view.iteratorLocal().empty();
@@ -737,8 +867,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
 
       // QR local on heads
       using red2band::local::computePanelReflectors;
-      computePanelReflectors(panel_heads, mat_taus_2nd.readwrite(LocalTileIndex(j_lc, 0)),
-                             panel_heads_view);
+      computePanelReflectors(panel_heads, get_tile_tau2(), panel_heads_view);
 
       // copy back data
       {
@@ -822,10 +951,11 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
 
         using factorization::internal::computeTFactor;
         const GlobalTileIndex j_tau(j, 0);
-        computeTFactor<B>(panel_heads, mat_taus_2nd.read(j_tau), ws_T.readwrite(zero_lc));
+        computeTFactor<B>(panel_heads, get_tile_tau2_ro(), ws_T.readwrite(zero_lc));
       }
 
       auto& ws_VT = panels_vt.nextResource();
+
       ws_VT.setRange(at_offset, at_end_R);
       ws_VT.setHeight(nrefls_step);
 

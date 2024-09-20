@@ -10,7 +10,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <functional>
+#include <utility>
 #include <vector>
 
 #include <pika/execution.hpp>

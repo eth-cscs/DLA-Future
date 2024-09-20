@@ -10,7 +10,10 @@
 
 #pragma once
 
+#include <array>
+#include <cstddef>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include <pika/barrier.hpp>

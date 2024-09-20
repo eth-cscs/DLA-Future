@@ -17,6 +17,7 @@
 #include <mpi.h>
 
 #include <pika/execution.hpp>
+#include <pika/execution_base/any_sender.hpp>
 
 #include <dlaf/common/callable_object.h>
 #include <dlaf/common/eti.h>
@@ -80,8 +81,9 @@ template <Device DCommIn, Device DCommOut, class T, Device DIn, Device DOut>
     // written into the output tile instead).  The reduction is explicitly done
     // on CPU memory so that we can manage potential asynchronous copies between
     // CPU and GPU. A reduction requires contiguous memory.
-    return withTemporaryTile<DCommIn, CopyToDestination::Yes, CopyFromDestination::No,
-                             RequireContiguous::Yes>(std::move(tile_in), std::move(all_reduce));
+    return pika::execution::experimental::make_unique_any_sender(
+        withTemporaryTile<DCommIn, CopyToDestination::Yes, CopyFromDestination::No,
+                          RequireContiguous::Yes>(std::move(tile_in), std::move(all_reduce)));
   };
 
 #if !defined(DLAF_WITH_MPI_GPU_AWARE)

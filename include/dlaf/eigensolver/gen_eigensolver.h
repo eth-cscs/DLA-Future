@@ -55,8 +55,6 @@ void hermitian_generalized_eigensolver_helper(
   DLAF_ASSERT(first_eigenvalue_index == 0, first_eigenvalue_index);  // TODO: remove this restriction
   DLAF_ASSERT(first_eigenvalue_index >= 0, first_eigenvalue_index);
   DLAF_ASSERT(last_eigenvalue_index < mat_a.size().rows(), last_eigenvalue_index, mat_a.size().rows());
-  DLAF_ASSERT(first_eigenvalue_index <= last_eigenvalue_index, first_eigenvalue_index,
-              last_eigenvalue_index);
 
   eigensolver::internal::GenEigensolver<B, D, T>::call(uplo, mat_a, mat_b, eigenvalues, eigenvectors,
                                                        factorization, first_eigenvalue_index,
@@ -78,8 +76,6 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver_helper(
   DLAF_ASSERT(first_eigenvalue_index == 0, first_eigenvalue_index);  // TODO: remove this restriction
   DLAF_ASSERT(first_eigenvalue_index >= 0, first_eigenvalue_index);
   DLAF_ASSERT(last_eigenvalue_index < mat_a.size().rows(), last_eigenvalue_index, mat_a.size().rows());
-  DLAF_ASSERT(first_eigenvalue_index <= last_eigenvalue_index, first_eigenvalue_index,
-              last_eigenvalue_index);
 
   const SizeType size = mat_a.size().rows();
 
@@ -123,8 +119,6 @@ void hermitian_generalized_eigensolver_helper(
   DLAF_ASSERT(first_eigenvalue_index == 0, first_eigenvalue_index);  // TODO: remove this restriction
   DLAF_ASSERT(first_eigenvalue_index >= 0, first_eigenvalue_index);
   DLAF_ASSERT(last_eigenvalue_index < mat_a.size().rows(), last_eigenvalue_index, mat_a.size().rows());
-  DLAF_ASSERT(first_eigenvalue_index <= last_eigenvalue_index, first_eigenvalue_index,
-              last_eigenvalue_index);
 
   eigensolver::internal::GenEigensolver<B, D, T>::call(grid, uplo, mat_a, mat_b, eigenvalues,
                                                        eigenvectors, factorization,
@@ -146,8 +140,6 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver_helper(
   DLAF_ASSERT(first_eigenvalue_index == 0, first_eigenvalue_index);  // TODO: remove this restriction
   DLAF_ASSERT(first_eigenvalue_index >= 0, first_eigenvalue_index);
   DLAF_ASSERT(last_eigenvalue_index < mat_a.size().rows(), last_eigenvalue_index, mat_a.size().rows());
-  DLAF_ASSERT(first_eigenvalue_index <= last_eigenvalue_index, first_eigenvalue_index,
-              last_eigenvalue_index);
 
   const SizeType size = mat_a.size().rows();
 

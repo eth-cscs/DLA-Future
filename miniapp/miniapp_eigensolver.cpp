@@ -282,7 +282,7 @@ using dlaf::matrix::Tile;
 
 /// Procedure to evaluate the result of the Eigensolver
 ///
-/// 1. Check the value of | E D - A E | / | lambda_max |
+/// 1. Check the value of | E D - A E | / | A |
 ///
 /// Prints a message with the ratio and a note about the error:
 /// "":        check ok

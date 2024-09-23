@@ -48,7 +48,6 @@ TIMELIMIT="20:00"
 ARTIFACTS=""
 fi
 
-# CRAY_CUDA_MPS set to 0 to avoid test hanging on daint (See PR #1197)
 BASE_TEMPLATE="
 include:
   - remote: 'https://gitlab.com/cscs-ci/recipes/-/raw/master/templates/v2/.ci-ext.yml'
@@ -62,7 +61,7 @@ variables:
   SLURM_EXCLUSIVE: ''
   SLURM_EXACT: ''
   SLURM_CONSTRAINT: $SLURM_CONSTRAINT
-  CRAY_CUDA_MPS: 0
+  CRAY_CUDA_MPS: 1
   MPICH_MAX_THREAD_SAFETY: multiple
 
 {{JOBS}}

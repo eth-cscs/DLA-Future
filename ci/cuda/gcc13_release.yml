@@ -1,0 +1,28 @@
+include:
+  - local: 'ci/common-ci.yml'
+
+cuda gcc13 release deps:
+  extends: .build_deps_common_gh200
+  variables:
+    BASE_IMAGE: docker.io/nvidia/cuda:12.6.1-devel-ubuntu24.04
+    COMPILER: gcc@13
+    SPACK_ENVIRONMENT: ci/docker/release-cuda-gh200.yaml
+    DEPS_IMAGE: $CSCS_REGISTRY_PATH/cuda-gh200-gcc13-release/deps
+
+cuda gcc13 release build:
+  extends:
+    - .build_common_gh200
+    - .build_for_alps_gh200
+  needs:
+    - cuda gcc13 release deps
+  variables:
+    DLAF_IMAGE: $CSCS_REGISTRY_PATH/cuda-gh200-gcc13-release/dlaf:$CI_COMMIT_SHA
+
+cuda gcc13 release test:
+  extends: .run_common
+  needs:
+    - cuda gcc13 release build
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cuda gcc13 release build

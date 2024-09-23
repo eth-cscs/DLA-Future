@@ -10,8 +10,7 @@ stages:
 ## BUILDS
 ##
 
-.build_deps_common:
-  extends: .container-builder
+.build_deps_common_base:
   stage: build_deps
   timeout: 6 hours
   before_script:
@@ -55,11 +54,23 @@ stages:
     EXTRA_APTGET: ""
     CXXSTD: 17
     USE_MKL: "OFF"
-    COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
     USE_CODECOV: "false"
 
-.build_common:
-  extends: .container-builder
+.build_deps_common:
+  extends:
+    - .container-builder-cscs-zen2
+    - .build_deps_common_base
+  variables:
+    COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
+
+.build_deps_common_gh200:
+  extends:
+    - .container-builder-cscs-gh200
+    - .build_deps_common_base
+  variables:
+    COMMON_SPACK_ENVIRONMENT: ci/docker/common-gh200.yaml
+
+.build_common_base:
   stage: build
   timeout: 2 hours
   before_script:
@@ -82,6 +93,16 @@ stages:
     paths:
       - pipeline.yml
 
+.build_common:
+  extends:
+    - .container-builder-cscs-zen2
+    - .build_common_base
+
+.build_common_gh200:
+  extends:
+    - .container-builder-cscs-gh200
+    - .build_common_base
+
 .build_for_daint-mc:
   variables:
     RUNNER: ".container-runner-daint"
@@ -100,6 +121,14 @@ stages:
   variables:
     RUNNER: ".container-runner-eiger"
     SLURM_CONSTRAINT: mc
+    THREADS_MAX_PER_TASK: 32
+    THREADS_PER_NODE: 256
+
+.build_for_alps_gh200:
+  variables:
+    RUNNER: ".container-runner-todi"
+    SLURM_CONSTRAINT: gpu
+    # 64 / 2 to avoid ranks on multiple sockets for RANK6
     THREADS_MAX_PER_TASK: 32
     THREADS_PER_NODE: 256
 

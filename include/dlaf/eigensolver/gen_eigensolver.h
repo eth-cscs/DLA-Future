@@ -52,6 +52,11 @@ void hermitian_generalized_eigensolver_helper(
   DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);
   DLAF_ASSERT(matrix::single_tile_per_block(eigenvalues), eigenvalues);
   DLAF_ASSERT(matrix::single_tile_per_block(eigenvectors), eigenvectors);
+  DLAF_ASSERT(first_eigenvalue_index == 0, first_eigenvalue_index);  // TODO: remove this restriction
+  DLAF_ASSERT(first_eigenvalue_index >= 0, first_eigenvalue_index);
+  DLAF_ASSERT(last_eigenvalue_index < mat_a.size().rows(), last_eigenvalue_index, mat_a.size().rows());
+  DLAF_ASSERT(first_eigenvalue_index <= last_eigenvalue_index, first_eigenvalue_index,
+              last_eigenvalue_index);
 
   eigensolver::internal::GenEigensolver<B, D, T>::call(uplo, mat_a, mat_b, eigenvalues, eigenvectors,
                                                        factorization, first_eigenvalue_index,
@@ -70,6 +75,11 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver_helper(
   DLAF_ASSERT(matrix::square_blocksize(mat_b), mat_b);
   DLAF_ASSERT(mat_a.size() == mat_b.size(), mat_a, mat_b);
   DLAF_ASSERT(mat_a.blockSize() == mat_b.blockSize(), mat_a, mat_b);
+  DLAF_ASSERT(first_eigenvalue_index == 0, first_eigenvalue_index);  // TODO: remove this restriction
+  DLAF_ASSERT(first_eigenvalue_index >= 0, first_eigenvalue_index);
+  DLAF_ASSERT(last_eigenvalue_index < mat_a.size().rows(), last_eigenvalue_index, mat_a.size().rows());
+  DLAF_ASSERT(first_eigenvalue_index <= last_eigenvalue_index, first_eigenvalue_index,
+              last_eigenvalue_index);
 
   const SizeType size = mat_a.size().rows();
 
@@ -110,6 +120,11 @@ void hermitian_generalized_eigensolver_helper(
   DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);
   DLAF_ASSERT(matrix::single_tile_per_block(eigenvalues), eigenvalues);
   DLAF_ASSERT(matrix::single_tile_per_block(eigenvectors), eigenvectors);
+  DLAF_ASSERT(first_eigenvalue_index == 0, first_eigenvalue_index);  // TODO: remove this restriction
+  DLAF_ASSERT(first_eigenvalue_index >= 0, first_eigenvalue_index);
+  DLAF_ASSERT(last_eigenvalue_index < mat_a.size().rows(), last_eigenvalue_index, mat_a.size().rows());
+  DLAF_ASSERT(first_eigenvalue_index <= last_eigenvalue_index, first_eigenvalue_index,
+              last_eigenvalue_index);
 
   eigensolver::internal::GenEigensolver<B, D, T>::call(grid, uplo, mat_a, mat_b, eigenvalues,
                                                        eigenvectors, factorization,
@@ -128,6 +143,11 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver_helper(
   DLAF_ASSERT(matrix::square_blocksize(mat_b), mat_b);
   DLAF_ASSERT(mat_a.size() == mat_b.size(), mat_a, mat_b);
   DLAF_ASSERT(mat_a.blockSize() == mat_b.blockSize(), mat_a, mat_b);
+  DLAF_ASSERT(first_eigenvalue_index == 0, first_eigenvalue_index);  // TODO: remove this restriction
+  DLAF_ASSERT(first_eigenvalue_index >= 0, first_eigenvalue_index);
+  DLAF_ASSERT(last_eigenvalue_index < mat_a.size().rows(), last_eigenvalue_index, mat_a.size().rows());
+  DLAF_ASSERT(first_eigenvalue_index <= last_eigenvalue_index, first_eigenvalue_index,
+              last_eigenvalue_index);
 
   const SizeType size = mat_a.size().rows();
 
@@ -184,7 +204,7 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver_helper(
 /// @pre @p eigenvectors has tilesize (NB x NB)
 ///
 /// @param first_eigenvalue_index is the index of the first eigenvalue to compute
-/// @pre @p first_eigenvalue_index >= 0
+/// @pre @p first_eigenvalue_index == 0
 /// @param last_eigenvalue_index is the index of the last eigenvalue to compute
 /// @pre @p last_eigenvalue_index < N
 template <Backend B, Device D, class T>
@@ -541,7 +561,7 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver_factorized(blas::Uplo 
 /// @pre @p eigenvectors has tilesize (NB x NB)
 ///
 /// @param first_eigenvalue_index is the index of the first eigenvalue to compute
-/// @pre @p first_eigenvalue_index >= 0
+/// @pre @p first_eigenvalue_index == 0
 /// @param last_eigenvalue_index is the index of the last eigenvalue to compute
 /// @pre @p last_eigenvalue_index < N
 template <Backend B, Device D, class T>
@@ -631,7 +651,7 @@ void hermitian_generalized_eigensolver(comm::CommunicatorGrid& grid, blas::Uplo 
 /// @pre @p mat_b has tilesize (NB x NB)
 ///
 /// @param first_eigenvalue_index is the index of the first eigenvalue to compute
-/// @pre @p first_eigenvalue_index >= 0
+/// @pre @p first_eigenvalue_index == 0
 /// @param last_eigenvalue_index is the index of the last eigenvalue to compute
 /// @pre @p last_eigenvalue_index < N
 template <Backend B, Device D, class T>
@@ -721,7 +741,7 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver(comm::CommunicatorGrid
 /// @pre @p eigenvectors has tilesize (NB x NB)
 ///
 /// @param first_eigenvalue_index is the index of the first eigenvalue to compute
-/// @pre @p first_eigenvalue_index >= 0
+/// @pre @p first_eigenvalue_index == 0
 /// @param last_eigenvalue_index is the index of the last eigenvalue to compute
 /// @pre @p last_eigenvalue_index < N
 template <Backend B, Device D, class T>
@@ -813,7 +833,7 @@ void hermitian_generalized_eigensolver_factorized(comm::CommunicatorGrid& grid, 
 /// @pre @p mat_b is the result of a Cholesky factorization
 ///
 /// @param first_eigenvalue_index is the index of the first eigenvalue to compute
-/// @pre @p first_eigenvalue_index >= 0
+/// @pre @p first_eigenvalue_index == 0
 /// @param last_eigenvalue_index is the index of the last eigenvalue to compute
 /// @pre @p last_eigenvalue_index < N
 template <Backend B, Device D, class T>
@@ -856,7 +876,7 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver_factorized(
 /// @pre @p mat_b is the result of a Cholesky factorization
 ///
 /// @param first_eigenvalue_index is the index of the first eigenvalue to compute
-/// @pre @p first_eigenvalue_index >= 0
+/// @pre @p first_eigenvalue_index == 0
 /// @param last_eigenvalue_index is the index of the last eigenvalue to compute
 /// @pre @p last_eigenvalue_index < N
 template <Backend B, Device D, class T>

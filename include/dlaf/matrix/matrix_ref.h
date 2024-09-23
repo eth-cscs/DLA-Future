@@ -57,7 +57,7 @@ public:
 
   /// Create a matrix reference of @p mat.
   ///
-  /// @param[in] mat is the input matrix,
+  /// @param[in] mat is the input matrix.
   MatrixRef(Matrix<const T, D>& mat) : MatrixRef<const T, D>(mat, {{0, 0}, mat.distribution().size()}) {}
 
   MatrixRef() = delete;
@@ -147,7 +147,7 @@ public:
 
   /// Create a matrix reference of @p mat.
   ///
-  /// @param[in] mat is the input matrix,
+  /// @param[in] mat is the input matrix.
   MatrixRef(Matrix<T, D>& mat) : MatrixRef<const T, D>(mat), mat_(mat) {}
 
   MatrixRef() = delete;

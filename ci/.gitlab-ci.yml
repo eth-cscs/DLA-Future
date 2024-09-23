@@ -5,9 +5,8 @@ include:
   - local: 'ci/cpu/clang15_release.yml'
   - local: 'ci/cpu/clang16_release.yml'
   - local: 'ci/cpu/clang18_release.yml'
-  # https://github.com/eth-cscs/DLA-Future/issues/1184
-  # - local: 'ci/cpu/gcc11_release_stdexec.yml'
-  # - local: 'ci/cpu/gcc11_debug_stdexec.yml'
+  - local: 'ci/cpu/gcc11_release_stdexec.yml'
+  - local: 'ci/cpu/gcc11_debug_stdexec.yml'
   - local: 'ci/cpu/gcc12_release_cxx20.yml'
   - local: 'ci/cpu/gcc13_codecov.yml'
   - local: 'ci/cpu/gcc13_release.yml'

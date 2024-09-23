@@ -18,13 +18,6 @@
 
 namespace dlaf::permutations::internal {
 
-struct MatrixLayout {
-  SizeType nb;          // square tile size
-  SizeType ld;          // tile leading dimension
-  SizeType row_offset;  // tile offset to first element of tile on the next row
-  SizeType col_offset;  // tile offset to first element of tile on the next column
-};
-
 __device__ SizeType getIndex(const MatrixLayout& layout, SizeType row, SizeType col) {
   SizeType tile_row = row / layout.nb;
   SizeType tile_col = col / layout.nb;
@@ -35,32 +28,6 @@ __device__ SizeType getIndex(const MatrixLayout& layout, SizeType row, SizeType 
   SizeType tile_el_offset = tile_el_row + tile_el_col * layout.ld;
 
   return tile_offset + tile_el_offset;
-}
-
-template <class T>
-MatrixLayout getMatrixLayout(const matrix::Distribution& distr,
-                             const std::vector<matrix::Tile<T, Device::GPU>>& tiles) {
-  LocalTileSize tile_sz = distr.localNrTiles();
-  MatrixLayout layout;
-  layout.nb = distr.blockSize().rows();
-  layout.ld = tiles[0].ld();
-  layout.row_offset = (tile_sz.rows() > 1) ? tiles[1].ptr() - tiles[0].ptr() : 0;
-  layout.col_offset = (tile_sz.cols() > 1) ? tiles[to_sizet(tile_sz.rows())].ptr() - tiles[0].ptr() : 0;
-  return layout;
-}
-
-template <class T>
-MatrixLayout getMatrixLayout(
-    const matrix::Distribution& distr,
-    const std::vector<matrix::internal::TileAsyncRwMutexReadOnlyWrapper<T, Device::GPU>>& tiles) {
-  const LocalTileSize tile_sz = distr.localNrTiles();
-  MatrixLayout layout;
-  layout.nb = distr.blockSize().rows();
-  layout.ld = tiles[0].get().ld();
-  layout.row_offset = (tile_sz.rows() > 1) ? tiles[1].get().ptr() - tiles[0].get().ptr() : 0;
-  layout.col_offset =
-      (tile_sz.cols() > 1) ? tiles[to_sizet(tile_sz.rows())].get().ptr() - tiles[0].get().ptr() : 0;
-  return layout;
 }
 
 constexpr unsigned perms_kernel_sz = 32;
@@ -100,16 +67,9 @@ __global__ void applyPermutationsOnDevice(SizeType out_begin_row, SizeType out_b
 }
 
 template <class T, Coord coord>
-void applyPermutationsOnDevice(
-    GlobalElementIndex out_begin, GlobalElementSize sz, SizeType in_offset,
-    const matrix::Distribution& distr, const SizeType* perms,
-    const std::vector<matrix::internal::TileAsyncRwMutexReadOnlyWrapper<T, Device::GPU>>& in_tiles,
-    const std::vector<matrix::Tile<T, Device::GPU>>& out_tiles, whip::stream_t stream) {
-  MatrixLayout in_layout = getMatrixLayout(distr, in_tiles);
-  MatrixLayout out_layout = getMatrixLayout(distr, out_tiles);
-  const T* in = in_tiles[0].get().ptr();
-  T* out = out_tiles[0].ptr();
-
+void applyPermutationsOnDevice(GlobalElementIndex out_begin, GlobalElementSize sz, SizeType in_offset,
+                               const SizeType* perms, const MatrixLayout in_layout, const T* in,
+                               const MatrixLayout out_layout, T* out, whip::stream_t stream) {
   constexpr Coord orth_coord = orthogonal(coord);
   SizeType nelems = sz.get<orth_coord>();  // number of elements in each row or column
   SizeType nperms = sz.get<coord>();       // number of permuted rows or columns

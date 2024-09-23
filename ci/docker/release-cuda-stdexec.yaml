@@ -18,7 +18,7 @@ spack:
       true
 
   specs:
-    - dla-future@master build_type=Debug +miniapps +ci-test +ci-check-threads
+    - dla-future@master +cuda +miniapps +ci-test
 
   packages:
     all:
@@ -27,9 +27,6 @@ spack:
     pika:
       require:
         - '+stdexec'
-        - 'build_type=Debug'
-        - 'malloc=system'
     stdexec:
       require:
         - '@git.8bc7c7f06fe39831dea6852407ebe7f6be8fa9fd=main'
-        - 'build_type=Debug'

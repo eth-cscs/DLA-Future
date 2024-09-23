@@ -40,6 +40,7 @@ void GenEigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<
   hermitian_eigensolver<B>(uplo, mat_a, eigenvalues, eigenvectors, first_eigenvalue_index,
                            last_eigenvalue_index);
 
+  // TODO: only multiply the necessary eigenvectors
   triangular_solver<B>(blas::Side::Left, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1), mat_b,
                        eigenvectors);
 }
@@ -82,6 +83,7 @@ void GenEigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo
   hermitian_eigensolver<B>(grid, uplo, mat_a, eigenvalues, eigenvectors, first_eigenvalue_index,
                            last_eigenvalue_index);
 
+  // TODO: only multiply the necessary eigenvectors
   triangular_solver<B>(grid, blas::Side::Left, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1),
                        mat_b, eigenvectors);
 

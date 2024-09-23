@@ -55,7 +55,6 @@ ARTIFACTS="
 "
 fi
 
-# CRAY_CUDA_MPS set to 0 to avoid test hanging on daint (See PR #1197)
 BASE_TEMPLATE="
 include:
   - remote: 'https://gitlab.com/cscs-ci/recipes/-/raw/master/templates/v2/.ci-ext.yml'
@@ -70,7 +69,7 @@ variables:
   SLURM_EXCLUSIVE: ''
   SLURM_EXACT: ''
   SLURM_CONSTRAINT: $SLURM_CONSTRAINT
-  CRAY_CUDA_MPS: 0
+  CRAY_CUDA_MPS: 1
   MPICH_MAX_THREAD_SAFETY: multiple
 
 {{JOBS}}
@@ -102,6 +101,7 @@ JOBS=""
 for label in `ctest --print-labels | egrep -o "RANK_[1-9][0-9]?"`; do
     N=`echo "$label" | sed "s/RANK_//"`
     C=$(( THREADS_PER_NODE / N ))
+
     if [ $C -gt $THREADS_MAX_PER_TASK ]; then
       C=$THREADS_MAX_PER_TASK
     fi

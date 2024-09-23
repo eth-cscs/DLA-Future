@@ -1,0 +1,32 @@
+include:
+  - local: 'ci/common-ci.yml'
+
+cuda gcc13 codecov deps:
+  extends: .build_deps_common_gh200
+  variables:
+    BASE_IMAGE: $CSCS_REGISTRY_PATH/base-images/cuda_12.6.1-devel-ubuntu24.04:v1.2
+    COMPILER: gcc@13
+    SPACK_ENVIRONMENT: ci/docker/debug-cuda-gh200.yaml
+    DEPS_IMAGE: $CSCS_REGISTRY_PATH/cuda-gh200-gcc13-codecov/deps
+    USE_CODECOV: "true"
+
+cuda gcc13 codecov build:
+  extends:
+    - .build_common_gh200
+    - .build_for_alps_gh200
+  needs:
+    - cuda gcc13 codecov deps
+  variables:
+    DOCKERFILE: ci/docker/codecov.Dockerfile
+    DLAF_IMAGE: $CSCS_REGISTRY_PATH/cuda-gh200-gcc13-codecov/dlaf:$CI_COMMIT_SHA
+
+cuda gcc13 codecov test:
+  extends: .run_common
+  variables:
+    PIKA_MPI_ENABLE_POOL: 1
+  needs:
+    - cuda gcc13 codecov build
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cuda gcc13 codecov build

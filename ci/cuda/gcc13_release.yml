@@ -1,30 +1,29 @@
 include:
   - local: 'ci/common-ci.yml'
 
-cuda gcc13 stdexec release deps:
+cuda gcc13 release deps:
   extends: .build_deps_common_gh200
   variables:
     BASE_IMAGE: $CSCS_REGISTRY_PATH/base-images/cuda_12.6.1-devel-ubuntu24.04:v1.2
     COMPILER: gcc@13
-    CXXSTD: 20
-    SPACK_ENVIRONMENT: ci/docker/release-cuda-gh200-stdexec.yaml
-    DEPS_IMAGE: $CSCS_REGISTRY_PATH/cuda-gh200-gcc13-release-stdexec/deps
+    SPACK_ENVIRONMENT: ci/docker/release-cuda-gh200.yaml
+    DEPS_IMAGE: $CSCS_REGISTRY_PATH/cuda-gh200-gcc13-release/deps
 
-cuda gcc13 stdexec release build:
+cuda gcc13 release build:
   extends:
     - .build_common_gh200
     - .build_for_alps_gh200
   needs:
-    - cuda gcc13 stdexec release deps
+    - cuda gcc13 release deps
   variables:
-    DLAF_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc13-release/dlaf:$CI_COMMIT_SHA
+    DLAF_IMAGE: $CSCS_REGISTRY_PATH/cuda-gh200-gcc13-release/dlaf:$CI_COMMIT_SHA
 
-cuda gcc13 stdexec release test:
+cuda gcc13 release test:
   extends: .run_common
   variables:
     PIKA_MPI_ENABLE_POOL: 1
   needs:
-    - cuda gcc13 stdexec release build
+    - cuda gcc13 release build
   trigger:
     include:
       - artifact: pipeline.yml

@@ -1,5 +1,6 @@
 include:
   - remote: 'https://gitlab.com/cscs-ci/recipes/-/raw/master/templates/v2/.ci-ext.yml'
+  - local: 'ci/ci-ext-custom.yml'
 
 stages:
   - build_deps
@@ -9,12 +10,9 @@ stages:
 variables:
   FF_TIMESTAMPS: true
 
-##
-## BUILDS
-##
+## BUILD DEPS
 
-.build_deps_common:
-  extends: .container-builder
+.build_deps_common_base:
   stage: build_deps
   timeout: 6 hours
   before_script:
@@ -58,11 +56,25 @@ variables:
     EXTRA_APTGET: ""
     CXXSTD: 17
     USE_MKL: "OFF"
-    COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
     USE_CODECOV: "false"
 
-.build_common:
-  extends: .container-builder
+.build_deps_common:
+  extends:
+    - .container-builder-cscs-zen2
+    - .build_deps_common_base
+  variables:
+    COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
+
+.build_deps_common_gh200:
+  extends:
+    - .container-builder-cscs-gh200
+    - .build_deps_common_base
+  variables:
+    COMMON_SPACK_ENVIRONMENT: ci/docker/common-gh200.yaml
+
+## BUILD DLAF
+
+.build_common_base:
   stage: build
   timeout: 2 hours
   before_script:
@@ -74,6 +86,7 @@ variables:
     PERSIST_IMAGE_NAME: $DLAF_IMAGE
     DOCKER_BUILD_ARGS: '[
         "DEPS_IMAGE",
+        "DLAF_LD_PRELOAD",
         "PIP_OPTS",
         "NUM_PROCS=$NUM_CORES_BUILD_DLAF"
       ]'
@@ -85,19 +98,20 @@ variables:
     paths:
       - pipeline.yml
 
-.build_for_daint-mc:
+.build_common:
+  extends:
+    - .container-builder-cscs-zen2
+    - .build_common_base
   variables:
-    RUNNER: ".container-runner-daint"
-    SLURM_CONSTRAINT: mc
-    THREADS_MAX_PER_TASK: 72
-    THREADS_PER_NODE: 72
+    DLAF_LD_PRELOAD: "/lib/x86_64-linux-gnu/libSegFault.so"
 
-.build_for_daint-gpu:
+
+.build_common_gh200:
+  extends:
+    - .container-builder-cscs-gh200
+    - .build_common_base
   variables:
-    RUNNER: ".container-runner-daint"
-    SLURM_CONSTRAINT: gpu
-    THREADS_MAX_PER_TASK: 24
-    THREADS_PER_NODE: 24
+    DLAF_LD_PRELOAD: "/lib/aarch64-linux-gnu/libSegFault.so"
 
 .build_for_eiger:
   variables:
@@ -105,6 +119,16 @@ variables:
     SLURM_CONSTRAINT: mc
     THREADS_MAX_PER_TASK: 32
     THREADS_PER_NODE: 256
+
+.build_for_alps_gh200:
+  variables:
+    RUNNER: ".dlaf-container-runner-daint-gh200"
+    SLURM_CONSTRAINT: gpu
+    # 64 / 2 to avoid ranks on multiple sockets for RANK6
+    THREADS_MAX_PER_TASK: 32
+    THREADS_PER_NODE: 256
+
+## RUN
 
 .run_common:
   stage: test

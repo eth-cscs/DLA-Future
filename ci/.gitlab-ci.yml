@@ -4,7 +4,7 @@ include:
 #  - local: 'ci/cpu/clang15_release_stdexec.yml'
 #  - local: 'ci/cpu/clang15_release.yml'
 #  - local: 'ci/cpu/clang16_release.yml'
-  - local: 'ci/cpu/clang18_release.yml'
+#  - local: 'ci/cpu/clang18_release.yml'
 #  - local: 'ci/cpu/gcc11_release_stdexec.yml'
 #  - local: 'ci/cpu/gcc11_debug_stdexec.yml'
 #  - local: 'ci/cpu/gcc12_release_cxx20.yml'

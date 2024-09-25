@@ -896,7 +896,7 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
     xt.setRangeStart(at_offset);
     xt.setHeight(nrefls_tile);
 
-    comm::broadcast(rank_v0.col(), x, xt, mpi_row_chain, mpi_col_chain);
+    comm::broadcast_all(rank_v0.col(), x, xt, mpi_row_chain, mpi_col_chain);
 
     // TRAILING MATRIX UPDATE
 

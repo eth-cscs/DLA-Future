@@ -850,10 +850,15 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
           // copy - set - send
           ex::start_detached(ex::when_all(mat_a.read(ij_head), panel_heads.readwrite(idx_panel_head)) |
                              di::transform(di::Policy<B>(), [=](const auto& head_in, auto&& head) {
-                               // TODO FIXME change copy and if possible just lower
+                               // TODO FIXME workaround for over-sized panel
+                               if (head_in.size() != head.size())
+                                 tile::internal::set0(head);
+
+                               // TODO FIXME change copy and if possible just upper
                                // matrix::internal::copy(head_in, head);
-                               lapack::lacpy(blas::Uplo::General, head.size().rows(), head.size().cols(),
-                                             head_in.ptr(), head_in.ld(), head.ptr(), head.ld());
+                               lapack::lacpy(blas::Uplo::General, head_in.size().rows(),
+                                             head_in.size().cols(), head_in.ptr(), head_in.ld(),
+                                             head.ptr(), head.ld());
                                lapack::laset(blas::Uplo::Lower, head.size().rows() - 1,
                                              head.size().cols(), T(0), T(0), head.ptr({1, 0}),
                                              head.ld());

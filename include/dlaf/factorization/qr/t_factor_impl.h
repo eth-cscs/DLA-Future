@@ -58,9 +58,9 @@ struct Helpers<Backend::MC, Device::CPU, T> {
         std::forward<TSender>(t));
   }
 
-  template <class VISender, class TSender>
-  static auto gemvColumnT(SizeType first_row_tile, VISender tile_vi,
-                          matrix::ReadOnlyTileSender<T, Device::CPU> taus, TSender&& tile_t) {
+  static auto gemvColumnT(SizeType first_row_tile, matrix::ReadOnlyTileSender<T, Device::CPU> tile_vi,
+                          matrix::ReadOnlyTileSender<T, Device::CPU> taus,
+                          matrix::ReadWriteTileSender<T, Device::CPU>&& tile_t) {
     namespace ex = pika::execution::experimental;
 
     auto gemv_func = [first_row_tile](const auto& tile_v, const auto& taus, auto&& tile_t) noexcept {
@@ -76,11 +76,12 @@ struct Helpers<Backend::MC, Device::CPU, T> {
 
         // Position of the 1 in the diagonal in the current column.
         SizeType i_diag = j - first_row_tile;
-        const SizeType first_element_in_col = std::max<SizeType>(0, i_diag);
 
         // Break if the reflector starts in the next tile.
         if (i_diag >= tile_v.size().rows())
           break;
+
+        const SizeType first_element_in_col = std::max<SizeType>(0, i_diag);
 
         // T(0:j, j) = -tau . V(j:, 0:j)* . V(j:, j)
         // [j x 1] = [(n-j) x j]* . [(n-j) x 1]
@@ -93,20 +94,18 @@ struct Helpers<Backend::MC, Device::CPU, T> {
         }
 
         blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, va_size.rows(), va_size.cols(), -tau,
-                   tile_v.ptr(va_start), tile_v.ld(), tile_v.ptr(vb_start), 1, 1, tile_t.ptr(t_start),
+                   tile_v.ptr(va_start), tile_v.ld(), tile_v.ptr(vb_start), 1, T(1), tile_t.ptr(t_start),
                    1);
       }
       return std::move(tile_t);
     };
     return dlaf::internal::transform(
         dlaf::internal::Policy<Backend::MC>(pika::execution::thread_priority::high),
-        std::move(gemv_func), ex::when_all(tile_vi, std::move(taus), std::forward<TSender>(tile_t)));
+        std::move(gemv_func), ex::when_all(tile_vi, std::move(taus), std::move(tile_t)));
   }
 
   template <typename TSender>
   static auto trmvUpdateColumn(TSender&& tile_t) noexcept {
-    namespace ex = pika::execution::experimental;
-
     // Update each column (in order) t = T . t
     // remember that T is upper triangular, so it is possible to use TRMV
     auto trmv_func = [](matrix::Tile<T, Device::CPU>&& tile_t) {
@@ -121,6 +120,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
       // TODO: Why return if the tile is unused?
       return std::move(tile_t);
     };
+
     return dlaf::internal::transform(
         dlaf::internal::Policy<Backend::MC>(pika::execution::thread_priority::high),
         std::move(trmv_func), std::forward<TSender>(tile_t));
@@ -237,7 +237,8 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
   if (hh_panel.getWidth() == 0)
     return;
 
-  const auto v_start = hh_panel.offsetElement();
+  const SizeType bs = hh_panel.parentDistribution().blockSize().rows();
+  const SizeType offset_lc = (bs - hh_panel.tile_size_of_local_head().rows());
 
   matrix::ReadWriteTileSender<T, device> t_local = Helpers::set0(std::move(t));
 
@@ -261,7 +262,7 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
   // -tau(j) . V(j:, 0:j)* . V(j:, j)
   for (const auto& v_i : hh_panel.iteratorLocal()) {
     const SizeType first_row_tile =
-        std::max<SizeType>(0, v_i.row() * hh_panel.parentDistribution().blockSize().rows() - v_start);
+        std::max<SizeType>(0, (v_i.row() - hh_panel.rangeStartLocal()) * bs - offset_lc);
 
     // Note:
     // Since we are writing always on the same t, the gemv are serialized

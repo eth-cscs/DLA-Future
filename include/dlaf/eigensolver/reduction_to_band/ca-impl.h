@@ -962,7 +962,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
       ws_VT.setRange(at_offset, at_end_R);
       ws_VT.setHeight(nrefls_step);
 
-      comm::broadcast(rank_panel, ws_V, ws_VT, mpi_row_chain, mpi_col_chain);
+      comm::broadcast_all(rank_panel, ws_V, ws_VT, mpi_row_chain, mpi_col_chain);
 
       // Note:
       // Differently from 1st pass, where transformations are independent one from the other,
@@ -981,7 +981,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
       ws_W0T.setRange(at_offset, at_end_R);
       ws_W0T.setHeight(nrefls_step);
 
-      comm::broadcast(rank_panel, ws_W0, ws_W0T, mpi_row_chain, mpi_col_chain);
+      comm::broadcast_all(rank_panel, ws_W0, ws_W0T, mpi_row_chain, mpi_col_chain);
 
       // W1 = A W0
       auto& ws_W1 = panels_w1.nextResource();

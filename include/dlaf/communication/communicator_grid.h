@@ -131,6 +131,11 @@ public:
       return col_communicator_pipeline();
   }
 
+  /// Synchronization barrier for all communicators in the grid
+  ///
+  /// This function returns when all communications on the communicators in the grid have completed.
+  void wait_all_communicators();
+
   /// Prints information about the CommunicationGrid.
   friend std::ostream& operator<<(std::ostream& out, const CommunicatorGrid& grid) {
     return out << "position=" << grid.position_ << ", size=" << grid.grid_size_;

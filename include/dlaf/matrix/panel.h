@@ -304,6 +304,10 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
     has_been_used_ = false;
   }
 
+  TileElementSize tile_size_of_local_head() const {
+    return tileSize(LocalTileIndex(coord, rangeStartLocal()));
+  }
+
 protected:
   using ReadWriteSenderType = typename BaseT::ReadWriteSenderType;
 

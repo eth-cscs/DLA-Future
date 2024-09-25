@@ -109,7 +109,7 @@ for rank_label in `ctest --print-labels | egrep -o "RANK_[1-9][0-9]?"`; do
         C=$(( THREADS_PER_NODE / N ))
 
         # Skip label combinations that match no tests
-        if ! ctest -N -L $category_label -L $rank_label | egrep --quiet "^Total Tests: [1-9][0-9]?$"; then
+        if [[ "$(ctest -N -L $category_label -L $rank_label | tail -n1)" == "Total Tests: 0" ]]; then
             continue
         fi
 

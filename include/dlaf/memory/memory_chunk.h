@@ -27,13 +27,13 @@ namespace memory {
 
 namespace internal {
 umpire::Allocator& getUmpireHostAllocator();
-void initializeUmpireHostAllocator(std::size_t initial_bytes, std::size_t next_bytes,
+void initializeUmpireHostAllocator(std::size_t initial_block_bytes, std::size_t next_block_bytes,
                                    std::size_t alignment_bytes, double coalesce_free_ratio,
                                    double coalesce_reallocation_ratio);
 void finalizeUmpireHostAllocator();
 
 #ifdef DLAF_WITH_GPU
-void initializeUmpireDeviceAllocator(std::size_t initial_bytes, std::size_t next_bytes,
+void initializeUmpireDeviceAllocator(std::size_t initial_block_bytes, std::size_t next_block_bytes,
                                      std::size_t alignment_bytes, double coalesce_free_ratio,
                                      double coalesce_reallocation_ratio);
 void finalizeUmpireDeviceAllocator();

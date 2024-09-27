@@ -97,8 +97,6 @@ struct Options
 struct reductionToBandMiniapp {
   template <dlaf::Backend backend, typename T>
   static void run(const Options& opts) {
-    using pika::this_thread::experimental::sync_wait;
-
     using namespace dlaf;
     using dlaf::SizeType;
     using dlaf::comm::Communicator;

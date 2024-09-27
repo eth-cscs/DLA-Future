@@ -51,7 +51,6 @@ using dlaf::comm::CommunicatorGrid;
 using dlaf::common::Ordering;
 using dlaf::matrix::Matrix;
 using dlaf::matrix::MatrixMirror;
-using pika::this_thread::experimental::sync_wait;
 
 struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {

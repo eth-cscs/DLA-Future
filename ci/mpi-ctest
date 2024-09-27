@@ -20,9 +20,16 @@ fi
 
 # Create coverage reports for code run
 if [[ "$ENABLE_COVERAGE" == "YES" ]]; then
-    TZ=CET date +"Start creating codecov reports from rank $SLURM_PROCID at: %H:%M:%S %z with $SLURM_CPUS_PER_TASK threads"
+    # On daint-mc (XC40) reduce the number of tasks to avoid out-of-memory error
+    if [ $SLURM_CPUS_ON_NODE -eq 72 -a "$SLURM_CLUSTER_NAME" = "daint" ]; then
+      COV_THREADS=$((SLURM_CPUS_PER_TASK/2))
+    else
+      COV_THREADS=$SLURM_CPUS_PER_TASK
+    fi
 
-    fastcov --jobs $SLURM_CPUS_PER_TASK --gcov gcov --process-gcno --branch-coverage --include /DLA-Future/ --exclude /DLA-Future/test/ /DLA-Future/miniapp/ --lcov -o "$LOCAL_REPORTS/run.info" &> /dev/null
+    TZ=CET date +"Start creating codecov reports from rank $SLURM_PROCID at: %H:%M:%S %z with $COV_THREADS threads"
+
+    fastcov --jobs $COV_THREADS --gcov gcov --process-gcno --branch-coverage --include /DLA-Future/ --exclude /DLA-Future/test/ /DLA-Future/miniapp/ --lcov -o "$LOCAL_REPORTS/run.info" &> /dev/null
 
     cp "$LOCAL_REPORTS/run.info" "$SHARED_REPORTS/codecov-$REPORT_NAME.info"
 

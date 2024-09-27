@@ -1,0 +1,21 @@
+include:
+  - local: 'ci/common-ci.yml'
+
+cuda gcc13 stdexec release deps:
+  extends: .build_deps_common
+  variables:
+    BASE_IMAGE: docker.io/nvidia/cuda:12.6.1-devel-ubuntu24.04
+    COMPILER: gcc@13
+    CXXSTD: 20
+    SPACK_ENVIRONMENT: ci/docker/release-cuda-stdexec.yaml
+    USE_MKL: "ON"
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc13-release-stdexec/build
+
+cuda gcc13 stdexec release build:
+  extends:
+    - .build_common
+    - .build_for_daint-gpu
+  needs:
+    - cuda gcc13 stdexec release deps
+  variables:
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc13-release/deploy:$CI_COMMIT_SHA

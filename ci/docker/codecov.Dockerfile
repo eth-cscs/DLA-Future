@@ -67,6 +67,7 @@ ARG SOURCE
 ARG DEPLOY
 
 ARG EXTRA_APTGET_DEPLOY
+ARG PIP_OPTS
 # python is needed for fastcov
 # pip is needed only to install fastcov (it is removed with
 #     its dependencies after fastcov installation)
@@ -82,7 +83,7 @@ RUN apt-get update -qq && \
       ca-certificates \
       glibc-tools jq strace \
       tzdata && \
-    pip install fastcov && \
+    pip install ${PIP_OPTS} fastcov && \
     apt-get autoremove -qq -y python3-pip && \
     apt-get clean
 

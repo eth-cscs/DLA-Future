@@ -42,6 +42,8 @@ std::ostream& operator<<(std::ostream& os, const configuration& cfg) {
   os << "  umpire_device_memory_pool_alignment_bytes = " << cfg.umpire_device_memory_pool_alignment_bytes << std::endl;
   os << "  umpire_device_memory_pool_coalescing_free_ratio = " << cfg.umpire_device_memory_pool_coalescing_free_ratio << std::endl;
   os << "  umpire_device_memory_pool_coalescing_reallocation_ratio = " << cfg.umpire_device_memory_pool_coalescing_reallocation_ratio << std::endl;
+  os << "  num_gpu_blas_handles = " << cfg.num_gpu_blas_handles << std::endl;
+  os << "  num_gpu_lapack_handles = " << cfg.num_gpu_lapack_handles << std::endl;
   os << "  mpi_pool = " << cfg.mpi_pool << std::endl;
   // clang-format on
   return os;
@@ -78,7 +80,8 @@ struct Init<Backend::MC> {
 #ifdef DLAF_WITH_GPU
 static std::unique_ptr<pika::cuda::experimental::cuda_pool> gpu_pool{nullptr};
 
-void initializeGpuPool(int device, std::size_t num_np_streams, std::size_t num_hp_streams) {
+void initializeGpuPool(int device, std::size_t num_np_streams, std::size_t num_hp_streams,
+                       std::size_t num_blas_handles, std::size_t num_lapack_handles) {
   DLAF_ASSERT(!gpu_pool, "");
   // HIP currently requires not using hipStreamNonBlocking as some rocSOLVER
   // functions such as potrf are not safe to use with it (see
@@ -90,7 +93,14 @@ void initializeGpuPool(int device, std::size_t num_np_streams, std::size_t num_h
 #else
                                                             0
 #endif
+#if PIKA_VERSION_FULL >= 0x001D00  // >= 0.29.0
+                                                            ,
+                                                            num_blas_handles, num_lapack_handles
+#endif
       );
+#if PIKA_VERSION_FULL < 0x001D00  // < 0.29.0
+  dlaf::internal::silenceUnusedWarningFor(num_blas_handles, num_lapack_handles);
+#endif
 }
 
 void finalizeGpuPool() {
@@ -112,7 +122,8 @@ struct Init<Backend::GPU> {
         cfg.umpire_device_memory_pool_initial_block_bytes, cfg.umpire_device_memory_pool_alignment_bytes,
         cfg.umpire_host_memory_pool_coalescing_free_ratio,
         cfg.umpire_host_memory_pool_coalescing_reallocation_ratio);
-    initializeGpuPool(device, cfg.num_np_gpu_streams_per_thread, cfg.num_hp_gpu_streams_per_thread);
+    initializeGpuPool(device, cfg.num_np_gpu_streams_per_thread, cfg.num_hp_gpu_streams_per_thread,
+                      cfg.num_gpu_blas_handles, cfg.num_gpu_lapack_handles);
     pika::cuda::experimental::detail::register_polling(pika::resource::get_thread_pool("default"));
   }
 
@@ -201,6 +212,26 @@ void updateConfigurationValue(const pika::program_options::variables_map& vm, T&
   }
 }
 
+void warnUnusedConfigurationOption(const pika::program_options::variables_map& vm,
+                                   const std::string& env_var, const std::string& cmdline_option,
+                                   const std::string& reason) {
+  DLAF_ASSERT(env_var.find("DLAF") == std::string::npos, env_var);
+  DLAF_ASSERT(cmdline_option.find("dlaf") == std::string::npos, cmdline_option);
+
+  const std::string dlaf_env_var = "DLAF_" + env_var;
+  char* env_var_value = std::getenv(dlaf_env_var.c_str());
+  if (env_var_value) {
+    std::cerr << "[WARNING] Environment variable " << dlaf_env_var << " is set but will be ignored ("
+              << reason << ")\n";
+  }
+
+  const std::string dlaf_cmdline_option = "dlaf:" + cmdline_option;
+  if (vm.count(dlaf_cmdline_option) >= 1) {
+    std::cerr << "[WARNING] Command line option " << dlaf_cmdline_option
+              << " is set but will be ignored (" << reason << ")\n";
+  }
+}
+
 void updateConfiguration(const pika::program_options::variables_map& vm, configuration& cfg) {
   // clang-format off
   updateConfigurationValue(vm, cfg.num_np_gpu_streams_per_thread, "NUM_NP_GPU_STREAMS_PER_THREAD", "num-np-gpu-streams-per-thread");
@@ -215,6 +246,12 @@ void updateConfiguration(const pika::program_options::variables_map& vm, configu
   updateConfigurationValue(vm, cfg.umpire_device_memory_pool_alignment_bytes, "UMPIRE_DEVICE_MEMORY_POOL_ALIGNMENT_BYTES", "umpire-device-memory-pool-alignment-bytes");
   updateConfigurationValue(vm, cfg.umpire_device_memory_pool_coalescing_free_ratio, "UMPIRE_DEVICE_MEMORY_POOL_COALESCING_FREE_RATIO", "umpire-device-memory-pool-coalescing-free-ratio");
   updateConfigurationValue(vm, cfg.umpire_device_memory_pool_coalescing_reallocation_ratio, "UMPIRE_DEVICE_MEMORY_POOL_COALESCING_REALLOCATION_RATIO", "umpire-device-memory-pool-coalescing-reallocation-ratio");
+  updateConfigurationValue(vm, cfg.num_gpu_blas_handles, "NUM_GPU_BLAS_HANDLES", "num-gpu-blas-handles");
+  updateConfigurationValue(vm, cfg.num_gpu_lapack_handles, "NUM_GPU_LAPACK_HANDLES", "num-gpu-lapack-handles");
+#if PIKA_VERSION_FULL < 0x001D00  // < 0.29.0
+  warnUnusedConfigurationOption(vm, "NUM_GPU_BLAS_HANDLES", "num-gpu-blas-handles", "only supported with pika 0.29.0 or newer");
+  warnUnusedConfigurationOption(vm, "NUM_GPU_LAPACK_HANDLES", "num-gpu-lapack-handles", "only supported with pika 0.29.0 or newer");
+#endif
   // clang-format on
   cfg.mpi_pool = (pika::resource::pool_exists("mpi")) ? "mpi" : "default";
 
@@ -285,6 +322,8 @@ pika::program_options::options_description getOptionsDescription() {
   desc.add_options()("dlaf:umpire-device-memory-pool-alignment-bytes", pika::program_options::value<std::size_t>(), "Alignment of allocations in bytes in device memory pool");
   desc.add_options()("dlaf:umpire-device-memory-pool-coalescing-free-ratio", pika::program_options::value<double>(), "Required ratio of free memory in device memory pool before performing coalescing of free blocks");
   desc.add_options()("dlaf:umpire-device-memory-pool-coalescing-reallocation-ratio", pika::program_options::value<double>(), "Ratio of current used memory in device memory pool to use for reallocation of new blocks when coalescing free blocks");
+  desc.add_options()("dlaf:num-gpu-blas-handles", pika::program_options::value<std::size_t>(), "Number of GPU BLAS (cuBLAS/rocBLAS) handles");
+  desc.add_options()("dlaf:num-gpu-lapack-handles", pika::program_options::value<std::size_t>(), "Number of GPU LAPACK (cuSOLVER/rocSOLVER) handles");
   desc.add_options()("dlaf:no-mpi-pool", pika::program_options::bool_switch(), "Disable the MPI pool.");
 
   // Tune parameters command line options

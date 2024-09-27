@@ -43,7 +43,7 @@ TEST(GridTest, GridScaLAPACKOrdering) {
 #endif
 
 TEST(GridTest, GridDLAFOrdering) {
-  for (const auto [key, value] : ordering) {
+  for (const auto& [key, value] : ordering) {
     dlaf::comm::Communicator world(MPI_COMM_WORLD);
 
     dlaf::comm::CommunicatorGrid row_major(world, 2, 3, value);

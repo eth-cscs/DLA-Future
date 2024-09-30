@@ -6,9 +6,9 @@ cpu asan ubsan lsan deps:
   variables:
     EXTRA_APTGET: "clang-18 libclang-rt-18-dev libomp-18-dev"
     COMPILER: clang@18
-    USE_MKL: "ON"
     SPACK_ENVIRONMENT: ci/docker/asan-ubsan-lsan.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cpu-asan-ubsan-lsan/build
+    USE_MKL: "ON"
+    DEPS_IMAGE: $CSCS_REGISTRY_PATH/cpu-asan-ubsan-lsan/deps
 
 cpu asan ubsan lsan build:
   extends:
@@ -17,9 +17,7 @@ cpu asan ubsan lsan build:
   needs:
     - cpu asan ubsan lsan deps
   variables:
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cpu-asan-ubsan-lsan/deploy:$CI_COMMIT_SHA
-    # For symbolizing stacktraces with llvm-symbolizer
-    EXTRA_APTGET_DEPLOY: "llvm-18"
+    DLAF_IMAGE: $CSCS_REGISTRY_PATH/cpu-asan-ubsan-lsan/dlaf:$CI_COMMIT_SHA
 
 cpu asan ubsan lsan test:
   extends: .run_common

@@ -7,9 +7,9 @@ cpu gcc11 stdexec release deps:
     EXTRA_APTGET: "gcc-11 g++-11 gfortran-11"
     COMPILER: gcc@11
     CXXSTD: 20
-    USE_MKL: "ON"
     SPACK_ENVIRONMENT: ci/docker/release-cpu-stdexec.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc11-stdexec-release/build
+    USE_MKL: "ON"
+    DEPS_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc11-stdexec-release/deps
 
 cpu gcc11 stdexec release build:
   extends:
@@ -18,7 +18,7 @@ cpu gcc11 stdexec release build:
   needs:
     - cpu gcc11 stdexec release deps
   variables:
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc11-stdexec-release/deploy:$CI_COMMIT_SHA
+    DLAF_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc11-stdexec-release/dlaf:$CI_COMMIT_SHA
 
 cpu gcc11 stdexec release test:
   extends: .run_common

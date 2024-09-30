@@ -9,7 +9,7 @@ rocm clang14 release deps:
     COMPILER: clang@14
     USE_ROCBLAS: "ON"
     SPACK_ENVIRONMENT: ci/docker/release-rocm533.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/rocm-clang14-release/build
+    DEPS_IMAGE: $CSCS_REGISTRY_PATH/rocm-clang14-release/deps
 
 rocm clang14 release build:
   extends:
@@ -18,5 +18,4 @@ rocm clang14 release build:
   needs:
     - rocm clang14 release deps
   variables:
-    DEPLOY_BASE_IMAGE: $CSCS_REGISTRY_PATH/rocm-patched:5.3.3
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/rocm-clang14-release/deploy:$CI_COMMIT_SHA
+    DLAF_IMAGE: $CSCS_REGISTRY_PATH/rocm-clang14-release/dlaf:$CI_COMMIT_SHA

@@ -46,7 +46,8 @@ namespace dlaf {
 /// @pre @p mat_b has tilesize (MB x NB)
 template <Backend backend, Device device, class T>
 void triangular_solver(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha,
-                       Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
+                       Matrix<const T, device>& mat_a,
+                       dlaf::matrix::internal::MatrixRef<T, device>& mat_b) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
@@ -124,7 +125,7 @@ void triangular_solver(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag
 template <Backend backend, Device device, class T>
 void triangular_solver(comm::CommunicatorGrid& grid, blas::Side side, blas::Uplo uplo, blas::Op op,
                        blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
-                       Matrix<T, device>& mat_b) {
+                       dlaf::matrix::internal::MatrixRef<T, device>& mat_b) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);

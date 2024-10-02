@@ -29,7 +29,7 @@ RUN spack repo rm --scope site dlaf && \
     spack -e ci concretize -f && \
     spack -e ci --config "config:flags:keep_werror:all" install --jobs ${NUM_PROCS} --keep-stage --verbose
 
-RUN mkdir -p ${BIN} && cp -L ${SOURCE}/ci/{mpi-ctest,check-threads} ${BIN}
+RUN mkdir -p ${BIN} && cp -L ${SOURCE}/ci/{mpi-ctest,check-threads,upload_codecov} ${BIN}
 
 ARG PIP_OPTS
 # pip is needed only to install fastcov (it is removed with
@@ -46,7 +46,7 @@ RUN cd /usr/local/bin && \
   chmod +x codecov.sh
 
 # Make it easy to call our binaries.
-ENV PATH="${BIN}:/usr/local/bin:$PATH"
+ENV PATH="${BIN}:$PATH"
 ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
 ENV NVIDIA_REQUIRE_CUDA "cuda>=10.2"

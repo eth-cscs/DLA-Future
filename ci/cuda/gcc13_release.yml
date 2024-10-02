@@ -19,7 +19,7 @@ cuda gcc13 release build:
     DLAF_IMAGE: $CSCS_REGISTRY_PATH/cuda-gh200-gcc13-release/dlaf:$CI_COMMIT_SHA
 
 cuda gcc13 release test:
-  extends: .run_common
+  extends: .run_todi
   needs:
     - cuda gcc13 release build
   trigger:

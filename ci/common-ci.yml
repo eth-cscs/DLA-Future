@@ -6,9 +6,7 @@ stages:
   - build
   - test
 
-##
-## BUILDS
-##
+## BUILD DEPS
 
 .build_deps_common_base:
   stage: build_deps
@@ -69,6 +67,9 @@ stages:
     - .build_deps_common_base
   variables:
     COMMON_SPACK_ENVIRONMENT: ci/docker/common-gh200.yaml
+    SLURM_RESERVATION: "daint"
+
+## BUILD DLAF
 
 .build_common_base:
   stage: build
@@ -102,6 +103,8 @@ stages:
   extends:
     - .container-builder-cscs-gh200
     - .build_common_base
+  variables:
+    SLURM_RESERVATION: "daint"
 
 .build_for_daint-mc:
   variables:
@@ -132,9 +135,16 @@ stages:
     THREADS_MAX_PER_TASK: 32
     THREADS_PER_NODE: 256
 
+## RUN
+
 .run_common:
   stage: test
   trigger:
     strategy: depend
     forward:
       pipeline_variables: true
+
+.run_todi:
+  extends: .run_common
+  variables:
+    SLURM_RESERVATION: "daint"

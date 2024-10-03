@@ -41,6 +41,7 @@ umpire::Allocator& getUmpireHostAllocator() {
 using PoolType = umpire::strategy::QuickPool;
 using CoalesceHeuristicType = umpire::strategy::PoolCoalesceHeuristic<PoolType>;
 
+#ifdef DLAF_WITH_GPU
 // This is a modified version of the "percent_releasable" coalescing heuristic
 // from Umpire. This version allows choosing what ratio of the actual size to
 // reallocate when coalescing.
@@ -72,6 +73,7 @@ static CoalesceHeuristicType get_coalesce_heuristic(double coalesce_free_ratio,
     }
   };
 }
+#endif
 
 void initializeUmpireHostAllocator(std::size_t initial_block_bytes, std::size_t next_block_bytes,
                                    std::size_t alignment_bytes, double coalesce_free_ratio,

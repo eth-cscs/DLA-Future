@@ -196,7 +196,7 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid& grid, Matrix<T
 #ifdef DLAF_WITH_HDF5
   static std::atomic<size_t> num_cholesky_calls = 0;
   std::stringstream fname;
-  fname << "cholesky-facrorization-" << matrix::internal::TypeToString_v<T> << "-"
+  fname << "cholesky-factorization-" << matrix::internal::TypeToString_v<T> << "-"
         << std::to_string(num_cholesky_calls) << ".h5";
   std::optional<matrix::internal::FileHDF5> file;
 

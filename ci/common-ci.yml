@@ -78,7 +78,7 @@ stages:
     - 'echo $DOCKERHUB_TOKEN | podman login docker.io -u $DOCKERHUB_USERNAME --password-stdin'
     - 'echo "INFO: Using NUM_CORES_BUILD_DLAF=$NUM_CORES_BUILD_DLAF"'
   after_script:
-    - podman run -v $PWD/ci/ctest_to_gitlab.sh:/ctest_to_gitlab.sh $DLAF_IMAGE /ctest_to_gitlab.sh "$DLAF_IMAGE" "$USE_CODECOV" "THREADS_MAX_PER_TASK" "$THREADS_PER_NODE" "$SLURM_CONSTRAINT" "$RUNNER" > pipeline.yml
+    - podman run -v $PWD/ci/ctest_to_gitlab.sh:/ctest_to_gitlab.sh $DLAF_IMAGE /ctest_to_gitlab.sh "$DLAF_IMAGE" "$USE_CODECOV" "$THREADS_MAX_PER_TASK" "$THREADS_PER_NODE" "$SLURM_CONSTRAINT" "$RUNNER" > pipeline.yml
   variables:
     PERSIST_IMAGE_NAME: $DLAF_IMAGE
     DOCKER_BUILD_ARGS: '[

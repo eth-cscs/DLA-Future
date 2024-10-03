@@ -15,6 +15,7 @@
 
 #include <pika/execution.hpp>
 
+#include <dlaf/blas/tile_extensions.h>
 #include <dlaf/common/assert.h>
 #include <dlaf/common/index2d.h>
 #include <dlaf/communication/broadcast_panel.h>
@@ -22,6 +23,7 @@
 #include <dlaf/communication/index.h>
 #include <dlaf/communication/kernels/all_reduce.h>
 #include <dlaf/communication/kernels/broadcast.h>
+#include <dlaf/communication/kernels/p2p.h>
 #include <dlaf/eigensolver/reduction_to_band/api.h>
 #include <dlaf/eigensolver/reduction_to_band/common.h>
 #include <dlaf/factorization/qr.h>
@@ -41,7 +43,8 @@ namespace dlaf::eigensolver::internal {
 namespace ca_red2band {
 
 template <Backend B, Device D, class T>
-void hemm(comm::Index2D rank_qr, matrix::Panel<Coord::Col, T, D>& W1,
+void hemm(comm::Index2D rank_qr, matrix::Panel<Coord::Col, T, D>& W3,
+          matrix::Panel<Coord::Col, T, D>& W1,
           matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>& W1T,
           const matrix::SubMatrixView& at_view, matrix::Matrix<const T, D>& A,
           matrix::Panel<Coord::Col, const T, D>& W0,
@@ -49,6 +52,7 @@ void hemm(comm::Index2D rank_qr, matrix::Panel<Coord::Col, T, D>& W1,
           comm::CommunicatorPipeline<comm::CommunicatorType::Row>& mpi_row_chain,
           comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_chain) {
   namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
 
   using red2band::hemmDiag;
   using red2band::hemmOffDiag;
@@ -119,24 +123,24 @@ void hemm(comm::Index2D rank_qr, matrix::Panel<Coord::Col, T, D>& W1,
   if (mpi_col_chain.size() > 1) {
     for (const auto& i_wt_lc : W1T.iteratorLocal()) {
       const auto i_diag = dist.template global_tile_from_local_tile<Coord::Col>(i_wt_lc.col());
-      const auto rank_owner_row = dist.template rank_global_tile<Coord::Row>(i_diag);
+      const auto rank_dst = dist.template rank_global_tile<Coord::Row>(i_diag);
 
-      if (rank_owner_row == rank_qr.row())
+      if (rank_dst == rank_qr.row())
         continue;
 
-      if (rank_owner_row == rank.row()) {
-        // Note:
-        // Since it is the owner, it has to perform the "mirroring" of the results from columns to
-        // rows.
-        // Moreover, it reduces in place because the owner of the diagonal stores the partial result
-        // directly in W1 (without using W1T)
+      constexpr comm::IndexT_MPI tag = 0;
+      const auto rank_src = rank_qr.row();
+
+      if (rank.row() == rank_dst) {
         const auto i_w1_lc = dist.template local_tile_from_global_tile<Coord::Row>(i_diag);
-        ex::start_detached(comm::schedule_reduce_recv_in_place(mpi_col_chain.exclusive(), MPI_SUM,
-                                                               W1.readwrite({i_w1_lc, 0})));
+        ex::start_detached(comm::schedule_recv(mpi_col_chain.exclusive(), rank_src, tag,
+                                               W3.readwrite({i_w1_lc, 0})));
+        ex::start_detached(di::whenAllLift(T(1), W3.read({i_w1_lc, 0}), W1.readwrite({i_w1_lc, 0})) |
+                           tile::add(di::Policy<B>()));
       }
-      else {
-        ex::start_detached(comm::schedule_reduce_send(mpi_col_chain.exclusive(), rank_owner_row, MPI_SUM,
-                                                      W1T.read(i_wt_lc)));
+      else if (rank.row() == rank_src) {
+        ex::start_detached(comm::schedule_send(mpi_col_chain.exclusive(), rank_dst, tag,
+                                               W1T.read(i_wt_lc)));
       }
     }
   }
@@ -151,6 +155,30 @@ void hemm(comm::Index2D rank_qr, matrix::Panel<Coord::Col, T, D>& W1,
 
       ex::start_detached(comm::schedule_all_reduce_in_place(mpi_row_chain.exclusive(), MPI_SUM,
                                                             W1.readwrite(i_w1_lc)));
+    }
+  }
+
+  // send p2p w1 to w1t
+  if (mpi_col_chain.size() > 1) {
+    for (const auto& i_wt_lc : W1T.iteratorLocal()) {
+      const auto i_diag = dist.template global_tile_from_local_tile<Coord::Col>(i_wt_lc.col());
+      const auto rank_src = dist.template rank_global_tile<Coord::Row>(i_diag);
+
+      if (rank_src == rank_qr.row())
+        continue;
+
+      constexpr comm::IndexT_MPI tag = 0;
+      const auto rank_dst = rank_qr.row();
+
+      if (rank.row() == rank_src) {
+        const auto i_w1_lc = dist.template local_tile_from_global_tile<Coord::Row>(i_diag);
+        ex::start_detached(comm::schedule_send(mpi_col_chain.exclusive(), rank_dst, tag,
+                                               W1.read({i_w1_lc, 0})));
+      }
+      else if (rank.row() == rank_dst) {
+        ex::start_detached(comm::schedule_recv(mpi_col_chain.exclusive(), rank_src, tag,
+                                               W1T.readwrite(i_wt_lc)));
+      }
     }
   }
 }
@@ -749,6 +777,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
         }
 
         auto& ws_W1 = panels_w1.nextResource();
+        auto& ws_W3 = panels_w3.nextResource();
 
         // W1 = A W0
         // Note:
@@ -769,7 +798,6 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
 
           // Note:
           // Next steps for L and R need W1, so we create a copy that we are going to update for this step.
-          auto& ws_W3 = panels_w3.nextResource();
           ws_W3.setRangeStart(at_offset);
           ws_W3.setWidth(nrefls_this);
 
@@ -789,43 +817,16 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
         ws_W1.setRangeStart(at_offset);
         ws_W1.setWidth(nrefls_this);
 
+        ws_W3.setRangeStart(at_offset);
+        ws_W3.setWidth(nrefls_this);
+
         auto& ws_W1T = panels_w1t.nextResource();
         ws_W1T.setRangeStart(at_offset);
         ws_W1T.setHeight(nrefls_this);
 
-        // TODO FIXME reduce communications with P2P
         using ca_red2band::hemm;
-        hemm<B>(rank_qr, ws_W1, ws_W1T, at_view, mat_a, ws_W0, ws_W0T, mpi_row_chain, mpi_col_chain);
-
-        // Note:
-        // W1T has been used as support panel, so reset it again.
-        ws_W1T.reset();
-        ws_W1T.setRangeStart(at_offset);
-        ws_W1T.setHeight(nrefls_this);
-
-        // broadcast W1T just where it has been set (i.e. outside current transformation columns)
-        for (const auto ij_lc : ws_W1T.iteratorLocal()) {
-          const SizeType k = dist.template global_tile_from_local_tile<Coord::Col>(ij_lc.col());
-          const comm::IndexT_MPI rank_src = dist.template rank_global_tile<Coord::Row>(k);
-
-          if (rank_qr.row() == rank_src)
-            continue;
-
-          using comm::schedule_bcast_recv;
-          using comm::schedule_bcast_send;
-
-          if (rank_src == rank.row()) {
-            const SizeType i_lc = dist.template local_tile_from_global_tile<Coord::Row>(k);
-
-            ws_W1T.setTile(ij_lc, ws_W1.read({i_lc, 0}));
-
-            ex::start_detached(schedule_bcast_send(mpi_col_chain.exclusive(), ws_W1.read({i_lc, 0})));
-          }
-          else {
-            ex::start_detached(schedule_bcast_recv(mpi_col_chain.exclusive(), rank_src,
-                                                   ws_W1T.readwrite(ij_lc)));
-          }
-        }
+        hemm<B>(rank_qr, ws_W3, ws_W1, ws_W1T, at_view, mat_a, ws_W0, ws_W0T, mpi_row_chain,
+                mpi_col_chain);
 
         // R (exclusively)
         // A -= W1 V*
@@ -886,6 +887,8 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
             }
           }
         }
+
+        ws_W3.reset();
 
         ws_W1T.reset();
         ws_W1.reset();

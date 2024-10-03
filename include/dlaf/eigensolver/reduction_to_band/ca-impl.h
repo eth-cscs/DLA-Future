@@ -39,6 +39,7 @@
 namespace dlaf::eigensolver::internal {
 
 namespace ca_red2band {
+
 template <Backend B, Device D, class T>
 void hemm(comm::Index2D rank_qr, matrix::Panel<Coord::Col, T, D>& W1,
           matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>& W1T,
@@ -57,14 +58,12 @@ void hemm(comm::Index2D rank_qr, matrix::Panel<Coord::Col, T, D>& W1,
   const auto dist = A.distribution();
   const auto rank = dist.rankIndex();
 
-  // Note:
-  // They have to be set to zero, because all tiles are going to be reduced, and some tiles may not get
-  // "initialized" during computation, so they should not contribute with any spurious value to final result.
-  matrix::util::set0<B>(thread_priority::high, W1);
+  // W1 is partially set, just for rank on rank_qr rows, zero out just the others
+  if (rank.row() != rank_qr.row())
+    matrix::util::set0<B>(thread_priority::high, W1);
   matrix::util::set0<B>(thread_priority::high, W1T);
 
   const LocalTileIndex at_offset = at_view.begin();
-
   for (SizeType i_lc = at_offset.row(); i_lc < dist.local_nr_tiles().rows(); ++i_lc) {
     // Note:
     // diagonal included: get where the first upper tile is in local coordinates
@@ -77,54 +76,40 @@ void hemm(comm::Index2D rank_qr, matrix::Panel<Coord::Col, T, D>& W1,
 
       const bool is_diagonal_tile = (ij.row() == ij.col());
 
+      if (is_diagonal_tile) {
+        continue;
+      }
+
       auto getSubA = [&A, &at_view, ij_lc]() { return splitTile(A.read(ij_lc), at_view(ij_lc)); };
 
-      if (is_diagonal_tile) {
-        const comm::IndexT_MPI id_qr_R = dist.template rank_global_tile<Coord::Row>(ij.col());
-
+      const GlobalTileIndex ijL = ij;
+      const comm::IndexT_MPI id_qr_lower_R = dist.template rank_global_tile<Coord::Row>(ijL.col());
+      const comm::IndexT_MPI id_qr_lower_L = dist.template rank_global_tile<Coord::Row>(ijL.row());
+      if (id_qr_lower_R == rank_qr.row() && id_qr_lower_L != rank_qr.row()) {
         // Note:
-        // Use W0 just if the tile belongs to the current local transformation.
-        if (id_qr_R != rank_qr.row())
-          continue;
-
-        hemmDiag<B>(thread_priority::high, getSubA(), W0.read(ij_lc), W1.readwrite(ij_lc));
+        // Since it is not a diagonal tile, otherwise it would have been managed in the previous
+        // branch, the second operand might not be available in W but it is accessible through the
+        // support panel W1T.
+        // However, since we are still computing the "straight" part, the result can be stored
+        // in the "local" panel W1.
+        hemmOffDiag<B>(thread_priority::high, blas::Op::NoTrans, getSubA(), W0T.read(ij_lc),
+                       W1.readwrite(ij_lc));
       }
-      else {
-        const GlobalTileIndex ijL = ij;
-        const comm::IndexT_MPI id_qr_lower_R = dist.template rank_global_tile<Coord::Row>(ijL.col());
-        if (id_qr_lower_R == rank_qr.row()) {
-          // Note:
-          // Since it is not a diagonal tile, otherwise it would have been managed in the previous
-          // branch, the second operand might not be available in W but it is accessible through the
-          // support panel W1T.
-          // However, since we are still computing the "straight" part, the result can be stored
-          // in the "local" panel W1.
-          hemmOffDiag<B>(thread_priority::high, blas::Op::NoTrans, getSubA(), W0T.read(ij_lc),
-                         W1.readwrite(ij_lc));
-        }
 
-        const GlobalTileIndex ijU = transposed(ij);
-        const comm::IndexT_MPI id_qr_upper_R = dist.template rank_global_tile<Coord::Row>(ijU.col());
-        if (id_qr_upper_R == rank_qr.row()) {
-          // Note:
-          // Here we are considering the hermitian part of A, so pretend to deal with transposed coordinate.
-          // Check if the result still belongs to the same rank, otherwise store it in the support panel.
-          const comm::IndexT_MPI owner_row = dist.template rank_global_tile<Coord::Row>(ijU.row());
-          const SizeType iU_lc = dist.template local_tile_from_global_tile<Coord::Row>(ij.col());
-          const LocalTileIndex i_w1_lc(iU_lc, 0);
-          const LocalTileIndex i_w1t_lc(0, ij_lc.col());
-          auto tile_w1 = (rank.row() == owner_row) ? W1.readwrite(i_w1_lc) : W1T.readwrite(i_w1t_lc);
-
-          hemmOffDiag<B>(thread_priority::high, blas::Op::ConjTrans, getSubA(), W0.read(ij_lc),
-                         std::move(tile_w1));
-        }
+      const GlobalTileIndex ijU = transposed(ij);
+      const comm::IndexT_MPI id_qr_upper_R = dist.template rank_global_tile<Coord::Row>(ijU.col());
+      const comm::IndexT_MPI id_qr_upper_L = dist.template rank_global_tile<Coord::Row>(ijU.row());
+      if (id_qr_upper_R == rank_qr.row() && id_qr_upper_L != rank_qr.row()) {
+        const LocalTileIndex i_w1t_lc(0, ij_lc.col());
+        hemmOffDiag<B>(thread_priority::high, blas::Op::ConjTrans, getSubA(), W0.read(ij_lc),
+                       W1T.readwrite(i_w1t_lc));
       }
     }
   }
 
   // Note:
   // At this point, partial results of W1 are available in the panels, and they have to be reduced,
-  // both row-wise and col-wise. The final W1 result will be available just on Ai panel column.
+  // both row-wise and col-wise.
 
   // Note:
   // The first step in reducing partial results distributed over W1 and W1T, it is to reduce the row
@@ -135,6 +120,9 @@ void hemm(comm::Index2D rank_qr, matrix::Panel<Coord::Col, T, D>& W1,
     for (const auto& i_wt_lc : W1T.iteratorLocal()) {
       const auto i_diag = dist.template global_tile_from_local_tile<Coord::Col>(i_wt_lc.col());
       const auto rank_owner_row = dist.template rank_global_tile<Coord::Row>(i_diag);
+
+      if (rank_owner_row == rank_qr.row())
+        continue;
 
       if (rank_owner_row == rank.row()) {
         // Note:
@@ -158,12 +146,11 @@ void hemm(comm::Index2D rank_qr, matrix::Panel<Coord::Col, T, D>& W1,
   // so the last step needed is to reduce these last partial results in the final results.
   if (mpi_row_chain.size() > 1) {
     for (const auto& i_w1_lc : W1.iteratorLocal()) {
-      if (rank_qr.col() == rank.col())
-        ex::start_detached(comm::schedule_reduce_recv_in_place(mpi_row_chain.exclusive(), MPI_SUM,
-                                                               W1.readwrite(i_w1_lc)));
-      else
-        ex::start_detached(comm::schedule_reduce_send(mpi_row_chain.exclusive(), rank_qr.col(), MPI_SUM,
-                                                      W1.read(i_w1_lc)));
+      if (rank_qr.row() == rank.row())
+        continue;
+
+      ex::start_detached(comm::schedule_all_reduce_in_place(mpi_row_chain.exclusive(), MPI_SUM,
+                                                            W1.readwrite(i_w1_lc)));
     }
   }
 }
@@ -499,6 +486,7 @@ void her2k_2nd(const SizeType i_end, const SizeType j_end, const matrix::SubMatr
     }
   }
 }
+
 }
 
 // Distributed implementation of reduction to band
@@ -815,8 +803,29 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
         ws_W1T.setRangeStart(at_offset);
         ws_W1T.setHeight(nrefls_this);
 
-        // TODO FIXME restrict communication to just interested ones
-        comm::broadcast(rank_panel, ws_W1, ws_W1T, mpi_row_chain, mpi_col_chain);
+        // broadcast W1T just where it has been set (i.e. outside current transformation columns)
+        for (const auto ij_lc : ws_W1T.iteratorLocal()) {
+          const SizeType k = dist.template global_tile_from_local_tile<Coord::Col>(ij_lc.col());
+          const comm::IndexT_MPI rank_src = dist.template rank_global_tile<Coord::Row>(k);
+
+          if (rank_qr.row() == rank_src)
+            continue;
+
+          using comm::schedule_bcast_recv;
+          using comm::schedule_bcast_send;
+
+          if (rank_src == rank.row()) {
+            const SizeType i_lc = dist.template local_tile_from_global_tile<Coord::Row>(k);
+
+            ws_W1T.setTile(ij_lc, ws_W1.read({i_lc, 0}));
+
+            ex::start_detached(schedule_bcast_send(mpi_col_chain.exclusive(), ws_W1.read({i_lc, 0})));
+          }
+          else {
+            ex::start_detached(schedule_bcast_recv(mpi_col_chain.exclusive(), rank_src,
+                                                   ws_W1T.readwrite(ij_lc)));
+          }
+        }
 
         // R (exclusively)
         // A -= W1 V*

@@ -93,6 +93,8 @@ JOBS=""
 for label in `ctest --print-labels | egrep -o "RANK_[1-9][0-9]?"`; do
     N=`echo "$label" | sed "s/RANK_//"`
     C=$(( THREADS_PER_NODE / N ))
+
+    echo "$N $C $THREADS_MAX_PER_TASK"
     if [ $C -gt $THREADS_MAX_PER_TASK ]; then
       C=$THREADS_MAX_PER_TASK
     fi

@@ -129,7 +129,7 @@ stages:
 
 .build_for_alps_gh200:
   variables:
-    RUNNER: ".container-runner-todi"
+    RUNNER: ".container-runner-todi-gh200"
     SLURM_CONSTRAINT: gpu
     # 64 / 2 to avoid ranks on multiple sockets for RANK6
     THREADS_MAX_PER_TASK: 32

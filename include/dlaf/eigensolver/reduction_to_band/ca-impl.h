@@ -830,7 +830,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
         ws_W3.setWidth(nrefls_this);
 
         auto& ws_W1T = panels_w1t.nextResource();
-        ws_W1T.setRangeStart(at_offset);
+        ws_W1T.setRange(at_offset, common::indexFromOrigin(dist.nr_tiles()));
         ws_W1T.setHeight(nrefls_this);
 
         using ca_red2band::hemm;
@@ -1117,7 +1117,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
       ws_W1.setWidth(nrefls_step);
 
       auto& ws_W1T = panels_w1t.nextResource();
-      ws_W1T.setRangeStart(at_offset);
+      ws_W1T.setRange(at_offset, at_end_R);
       ws_W1T.setHeight(nrefls_step);
 
       ca_red2band::hemm2nd<B, D>(rank_panel, ws_W1, ws_W1T, at_view, at_end_R.col(), mat_a, ws_W0,
@@ -1140,10 +1140,31 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
 
       // distribute W1 -> W1T
       ws_W1T.reset();
-      ws_W1T.setRangeStart(at_offset);
+      ws_W1T.setRange(at_offset, at_end_R);
       ws_W1T.setHeight(nrefls_step);
 
-      comm::broadcast(rank_panel, ws_W1, ws_W1T, mpi_row_chain, mpi_col_chain);
+      // broadcast to all rows
+      comm::broadcast(rank_panel, ws_W1, mpi_row_chain);
+      // but broadcast just interesting columns
+      for (const auto ij_wt_lc : ws_W1T.iteratorLocal()) {
+        const SizeType k = dist.template global_tile_from_local_tile<Coord::Col>(ij_wt_lc.col());
+        const comm::IndexT_MPI rank_src = dist.template rank_global_tile<Coord::Row>(k);
+
+        using comm::schedule_bcast_recv;
+        using comm::schedule_bcast_send;
+
+        if (rank_src == rank.row()) {
+          const SizeType i_lc = dist.template local_tile_from_global_tile<Coord::Row>(k);
+
+          ws_W1T.setTile(ij_wt_lc, ws_W1.read({i_lc, 0}));
+
+          ex::start_detached(schedule_bcast_send(mpi_col_chain.exclusive(), ws_W1.read({i_lc, 0})));
+        }
+        else {
+          ex::start_detached(schedule_bcast_recv(mpi_col_chain.exclusive(), rank_src,
+                                                 ws_W1T.readwrite(ij_wt_lc)));
+        }
+      }
 
       // LR: A -= W1 VT + V W1T
       // R : [at_end_L.row():, :at_endR_col()] A = A - W1 V.T

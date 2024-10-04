@@ -42,6 +42,10 @@ packages:
     variants:
       - '~fortran'
       - '~libxml2'
+  libfabric:
+    # Fix version to be compatible with version on todi
+    require:
+      - '@1.15.2'
   hwloc:
     variants:
       - '~libxml2'

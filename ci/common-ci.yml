@@ -98,12 +98,16 @@ stages:
   extends:
     - .container-builder-cscs-zen2
     - .build_common_base
+  variables:
+    LD_PRELOAD: "/lib/x86_64-linux-gnu/libSegFault.so"
+
 
 .build_common_gh200:
   extends:
     - .container-builder-cscs-gh200
     - .build_common_base
   variables:
+    LD_PRELOAD: "/lib/aarch64-linux-gnu/libSegFault.so"
     SLURM_RESERVATION: "daint"
 
 .build_for_daint-mc:
@@ -148,3 +152,5 @@ stages:
   extends: .run_common
   variables:
     SLURM_RESERVATION: "daint"
+    # Workaround after update until hooks are fixed
+    ENROOT_LIBRARY_PATH: /capstor/scratch/cscs/fmohamed/enrootlibn

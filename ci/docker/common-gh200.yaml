@@ -10,8 +10,8 @@
 
 packages:
   all:
-    target: [x86_64]
-  # Set intel MKL as default blas, lapack and scalapack provider.
+    target: [neoverse_v2]
+  # Set nvpl as default blas, lapack and scalapack provider.
   # Can be overwritten in environments if needed.
   blas:
     require: 'nvpl-blas'
@@ -39,6 +39,7 @@ packages:
     # Fix version to have better control.
     require:
       - '@4.2.1'
+      - 'pmi=cray'
     variants:
       - '~fortran'
       - '~libxml2'

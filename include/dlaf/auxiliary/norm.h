@@ -30,7 +30,7 @@ namespace dlaf::auxiliary {
 /// @pre @p A has size (M x N) and is distributed according to @p grid
 /// @pre @p A has blocksize (MB x NB)
 /// @pre @p A has tilesize (MB x NB)
-/// @pre if uplo == blas::uplo::Upper or uplo == blas::uplo::Lower Ashould be square, i.e. M == N and MB == NB.
+/// @pre if uplo == blas::uplo::Upper or uplo == blas::uplo::Lower A should be square, i.e. M == N and MB == NB.
 /// @return the max norm of the Matrix @p A or 0 if `A.size().isEmpty()`
 template <Backend backend, Device device, class T>
 dlaf::BaseType<T> max_norm(comm::CommunicatorGrid& grid, comm::Index2D rank, blas::Uplo uplo,

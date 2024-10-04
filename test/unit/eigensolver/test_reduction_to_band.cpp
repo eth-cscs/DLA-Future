@@ -675,6 +675,11 @@ auto checkResult(const Distribution dist, const SizeType band_size,
         if (nrefls <= 0)
           continue;
 
+        const SizeType nrtiles_transf = i_end - i_begin;
+        if (nrtiles_transf == 1) {
+          continue;
+        }
+
         // Compute T1
         const auto& tile_taus = taus_1st.tile({j, rank});
 

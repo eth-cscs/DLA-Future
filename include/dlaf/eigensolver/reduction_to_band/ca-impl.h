@@ -650,11 +650,16 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
         dist.template next_local_tile_from_global_tile<Coord::Col>(at_offset.col()));
     matrix::SubMatrixView at_view(dist, at_offset_el);
 
+    const SizeType nrtiles_transf = dist.local_nr_tiles().rows() - at_view.begin().row();
+
     // PANEL: just ranks in the current column
     // QR local (HH reflectors stored in-place)
+
     if (rank_panel == rank.col()) {
-      using red2band::local::computePanelReflectors;
-      computePanelReflectors(mat_a, get_tile_tau(), panel_view);
+      if (nrtiles_transf > 1) {
+        using red2band::local::computePanelReflectors;
+        computePanelReflectors(mat_a, get_tile_tau(), panel_view);
+      }
     }
 
     // TRAILING 1st pass
@@ -705,6 +710,10 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
 
         const SizeType nrtiles_transf =
             util::ceilDiv<SizeType>(dist.nr_tiles().rows() - head_qr, dist.grid_size().rows());
+
+        if (nrtiles_transf <= 1) {
+          continue;
+        }
 
         // TODO FIXME cannot skip because otherwise no W1 reduction if any rank skip?!
         // // this rank is not involved at all
@@ -960,9 +969,11 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
                                lapack::lacpy(blas::Uplo::General, head_in.size().rows(),
                                              head_in.size().cols(), head_in.ptr(), head_in.ld(),
                                              head.ptr(), head.ld());
-                               lapack::laset(blas::Uplo::Lower, head.size().rows() - 1,
-                                             head.size().cols(), T(0), T(0), head.ptr({1, 0}),
-                                             head.ld());
+
+                               if (nrtiles_transf > 1)
+                                 lapack::laset(blas::Uplo::Lower, head.size().rows() - 1,
+                                               head.size().cols(), T(0), T(0), head.ptr({1, 0}),
+                                               head.ld());
                              }));
           ex::start_detached(schedule_bcast_send(mpi_col_chain.exclusive(),
                                                  panel_heads.read(idx_panel_head)));
@@ -1051,6 +1062,17 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
         const LocalTileIndex ij_vhh_lc(ws_V.rangeStartLocal(), 0);
 
         if (rank_has_head_row) {
+          // TODO CHECK not fully sure why it is needed after 1st step skip
+          {
+            const LocalTileIndex idx_panel_head(0, 0);
+            const GlobalTileIndex ij_head(panel_view.offset().row(), j);
+            ex::start_detached(ex::when_all(panel_heads.readwrite(idx_panel_head)) |
+                               di::transform(di::Policy<B>(), [=](auto&& head) {
+                                 lapack::laset(blas::Uplo::Upper, head.size().rows(), head.size().cols(),
+                                               T(0), T(1), head.ptr({0, 0}), head.ld());
+                               }));
+          }
+
           ex::start_detached(ex::when_all(mat_hh_2nd.read(ij_head), ws_V.readwrite(ij_vhh_lc)) |
                              di::transform(di::Policy<B>(), [=](const auto& head_in, auto&& head) {
                                lapack::lacpy(blas::Uplo::General, head.size().rows(), head.size().cols(),

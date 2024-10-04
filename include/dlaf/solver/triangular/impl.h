@@ -38,7 +38,7 @@
 
 namespace dlaf::solver::internal {
 
-using namespace dlaf::matrix::internal;  // MatrixRef
+using dlaf::matrix::internal::MatrixRef;
 
 namespace triangular_lln {
 template <Backend backend, class T, typename InSender, typename OutSender>

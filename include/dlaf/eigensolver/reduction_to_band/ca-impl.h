@@ -434,12 +434,8 @@ void hemm2nd(comm::IndexT_MPI rank_panel, matrix::Panel<Coord::Col, T, D>& W1,
   // so the last step needed is to reduce these last partial results in the final results.
   if (mpi_row_chain.size() > 1) {
     for (const auto& i_w1_lc : W1.iteratorLocal()) {
-      if (rank_panel == rank.col())
-        ex::start_detached(comm::schedule_reduce_recv_in_place(mpi_row_chain.exclusive(), MPI_SUM,
-                                                               W1.readwrite(i_w1_lc)));
-      else
-        ex::start_detached(comm::schedule_reduce_send(mpi_row_chain.exclusive(), rank_panel, MPI_SUM,
-                                                      W1.read(i_w1_lc)));
+      ex::start_detached(comm::schedule_all_reduce_in_place(mpi_row_chain.exclusive(), MPI_SUM,
+                                                            W1.readwrite(i_w1_lc)));
     }
   }
 }
@@ -1124,7 +1120,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
                                  ws_W0T, mpi_row_chain, mpi_col_chain);
 
       // W1 = W1 - 0.5 V W0* W1
-      if (rank.col() == rank_panel) {
+      {
         matrix::Matrix<T, D> ws_W2 = std::move(ws_T);
 
         // W2 = W0T W1
@@ -1143,8 +1139,6 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
       ws_W1T.setRange(at_offset, at_end_R);
       ws_W1T.setHeight(nrefls_step);
 
-      // broadcast to all rows
-      comm::broadcast(rank_panel, ws_W1, mpi_row_chain);
       // but broadcast just interesting columns
       for (const auto ij_wt_lc : ws_W1T.iteratorLocal()) {
         const SizeType k = dist.template global_tile_from_local_tile<Coord::Col>(ij_wt_lc.col());

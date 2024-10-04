@@ -94,7 +94,7 @@ template <Backend B, Device D, class T>
 void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, const SizeType b) {
   Matrix<T, Device::CPU> mat_e_h({m, n}, {mb, nb});
   set_random(mat_e_h);
-  auto mat_e_local = allGather(blas::Uplo::General, mat_e_h);
+  auto mat_e_local = allGather<T>(blas::Uplo::General, mat_e_h);
 
   Matrix<const T, Device::CPU> mat_hh = [m, mb, b]() {
     Matrix<T, Device::CPU> mat_hh({m, m}, {mb, mb});
@@ -126,7 +126,7 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, co
     return mat_hh;
   }();
 
-  MatrixLocal<T> mat_hh_local = allGather(blas::Uplo::Lower, mat_hh);
+  auto mat_hh_local = allGather<T>(blas::Uplo::Lower, mat_hh);
 
   {
     MatrixMirror<T, D, Device::CPU> mat_e(mat_e_h);
@@ -177,7 +177,7 @@ void testBacktransformation(comm::CommunicatorGrid& grid, SizeType m, SizeType n
 
   Matrix<T, Device::CPU> mat_e_h(dist);
   set_random(mat_e_h);
-  auto mat_e_local = allGather(blas::Uplo::General, mat_e_h, grid);
+  auto mat_e_local = allGather<T>(blas::Uplo::General, mat_e_h, grid);
 
   Matrix<const T, Device::CPU> mat_hh = [&grid, m, mb, b]() {
     const Distribution dist({m, m}, {mb, mb}, grid.size(), grid.rank(), {0, 0});
@@ -206,7 +206,7 @@ void testBacktransformation(comm::CommunicatorGrid& grid, SizeType m, SizeType n
     return mat_hh;
   }();
 
-  MatrixLocal<T> mat_hh_local = allGather(blas::Uplo::Lower, mat_hh, grid);
+  auto mat_hh_local = allGather<T>(blas::Uplo::Lower, mat_hh, grid);
 
   {
     MatrixMirror<T, D, Device::CPU> mat_e(mat_e_h);

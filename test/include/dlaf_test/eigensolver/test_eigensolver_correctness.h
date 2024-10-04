@@ -51,11 +51,11 @@ void testEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::C
 
   const SizeType m = reference.size().rows();
 
-  auto mat_a_local = allGather(blas::Uplo::General, reference, grid...);
+  auto mat_a_local = allGather<T>(blas::Uplo::General, reference, grid...);
   auto mat_evalues_local = [&]() {
     MatrixMirror<const BaseType<T>, Device::CPU, D> mat_evals(eigenvalues);
 
-    return allGather(blas::Uplo::General, mat_evals.get());
+    return allGather<BaseType<T>>(blas::Uplo::General, mat_evals.get());
   }();
   auto mat_e_local = [&]() {
     MatrixMirror<const T, Device::CPU, D> mat_e(eigenvectors);
@@ -64,7 +64,7 @@ void testEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::C
                                                                    last_eigenvalue_index);
     matrix::internal::MatrixRef mat_e_ref(mat_e.get(), spec);
 
-    return allGather(blas::Uplo::General, mat_e_ref, grid...);
+    return allGather<T>(blas::Uplo::General, mat_e_ref, grid...);
   }();
 
   // Number of valid eigenvectors

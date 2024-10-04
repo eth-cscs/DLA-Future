@@ -56,7 +56,7 @@ namespace dlaf {
 /// @param[in] first_eigenvalue_index is the index of the first eigenvalue to compute
 /// @pre @p first_eigenvalue_index == 0
 /// @param[in] last_eigenvalue_index is the index of the last eigenvalue to compute
-/// @pre @p last_eigenvalue_index < N
+/// @pre @p first_eigenvalue_index <= last_eigenvalue_index < N
 template <Backend B, Device D, class T>
 void hermitian_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat, Matrix<BaseType<T>, D>& eigenvalues,
                            Matrix<T, D>& eigenvectors, SizeType first_eigenvalue_index,

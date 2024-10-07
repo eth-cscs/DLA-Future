@@ -29,7 +29,6 @@
 
 namespace dlaf {
 std::ostream& operator<<(std::ostream& os, const configuration& cfg) {
-  os << "  print_config = " << cfg.print_config << std::endl;  // TODO: Is this silly?
   os << "  num_np_gpu_streams_per_thread = " << cfg.num_np_gpu_streams_per_thread << std::endl;
   os << "  num_hp_gpu_streams_per_thread = " << cfg.num_hp_gpu_streams_per_thread << std::endl;
   os << "  num_gpu_blas_handles = " << cfg.num_gpu_blas_handles << std::endl;

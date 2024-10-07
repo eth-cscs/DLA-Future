@@ -18,6 +18,7 @@
 #include <dlaf/common/unwrap.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/communicator_pipeline.h>
+#include <dlaf/sender/continues_on.h>
 #include <dlaf/sender/transform.h>
 #include <dlaf/sender/when_all_lift.h>
 
@@ -89,9 +90,10 @@ MPICallHelper(F&&) -> MPICallHelper<std::decay_t<F>>;
 template <typename F, typename Sender,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 [[nodiscard]] decltype(auto) transformMPI(F&& f, Sender&& sender) {
+  using dlaf::internal::continues_on;
   namespace ex = pika::execution::experimental;
 
-  return ex::transfer(std::forward<Sender>(sender), dlaf::internal::getMPIScheduler()) |
+  return continues_on(std::forward<Sender>(sender), dlaf::internal::getMPIScheduler()) |
          ex::then(dlaf::common::internal::ConsumeRvalues{MPICallHelper{std::forward<F>(f)}}) |
          ex::drop_operation_state();
 }

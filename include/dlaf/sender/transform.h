@@ -17,6 +17,7 @@
 #include <dlaf/common/unwrap.h>
 #include <dlaf/init.h>
 #include <dlaf/schedulers.h>
+#include <dlaf/sender/continues_on.h>
 #include <dlaf/sender/policy.h>
 #include <dlaf/sender/typelist.h>
 #include <dlaf/sender/when_all_lift.h>
@@ -46,19 +47,19 @@ enum class TransformDispatchType { Plain, Blas, Lapack };
 // allows choosing the priority.
 //
 // At its core, transform is a convenience wrapper around
-// sender | transfer(with_priority(scheduler, priority)) | then(ConsumeRvalues(unwrapping(f))).
+// sender | continues_on(with_priority(scheduler, priority)) | then(ConsumeRvalues(unwrapping(f))).
 
 /// Lazy transform. This does not submit the work and returns a sender.
 template <TransformDispatchType Tag = TransformDispatchType::Plain, Backend B = Backend::MC,
           typename F = void, typename Sender = void,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 [[nodiscard]] decltype(auto) transform(const Policy<B> policy, F&& f, Sender&& sender) {
+  using dlaf::internal::continues_on;
   using pika::execution::experimental::drop_operation_state;
   using pika::execution::experimental::then;
-  using pika::execution::experimental::transfer;
 
   auto scheduler = getBackendScheduler<B>(policy.priority(), policy.stacksize());
-  auto transfer_sender = transfer(std::forward<Sender>(sender), std::move(scheduler));
+  auto transfer_sender = continues_on(std::forward<Sender>(sender), std::move(scheduler));
 
   using dlaf::common::internal::ConsumeRvalues;
   using dlaf::common::internal::Unwrapping;

@@ -146,9 +146,9 @@ TYPED_TEST(EigensolverTestMC, CorrectnessLocal) {
 
       testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(uplo, m, mb,
                                                                                       MatrixType::random,
-                                                                                      m - 1);
+                                                                                      m);
       testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::use_preallocated>(
-          uplo, m, mb, MatrixType::random, m - 1);
+          uplo, m, mb, MatrixType::random, m);
 
       if (m >= 2) {
         testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(
@@ -161,7 +161,7 @@ TYPED_TEST(EigensolverTestMC, CorrectnessLocal) {
       getTuneParameters().eigensolver_min_band = b_min;
 
       testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(
-          uplo, m, mb, MatrixType::identity, m - 1);
+          uplo, m, mb, MatrixType::identity, m);
     }
   }
 }
@@ -173,9 +173,9 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributed) {
         getTuneParameters().eigensolver_min_band = b_min;
 
         testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(
-            uplo, m, mb, MatrixType::random, m - 1, grid);
+            uplo, m, mb, MatrixType::random, m, grid);
         testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::use_preallocated>(
-            uplo, m, mb, MatrixType::random, m - 1, grid);
+            uplo, m, mb, MatrixType::random, m, grid);
 
         if (m >= 2) {
           testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(
@@ -188,7 +188,7 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributed) {
         getTuneParameters().eigensolver_min_band = b_min;
 
         testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(
-            uplo, m, mb, MatrixType::identity, m - 1, grid);
+            uplo, m, mb, MatrixType::identity, m, grid);
       }
     }
   }
@@ -200,9 +200,9 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessLocal) {
     for (auto [m, mb, b_min] : sizes) {
       getTuneParameters().eigensolver_min_band = b_min;
       testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(
-          uplo, m, mb, MatrixType::random, m - 1);
+          uplo, m, mb, MatrixType::random, m);
       testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::use_preallocated>(
-          uplo, m, mb, MatrixType::random, m - 1);
+          uplo, m, mb, MatrixType::random, m);
 
       if (m >= 2) {
         testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(
@@ -214,7 +214,7 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessLocal) {
     for (auto [m, mb, b_min] : sizes_id) {
       getTuneParameters().eigensolver_min_band = b_min;
       testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(
-          uplo, m, mb, MatrixType::identity, m - 1);
+          uplo, m, mb, MatrixType::identity, m);
     }
   }
 }
@@ -225,9 +225,9 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessDistributed) {
       for (auto [m, mb, b_min] : sizes) {
         getTuneParameters().eigensolver_min_band = b_min;
         testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(
-            uplo, m, mb, MatrixType::random, m - 1, grid);
+            uplo, m, mb, MatrixType::random, m, grid);
         testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::use_preallocated>(
-            uplo, m, mb, MatrixType::random, m - 1, grid);
+            uplo, m, mb, MatrixType::random, m, grid);
 
         if (m >= 2) {
           testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(
@@ -239,7 +239,7 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessDistributed) {
       for (auto [m, mb, b_min] : sizes_id) {
         getTuneParameters().eigensolver_min_band = b_min;
         testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(
-            uplo, m, mb, MatrixType::identity, m - 1, grid);
+            uplo, m, mb, MatrixType::identity, m, grid);
       }
     }
   }

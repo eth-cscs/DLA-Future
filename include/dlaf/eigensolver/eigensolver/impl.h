@@ -36,8 +36,8 @@ namespace dlaf::eigensolver::internal {
 
 template <Backend B, Device D, class T>
 void Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<BaseType<T>, D>& evals,
-                                Matrix<T, D>& mat_e, SizeType first_eigenvalue_index,
-                                SizeType last_eigenvalue_index) {
+                                Matrix<T, D>& mat_e, SizeType eigenvalue_index_begin,
+                                SizeType eigenvalue_index_end) {
   const SizeType band_size = getBandSize(mat_a.blockSize().rows());
 
   // need uplo check as reduction to band doesn't have the uplo argument yet.
@@ -49,8 +49,8 @@ void Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<Bas
 
   tridiagonal_eigensolver<B>(ret.tridiagonal, evals, mat_e);
 
-  auto spec = matrix::util::internal::sub_matrix_spec_slice_cols(mat_a, first_eigenvalue_index,
-                                                                 last_eigenvalue_index);
+  auto spec = matrix::util::internal::sub_matrix_spec_slice_cols(mat_a, eigenvalue_index_begin,
+                                                                 eigenvalue_index_end);
 
   matrix::internal::MatrixRef mat_e_ref(mat_e, spec);
   bt_band_to_tridiagonal<B>(band_size, mat_e_ref, ret.hh_reflectors);
@@ -60,7 +60,7 @@ void Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<Bas
 template <Backend B, Device D, class T>
 void Eigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix<T, D>& mat_a,
                                 Matrix<BaseType<T>, D>& evals, Matrix<T, D>& mat_e,
-                                SizeType first_eigenvalue_index, SizeType last_eigenvalue_index) {
+                                SizeType eigenvalue_index_begin, SizeType eigenvalue_index_end) {
   const SizeType band_size = getBandSize(mat_a.blockSize().rows());
 
   // need uplo check as reduction to band doesn't have the uplo argument yet.
@@ -86,8 +86,8 @@ void Eigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo, M
 
   tridiagonal_eigensolver<B>(grid, ret.tridiagonal, evals, mat_e);
 
-  auto spec = matrix::util::internal::sub_matrix_spec_slice_cols(mat_e, first_eigenvalue_index,
-                                                                 last_eigenvalue_index);
+  auto spec = matrix::util::internal::sub_matrix_spec_slice_cols(mat_e, eigenvalue_index_begin,
+                                                                 eigenvalue_index_end);
   matrix::internal::MatrixRef mat_e_ref(mat_e, spec);
 
   bt_band_to_tridiagonal<B>(grid, band_size, mat_e_ref, ret.hh_reflectors);

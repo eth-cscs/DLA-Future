@@ -174,13 +174,13 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessLocal) {
     for (auto [m, mb, b_min] : sizes) {
       getTuneParameters().eigensolver_min_band = b_min;
       testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation,
-                         Factorization::do_factorization>(uplo, m, mb, m - 1);
+                         Factorization::do_factorization>(uplo, m, mb, m);
       testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::use_preallocated,
-                         Factorization::do_factorization>(uplo, m, mb, m - 1);
+                         Factorization::do_factorization>(uplo, m, mb, m);
       testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation,
-                         Factorization::already_factorized>(uplo, m, mb, m - 1);
+                         Factorization::already_factorized>(uplo, m, mb, m);
       testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::use_preallocated,
-                         Factorization::already_factorized>(uplo, m, mb, m - 1);
+                         Factorization::already_factorized>(uplo, m, mb, m);
 
       if (m >= 2) {
         testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation,
@@ -202,13 +202,13 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributed) {
       for (auto [m, mb, b_min] : sizes) {
         getTuneParameters().eigensolver_min_band = b_min;
         testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation,
-                           Factorization::do_factorization>(uplo, m, mb, m - 1, grid);
+                           Factorization::do_factorization>(uplo, m, mb, m, grid);
         testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::use_preallocated,
-                           Factorization::do_factorization>(uplo, m, mb, m - 1, grid);
+                           Factorization::do_factorization>(uplo, m, mb, m, grid);
         testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation,
-                           Factorization::already_factorized>(uplo, m, mb, m - 1, grid);
+                           Factorization::already_factorized>(uplo, m, mb, m, grid);
         testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::use_preallocated,
-                           Factorization::already_factorized>(uplo, m, mb, m - 1, grid);
+                           Factorization::already_factorized>(uplo, m, mb, m, grid);
 
         if (m >= 2) {
           testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation,
@@ -231,13 +231,13 @@ TYPED_TEST(GenEigensolverTestGPU, CorrectnessLocal) {
     for (auto [m, mb, b_min] : sizes) {
       getTuneParameters().eigensolver_min_band = b_min;
       testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation,
-                         Factorization::do_factorization>(uplo, m, mb, m - 1);
+                         Factorization::do_factorization>(uplo, m, mb, m);
       testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::use_preallocated,
-                         Factorization::do_factorization>(uplo, m, mb, m - 1);
+                         Factorization::do_factorization>(uplo, m, mb, m);
       testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation,
-                         Factorization::already_factorized>(uplo, m, mb, m - 1);
+                         Factorization::already_factorized>(uplo, m, mb, m);
       testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::use_preallocated,
-                         Factorization::already_factorized>(uplo, m, mb, m - 1);
+                         Factorization::already_factorized>(uplo, m, mb, m);
 
       if (m >= 2) {
         testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation,
@@ -258,14 +258,15 @@ TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributed) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
         getTuneParameters().eigensolver_min_band = b_min;
+
         testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation,
-                           Factorization::do_factorization>(uplo, m, mb, m - 1, grid);
+                           Factorization::do_factorization>(uplo, m, mb, m, grid);
         testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::use_preallocated,
-                           Factorization::do_factorization>(uplo, m, mb, m - 1, grid);
+                           Factorization::do_factorization>(uplo, m, mb, m, grid);
         testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation,
-                           Factorization::already_factorized>(uplo, m, mb, m - 1, grid);
+                           Factorization::already_factorized>(uplo, m, mb, m, grid);
         testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::use_preallocated,
-                           Factorization::already_factorized>(uplo, m, mb, m - 1, grid);
+                           Factorization::already_factorized>(uplo, m, mb, m, grid);
         if (m >= 2) {
           testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation,
                              Factorization::do_factorization>(uplo, m, mb, m / 2, grid);

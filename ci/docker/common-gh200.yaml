@@ -38,8 +38,7 @@ packages:
   mpich:
     # Fix version to have better control.
     require:
-      - '@4.2.1'
-      - 'pmi=cray'
+      - '@3.4.3'
     variants:
       - '~fortran'
       - '~libxml2'

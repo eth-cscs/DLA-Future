@@ -152,5 +152,6 @@ stages:
   extends: .run_common
   variables:
     SLURM_RESERVATION: "daint"
+    SLURM_MPI: "pmi2"
     # Workaround after update until hooks are fixed
     ENROOT_LIBRARY_PATH: /capstor/scratch/cscs/fmohamed/enrootlibn

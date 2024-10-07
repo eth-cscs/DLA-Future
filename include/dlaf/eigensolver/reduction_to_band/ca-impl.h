@@ -329,7 +329,7 @@ void her2kUpdateTrailingMatrix(comm::Index2D rank_qr, const matrix::SubMatrixVie
 }
 
 template <Backend B, Device D, class T>
-void hemm2nd(comm::IndexT_MPI rank_panel, matrix::Panel<Coord::Col, T, D>& W1,
+void hemm2nd(matrix::Panel<Coord::Col, T, D>& W1,
              matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>& W1T,
              const matrix::SubMatrixView& at_view, const SizeType j_end, matrix::Matrix<const T, D>& A,
              matrix::Panel<Coord::Col, const T, D>& W0,
@@ -1116,8 +1116,8 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
       ws_W1T.setRange(at_offset, at_end_R);
       ws_W1T.setHeight(nrefls_step);
 
-      ca_red2band::hemm2nd<B, D>(rank_panel, ws_W1, ws_W1T, at_view, at_end_R.col(), mat_a, ws_W0,
-                                 ws_W0T, mpi_row_chain, mpi_col_chain);
+      ca_red2band::hemm2nd<B, D>(ws_W1, ws_W1T, at_view, at_end_R.col(), mat_a, ws_W0, ws_W0T,
+                                 mpi_row_chain, mpi_col_chain);
 
       // W1 = W1 - 0.5 V W0* W1
       {

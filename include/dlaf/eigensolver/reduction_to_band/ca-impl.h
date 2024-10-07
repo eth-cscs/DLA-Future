@@ -562,6 +562,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
 
   auto mpi_col_chain = grid.col_communicator_pipeline();
   auto mpi_row_chain = grid.row_communicator_pipeline();
+  auto mpi_all_chain = grid.full_communicator_pipeline();
 
   constexpr std::size_t n_workspaces = 2;
 
@@ -660,36 +661,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
 
     // TRAILING 1st pass
     if (at_offset_el.isIn(mat_a.size())) {
-      // TODO FIXME workaround for possibly non-participating ranks (they cannot have width = 0)
-      const SizeType nrefls_1st_min = std::max<SizeType>(nrefls_1st, 1);
-
-      const LocalTileIndex zero_lc(0, 0);
-      matrix::Matrix<T, D> ws_T({nrefls_1st_min, nrefls_1st_min}, dist.block_size());
-
-      auto& ws_V = panels_v.nextResource();
-      ws_V.setRangeStart(at_offset);
-      ws_V.setWidth(nrefls_1st_min);
-
-      auto& ws_W0 = panels_w0.nextResource();
-      ws_W0.setRangeStart(at_offset);
-      ws_W0.setWidth(nrefls_1st_min);
-
-      if (rank_panel == rank.col() && nrefls_1st != 0) {
-        using factorization::internal::computeTFactor;
-        using red2band::local::setupReflectorPanelV;
-
-        const bool has_head = !panel_view.iteratorLocal().empty();
-        setupReflectorPanelV<B, D, T>(has_head, panel_view, nrefls_1st_min, ws_V, mat_a, !is_full_band);
-
-        computeTFactor<B>(ws_V, get_tile_tau_ro(), ws_T.readwrite(zero_lc));
-
-        // W = V T
-        red2band::local::trmmComputeW<B, D>(ws_W0, ws_V, ws_T.read(zero_lc));
-      }
-
       // Note: apply local transformations, one after the other
-      // matrix::Matrix<T, D> ws_W2 = std::move(ws_T);
-
       for (int idx_qr_head = 0; idx_qr_head < n_qr_heads; ++idx_qr_head) {
         const SizeType head_qr = at_view.offset().row() + idx_qr_head;
         const comm::Index2D rank_qr(dist.template rank_global_tile<Coord::Row>(head_qr), rank_panel);
@@ -730,21 +702,25 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
         if (nrefls_this == 0)
           continue;
 
+        auto& ws_V = panels_v.nextResource();
+        ws_V.setRange(at_offset, common::indexFromOrigin(dist.nr_tiles()));
+        ws_V.setWidth(nrefls_this);
+
+        if (rank_qr == rank) {
+          using red2band::local::setupReflectorPanelV;
+          const bool has_head = !panel_view.iteratorLocal().empty();
+          setupReflectorPanelV<B, D, T>(has_head, panel_view, nrefls_this, ws_V, mat_a, !is_full_band);
+        }
+
         // "local" broadcast along rows involved in this local transformation
         if (is_row_involved) {
           comm::broadcast(rank_panel, ws_V, mpi_row_chain);
-          comm::broadcast(rank_panel, ws_W0, mpi_row_chain);
         }
 
         auto& ws_VT = panels_vt.nextResource();
         // TODO FIXME workaround for panel problem on reset about range
         ws_VT.setRange(at_offset, common::indexFromOrigin(dist.nr_tiles()));
         ws_VT.setHeight(nrefls_this);
-
-        auto& ws_W0T = panels_w0t.nextResource();
-        // TODO FIXME workaround for panel problem on reset about range
-        ws_W0T.setRange(at_offset, common::indexFromOrigin(dist.nr_tiles()));
-        ws_W0T.setHeight(nrefls_this);
 
         // broadcast along cols involved in this local transformation
         if (is_col_involved) {  // diagonal
@@ -763,24 +739,51 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
               const SizeType i_lc = dist.template local_tile_from_global_tile<Coord::Row>(k);
 
               ws_VT.setTile(ij_lc, ws_V.read({i_lc, 0}));
-              ws_W0T.setTile(ij_lc, ws_W0.read({i_lc, 0}));
 
               // if (nrtiles_transf > 1) {
               ex::start_detached(schedule_bcast_send(mpi_col_chain.exclusive(), ws_V.read({i_lc, 0})));
-              ex::start_detached(schedule_bcast_send(mpi_col_chain.exclusive(), ws_W0.read({i_lc, 0})));
               // }
             }
             else {
               // if (nrtiles_transf > 1) {
               ex::start_detached(schedule_bcast_recv(mpi_col_chain.exclusive(), rank_src,
                                                      ws_VT.readwrite(ij_lc)));
-              ex::start_detached(schedule_bcast_recv(mpi_col_chain.exclusive(), rank_src,
-                                                     ws_W0T.readwrite(ij_lc)));
               // }
             }
           }
         }
 
+        // TFactor
+        const LocalTileIndex zero_lc(0, 0);
+        matrix::Matrix<T, D> ws_T({nrefls_this, nrefls_this}, dist.block_size());
+        if (rank == rank_qr) {
+          using factorization::internal::computeTFactor;
+          computeTFactor<B>(ws_V, get_tile_tau_ro(), ws_T.readwrite(zero_lc));
+          // TODO not everyone is involved?!
+          ex::start_detached(comm::schedule_bcast_send(mpi_all_chain.exclusive(), ws_T.read(zero_lc)));
+        }
+        else {
+          // TODO not everyone is involved?!
+          ex::start_detached(comm::schedule_bcast_recv(mpi_all_chain.exclusive(),
+                                                       mpi_all_chain.rank_full_communicator(rank_qr),
+                                                       ws_T.readwrite(zero_lc)));
+        }
+
+        // W0
+        auto& ws_W0 = panels_w0.nextResource();
+        ws_W0.setRange(at_offset, common::indexFromOrigin(dist.nr_tiles()));
+        ws_W0.setWidth(nrefls_this);
+
+        auto& ws_W0T = panels_w0t.nextResource();
+        // TODO FIXME workaround for panel problem on reset about range
+        ws_W0T.setRange(at_offset, common::indexFromOrigin(dist.nr_tiles()));
+        ws_W0T.setHeight(nrefls_this);
+
+        // W = V T
+        red2band::local::trmmComputeW<B, D>(ws_W0, ws_V, ws_T.read(zero_lc));
+        red2band::local::trmmComputeW<B, D>(ws_W0T, ws_VT, ws_T.read(zero_lc));
+
+        // W1
         auto& ws_W1 = panels_w1.nextResource();
         auto& ws_W3 = panels_w3.nextResource();
 
@@ -899,11 +902,11 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
         ws_W1.reset();
 
         ws_W0T.reset();
-        ws_VT.reset();
-      }
+        ws_W0.reset();
 
-      ws_W0.reset();
-      ws_V.reset();
+        ws_VT.reset();
+        ws_V.reset();
+      }
     }
 
     // ===== 2nd pass

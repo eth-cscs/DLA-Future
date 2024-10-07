@@ -7,7 +7,7 @@ cuda gcc11 codecov deps:
     BASE_IMAGE: docker.io/nvidia/cuda:11.7.1-devel-ubuntu22.04
     COMPILER: gcc@11
     SPACK_ENVIRONMENT: ci/docker/debug-cuda.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-codecov/build
+    DEPS_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-codecov/deps
     USE_CODECOV: "true"
 
 cuda gcc11 codecov build:
@@ -18,8 +18,7 @@ cuda gcc11 codecov build:
     - cuda gcc11 codecov deps
   variables:
     DOCKERFILE: ci/docker/codecov.Dockerfile
-    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-codecov/deploy:$CI_COMMIT_SHA
+    DLAF_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-codecov/dlaf:$CI_COMMIT_SHA
 
 cuda gcc11 codecov test:
   extends: .run_common

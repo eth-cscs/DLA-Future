@@ -12,32 +12,20 @@
 
 IMAGE="$1"
 USE_CODECOV="$2"
-THREADS_PER_NODE="$3"
-SLURM_CONSTRAINT="$4"
+THREADS_MAX_PER_TASK="$3"
+THREADS_PER_NODE="$4"
+SLURM_CONSTRAINT="$5"
+RUNNER="$6"
 
 if [ "$USE_CODECOV" = true ]; then
-BASE_TEMPLATE="
-include:
-  - remote: 'https://gitlab.com/cscs-ci/recipes/-/raw/master/templates/v2/.cscs.yml'
-
-image: $IMAGE
-
-stages:
+STAGES="
   - test
   - upload
-
-variables:
-  SLURM_EXCLUSIVE: ''
-  SLURM_EXACT: ''
-  SLURM_CONSTRAINT: $SLURM_CONSTRAINT
-  CRAY_CUDA_MPS: 1
-  MPICH_MAX_THREAD_SAFETY: multiple
-
-{{JOBS}}
-
+"
+EXTRA_JOBS="
 upload_reports:
   stage: upload
-  extends: .daint
+  extends: $RUNNER
   variables:
     PULL_IMAGE: 'NO'
     SLURM_NTASKS: 1
@@ -45,34 +33,29 @@ upload_reports:
     DISABLE_AFTER_SCRIPT: 'YES'
   script: upload_codecov
 "
-JOB_TEMPLATE="
-
-{{LABEL}}:
-  stage: test
-  extends: .daint
-  variables:
-    SLURM_CPUS_PER_TASK: {{CPUS_PER_TASK}}
-    SLURM_NTASKS: {{NTASKS}}
-    SLURM_TIMELIMIT: '25:00'
-    SLURM_UNBUFFEREDIO: 1
-    SLURM_WAIT: 0
-    PULL_IMAGE: 'YES'
-    USE_MPI: 'YES'
-    DISABLE_AFTER_SCRIPT: 'YES'
-    DLAF_HDF5_TEST_OUTPUT_PATH: \$CI_PROJECT_DIR
-  script: mpi-ctest -L {{LABEL}}
+TIMELIMIT="25:00"
+ARTIFACTS="
   artifacts:
     paths:
-      - codecov-reports/"
+      - codecov-reports/
+"
 else
+STAGES="
+  - test
+"
+EXTRA_JOBS=""
+TIMELIMIT="20:00"
+ARTIFACTS=""
+fi
+
 BASE_TEMPLATE="
 include:
-  - remote: 'https://gitlab.com/cscs-ci/recipes/-/raw/master/templates/v2/.cscs.yml'
+  - remote: 'https://gitlab.com/cscs-ci/recipes/-/raw/master/templates/v2/.ci-ext.yml'
 
 image: $IMAGE
 
 stages:
-  - test
+$STAGES
 
 variables:
   SLURM_EXCLUSIVE: ''
@@ -82,30 +65,38 @@ variables:
   MPICH_MAX_THREAD_SAFETY: multiple
 
 {{JOBS}}
+
+$EXTRA_JOBS
+
 "
 
 JOB_TEMPLATE="
 {{LABEL}}:
   stage: test
-  extends: .daint
+  extends: $RUNNER
   variables:
     SLURM_CPUS_PER_TASK: {{CPUS_PER_TASK}}
     SLURM_NTASKS: {{NTASKS}}
-    SLURM_TIMELIMIT: '20:00'
+    SLURM_TIMELIMIT: '$TIMELIMIT'
     SLURM_UNBUFFEREDIO: 1
     SLURM_WAIT: 0
     PULL_IMAGE: 'YES'
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
     DLAF_HDF5_TEST_OUTPUT_PATH: \$CI_PROJECT_DIR
-  script: mpi-ctest -L {{LABEL}}"
-fi
+  script: mpi-ctest -L {{LABEL}}
+  $ARTIFACTS
+"
 
 JOBS=""
 
 for label in `ctest --print-labels | egrep -o "RANK_[1-9][0-9]?"`; do
     N=`echo "$label" | sed "s/RANK_//"`
     C=$(( THREADS_PER_NODE / N ))
+
+    if [ $C -gt $THREADS_MAX_PER_TASK ]; then
+      C=$THREADS_MAX_PER_TASK
+    fi
 
     JOB=`echo "$JOB_TEMPLATE" | sed "s|{{LABEL}}|$label|g" \
                               | sed "s|{{NTASKS}}|$N|g" \

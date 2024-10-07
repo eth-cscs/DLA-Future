@@ -9,7 +9,7 @@ cuda gcc13 stdexec release deps:
     CXXSTD: 20
     SPACK_ENVIRONMENT: ci/docker/release-cuda-stdexec.yaml
     USE_MKL: "ON"
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc13-release-stdexec/build
+    DEPS_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc13-release-stdexec/deps
 
 cuda gcc13 stdexec release build:
   extends:
@@ -18,4 +18,4 @@ cuda gcc13 stdexec release build:
   needs:
     - cuda gcc13 stdexec release deps
   variables:
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc13-release/deploy:$CI_COMMIT_SHA
+    DLAF_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc13-release/dlaf:$CI_COMMIT_SHA

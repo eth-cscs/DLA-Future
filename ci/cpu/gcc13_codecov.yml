@@ -6,7 +6,7 @@ cpu gcc13 codecov deps:
   variables:
     COMPILER: gcc@13
     SPACK_ENVIRONMENT: ci/docker/debug-cpu.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc13-codecov/build
+    DEPS_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc13-codecov/deps
     USE_CODECOV: "true"
 
 cpu gcc13 codecov build:
@@ -17,7 +17,7 @@ cpu gcc13 codecov build:
     - cpu gcc13 codecov deps
   variables:
     DOCKERFILE: ci/docker/codecov.Dockerfile
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc13-codecov/deploy:$CI_COMMIT_SHA
+    DLAF_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc13-codecov/dlaf:$CI_COMMIT_SHA
     PIP_OPTS: "--break-system-packages"
 
 cpu gcc13 codecov test:

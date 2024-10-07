@@ -16,6 +16,7 @@ THREADS_PER_NODE="$3"
 SLURM_CONSTRAINT="$4"
 
 if [ "$USE_CODECOV" = true ]; then
+# CRAY_CUDA_MPS set to 0 to avoid test hanging on daint (See PR #1197)
 BASE_TEMPLATE="
 include:
   - remote: 'https://gitlab.com/cscs-ci/recipes/-/raw/master/templates/v2/.cscs.yml'
@@ -30,7 +31,7 @@ variables:
   SLURM_EXCLUSIVE: ''
   SLURM_EXACT: ''
   SLURM_CONSTRAINT: $SLURM_CONSTRAINT
-  CRAY_CUDA_MPS: 1
+  CRAY_CUDA_MPS: 0
   MPICH_MAX_THREAD_SAFETY: multiple
 
 {{JOBS}}
@@ -65,6 +66,7 @@ JOB_TEMPLATE="
     paths:
       - codecov-reports/"
 else
+# CRAY_CUDA_MPS set to 0 to avoid test hanging on daint (See PR #1197)
 BASE_TEMPLATE="
 include:
   - remote: 'https://gitlab.com/cscs-ci/recipes/-/raw/master/templates/v2/.cscs.yml'
@@ -78,7 +80,7 @@ variables:
   SLURM_EXCLUSIVE: ''
   SLURM_EXACT: ''
   SLURM_CONSTRAINT: $SLURM_CONSTRAINT
-  CRAY_CUDA_MPS: 1
+  CRAY_CUDA_MPS: 0
   MPICH_MAX_THREAD_SAFETY: multiple
 
 {{JOBS}}

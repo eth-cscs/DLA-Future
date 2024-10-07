@@ -51,7 +51,7 @@ struct Options
   SizeType mb;
   SizeType nb;
   SizeType b;
-  SizeType last_eval_idx;
+  SizeType eval_idx_end;
 
   Options(const pika::program_options::variables_map& vm)
       : MiniappOptions(vm), m(vm["m"].as<SizeType>()), n(vm["n"].as<SizeType>()),
@@ -60,14 +60,9 @@ struct Options
     DLAF_ASSERT(mb > 0, mb);
     DLAF_ASSERT(b > 0 && mb % b == 0, b, mb);
 
-    if (vm.count("last-eval-index") == 1) {
-      last_eval_idx = vm["last-eval-index"].as<SizeType>();
-    }
-    else {
-      last_eval_idx = m - 1;
-    }
+    eval_idx_end = vm.count("eval-index-end") == 1 ? vm["eval-index-end"].as<SizeType>() : m;
 
-    DLAF_ASSERT(last_eval_idx >= 0 && last_eval_idx < m, last_eval_idx);
+    DLAF_ASSERT(eval_idx_end >= 0 && eval_idx_end <= m, eval_idx_end);
 
     if (do_check != dlaf::miniapp::CheckIterFreq::None) {
       std::cerr << "Warning! At the moment result checking it is not implemented." << std::endl;
@@ -139,7 +134,7 @@ struct BacktransformBandToTridiagMiniapp {
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         auto spec =
-            dlaf::matrix::util::internal::sub_matrix_spec_slice_cols(mat_e_host, 0, opts.last_eval_idx);
+            dlaf::matrix::util::internal::sub_matrix_spec_slice_cols(mat_e_host, 0, opts.eval_idx_end);
         MatrixRefType mat_e_ref(mat_e.get(), spec);
 
         dlaf::common::Timer<> timeit;
@@ -171,7 +166,7 @@ struct BacktransformBandToTridiagMiniapp {
                   << "GFlop/s" << " " << dlaf::internal::FormatShort{opts.type} << " "
                   << mat_e_host.size() << " " << mat_e_host.blockSize() << " " << opts.b << " "
                   << comm_grid.size() << " " << pika::get_os_thread_count() << " " << backend << " ("
-                  << 0l << ", " << opts.last_eval_idx << ")" << std::endl;
+                  << 0l << ", " << opts.eval_idx_end << ")" << std::endl;
         if (opts.csv_output) {
           // CSV formatted output with column names that can be read by pandas to simplify
           // post-processing CSVData{-version}, value_0, title_0, value_1, title_1
@@ -182,8 +177,8 @@ struct BacktransformBandToTridiagMiniapp {
                     << ", " << "band_size, " << opts.b << ", " << "comm_rows, "
                     << comm_grid.size().rows() << ", " << "comm_cols, " << comm_grid.size().cols()
                     << ", " << "threads, " << pika::get_os_thread_count() << ", " << "backend, "
-                    << backend << ", " << opts.info << ", " << "first eigenvalue index, " << 0l << ", "
-                    << "last eigenvalue index, " << opts.last_eval_idx << std::endl;
+                    << backend << ", " << opts.info << ", " << "eigenvalue index begin, " << 0l << ", "
+                    << "eigenvalue index end, " << opts.eval_idx_end << std::endl;
         }
       }
 
@@ -223,7 +218,7 @@ int main(int argc, char** argv) {
     ("mb",              value<SizeType>()   ->default_value( 256), "Matrix E block rows")
     ("nb",              value<SizeType>()   ->default_value( 512), "Matrix E block columns")
     ("b",               value<SizeType>()   ->default_value(  64), "Band size")
-    ("last-eval-index", value<SizeType>()                        , "Index of last eigenvalue of interest/eigenvector to transform")
+    ("eval-index-end", value<SizeType>()                        , "Index of last eigenvalue of interest/eigenvector to transform (exclusive)")
   ;
   // clang-format on
   dlaf::miniapp::addUploOption(desc_commandline);

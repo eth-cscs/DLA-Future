@@ -62,13 +62,13 @@ template <typename T>
 void checkGenEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
                          Matrix<const T, Device::CPU>& B,
                          Matrix<const BaseType<T>, Device::CPU>& evalues,
-                         Matrix<const T, Device::CPU>& E, const SizeType last_eval_idx);
+                         Matrix<const T, Device::CPU>& E, const SizeType eval_idx_end);
 
 struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
   SizeType m;
   SizeType mb;
-  SizeType last_eval_idx;
+  SizeType eval_idx_end;
   blas::Uplo uplo;
 #ifdef DLAF_WITH_HDF5
   std::filesystem::path input_file;
@@ -83,15 +83,10 @@ struct Options
     DLAF_ASSERT(m > 0, m);
     DLAF_ASSERT(mb > 0, mb);
 
-    if (vm.count("last-eval-index") == 1) {
-      last_eval_idx = vm["last-eval-index"].as<SizeType>();
-    }
-    else {
-      last_eval_idx = m - 1;
-    }
+    eval_idx_end = vm.count("eval-index-end") == 1 ? vm["eval-index-end"].as<SizeType>() : m;
 
-    DLAF_ASSERT(last_eval_idx < m, last_eval_idx);
-    DLAF_ASSERT(last_eval_idx >= 0, last_eval_idx);
+    DLAF_ASSERT(eval_idx_end < m, eval_idx_end);
+    DLAF_ASSERT(eval_idx_end >= 0, eval_idx_end);
 
 #ifdef DLAF_WITH_HDF5
     if (vm.count("input-file") == 1) {
@@ -196,10 +191,10 @@ struct GenEigensolverMiniapp {
         using dlaf::hermitian_generalized_eigensolver;
         if (opts.local)
           return hermitian_generalized_eigensolver<backend>(opts.uplo, matrix_a->get(), matrix_b->get(),
-                                                            0l, opts.last_eval_idx);
+                                                            0l, opts.eval_idx_end);
         else
           return hermitian_generalized_eigensolver<backend>(comm_grid, opts.uplo, matrix_a->get(),
-                                                            matrix_b->get(), 0l, opts.last_eval_idx);
+                                                            matrix_b->get(), 0l, opts.eval_idx_end);
       };
       auto [eigenvalues, eigenvectors] = bench();
 
@@ -232,7 +227,7 @@ struct GenEigensolverMiniapp {
       if (0 == world.rank() && run_index >= 0) {
         std::cout << "[" << run_index << "]" << " " << elapsed_time << "s" << " "
                   << dlaf::internal::FormatShort{opts.type} << dlaf::internal::FormatShort{opts.uplo}
-                  << " " << matrix_a_host.size() << " (" << 0l << ", " << opts.last_eval_idx << ")"
+                  << " " << matrix_a_host.size() << " (" << 0l << ", " << opts.eval_idx_end << ")"
                   << " " << " " << matrix_a_host.blockSize() << " "
                   << dlaf::eigensolver::internal::getBandSize(matrix_a_host.blockSize().rows()) << " "
                   << comm_grid.size() << " " << pika::get_os_thread_count() << " " << backend
@@ -243,8 +238,8 @@ struct GenEigensolverMiniapp {
           std::cout << "CSVData-2, " << "run, " << run_index << ", " << "time, " << elapsed_time << ", "
                     << "type, " << dlaf::internal::FormatShort{opts.type}.value << ", " << "uplo, "
                     << dlaf::internal::FormatShort{opts.uplo}.value << ", " << "matrixsize, "
-                    << matrix_a_host.size().rows() << ", " << "first eigenvalue index, " << 0l << ", "
-                    << "last eigenvalue index, " << ", " << opts.last_eval_idx << ", " << "blocksize, "
+                    << matrix_a_host.size().rows() << ", " << "eigenvalue index begin, " << 0l << ", "
+                    << "eigenvalue index end, " << ", " << opts.eval_idx_end << ", " << "blocksize, "
                     << matrix_a_host.blockSize().rows() << ", " << "bandsize, "
                     << dlaf::eigensolver::internal::getBandSize(matrix_a_host.blockSize().rows()) << ", "
                     << "comm_rows, " << comm_grid.size().rows() << ", " << "comm_cols, "
@@ -258,7 +253,7 @@ struct GenEigensolverMiniapp {
         MatrixMirrorEvalsType eigenvalues_host(eigenvalues);
         MatrixMirrorEvectsType eigenvectors_host(eigenvectors);
         checkGenEigensolver(comm_grid, opts.uplo, matrix_a_ref, matrix_b_ref, eigenvalues_host.get(),
-                            eigenvectors_host.get(), opts.last_eval_idx);
+                            eigenvectors_host.get(), opts.eval_idx_end);
       }
     }
   }
@@ -288,7 +283,7 @@ int main(int argc, char** argv) {
   desc_commandline.add_options()
     ("matrix-size",     value<SizeType>()   ->default_value(4096), "Matrix size")
     ("block-size",      value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
-    ("last-eval-index", value<SizeType>()                        , "Index of last eigenvalue of interest/eigenvector to transform")
+    ("eval-index-end", value<SizeType>()                         , "Index of last eigenvalue of interest/eigenvector to transform (exclusive)")
 #ifdef DLAF_WITH_HDF5
     ("input-file",    value<std::filesystem::path>()                              , "Load matrix from given HDF5 file")
     ("input-dataset-a", value<std::string>()         -> default_value("/input-a") , "Name of HDF5 dataset to load as matrix")
@@ -325,7 +320,7 @@ template <typename T>
 void checkGenEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
                          Matrix<const T, Device::CPU>& B,
                          Matrix<const BaseType<T>, Device::CPU>& evalues,
-                         Matrix<const T, Device::CPU>& E, const SizeType last_eval_idx) {
+                         Matrix<const T, Device::CPU>& E, const SizeType eval_idx_end) {
   const Index2D rank_result{0, 0};
 
   const auto norm_A = dlaf::auxiliary::max_norm<dlaf::Backend::MC>(comm_grid, rank_result, uplo, A);
@@ -333,10 +328,10 @@ void checkGenEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<co
 
   // 2.
   // Compute C = E D - A E
-  auto spec = dlaf::matrix::util::internal::sub_matrix_spec_slice_cols(E, 0l, last_eval_idx);
+  auto spec = dlaf::matrix::util::internal::sub_matrix_spec_slice_cols(E, 0l, eval_idx_end);
   dlaf::matrix::internal::MatrixRef<const T, Device::CPU> E_ref(E, spec);
   dlaf::matrix::internal::MatrixRef<const BaseType<T>, Device::CPU> evalues_ref(
-      evalues, {{0, 0}, {last_eval_idx + 1, 1}});
+      evalues, {{0, 0}, {eval_idx_end, 1}});
 
   Matrix<T, Device::CPU> C(E_ref.distribution());
   Matrix<T, Device::CPU> C2(E_ref.distribution());
@@ -355,7 +350,7 @@ void checkGenEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<co
     return;
 
   constexpr auto eps = std::numeric_limits<dlaf::BaseType<T>>::epsilon();
-  const auto n = last_eval_idx + 1;
+  const auto n = eval_idx_end;
 
   const auto diff_ratio = norm_diff / norm_A / norm_B;
 

@@ -279,7 +279,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span><span class="preprocessor">#ifdef DLAF_WITH_HDF5</span></div>
 <div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>  <span class="keyword">static</span> std::atomic&lt;size_t&gt; num_cholesky_calls = 0;</div>
 <div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>  std::stringstream fname;</div>
-<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>  fname &lt;&lt; <span class="stringliteral">&quot;cholesky-facrorization-&quot;</span> &lt;&lt; matrix::internal::TypeToString_v&lt;T&gt; &lt;&lt; <span class="stringliteral">&quot;-&quot;</span></div>
+<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>  fname &lt;&lt; <span class="stringliteral">&quot;cholesky-factorization-&quot;</span> &lt;&lt; matrix::internal::TypeToString_v&lt;T&gt; &lt;&lt; <span class="stringliteral">&quot;-&quot;</span></div>
 <div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>        &lt;&lt; std::to_string(num_cholesky_calls) &lt;&lt; <span class="stringliteral">&quot;.h5&quot;</span>;</div>
 <div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>  std::optional&lt;matrix::internal::FileHDF5&gt; file;</div>
 <div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span> </div>

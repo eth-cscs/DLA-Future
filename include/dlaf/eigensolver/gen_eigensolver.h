@@ -53,7 +53,8 @@ void hermitian_generalized_eigensolver_helper(
   DLAF_ASSERT(matrix::single_tile_per_block(eigenvalues), eigenvalues);
   DLAF_ASSERT(matrix::single_tile_per_block(eigenvectors), eigenvectors);
   DLAF_ASSERT(eigenvalue_index_begin == 0, eigenvalue_index_begin);
-  DLAF_ASSERT(eigenvalue_index_end >= eigenvalue_index_begin, eigenvalue_index_end, eigenvalue_index_begin);
+  DLAF_ASSERT(eigenvalue_index_end >= eigenvalue_index_begin, eigenvalue_index_end,
+              eigenvalue_index_begin);
   DLAF_ASSERT(eigenvalue_index_end <= mat_a.size().rows(), eigenvalue_index_end, mat_a.size().rows());
 
   eigensolver::internal::GenEigensolver<B, D, T>::call(uplo, mat_a, mat_b, eigenvalues, eigenvectors,
@@ -74,7 +75,8 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver_helper(
   DLAF_ASSERT(mat_a.size() == mat_b.size(), mat_a, mat_b);
   DLAF_ASSERT(mat_a.blockSize() == mat_b.blockSize(), mat_a, mat_b);
   DLAF_ASSERT(eigenvalue_index_begin == 0, eigenvalue_index_begin);
-  DLAF_ASSERT(eigenvalue_index_end >= eigenvalue_index_begin, eigenvalue_index_end, eigenvalue_index_begin);
+  DLAF_ASSERT(eigenvalue_index_end >= eigenvalue_index_begin, eigenvalue_index_end,
+              eigenvalue_index_begin);
   DLAF_ASSERT(eigenvalue_index_end <= mat_a.size().rows(), eigenvalue_index_end, mat_a.size().rows());
 
   const SizeType size = mat_a.size().rows();
@@ -117,7 +119,8 @@ void hermitian_generalized_eigensolver_helper(
   DLAF_ASSERT(matrix::single_tile_per_block(eigenvalues), eigenvalues);
   DLAF_ASSERT(matrix::single_tile_per_block(eigenvectors), eigenvectors);
   DLAF_ASSERT(eigenvalue_index_begin == 0, eigenvalue_index_begin);
-  DLAF_ASSERT(eigenvalue_index_end >= eigenvalue_index_begin, eigenvalue_index_end, eigenvalue_index_begin);
+  DLAF_ASSERT(eigenvalue_index_end >= eigenvalue_index_begin, eigenvalue_index_end,
+              eigenvalue_index_begin);
   DLAF_ASSERT(eigenvalue_index_end <= mat_a.size().rows(), eigenvalue_index_end, mat_a.size().rows());
 
   eigensolver::internal::GenEigensolver<B, D, T>::call(grid, uplo, mat_a, mat_b, eigenvalues,
@@ -138,7 +141,8 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver_helper(
   DLAF_ASSERT(mat_a.size() == mat_b.size(), mat_a, mat_b);
   DLAF_ASSERT(mat_a.blockSize() == mat_b.blockSize(), mat_a, mat_b);
   DLAF_ASSERT(eigenvalue_index_begin == 0, eigenvalue_index_begin);
-  DLAF_ASSERT(eigenvalue_index_end >= eigenvalue_index_begin, eigenvalue_index_end, eigenvalue_index_begin);
+  DLAF_ASSERT(eigenvalue_index_end >= eigenvalue_index_begin, eigenvalue_index_end,
+              eigenvalue_index_begin);
   DLAF_ASSERT(eigenvalue_index_end <= mat_a.size().rows(), eigenvalue_index_end, mat_a.size().rows());
 
   const SizeType size = mat_a.size().rows();
@@ -295,8 +299,7 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver(blas::Uplo uplo, Matri
   using eigensolver::internal::Factorization;
 
   return eigensolver::internal::hermitian_generalized_eigensolver_helper<B, D, T>(
-      uplo, mat_a, mat_b, Factorization::do_factorization, eigenvalue_index_begin,
-      eigenvalue_index_end);
+      uplo, mat_a, mat_b, Factorization::do_factorization, eigenvalue_index_begin, eigenvalue_index_end);
 }
 
 /// Generalized Eigensolver.
@@ -694,8 +697,7 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver(comm::CommunicatorGrid
 template <Backend B, Device D, class T>
 EigensolverResult<T, D> hermitian_generalized_eigensolver(comm::CommunicatorGrid& grid, blas::Uplo uplo,
                                                           Matrix<T, D>& mat_a, Matrix<T, D>& mat_b) {
-  return hermitian_generalized_eigensolver<B, D, T>(grid, uplo, mat_a, mat_b, 0,
-                                                    mat_a.size().rows());
+  return hermitian_generalized_eigensolver<B, D, T>(grid, uplo, mat_a, mat_b, 0, mat_a.size().rows());
 }
 
 /// Generalized Eigensolver.

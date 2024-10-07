@@ -75,7 +75,8 @@ void hermitian_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat, Matrix<BaseType<T
   DLAF_ASSERT(single_tile_per_block(eigenvalues), eigenvalues);
   DLAF_ASSERT(single_tile_per_block(eigenvectors), eigenvectors);
   DLAF_ASSERT(eigenvalue_index_begin == 0, eigenvalue_index_begin);
-  DLAF_ASSERT(eigenvalue_index_end >= eigenvalue_index_begin, eigenvalue_index_end, eigenvalue_index_begin);
+  DLAF_ASSERT(eigenvalue_index_end >= eigenvalue_index_begin, eigenvalue_index_end,
+              eigenvalue_index_begin);
   DLAF_ASSERT(eigenvalue_index_end <= mat.size().rows(), eigenvalue_index_end, mat.size().rows());
 
   eigensolver::internal::Eigensolver<B, D, T>::call(uplo, mat, eigenvalues, eigenvectors,
@@ -233,7 +234,8 @@ void hermitian_eigensolver(comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix
   DLAF_ASSERT(single_tile_per_block(eigenvalues), eigenvalues);
   DLAF_ASSERT(single_tile_per_block(eigenvectors), eigenvectors);
   DLAF_ASSERT(eigenvalue_index_begin == 0, eigenvalue_index_begin);
-  DLAF_ASSERT(eigenvalue_index_end >= eigenvalue_index_begin, eigenvalue_index_end, eigenvalue_index_begin);
+  DLAF_ASSERT(eigenvalue_index_end >= eigenvalue_index_begin, eigenvalue_index_end,
+              eigenvalue_index_begin);
   DLAF_ASSERT(eigenvalue_index_end <= mat.size().rows(), eigenvalue_index_end, mat.size().rows());
 
   eigensolver::internal::Eigensolver<B, D, T>::call(grid, uplo, mat, eigenvalues, eigenvectors,

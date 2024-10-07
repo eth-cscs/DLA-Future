@@ -1,18 +1,17 @@
-ARG BUILD_IMAGE
-ARG DEPLOY_BASE_IMAGE
+ARG DEPS_IMAGE
+FROM $DEPS_IMAGE
 
-# This is the folder where the project is built
+LABEL com.jfrog.artifactory.retention.maxDays="7"
+LABEL com.jfrog.artifactory.retention.maxCount="10"
+
+# Directory where the project is built
 ARG BUILD=/DLA-Future-build
-# This is where we copy the sources to
+# Directory where the miniapps are built as separate project
+ARG BUILD_MINIAPP=/DLA-Future-miniapp-build
+# Directory where the sources are copied to
 ARG SOURCE=/DLA-Future
-# Where a bunch of shared libs live
-ARG DEPLOY=/root/DLA-Future.bundle
-
-FROM $BUILD_IMAGE as builder
-
-ARG BUILD
-ARG SOURCE
-ARG DEPLOY
+# Directory for some helper executables
+ARG BIN=/DLA-Future-build/bin
 
 # Build DLA-Future
 COPY . ${SOURCE}
@@ -25,94 +24,23 @@ RUN spack repo rm --scope site dlaf && \
     spack repo add ${SOURCE}/spack && \
     spack -e ci develop --no-clone --path ${SOURCE} --build-directory ${BUILD} dla-future@master && \
     spack -e ci concretize -f && \
-    spack -e ci --config "config:flags:keep_werror:all" install --jobs ${NUM_PROCS} --keep-stage --verbose
+    spack -e ci --config "config:flags:keep_werror:all" install --jobs ${NUM_PROCS} --keep-stage --verbose && \
+    find ${BUILD} -name CMakeFiles -exec rm -rf {} +
 
 # Test deployment with miniapps as independent project
-RUN pushd ${SOURCE}/miniapp && \
-    mkdir build-miniapps && cd build-miniapps && \
+RUN mkdir ${BUILD_MINIAPP} && cd ${BUILD_MINIAPP} && \
     spack -e ci build-env dla-future@master -- \
-    bash -c "cmake -DCMAKE_PREFIX_PATH=`spack -e ci location -i dla-future` .. && make -j ${NUM_PROCS}" && \
-    popd
+    bash -c "cmake -DCMAKE_PREFIX_PATH=`spack -e ci location -i dla-future` ${SOURCE}/miniapp && make -j ${NUM_PROCS}"
 
-# Prune and bundle binaries
-RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
-    export TEST_BINARIES=`PATH=${SOURCE}/ci:$PATH ctest --show-only=json-v1 | jq '.tests | map(.command | .[] | select(contains("check-threads") | not)) | .[]' | tr -d \"` && \
-    LIBASAN=$(find /usr/lib -name libclang_rt.asan-x86_64.so) && \
-    if [[ -n "${LIBASAN}" ]]; then export LD_LIBRARY_PATH=$(dirname ${LIBASAN}):${LD_LIBRARY_PATH}; fi && \
-    echo "Binary sizes:" && \
-    ls -lh ${TEST_BINARIES} && \
-    ls -lh src/lib* && \
-    libtree -d ${DEPLOY} ${TEST_BINARIES} && \
-    rm -rf ${DEPLOY}/usr/bin && \
-    libtree -d ${DEPLOY} $(which ctest addr2line) && \
-    cp -L ${SOURCE}/ci/{mpi-ctest,check-threads} ${DEPLOY}/usr/bin && \
-    echo "$TEST_BINARIES" | xargs -I{file} find -samefile {file} -exec cp --parents '{}' ${BUILD}-tmp ';' && \
-    find -name CTestTestfile.cmake -exec cp --parents '{}' ${BUILD}-tmp ';' && \
-    rm -rf ${BUILD} && \
-    mv ${BUILD}-tmp ${BUILD}
-
-# Deploy MKL separately, since it dlopen's some libs
-ARG USE_MKL=ON
-RUN if [ "$USE_MKL" = "ON" ]; then \
-      export MKL_LIB=$(dirname $(find $(spack location -i intel-oneapi-mkl) -name libmkl_core.so)) && \
-      libtree -d ${DEPLOY} \
-      ${MKL_LIB}/libmkl_avx2.so.2 \
-      ${MKL_LIB}/libmkl_avx512.so.2 \
-      ${MKL_LIB}/libmkl_core.so \
-      ${MKL_LIB}/libmkl_def.so.2 \
-      ${MKL_LIB}/libmkl_intel_thread.so \
-      ${MKL_LIB}/libmkl_mc3.so.2 \
-      ${MKL_LIB}/libmkl_sequential.so \
-      ${MKL_LIB}/libmkl_tbb_thread.so \
-      ${MKL_LIB}/libmkl_vml_avx2.so.2 \
-      ${MKL_LIB}/libmkl_vml_avx512.so.2 \
-      ${MKL_LIB}/libmkl_vml_cmpt.so.2 \
-      ${MKL_LIB}/libmkl_vml_def.so.2 \
-      ${MKL_LIB}/libmkl_vml_mc3.so.2 ; \
-    fi
-
-# Deploy Extra RocBlas files separately.
-ARG USE_ROCBLAS=OFF
-RUN mkdir ${DEPLOY}/usr/lib/rocblas; \
-    if [ "$USE_ROCBLAS" = "ON" ]; then \
-      cp -r `spack -e ci location -i rocblas`/lib/rocblas/library ${DEPLOY}/usr/lib/rocblas ; \
-    fi
-
-# Multistage build, this is the final small image
-FROM $DEPLOY_BASE_IMAGE
-
-# set jfrog autoclean policy
-LABEL com.jfrog.artifactory.retention.maxDays="7"
-LABEL com.jfrog.artifactory.retention.maxCount="10"
-
-ENV DEBIAN_FRONTEND noninteractive
-
-ARG BUILD
-ARG DEPLOY
-
-ARG EXTRA_APTGET_DEPLOY
-# glibc-tools is needed for libSegFault on ubuntu:22.04
-# jq, strace are needed for check-threads
-# tzdata is needed to print correct time
-RUN apt-get update -qq && \
-    apt-get install -qq -y --no-install-recommends \
-      ${EXTRA_APTGET_DEPLOY} \
-      glibc-tools jq strace \
-      tzdata && \
-    rm -rf /var/lib/apt/lists/*
-
-COPY --from=builder ${BUILD} ${BUILD}
-COPY --from=builder ${DEPLOY} ${DEPLOY}
+RUN mkdir -p ${BIN} && cp -L ${SOURCE}/ci/{mpi-ctest,check-threads} ${BIN}
 
 # Make it easy to call our binaries.
-ENV PATH="${DEPLOY}/usr/bin:$PATH"
+ENV PATH="${BIN}:$PATH"
 ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
 ENV NVIDIA_REQUIRE_CUDA "cuda>=10.2"
 
 # Automatically print stacktraces on segfault
 ENV LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so
-
-RUN echo "${DEPLOY}/usr/lib/" > /etc/ld.so.conf.d/dlaf.conf && ldconfig
 
 WORKDIR ${BUILD}

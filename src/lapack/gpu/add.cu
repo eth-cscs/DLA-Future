@@ -32,6 +32,20 @@ __device__ inline void addAlpha(const T& alpha, const T& a, T& b) {
   b = b + alpha * a;
 }
 
+#ifdef DLAF_WITH_HIP
+template <>
+__device__ inline void addAlpha<hipFloatComplex>(const hipFloatComplex& alpha, const hipFloatComplex& a,
+                                                 hipFloatComplex& b) {
+  b = b + hipCmulf(alpha, a);
+}
+
+template <>
+__device__ inline void addAlpha<hipDoubleComplex>(const hipDoubleComplex& alpha,
+                                                  const hipDoubleComplex& a, hipDoubleComplex& b) {
+  b = b + hipCmul(alpha, a);
+}
+#endif
+
 template <class T>
 __device__ inline void sum(const T& /*alpha*/, const T& a, T& b) {
   b = b + a;

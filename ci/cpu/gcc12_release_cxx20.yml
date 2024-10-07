@@ -9,7 +9,7 @@ cpu gcc12 cxx20 release deps:
     CXXSTD: 20
     SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
     USE_MKL: "ON"
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc12-release/build
+    DEPS_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc12-release/deps
 
 cpu gcc12 cxx20 release build:
   extends:
@@ -18,7 +18,7 @@ cpu gcc12 cxx20 release build:
   needs:
     - cpu gcc12 cxx20 release deps
   variables:
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc12-cxx20-release/deploy:$CI_COMMIT_SHA
+    DLAF_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc12-cxx20-release/dlaf:$CI_COMMIT_SHA
 
 cpu gcc12 cxx20 release test:
   extends: .run_common

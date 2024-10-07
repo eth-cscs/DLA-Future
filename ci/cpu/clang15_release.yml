@@ -6,9 +6,9 @@ cpu clang15 release deps:
   variables:
     EXTRA_APTGET: "clang-15"
     COMPILER: clang@15
-    USE_MKL: "ON"
     SPACK_ENVIRONMENT: ci/docker/release-cpu-serial.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cpu-clang15-release/build
+    USE_MKL: "ON"
+    DEPS_IMAGE: $CSCS_REGISTRY_PATH/cpu-clang15-release/deps
 
 cpu clang15 release build:
   extends:
@@ -17,7 +17,7 @@ cpu clang15 release build:
   needs:
     - cpu clang15 release deps
   variables:
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cpu-clang15-release/deploy:$CI_COMMIT_SHA
+    DLAF_IMAGE: $CSCS_REGISTRY_PATH/cpu-clang15-release/dlaf:$CI_COMMIT_SHA
 
 cpu clang15 release test:
   extends: .run_common

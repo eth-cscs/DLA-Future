@@ -161,7 +161,7 @@ struct EigensolverMiniapp {
 
       // wait and barrier for all ranks
       eigenvectors.waitLocalTiles();
-      DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
+      comm_grid.wait_all_communicators();
       double elapsed_time = timeit.elapsed();
 
 #ifdef DLAF_WITH_HDF5

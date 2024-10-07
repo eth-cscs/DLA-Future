@@ -133,7 +133,7 @@ struct triangularMultiplicationMiniapp {
     auto sync_barrier = [&]() {
       a.get().waitLocalTiles();
       b.get().waitLocalTiles();
-      DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
+      comm_grid.wait_all_communicators();
     };
 
     const T alpha = 2.0;

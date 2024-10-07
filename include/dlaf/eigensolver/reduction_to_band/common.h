@@ -405,8 +405,8 @@ void setupReflectorPanelV(bool has_head, const matrix::SubPanelView& panel_view,
   }
 }
 
-template <Backend B, Device D, class T>
-void trmmComputeW(matrix::Panel<Coord::Col, T, D>& w, matrix::Panel<Coord::Col, T, D>& v,
+template <Backend B, Device D, class T, Coord C, matrix::StoreTransposed S>
+void trmmComputeW(matrix::Panel<C, T, D, S>& w, matrix::Panel<C, T, D, S>& v,
                   matrix::ReadOnlyTileSender<T, D> tile_t) {
   namespace ex = pika::execution::experimental;
 

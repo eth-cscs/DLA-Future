@@ -220,7 +220,8 @@ void hemmA(comm::Index2D rank_qr, matrix::Panel<Coord::Col, T, D>& W1,
       auto getSubA = [&A, &at_view, ij_lc]() { return splitTile(A.read(ij_lc), at_view(ij_lc)); };
 
       if (is_diagonal_tile) {
-        const comm::IndexT_MPI id_qr_R = dist.template rank_global_tile<Coord::Row>(ij.col());
+        [[maybe_unused]] const comm::IndexT_MPI id_qr_R =
+            dist.template rank_global_tile<Coord::Row>(ij.col());
         DLAF_ASSERT_MODERATE(id_qr_R == rank_qr.row(), id_qr_R, rank_qr.row());
 
         hemmDiag<B>(thread_priority::high, getSubA(), W0.read(ij_lc), W1.readwrite(ij_lc));

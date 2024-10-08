@@ -11,6 +11,8 @@
 
 /// @file
 
+#include <utility>
+
 #include <blas.hh>
 
 #include <dlaf/communication/communicator_grid.h>

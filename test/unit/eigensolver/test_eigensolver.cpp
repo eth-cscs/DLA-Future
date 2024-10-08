@@ -143,19 +143,15 @@ TYPED_TEST(EigensolverTestMC, CorrectnessLocal) {
     for (auto [m, mb, b_min] : sizes) {
       getTuneParameters().eigensolver_min_band = b_min;
 
-      testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(uplo, m, mb,
-                                                                                      MatrixType::random,
-                                                                                      m);
-      testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::use_preallocated>(
-          uplo, m, mb, MatrixType::random, m);
-
-      if (m >= 2) {
+      // Test with all evals and half of them
+      for (SizeType den = 1; den <= 2; den++) {
         testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(
-            uplo, m, mb, MatrixType::random, m / 2);
+            uplo, m, mb, MatrixType::random, m / den);
         testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::use_preallocated>(
-            uplo, m, mb, MatrixType::random, m / 2);
+            uplo, m, mb, MatrixType::random, m / den);
       }
     }
+
     for (auto [m, mb, b_min] : sizes_id) {
       getTuneParameters().eigensolver_min_band = b_min;
 
@@ -171,18 +167,15 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributed) {
       for (auto [m, mb, b_min] : sizes) {
         getTuneParameters().eigensolver_min_band = b_min;
 
-        testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(
-            uplo, m, mb, MatrixType::random, m, grid);
-        testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::use_preallocated>(
-            uplo, m, mb, MatrixType::random, m, grid);
-
-        if (m >= 2) {
+        // Test with all evals and half of them
+        for (SizeType den = 1; den <= 2; den++) {
           testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(
-              uplo, m, mb, MatrixType::random, m / 2, grid);
+              uplo, m, mb, MatrixType::random, m / den, grid);
           testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::use_preallocated>(
-              uplo, m, mb, MatrixType::random, m / 2, grid);
+              uplo, m, mb, MatrixType::random, m / den, grid);
         }
       }
+
       for (auto [m, mb, b_min] : sizes_id) {
         getTuneParameters().eigensolver_min_band = b_min;
 
@@ -198,18 +191,15 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessLocal) {
   for (auto uplo : blas_uplos) {
     for (auto [m, mb, b_min] : sizes) {
       getTuneParameters().eigensolver_min_band = b_min;
-      testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(
-          uplo, m, mb, MatrixType::random, m);
-      testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::use_preallocated>(
-          uplo, m, mb, MatrixType::random, m);
-
-      if (m >= 2) {
+      // Test with all evals and half of them
+      for (SizeType den = 1; den <= 2; den++) {
         testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(
-            uplo, m, mb, MatrixType::random, m / 2);
+            uplo, m, mb, MatrixType::random, m / den);
         testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::use_preallocated>(
-            uplo, m, mb, MatrixType::random, m / 2);
+            uplo, m, mb, MatrixType::random, m / den);
       }
     }
+
     for (auto [m, mb, b_min] : sizes_id) {
       getTuneParameters().eigensolver_min_band = b_min;
       testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(
@@ -223,18 +213,15 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessDistributed) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
         getTuneParameters().eigensolver_min_band = b_min;
-        testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(
-            uplo, m, mb, MatrixType::random, m, grid);
-        testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::use_preallocated>(
-            uplo, m, mb, MatrixType::random, m, grid);
-
-        if (m >= 2) {
+        // Test with all evals and half of them
+        for (SizeType den = 1; den <= 2; den++) {
           testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(
-              uplo, m, mb, MatrixType::random, m / 2, grid);
+              uplo, m, mb, MatrixType::random, m / den, grid);
           testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::use_preallocated>(
-              uplo, m, mb, MatrixType::random, m / 2, grid);
+              uplo, m, mb, MatrixType::random, m / den, grid);
         }
       }
+
       for (auto [m, mb, b_min] : sizes_id) {
         getTuneParameters().eigensolver_min_band = b_min;
         testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(

@@ -508,6 +508,13 @@ using CAReductionToBandTestMC = ReductionToBandTest<T>;
 
 TYPED_TEST_SUITE(CAReductionToBandTestMC, MatrixElementTypes);
 
+#ifdef DLAF_WITH_GPU
+template <class T>
+using CAReductionToBandTestGPU = ReductionToBandTest<T>;
+
+TYPED_TEST_SUITE(CAReductionToBandTestGPU, MatrixElementTypes);
+#endif
+
 template <class T>
 MatrixLocal<T> allGatherT(Matrix<const T, Device::CPU>& source, comm::CommunicatorGrid& comm_grid) {
   // TODO tranposed distribution
@@ -763,7 +770,10 @@ void testCAReductionToBand(comm::CommunicatorGrid& grid, const LocalElementSize 
   ASSERT_EQ(taus_1st.size().rows(), k_reflectors);
   ASSERT_EQ(taus_1st.size().cols(), grid.size().rows());
 
-  auto mat_hh_2nd = allGather(blas::Uplo::General, red2band_result.hh_2nd, grid);
+  auto mat_hh_2nd = [&]() {
+    MatrixMirror<const T, Device::CPU, D> hh_2nd(red2band_result.hh_2nd);
+    return allGather(blas::Uplo::General, hh_2nd.get(), grid);
+  }();
 
   auto taus_2nd = allGatherTaus(k_reflectors, red2band_result.taus_2nd, grid);
   ASSERT_EQ(taus_2nd.size(), k_reflectors);
@@ -784,3 +794,16 @@ TYPED_TEST(CAReductionToBandTestMC, CorrectnessDistributed) {
     }
   }
 }
+
+#ifdef DLAF_WITH_GPU
+TYPED_TEST(CAReductionToBandTestGPU, CorrectnessDistributed) {
+  for (auto&& comm_grid : this->commGrids()) {
+    for (const auto& [size, block_size, band_size] : configs) {
+      for (auto input_matrix_structure : {InputMatrixStructure::full}) {
+        testCAReductionToBand<TypeParam, Device::GPU, Backend::GPU>(comm_grid, size, block_size,
+                                                                    band_size, input_matrix_structure);
+      }
+    }
+  }
+}
+#endif

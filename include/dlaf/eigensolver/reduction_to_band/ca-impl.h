@@ -38,6 +38,10 @@
 #include <dlaf/sender/transform.h>
 #include <dlaf/sender/transform_mpi.h>
 
+#ifdef DLAF_WITH_GPU
+#include <whip.hpp>
+#endif
+
 namespace dlaf::eigensolver::internal {
 
 namespace ca_red2band {
@@ -512,6 +516,100 @@ void her2k_2nd(const SizeType i_end, const SizeType j_end, const matrix::SubMatr
   }
 }
 
+template <class T, Device D>
+struct Helper;
+
+template <class T>
+struct Helper<T, Device::CPU> {
+  void compute_panel_1st(Matrix<T, Device::CPU>& heads,
+                         matrix::ReadWriteTileSender<T, Device::CPU> tile_tau,
+                         const matrix::SubPanelView& panel_view) {
+    using red2band::local::computePanelReflectors;
+    computePanelReflectors(heads, std::move(tile_tau), panel_view);
+  }
+
+  void compute_panel_2nd(matrix::Panel<Coord::Col, T, Device::CPU>& heads,
+                         matrix::ReadWriteTileSender<T, Device::CPU> tile_tau,
+                         const matrix::SubPanelView& panel_view) {
+    using red2band::local::computePanelReflectors;
+    computePanelReflectors(heads, std::move(tile_tau), panel_view);
+  }
+
+  static void prepare_2nd_panel(const matrix::Tile<const T, Device::CPU>& head_in,
+                                matrix::Tile<T, Device::CPU>&& head, const bool multi_tile) {
+    // TODO FIXME workaround for over-sized panel
+    if (head_in.size() != head.size())
+      tile::internal::set0(head);
+
+    // TODO FIXME change copy and if possible just upper
+    // matrix::internal::copy(head_in, head);
+    lapack::lacpy(blas::Uplo::General, head_in.size().rows(), head_in.size().cols(), head_in.ptr(),
+                  head_in.ld(), head.ptr(), head.ld());
+
+    if (multi_tile)
+      lapack::laset(blas::Uplo::Lower, head.size().rows() - 1, head.size().cols(), T(0), T(0),
+                    head.ptr({1, 0}), head.ld());
+  }
+
+  static void copy_back_band(const matrix::Tile<const T, Device::CPU>& hoh,
+                             matrix::Tile<T, Device::CPU> hoh_a) {
+    common::internal::SingleThreadedBlasScope single;
+    lapack::lacpy(blas::Uplo::Upper, hoh.size().rows(), hoh.size().cols(), hoh.ptr(), hoh.ld(),
+                  hoh_a.ptr(), hoh_a.ld());
+  }
+
+  static void copy_back_hh_head_2nd(const matrix::Tile<const T, Device::CPU>& head,
+                                    matrix::Tile<T, Device::CPU> head_a) {
+    common::internal::SingleThreadedBlasScope single;
+    lapack::laset(blas::Uplo::Upper, head_a.size().rows(), head_a.size().cols(), T(0), T(1),
+                  head_a.ptr(), head_a.ld());
+    lapack::lacpy(blas::Uplo::Lower, head.size().rows() - 1, head.size().cols() - 1, head.ptr({1, 0}),
+                  head.ld(), head_a.ptr({1, 0}), head_a.ld());
+  }
+
+  static void copy_back_hh_2nd(const matrix::Tile<const T, Device::CPU>& head,
+                               matrix::Tile<T, Device::CPU> head_a) {
+    common::internal::SingleThreadedBlasScope single;
+    lapack::lacpy(blas::Uplo::General, head.size().rows(), head.size().cols(), head.ptr(), head.ld(),
+                  head_a.ptr(), head_a.ld());
+  }
+};
+
+#ifdef DLAF_WITH_GPU
+template <class T>
+struct Helper<T, Device::GPU> {
+  void compute_panel_1st(Matrix<T, Device::GPU>& heads,
+                         matrix::ReadWriteTileSender<T, Device::CPU> tile_tau,
+                         const matrix::SubPanelView& panel_view) {
+    dlaf::internal::silenceUnusedWarningFor(heads, tile_tau, panel_view);
+  }
+
+  void compute_panel_2nd(matrix::Panel<Coord::Col, T, Device::GPU>& heads,
+                         matrix::ReadWriteTileSender<T, Device::CPU> tile_tau,
+                         const matrix::SubPanelView& panel_view) {
+    dlaf::internal::silenceUnusedWarningFor(heads, tile_tau, panel_view);
+  }
+
+  static void prepare_2nd_panel(const matrix::Tile<const T, Device::GPU>&,
+                                const matrix::Tile<T, Device::GPU>&, const bool, whip::stream_t) {};
+
+  static void copy_back_band(const matrix::Tile<const T, Device::GPU>& hoh,
+                             const matrix::Tile<T, Device::GPU>& hoh_a, whip::stream_t) {
+    dlaf::internal::silenceUnusedWarningFor(hoh, hoh_a);
+  }
+
+  static void copy_back_hh_head_2nd(const matrix::Tile<const T, Device::GPU>& head,
+                                    const matrix::Tile<T, Device::GPU>& head_a, whip::stream_t) {
+    dlaf::internal::silenceUnusedWarningFor(head, head_a);
+  }
+
+  static void copy_back_hh_2nd(const matrix::Tile<const T, Device::GPU>& head,
+                               const matrix::Tile<T, Device::GPU>& head_a, whip::stream_t) {
+    dlaf::internal::silenceUnusedWarningFor(head, head_a);
+  }
+};
+#endif
+
 }
 
 // Distributed implementation of reduction to band
@@ -596,6 +694,8 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
   const bool is_full_band = (band_size == dist.blockSize().cols());
   DLAF_ASSERT(is_full_band, is_full_band);
 
+  ca_red2band::Helper<T, D> helper;
+
   for (SizeType j = 0; j < ntiles; ++j) {
     const SizeType i = j + 1;
     const SizeType j_lc = dist.template local_tile_from_global_tile<Coord::Col>(j);
@@ -655,8 +755,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
 
     if (rank_panel == rank.col()) {
       if (nrtiles_transf > 1) {
-        using red2band::local::computePanelReflectors;
-        computePanelReflectors(mat_a, get_tile_tau(), panel_view);
+        helper.compute_panel_1st(mat_a, get_tile_tau(), panel_view);
       }
     }
 
@@ -812,7 +911,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
 
           for (const auto& idx : ws_W1.iteratorLocal())
             ex::start_detached(ex::when_all(ws_W1.read(idx), ws_W3.readwrite(idx)) |
-                               matrix::copy(di::Policy<Backend::MC>{}));
+                               matrix::copy(di::Policy<B>{}));
 
           // W1 -= 0.5 V W2
           red2band::local::gemmUpdateX<B, D>(ws_W3, ws_W2, ws_V);
@@ -958,23 +1057,10 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
 
         if (rank.row() == rank_head) {
           // copy - set - send
-          ex::start_detached(ex::when_all(mat_a.read(ij_head), panel_heads.readwrite(idx_panel_head)) |
-                             di::transform(di::Policy<B>(), [=](const auto& head_in, auto&& head) {
-                               // TODO FIXME workaround for over-sized panel
-                               if (head_in.size() != head.size())
-                                 tile::internal::set0(head);
-
-                               // TODO FIXME change copy and if possible just upper
-                               // matrix::internal::copy(head_in, head);
-                               lapack::lacpy(blas::Uplo::General, head_in.size().rows(),
-                                             head_in.size().cols(), head_in.ptr(), head_in.ld(),
-                                             head.ptr(), head.ld());
-
-                               if (nrtiles_transf > 1)
-                                 lapack::laset(blas::Uplo::Lower, head.size().rows() - 1,
-                                               head.size().cols(), T(0), T(0), head.ptr({1, 0}),
-                                               head.ld());
-                             }));
+          DLAF_ASSERT(nrtiles_transf > 0, nrtiles_transf);
+          ex::start_detached(di::whenAllLift(mat_a.read(ij_head), panel_heads.readwrite(idx_panel_head),
+                                             nrtiles_transf > 1) |
+                             di::transform(di::Policy<B>(), helper.prepare_2nd_panel));
           ex::start_detached(schedule_bcast_send(mpi_col_chain.exclusive(),
                                                  panel_heads.read(idx_panel_head)));
         }
@@ -986,8 +1072,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
       }
 
       // QR local on heads
-      using red2band::local::computePanelReflectors;
-      computePanelReflectors(panel_heads, get_tile_tau2(), panel_heads_view);
+      helper.compute_panel_2nd(panel_heads, get_tile_tau2(), panel_heads_view);
 
       // copy back data
       {
@@ -996,11 +1081,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
         const GlobalTileIndex ij_hoh(panel_view.offset().row(), j);
         if (rank.row() == dist.template rank_global_tile<Coord::Row>(ij_hoh.row()))
           ex::start_detached(ex::when_all(panel_heads.read({0, 0}), mat_a.readwrite(ij_hoh)) |
-                             di::transform(di::Policy<B>(), [](const auto& hoh, auto&& hoh_a) {
-                               common::internal::SingleThreadedBlasScope single;
-                               lapack::lacpy(blas::Uplo::Upper, hoh.size().rows(), hoh.size().cols(),
-                                             hoh.ptr(), hoh.ld(), hoh_a.ptr(), hoh_a.ld());
-                             }));
+                             di::transform(di::Policy<B>(), helper.copy_back_band));
 
         // Note: not all ranks might have an head
         if (rank_has_head_row) {
@@ -1016,24 +1097,11 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
 
           if (rank.row() == rank_hoh) {
             ex::start_detached(std::move(sender_heads) |
-                               di::transform(di::Policy<B>(), [](const auto& head, auto&& head_a) {
-                                 common::internal::SingleThreadedBlasScope single;
-                                 lapack::laset(blas::Uplo::Upper, head_a.size().rows(),
-                                               head_a.size().cols(), T(0), T(1), head_a.ptr(),
-                                               head_a.ld());
-                                 lapack::lacpy(blas::Uplo::Lower, head.size().rows() - 1,
-                                               head.size().cols() - 1, head.ptr({1, 0}), head.ld(),
-                                               head_a.ptr({1, 0}), head_a.ld());
-                               }));
+                               di::transform(di::Policy<B>(), helper.copy_back_hh_head_2nd));
           }
           else {
             ex::start_detached(std::move(sender_heads) |
-                               di::transform(di::Policy<B>(), [](const auto& head, auto&& head_a) {
-                                 common::internal::SingleThreadedBlasScope single;
-                                 lapack::lacpy(blas::Uplo::General, head.size().rows(),
-                                               head.size().cols(), head.ptr(), head.ld(), head_a.ptr(),
-                                               head_a.ld());
-                               }));
+                               di::transform(di::Policy<B>(), helper.copy_back_hh_2nd));
           }
         }
       }
@@ -1063,21 +1131,12 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
 
         if (rank_has_head_row) {
           // TODO CHECK not fully sure why it is needed after 1st step skip
-          {
-            const LocalTileIndex idx_panel_head(0, 0);
-            const GlobalTileIndex ij_head(panel_view.offset().row(), j);
-            ex::start_detached(ex::when_all(panel_heads.readwrite(idx_panel_head)) |
-                               di::transform(di::Policy<B>(), [=](auto&& head) {
-                                 lapack::laset(blas::Uplo::Upper, head.size().rows(), head.size().cols(),
-                                               T(0), T(1), head.ptr({0, 0}), head.ld());
-                               }));
-          }
+          ex::start_detached(di::whenAllLift(blas::Uplo::Upper, T(0), T(1),
+                                             panel_heads.readwrite({0, 0})) |
+                             tile::laset(di::Policy<B>()));
 
           ex::start_detached(ex::when_all(mat_hh_2nd.read(ij_head), ws_V.readwrite(ij_vhh_lc)) |
-                             di::transform(di::Policy<B>(), [=](const auto& head_in, auto&& head) {
-                               lapack::lacpy(blas::Uplo::General, head.size().rows(), head.size().cols(),
-                                             head_in.ptr(), head_in.ld(), head.ptr(), head.ld());
-                             }));
+                             dlaf::matrix::copy(di::Policy<B>()));
         }
 
         using factorization::internal::computeTFactor;

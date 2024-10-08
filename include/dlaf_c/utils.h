@@ -30,6 +30,14 @@ typedef float complex dlaf_complex_c;   ///< Single precision complex number
 typedef double complex dlaf_complex_z;  ///< Double precision complex number
 #endif
 
+#ifdef __cplusplus
+#include <dlaf/types.h>
+using dlaf::SizeType;
+#else
+#include <stddef.h>
+typedef ptrdiff_t SizeType;
+#endif
+
 #include <dlaf_c/desc.h>
 
 /// Make a DLA-Future descriptor from a ScaLAPACK descriptor

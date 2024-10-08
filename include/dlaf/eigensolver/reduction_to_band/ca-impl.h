@@ -521,11 +521,13 @@ struct Helper;
 
 template <class T>
 struct Helper<T, Device::CPU> {
-  void compute_panel_1st(Matrix<T, Device::CPU>& heads,
+  Helper(const std::size_t, matrix::Distribution, matrix::Distribution) {}
+
+  void compute_panel_1st(Matrix<T, Device::CPU>& mat_a,
                          matrix::ReadWriteTileSender<T, Device::CPU> tile_tau,
                          const matrix::SubPanelView& panel_view) {
     using red2band::local::computePanelReflectors;
-    computePanelReflectors(heads, std::move(tile_tau), panel_view);
+    computePanelReflectors(mat_a, std::move(tile_tau), panel_view);
   }
 
   void compute_panel_2nd(matrix::Panel<Coord::Col, T, Device::CPU>& heads,
@@ -578,34 +580,125 @@ struct Helper<T, Device::CPU> {
 #ifdef DLAF_WITH_GPU
 template <class T>
 struct Helper<T, Device::GPU> {
-  void compute_panel_1st(Matrix<T, Device::GPU>& heads,
+  Helper(const std::size_t n_workspaces, matrix::Distribution dist_a, matrix::Distribution dist_panels)
+      : panels_v(n_workspaces, dist_a), panels_heads(n_workspaces, dist_panels) {}
+
+  void compute_panel_1st(Matrix<T, Device::GPU>& mat_a,
                          matrix::ReadWriteTileSender<T, Device::CPU> tile_tau,
                          const matrix::SubPanelView& panel_view) {
-    dlaf::internal::silenceUnusedWarningFor(heads, tile_tau, panel_view);
+    // Note:
+    // - copy panel_view from GPU to CPU
+    // - computePanelReflectors on CPU (on a matrix like, with just a panel)
+    // - copy back matrix "panel" from CPU to GPU
+
+    auto& ws_panel = panels_v.nextResource();
+
+    copyToCPU(panel_view, mat_a, ws_panel);
+
+    using red2band::local::computePanelReflectors;
+    computePanelReflectors(ws_panel, std::move(tile_tau), panel_view);
+
+    copyFromCPU(panel_view, ws_panel, mat_a);
   }
 
   void compute_panel_2nd(matrix::Panel<Coord::Col, T, Device::GPU>& heads,
                          matrix::ReadWriteTileSender<T, Device::CPU> tile_tau,
                          const matrix::SubPanelView& panel_view) {
-    dlaf::internal::silenceUnusedWarningFor(heads, tile_tau, panel_view);
+    // Note:
+    // - copy panel_view from GPU to CPU
+    // - computePanelReflectors on CPU (on a matrix like, with just a panel)
+    // - copy back matrix "panel" from CPU to GPU
+
+    auto& ws_heads = panels_heads.nextResource();
+
+    copyToCPU(panel_view, heads, ws_heads);
+
+    using red2band::local::computePanelReflectors;
+    computePanelReflectors(ws_heads, std::move(tile_tau), panel_view);
+
+    copyFromCPU(panel_view, ws_heads, heads);
   }
 
-  static void prepare_2nd_panel(const matrix::Tile<const T, Device::GPU>&,
-                                const matrix::Tile<T, Device::GPU>&, const bool, whip::stream_t) {};
+  static void prepare_2nd_panel(const matrix::Tile<const T, Device::GPU>& head_in,
+                                const matrix::Tile<T, Device::GPU>& head, const bool multi_tile,
+                                whip::stream_t stream) {
+    // TODO FIXME workaround for over-sized panel
+    if (head_in.size() != head.size())
+      tile::internal::set0(head, stream);
+
+    // TODO FIXME change copy and if possible just upper
+    // matrix::internal::copy(head_in, head);
+    gpulapack::lacpy(blas::Uplo::General, head_in.size().rows(), head_in.size().cols(), head_in.ptr(),
+                     head_in.ld(), head.ptr(), head.ld(), stream);
+
+    if (multi_tile)
+      gpulapack::laset(blas::Uplo::Lower, head.size().rows() - 1, head.size().cols(), T(0), T(0),
+                       head.ptr({1, 0}), head.ld(), stream);
+  }
 
   static void copy_back_band(const matrix::Tile<const T, Device::GPU>& hoh,
-                             const matrix::Tile<T, Device::GPU>& hoh_a, whip::stream_t) {
-    dlaf::internal::silenceUnusedWarningFor(hoh, hoh_a);
+                             const matrix::Tile<T, Device::GPU>& hoh_a, whip::stream_t stream) {
+    common::internal::SingleThreadedBlasScope single;
+    gpulapack::lacpy(blas::Uplo::Upper, hoh.size().rows(), hoh.size().cols(), hoh.ptr(), hoh.ld(),
+                     hoh_a.ptr(), hoh_a.ld(), stream);
   }
 
   static void copy_back_hh_head_2nd(const matrix::Tile<const T, Device::GPU>& head,
-                                    const matrix::Tile<T, Device::GPU>& head_a, whip::stream_t) {
-    dlaf::internal::silenceUnusedWarningFor(head, head_a);
+                                    const matrix::Tile<T, Device::GPU>& head_a, whip::stream_t stream) {
+    common::internal::SingleThreadedBlasScope single;
+    dlaf::tile::internal::laset(blas::Uplo::Upper, T(0), T(1), head_a, stream);
+    gpulapack::lacpy(blas::Uplo::Lower, head.size().rows() - 1, head.size().cols() - 1, head.ptr({1, 0}),
+                     head.ld(), head_a.ptr({1, 0}), head_a.ld(), stream);
   }
 
   static void copy_back_hh_2nd(const matrix::Tile<const T, Device::GPU>& head,
-                               const matrix::Tile<T, Device::GPU>& head_a, whip::stream_t) {
-    dlaf::internal::silenceUnusedWarningFor(head, head_a);
+                               const matrix::Tile<T, Device::GPU>& head_a, whip::stream_t stream) {
+    common::internal::SingleThreadedBlasScope single;
+    gpulapack::lacpy(blas::Uplo::General, head.size().rows(), head.size().cols(), head.ptr(), head.ld(),
+                     head_a.ptr(), head_a.ld(), stream);
+  }
+
+protected:
+  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panels_v;
+  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panels_heads;
+
+  template <class MatrixLike>
+  void copyToCPU(const matrix::SubPanelView panel_view, MatrixLike&& mat_a,
+                 matrix::Panel<Coord::Col, T, Device::CPU>& v) {
+    namespace ex = pika::execution::experimental;
+
+    using dlaf::internal::Policy;
+    using dlaf::matrix::internal::CopyBackend_v;
+    using pika::execution::thread_priority;
+    using pika::execution::thread_stacksize;
+
+    for (const auto& i : panel_view.iteratorLocal()) {
+      auto spec = panel_view(i);
+      auto tmp_tile = v.readwrite(i);
+      ex::start_detached(
+          ex::when_all(splitTile(mat_a.read(i), spec), splitTile(std::move(tmp_tile), spec)) |
+          matrix::copy(Policy<CopyBackend_v<Device::GPU, Device::CPU>>(thread_priority::high,
+                                                                       thread_stacksize::nostack)));
+    }
+  }
+
+  template <class MatrixLike>
+  void copyFromCPU(const matrix::SubPanelView panel_view, matrix::Panel<Coord::Col, T, Device::CPU>& v,
+                   MatrixLike& mat_a) {
+    namespace ex = pika::execution::experimental;
+
+    using dlaf::internal::Policy;
+    using dlaf::matrix::internal::CopyBackend_v;
+    using pika::execution::thread_priority;
+    using pika::execution::thread_stacksize;
+
+    for (const auto& i : panel_view.iteratorLocal()) {
+      auto spec = panel_view(i);
+      auto tile_a = mat_a.readwrite(i);
+      ex::start_detached(ex::when_all(splitTile(v.read(i), spec), splitTile(std::move(tile_a), spec)) |
+                         matrix::copy(Policy<CopyBackend_v<Device::CPU, Device::GPU>>(
+                             thread_priority::high, thread_stacksize::nostack)));
+    }
   }
 };
 #endif
@@ -694,7 +787,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
   const bool is_full_band = (band_size == dist.blockSize().cols());
   DLAF_ASSERT(is_full_band, is_full_band);
 
-  ca_red2band::Helper<T, D> helper;
+  ca_red2band::Helper<T, D> helper(n_workspaces, dist, dist_heads);
 
   for (SizeType j = 0; j < ntiles; ++j) {
     const SizeType i = j + 1;

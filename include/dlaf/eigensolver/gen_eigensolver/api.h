@@ -22,12 +22,12 @@ template <Backend backend, Device device, class T>
 struct GenEigensolver {
   static void call(blas::Uplo uplo, Matrix<T, device>& mat_a, Matrix<T, device>& mat_b,
                    Matrix<BaseType<T>, device>& eigenvalues, Matrix<T, device>& eigenvectors,
-                   const Factorization factorization, SizeType eigenvalue_index_begin,
-                   SizeType eigenvalue_index_end);
+                   const Factorization factorization, const SizeType eigenvalues_index_begin,
+                   const SizeType eigenvalues_index_end);
   static void call(comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix<T, device>& mat_a,
                    Matrix<T, device>& mat_b, Matrix<BaseType<T>, device>& eigenvalues,
                    Matrix<T, device>& eigenvectors, const Factorization factorization,
-                   SizeType eigenvalue_index_begin, SizeType eigenvalue_index_end);
+                   const SizeType eigenvalues_index_begin, const SizeType eigenvalues_index_end);
 };
 
 // ETI

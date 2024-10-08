@@ -53,14 +53,14 @@ namespace dlaf {
 /// @pre @p eigenvectors has blocksize (NB x NB)
 /// @pre @p eigenvectors has tilesize (NB x NB)
 ///
-/// @param[in] eigenvalue_index_begin is the index of the first eigenvalue to compute
-/// @pre @p eigenvalue_index_begin == 0
-/// @param[in] eigenvalue_index_end is the index of the last eigenvalue to compute (exclusive)
-/// @pre @p eigenvalue_index_begin <= eigenvalue_index_end < N
+/// @param[in] eigenvalues_index_begin is the index of the first eigenvalue to compute
+/// @pre @p eigenvalues_index_begin == 0
+/// @param[in] eigenvalues_index_end is the index of the last eigenvalue to compute (exclusive)
+/// @pre @p eigenvalues_index_begin <= eigenvalues_index_end < N
 template <Backend B, Device D, class T>
 void hermitian_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat, Matrix<BaseType<T>, D>& eigenvalues,
-                           Matrix<T, D>& eigenvectors, SizeType eigenvalue_index_begin,
-                           SizeType eigenvalue_index_end) {
+                           Matrix<T, D>& eigenvectors, const SizeType eigenvalues_index_begin,
+                           const SizeType eigenvalues_index_end) {
   DLAF_ASSERT(matrix::local_matrix(mat), mat);
   DLAF_ASSERT(square_size(mat), mat);
   DLAF_ASSERT(square_blocksize(mat), mat);
@@ -76,13 +76,13 @@ void hermitian_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat, Matrix<BaseType<T
   DLAF_ASSERT(single_tile_per_block(mat), mat);
   DLAF_ASSERT(single_tile_per_block(eigenvalues), eigenvalues);
   DLAF_ASSERT(single_tile_per_block(eigenvectors), eigenvectors);
-  DLAF_ASSERT(eigenvalue_index_begin == 0, eigenvalue_index_begin);
-  DLAF_ASSERT(eigenvalue_index_end >= eigenvalue_index_begin, eigenvalue_index_end,
-              eigenvalue_index_begin);
-  DLAF_ASSERT(eigenvalue_index_end <= mat.size().rows(), eigenvalue_index_end, mat.size().rows());
+  DLAF_ASSERT(eigenvalues_index_begin == 0, eigenvalues_index_begin);
+  DLAF_ASSERT(eigenvalues_index_end >= eigenvalues_index_begin, eigenvalues_index_end,
+              eigenvalues_index_begin);
+  DLAF_ASSERT(eigenvalues_index_end <= mat.size().rows(), eigenvalues_index_end, mat.size().rows());
 
   eigensolver::internal::Eigensolver<B, D, T>::call(uplo, mat, eigenvalues, eigenvectors,
-                                                    eigenvalue_index_begin, eigenvalue_index_end);
+                                                    eigenvalues_index_begin, eigenvalues_index_end);
 }
 
 /// Standard Eigensolver.
@@ -139,21 +139,21 @@ void hermitian_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat, Matrix<BaseType<T
 /// @pre @p mat has blocksize (NB x NB)
 /// @pre @p mat has tilesize (NB x NB)
 ///
-/// @param[in] eigenvalue_index_begin is the index of the first eigenvalue to compute
-/// @pre @p eigenvalue_index_begin == 0
-/// @param[in] eigenvalue_index_end is the index of the last eigenvalue to compute (exclusive)
-/// @pre @p eigenvalue_index_end < N
+/// @param[in] eigenvalues_index_begin is the index of the first eigenvalue to compute
+/// @pre @p eigenvalues_index_begin == 0
+/// @param[in] eigenvalues_index_end is the index of the last eigenvalue to compute (exclusive)
+/// @pre @p eigenvalues_index_end < N
 template <Backend B, Device D, class T>
 EigensolverResult<T, D> hermitian_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat,
-                                              SizeType eigenvalue_index_begin,
-                                              SizeType eigenvalue_index_end) {
+                                              const SizeType eigenvalues_index_begin,
+                                              const SizeType eigenvalues_index_end) {
   const SizeType size = mat.size().rows();
   matrix::Matrix<BaseType<T>, D> eigenvalues(LocalElementSize(size, 1),
                                              TileElementSize(mat.blockSize().rows(), 1));
   matrix::Matrix<T, D> eigenvectors(LocalElementSize(size, size), mat.blockSize());
 
-  hermitian_eigensolver<B, D, T>(uplo, mat, eigenvalues, eigenvectors, eigenvalue_index_begin,
-                                 eigenvalue_index_end);
+  hermitian_eigensolver<B, D, T>(uplo, mat, eigenvalues, eigenvectors, eigenvalues_index_begin,
+                                 eigenvalues_index_end);
   return {std::move(eigenvalues), std::move(eigenvectors)};
 }
 
@@ -212,14 +212,15 @@ EigensolverResult<T, D> hermitian_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat
 /// @pre @p eigenvectors has blocksize (NB x NB)
 /// @pre @p eigenvectors has tilesize (NB x NB)
 ///
-/// @param[in] eigenvalue_index_begin is the index of the first eigenvalue to compute
-/// @pre @p eigenvalue_index_begin == 0
-/// @param[in] eigenvalue_index_end is the index of the last eigenvalue to compute (exclusive)
-/// @pre @p eigenvalue_index_end < N
+/// @param[in] eigenvalues_index_begin is the index of the first eigenvalue to compute
+/// @pre @p eigenvalues_index_begin == 0
+/// @param[in] eigenvalues_index_end is the index of the last eigenvalue to compute (exclusive)
+/// @pre @p eigenvalues_index_end < N
 template <Backend B, Device D, class T>
 void hermitian_eigensolver(comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix<T, D>& mat,
                            Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors,
-                           SizeType eigenvalue_index_begin, SizeType eigenvalue_index_end) {
+                           const SizeType eigenvalues_index_begin,
+                           const SizeType eigenvalues_index_end) {
   DLAF_ASSERT(matrix::equal_process_grid(mat, grid), mat);
   DLAF_ASSERT(square_size(mat), mat);
   DLAF_ASSERT(square_blocksize(mat), mat);
@@ -235,13 +236,13 @@ void hermitian_eigensolver(comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix
   DLAF_ASSERT(single_tile_per_block(mat), mat);
   DLAF_ASSERT(single_tile_per_block(eigenvalues), eigenvalues);
   DLAF_ASSERT(single_tile_per_block(eigenvectors), eigenvectors);
-  DLAF_ASSERT(eigenvalue_index_begin == 0, eigenvalue_index_begin);
-  DLAF_ASSERT(eigenvalue_index_end >= eigenvalue_index_begin, eigenvalue_index_end,
-              eigenvalue_index_begin);
-  DLAF_ASSERT(eigenvalue_index_end <= mat.size().rows(), eigenvalue_index_end, mat.size().rows());
+  DLAF_ASSERT(eigenvalues_index_begin == 0, eigenvalues_index_begin);
+  DLAF_ASSERT(eigenvalues_index_end >= eigenvalues_index_begin, eigenvalues_index_end,
+              eigenvalues_index_begin);
+  DLAF_ASSERT(eigenvalues_index_end <= mat.size().rows(), eigenvalues_index_end, mat.size().rows());
 
   eigensolver::internal::Eigensolver<B, D, T>::call(grid, uplo, mat, eigenvalues, eigenvectors,
-                                                    eigenvalue_index_begin, eigenvalue_index_end);
+                                                    eigenvalues_index_begin, eigenvalues_index_end);
 }
 
 /// Standard Eigensolver.
@@ -302,21 +303,21 @@ void hermitian_eigensolver(comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix
 /// @pre @p mat has blocksize (NB x NB)
 /// @pre @p mat has tilesize (NB x NB)
 ///
-/// @param[in] eigenvalue_index_begin is the index of the first eigenvalue to compute
-/// @pre @p eigenvalue_index_begin == 0
-/// @param[in] eigenvalue_index_end is the index of the last eigenvalue to compute (exclusive)
-/// @pre @p eigenvalue_index_end < N
+/// @param[in] eigenvalues_index_begin is the index of the first eigenvalue to compute
+/// @pre @p eigenvalues_index_begin == 0
+/// @param[in] eigenvalues_index_end is the index of the last eigenvalue to compute (exclusive)
+/// @pre @p eigenvalues_index_end < N
 template <Backend B, Device D, class T>
 EigensolverResult<T, D> hermitian_eigensolver(comm::CommunicatorGrid& grid, blas::Uplo uplo,
-                                              Matrix<T, D>& mat, SizeType eigenvalue_index_begin,
-                                              SizeType eigenvalue_index_end) {
+                                              Matrix<T, D>& mat, const SizeType eigenvalues_index_begin,
+                                              const SizeType eigenvalues_index_end) {
   const SizeType size = mat.size().rows();
   matrix::Matrix<BaseType<T>, D> eigenvalues(LocalElementSize(size, 1),
                                              TileElementSize(mat.blockSize().rows(), 1));
   matrix::Matrix<T, D> eigenvectors(GlobalElementSize(size, size), mat.blockSize(), grid);
 
-  hermitian_eigensolver<B, D, T>(grid, uplo, mat, eigenvalues, eigenvectors, eigenvalue_index_begin,
-                                 eigenvalue_index_end);
+  hermitian_eigensolver<B, D, T>(grid, uplo, mat, eigenvalues, eigenvectors, eigenvalues_index_begin,
+                                 eigenvalues_index_end);
   return {std::move(eigenvalues), std::move(eigenvectors)};
 }
 

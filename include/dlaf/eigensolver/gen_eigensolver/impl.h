@@ -30,18 +30,19 @@ namespace dlaf::eigensolver::internal {
 template <Backend B, Device D, class T>
 void GenEigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
                                    Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors,
-                                   const Factorization factorization, SizeType eigenvalue_index_begin,
-                                   SizeType eigenvalue_index_end) {
+                                   const Factorization factorization,
+                                   const SizeType eigenvalues_index_begin,
+                                   const SizeType eigenvalues_index_end) {
   if (factorization == Factorization::do_factorization) {
     cholesky_factorization<B>(uplo, mat_b);
   }
   generalized_to_standard<B>(uplo, mat_a, mat_b);
 
-  hermitian_eigensolver<B>(uplo, mat_a, eigenvalues, eigenvectors, eigenvalue_index_begin,
-                           eigenvalue_index_end);
+  hermitian_eigensolver<B>(uplo, mat_a, eigenvalues, eigenvectors, eigenvalues_index_begin,
+                           eigenvalues_index_end);
 
-  auto spec = matrix::util::internal::sub_matrix_spec_slice_cols(eigenvectors, eigenvalue_index_begin,
-                                                                 eigenvalue_index_end);
+  auto spec = matrix::util::internal::sub_matrix_spec_slice_cols(eigenvectors, eigenvalues_index_begin,
+                                                                 eigenvalues_index_end);
   matrix::internal::MatrixRef eigenvectors_ref(eigenvectors, spec);
   triangular_solver<B>(blas::Side::Left, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1), mat_b,
                        eigenvectors_ref);
@@ -51,7 +52,8 @@ template <Backend B, Device D, class T>
 void GenEigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix<T, D>& mat_a,
                                    Matrix<T, D>& mat_b, Matrix<BaseType<T>, D>& eigenvalues,
                                    Matrix<T, D>& eigenvectors, const Factorization factorization,
-                                   SizeType eigenvalue_index_begin, SizeType eigenvalue_index_end) {
+                                   const SizeType eigenvalues_index_begin,
+                                   const SizeType eigenvalues_index_end) {
 #ifdef DLAF_WITH_HDF5
   static std::atomic<size_t> num_gen_eigensolver_calls = 0;
   std::stringstream fname;
@@ -82,11 +84,11 @@ void GenEigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo
 
   generalized_to_standard<B>(grid, uplo, mat_a, mat_b);
 
-  hermitian_eigensolver<B>(grid, uplo, mat_a, eigenvalues, eigenvectors, eigenvalue_index_begin,
-                           eigenvalue_index_end);
+  hermitian_eigensolver<B>(grid, uplo, mat_a, eigenvalues, eigenvectors, eigenvalues_index_begin,
+                           eigenvalues_index_end);
 
-  auto spec = matrix::util::internal::sub_matrix_spec_slice_cols(eigenvectors, eigenvalue_index_begin,
-                                                                 eigenvalue_index_end);
+  auto spec = matrix::util::internal::sub_matrix_spec_slice_cols(eigenvectors, eigenvalues_index_begin,
+                                                                 eigenvalues_index_end);
   matrix::internal::MatrixRef eigenvectors_ref(eigenvectors, spec);
   triangular_solver<B>(grid, blas::Side::Left, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1),
                        mat_b, eigenvectors_ref);

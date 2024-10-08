@@ -73,7 +73,7 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
 template <class T, Backend B, Device D, Allocation allocation, Factorization factorization,
           class... GridIfDistributed>
 void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
-                        const SizeType last_eval_index, GridIfDistributed&... grid) {
+                        const SizeType eval_index_end, GridIfDistributed&... grid) {
   constexpr bool isDistributed = (sizeof...(grid) == 1);
 
   const TileElementSize block_size(mb, mb);
@@ -109,23 +109,23 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
       if constexpr (isDistributed) {
         if constexpr (factorization == Factorization::do_factorization) {
           return hermitian_generalized_eigensolver<B>(grid..., uplo, mat_a.get(), mat_b.get(), 0l,
-                                                      last_eval_index);
+                                                      eval_index_end);
         }
         else {
           cholesky_factorization<B, D, T>(grid..., uplo, mat_b.get());
           return hermitian_generalized_eigensolver_factorized<B>(grid..., uplo, mat_a.get(), mat_b.get(),
-                                                                 0l, last_eval_index);
+                                                                 0l, eval_index_end);
         }
       }
       else {
         if constexpr (factorization == Factorization::do_factorization) {
           return hermitian_generalized_eigensolver<B>(uplo, mat_a.get(), mat_b.get(), 0l,
-                                                      last_eval_index);
+                                                      eval_index_end);
         }
         else {
           cholesky_factorization<B, D, T>(uplo, mat_b.get());
           return hermitian_generalized_eigensolver_factorized<B>(uplo, mat_a.get(), mat_b.get(), 0l,
-                                                                 last_eval_index);
+                                                                 eval_index_end);
         }
       }
     }
@@ -137,13 +137,12 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
         Matrix<T, D> eigenvectors(GlobalElementSize(size, size), mat_a_h.blockSize(), grid...);
         if constexpr (factorization == Factorization::do_factorization) {
           hermitian_generalized_eigensolver<B>(grid..., uplo, mat_a.get(), mat_b.get(), eigenvalues,
-                                               eigenvectors, 0l, last_eval_index);
+                                               eigenvectors, 0l, eval_index_end);
         }
         else {
           cholesky_factorization<B, D, T>(grid..., uplo, mat_b.get());
           hermitian_generalized_eigensolver_factorized<B>(grid..., uplo, mat_a.get(), mat_b.get(),
-                                                          eigenvalues, eigenvectors, 0l,
-                                                          last_eval_index);
+                                                          eigenvalues, eigenvectors, 0l, eval_index_end);
         }
         return EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
       }
@@ -151,12 +150,12 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
         Matrix<T, D> eigenvectors(LocalElementSize(size, size), mat_a_h.blockSize());
         if constexpr (factorization == Factorization::do_factorization) {
           hermitian_generalized_eigensolver<B>(uplo, mat_a.get(), mat_b.get(), eigenvalues, eigenvectors,
-                                               0l, last_eval_index);
+                                               0l, eval_index_end);
         }
         else {
           cholesky_factorization<B, D, T>(uplo, mat_b.get());
           hermitian_generalized_eigensolver_factorized<B>(uplo, mat_a.get(), mat_b.get(), eigenvalues,
-                                                          eigenvectors, 0l, last_eval_index);
+                                                          eigenvectors, 0l, eval_index_end);
         }
         return EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
       }
@@ -166,7 +165,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
   if (mat_a_h.size().isEmpty())
     return;
 
-  testGenEigensolverCorrectness(uplo, reference_a, reference_b, ret, 0l, last_eval_index, grid...);
+  testGenEigensolverCorrectness(uplo, reference_a, reference_b, ret, 0l, eval_index_end, grid...);
 }
 
 TYPED_TEST(GenEigensolverTestMC, CorrectnessLocal) {

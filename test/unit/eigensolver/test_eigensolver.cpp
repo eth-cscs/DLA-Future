@@ -76,7 +76,7 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes_id = {
 
 template <class T, Backend B, Device D, Allocation allocation, class... GridIfDistributed>
 void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb, const MatrixType type,
-                     const SizeType last_eigenvalue_index, GridIfDistributed&... grid) {
+                     const SizeType eigenvalue_index_end, GridIfDistributed&... grid) {
   constexpr bool isDistributed = (sizeof...(grid) == 1);
   const LocalElementSize size(m, m);
   const TileElementSize block_size(mb, mb);
@@ -107,10 +107,10 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
 
     if constexpr (allocation == Allocation::do_allocation) {
       if constexpr (isDistributed) {
-        return hermitian_eigensolver<B>(grid..., uplo, mat_a.get(), 0l, last_eigenvalue_index);
+        return hermitian_eigensolver<B>(grid..., uplo, mat_a.get(), 0l, eigenvalue_index_end);
       }
       else {
-        return hermitian_eigensolver<B>(uplo, mat_a.get(), 0l, last_eigenvalue_index);
+        return hermitian_eigensolver<B>(uplo, mat_a.get(), 0l, eigenvalue_index_end);
       }
     }
     else if constexpr (allocation == Allocation::use_preallocated) {
@@ -120,13 +120,12 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
       if constexpr (isDistributed) {
         Matrix<T, D> eigenvectors(GlobalElementSize(size, size), mat_a_h.blockSize(), grid...);
         hermitian_eigensolver<B>(grid..., uplo, mat_a.get(), eigenvalues, eigenvectors, 0l,
-                                 last_eigenvalue_index);
+                                 eigenvalue_index_end);
         return EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
       }
       else {
         Matrix<T, D> eigenvectors(LocalElementSize(size, size), mat_a_h.blockSize());
-        hermitian_eigensolver<B>(uplo, mat_a.get(), eigenvalues, eigenvectors, 0l,
-                                 last_eigenvalue_index);
+        hermitian_eigensolver<B>(uplo, mat_a.get(), eigenvalues, eigenvectors, 0l, eigenvalue_index_end);
         return EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
       }
     }
@@ -136,7 +135,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
     return;
 
   testEigensolverCorrectness(uplo, reference, ret.eigenvalues, ret.eigenvectors, 0l,
-                             last_eigenvalue_index, grid...);
+                             eigenvalue_index_end, grid...);
 }
 
 TYPED_TEST(EigensolverTestMC, CorrectnessLocal) {

@@ -34,13 +34,13 @@ namespace dlaf::test {
 template <class T, Device D, class... GridIfDistributed>
 void testGenEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::CPU>& reference_a,
                                    Matrix<const T, Device::CPU>& reference_b,
-                                   dlaf::EigensolverResult<T, D>& ret, SizeType first_eigenvalue_index,
-                                   SizeType last_eigenvalue_index, GridIfDistributed&... grid) {
+                                   dlaf::EigensolverResult<T, D>& ret, SizeType eval_index_begin,
+                                   SizeType eval_index_end, GridIfDistributed&... grid) {
   using dlaf::matrix::MatrixMirror;
   using dlaf::matrix::test::allGather;
   using dlaf::matrix::test::MatrixLocal;
 
-  DLAF_ASSERT(first_eigenvalue_index == 0l, first_eigenvalue_index);
+  DLAF_ASSERT(eval_index_begin == 0l, eval_index_begin);
 
   // Note:
   // Wait for the algorithm to finish all scheduled tasks, because verification has MPI blocking
@@ -61,8 +61,8 @@ void testGenEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device
     MatrixMirror<const T, Device::CPU, D> mat_e(ret.eigenvectors);
 
     // Reference to sub-matrix representing only valid (i.e. back-transformed) eigenvectors
-    auto spec = matrix::util::internal::sub_matrix_spec_slice_cols(reference_a, first_eigenvalue_index,
-                                                                   last_eigenvalue_index);
+    auto spec = matrix::util::internal::sub_matrix_spec_slice_cols(reference_a, eval_index_begin,
+                                                                   eval_index_end);
     matrix::internal::MatrixRef mat_e_ref(mat_e.get(), spec);
 
     return allGather<T>(blas::Uplo::General, mat_e_ref, grid...);

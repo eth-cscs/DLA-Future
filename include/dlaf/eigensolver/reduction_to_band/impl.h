@@ -457,7 +457,7 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
   ComputePanelHelper(const std::size_t n_workspaces, matrix::Distribution dist_a)
       : panels_v(n_workspaces, dist_a) {}
 
-  void call(Matrix<T, Device::GPU>& mat_a, Matrix<T, Device::CPU>& mat_taus, const SizeType j_sub,
+  void call(Matrix<T, Device::GPU>& mat_a, matrix::ReadWriteTileSender<T, Device::CPU> tile_tau,
             const matrix::SubPanelView& panel_view) {
     using red2band::local::computePanelReflectors;
 
@@ -471,7 +471,7 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
     auto& v = panels_v.nextResource();
 
     copyToCPU(panel_view, mat_a, v);
-    computePanelReflectors(v, mat_taus.readwrite(GlobalTileIndex(j_sub, 0)), panel_view);
+    computePanelReflectors(v, std::move(tile_tau), panel_view);
     copyFromCPU(panel_view, v, mat_a);
   }
 

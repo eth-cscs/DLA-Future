@@ -27,6 +27,7 @@
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_ref.h>
 #include <dlaf/matrix/panel.h>
 #include <dlaf/matrix/tile.h>
 #include <dlaf/multiplication/hermitian/api.h>
@@ -96,7 +97,8 @@ void Hermitian<B, D, T>::call_LL(const T alpha, Matrix<const T, D>& mat_a, Matri
 
 template <Backend B, Device D, class T>
 void Hermitian<B, D, T>::call_LL(comm::CommunicatorGrid& grid, const T alpha, Matrix<const T, D>& mat_a,
-                                 Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
+                                 matrix::internal::MatrixRef<const T, D>& mat_b, const T beta,
+                                 Matrix<T, D>& mat_c) {
   using namespace hermitian_ll;
   namespace ex = pika::execution::experimental;
   using pika::execution::thread_priority;

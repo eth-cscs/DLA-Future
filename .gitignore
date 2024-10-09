@@ -9,6 +9,7 @@
 .clangd
 .cache
 /doc/html/
+.envrc
 
 # ------------------- C++
 

@@ -10,7 +10,6 @@
 
 #include <cstdlib>
 #include <iostream>
-#include <limits>
 #include <string>
 
 #include <pika/init.hpp>
@@ -52,6 +51,7 @@ struct Options
   SizeType mb;
   SizeType nb;
   SizeType b;
+  SizeType eval_idx_end;
 
   Options(const pika::program_options::variables_map& vm)
       : MiniappOptions(vm), m(vm["m"].as<SizeType>()), n(vm["n"].as<SizeType>()),
@@ -59,6 +59,10 @@ struct Options
     DLAF_ASSERT(m > 0, m);
     DLAF_ASSERT(mb > 0, mb);
     DLAF_ASSERT(b > 0 && mb % b == 0, b, mb);
+
+    eval_idx_end = vm.count("eval-index-end") == 1 ? vm["eval-index-end"].as<SizeType>() : m;
+
+    DLAF_ASSERT(eval_idx_end >= 0 && eval_idx_end <= m, eval_idx_end);
 
     if (do_check != dlaf::miniapp::CheckIterFreq::None) {
       std::cerr << "Warning! At the moment result checking it is not implemented." << std::endl;
@@ -79,6 +83,7 @@ struct BacktransformBandToTridiagMiniapp {
     using MatrixMirrorType = MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU>;
     using HostMatrixType = Matrix<T, Device::CPU>;
     using ConstHostMatrixType = Matrix<const T, Device::CPU>;
+    using MatrixRefType = dlaf::matrix::internal::MatrixRef<T, DefaultDevice_v<backend>>;
 
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
@@ -128,13 +133,17 @@ struct BacktransformBandToTridiagMiniapp {
         mat_hh.waitLocalTiles();
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
+        auto spec =
+            dlaf::matrix::util::internal::sub_matrix_spec_slice_cols(mat_e_host, 0, opts.eval_idx_end);
+        MatrixRefType mat_e_ref(mat_e.get(), spec);
+
         dlaf::common::Timer<> timeit;
         if (opts.local)
           dlaf::eigensolver::internal::bt_band_to_tridiagonal<backend, DefaultDevice_v<backend>, T>(
-              opts.b, mat_e.get(), mat_hh);
+              opts.b, mat_e_ref, mat_hh);
         else
           dlaf::eigensolver::internal::bt_band_to_tridiagonal<backend, DefaultDevice_v<backend>, T>(
-              comm_grid, opts.b, mat_e.get(), mat_hh);
+              comm_grid, opts.b, mat_e_ref, mat_hh);
 
         // wait and barrier for all ranks
         mat_e.get().waitLocalTiles();
@@ -153,27 +162,23 @@ struct BacktransformBandToTridiagMiniapp {
 
       // print benchmark results
       if (0 == world.rank() && run_index >= 0) {
-        std::cout << "[" << run_index << "]"
-                  << " " << elapsed_time << "s"
-                  << " " << gigaflops << "GFlop/s"
-                  << " " << dlaf::internal::FormatShort{opts.type} << " " << mat_e_host.size() << " "
-                  << mat_e_host.blockSize() << " " << opts.b << " " << comm_grid.size() << " "
-                  << pika::get_os_thread_count() << " " << backend << std::endl;
+        std::cout << "[" << run_index << "]" << " " << elapsed_time << "s" << " " << gigaflops
+                  << "GFlop/s" << " " << dlaf::internal::FormatShort{opts.type} << " "
+                  << mat_e_host.size() << " " << mat_e_host.blockSize() << " " << opts.b << " "
+                  << comm_grid.size() << " " << pika::get_os_thread_count() << " " << backend << " ("
+                  << 0l << ", " << opts.eval_idx_end << ")" << std::endl;
         if (opts.csv_output) {
           // CSV formatted output with column names that can be read by pandas to simplify
           // post-processing CSVData{-version}, value_0, title_0, value_1, title_1
-          std::cout << "CSVData-2, "
-                    << "run, " << run_index << ", "
-                    << "time, " << elapsed_time << ", "
-                    << "GFlops, " << gigaflops << ", "
-                    << "type, " << dlaf::internal::FormatShort{opts.type}.value << ", "
-                    << "matrixsize, " << mat_e_host.size().rows() << ", "
-                    << "blocksize, " << mat_e_host.blockSize().rows() << ", "
-                    << "band_size, " << opts.b << ", "
-                    << "comm_rows, " << comm_grid.size().rows() << ", "
-                    << "comm_cols, " << comm_grid.size().cols() << ", "
-                    << "threads, " << pika::get_os_thread_count() << ", "
-                    << "backend, " << backend << ", " << opts.info << std::endl;
+          std::cout << "CSVData-2, " << "run, " << run_index << ", " << "time, " << elapsed_time << ", "
+                    << "GFlops, " << gigaflops << ", " << "type, "
+                    << dlaf::internal::FormatShort{opts.type}.value << ", " << "matrixsize, "
+                    << mat_e_host.size().rows() << ", " << "blocksize, " << mat_e_host.blockSize().rows()
+                    << ", " << "band_size, " << opts.b << ", " << "comm_rows, "
+                    << comm_grid.size().rows() << ", " << "comm_cols, " << comm_grid.size().cols()
+                    << ", " << "threads, " << pika::get_os_thread_count() << ", " << "backend, "
+                    << backend << ", " << opts.info << ", " << "eigenvalue index begin, " << 0l << ", "
+                    << "eigenvalue index end, " << opts.eval_idx_end << std::endl;
         }
       }
 
@@ -208,11 +213,12 @@ int main(int argc, char** argv) {
 
   // clang-format off
   desc_commandline.add_options()
-    ("m",   value<SizeType>()   ->default_value(2048), "Matrix E rows")
-    ("n",   value<SizeType>()   ->default_value(4096), "Matrix E columns")
-    ("mb",  value<SizeType>()   ->default_value( 256), "Matrix E block rows")
-    ("nb",  value<SizeType>()   ->default_value( 512), "Matrix E block columns")
-    ("b",   value<SizeType>()   ->default_value(  64), "Band size")
+    ("m",               value<SizeType>()   ->default_value(2048), "Matrix E rows")
+    ("n",               value<SizeType>()   ->default_value(4096), "Matrix E columns")
+    ("mb",              value<SizeType>()   ->default_value( 256), "Matrix E block rows")
+    ("nb",              value<SizeType>()   ->default_value( 512), "Matrix E block columns")
+    ("b",               value<SizeType>()   ->default_value(  64), "Band size")
+    ("eval-index-end", value<SizeType>()                        , "Index of last eigenvalue of interest/eigenvector to transform (exclusive)")
   ;
   // clang-format on
   dlaf::miniapp::addUploOption(desc_commandline);

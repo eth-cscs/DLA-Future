@@ -39,20 +39,46 @@ DLAF_EXTERN_C int dlaf_symmetric_eigensolver_s(const int dlaf_context, const cha
                                                const struct DLAF_descriptor dlaf_descz) DLAF_NOEXCEPT;
 
 /// @copydoc dlaf_symmetric_eigensolver_s
+/// @param eigenvalues_index_begin index of the first eigenvalue to compute (has to be 0)
+/// @param eigenvalues_index_end index of the last eigenvalue to compute (exclusive)
+DLAF_EXTERN_C int dlaf_symmetric_eigensolver_partial_spectrum_s(
+    const int dlaf_context, const char uplo, float* a, const struct DLAF_descriptor dlaf_desca, float* w,
+    float* z, const struct DLAF_descriptor dlaf_descz, const SizeType eigenvalues_index_begin,
+    const SizeType eigenvalues_index_end) DLAF_NOEXCEPT;
+
+/// @copydoc dlaf_symmetric_eigensolver_s
 DLAF_EXTERN_C int dlaf_symmetric_eigensolver_d(const int dlaf_context, const char uplo, double* a,
                                                const struct DLAF_descriptor dlaf_desca, double* w,
                                                double* z,
                                                const struct DLAF_descriptor dlaf_descz) DLAF_NOEXCEPT;
+
+/// @copydoc dlaf_symmetric_eigensolver_partial_spectrum_s
+DLAF_EXTERN_C int dlaf_symmetric_eigensolver_partial_spectrum_d(
+    const int dlaf_context, const char uplo, double* a, const struct DLAF_descriptor dlaf_desca,
+    double* w, double* z, const struct DLAF_descriptor dlaf_descz,
+    const SizeType eigenvalues_index_begin, const SizeType eigenvalues_index_end) DLAF_NOEXCEPT;
 
 /// @copydoc dlaf_symmetric_eigensolver_s
 DLAF_EXTERN_C int dlaf_hermitian_eigensolver_c(
     const int dlaf_context, const char uplo, dlaf_complex_c* a, const struct DLAF_descriptor dlaf_desca,
     float* w, dlaf_complex_c* z, const struct DLAF_descriptor dlaf_descz) DLAF_NOEXCEPT;
 
+/// @copydoc dlaf_symmetric_eigensolver_partial_spectrum_s
+DLAF_EXTERN_C int dlaf_hermitian_eigensolver_partial_spectrum_c(
+    const int dlaf_context, const char uplo, dlaf_complex_c* a, const struct DLAF_descriptor dlaf_desca,
+    float* w, dlaf_complex_c* z, const struct DLAF_descriptor dlaf_descz,
+    const SizeType eigenvalues_index_begin, const SizeType eigenvalues_index_end) DLAF_NOEXCEPT;
+
 /// @copydoc dlaf_symmetric_eigensolver_s
 DLAF_EXTERN_C int dlaf_hermitian_eigensolver_z(
     const int dlaf_context, const char uplo, dlaf_complex_z* a, const struct DLAF_descriptor dlaf_desca,
     double* w, dlaf_complex_z* z, const struct DLAF_descriptor dlaf_descz) DLAF_NOEXCEPT;
+
+/// @copydoc dlaf_symmetric_eigensolver_partial_spectrum_s
+DLAF_EXTERN_C int dlaf_hermitian_eigensolver_partial_spectrum_z(
+    const int dlaf_context, const char uplo, dlaf_complex_z* a, const struct DLAF_descriptor dlaf_desca,
+    double* w, dlaf_complex_z* z, const struct DLAF_descriptor dlaf_descz,
+    const SizeType eigenvalues_index_begin, const SizeType eigenvalues_index_end) DLAF_NOEXCEPT;
 
 #ifdef DLAF_WITH_SCALAPACK
 
@@ -91,19 +117,47 @@ DLAF_EXTERN_C void dlaf_pssyevd(const char uplo, const int n, float* a, const in
                                 const int desca[9], float* w, float* z, const int iz, const int jz,
                                 const int descz[9], int* info) DLAF_NOEXCEPT;
 
+// @copydoc dlaf_pssyevd
+/// @param eigenvalues_index_begin index of the first eigenvalue to compute (has to be 0)
+/// @param eigenvalues_index_end index of the last eigenvalue to compute (exclusive)
+DLAF_EXTERN_C void dlaf_pssyevd_partial_spectrum(
+    const char uplo, const int n, float* a, const int ia, const int ja, const int desca[9], float* w,
+    float* z, const int iz, const int jz, const int descz[9], const SizeType eigenvalues_index_begin,
+    const SizeType eigenvalues_index_end, int* info) DLAF_NOEXCEPT;
+
 /// @copydoc dlaf_pssyevd
 DLAF_EXTERN_C void dlaf_pdsyevd(const char uplo, const int n, double* a, const int ia, const int ja,
                                 const int desca[9], double* w, double* z, const int iz, const int jz,
                                 const int descz[9], int* info) DLAF_NOEXCEPT;
+
+/// @copydoc dlaf_pssyevd_partial_spectrum
+DLAF_EXTERN_C void dlaf_pdsyevd_partial_spectrum(
+    const char uplo, const int n, double* a, const int ia, const int ja, const int desca[9], double* w,
+    double* z, const int iz, const int jz, const int descz[9], const SizeType eigenvalues_index_begin,
+    const SizeType eigenvalues_index_end, int* info) DLAF_NOEXCEPT;
 
 /// @copydoc dlaf_pssyevd
 DLAF_EXTERN_C void dlaf_pcheevd(const char uplo, const int n, dlaf_complex_c* a, const int ia,
                                 const int ja, const int desca[9], float* w, dlaf_complex_c* z,
                                 const int iz, const int jz, const int descz[9], int* info) DLAF_NOEXCEPT;
 
+/// @copydoc dlaf_pssyevd_partial_spectrum
+DLAF_EXTERN_C void dlaf_pcheevd_partial_spectrum(
+    const char uplo, const int n, dlaf_complex_c* a, const int ia, const int ja, const int desca[9],
+    float* w, dlaf_complex_c* z, const int iz, const int jz, const int descz[9],
+    const SizeType eigenvalues_index_begin, const SizeType eigenvalues_index_end,
+    int* info) DLAF_NOEXCEPT;
+
 /// @copydoc dlaf_pssyevd
 DLAF_EXTERN_C void dlaf_pzheevd(const char uplo, const int n, dlaf_complex_z* a, const int ia,
                                 const int ja, const int desca[9], double* w, dlaf_complex_z* z,
                                 const int iz, const int jz, const int descz[9], int* info) DLAF_NOEXCEPT;
+
+/// @copydoc dlaf_pssyevd_partial_spectrum
+DLAF_EXTERN_C void dlaf_pzheevd_partial_spectrum(
+    const char uplo, const int n, dlaf_complex_z* a, const int ia, const int ja, const int desca[9],
+    double* w, dlaf_complex_z* z, const int iz, const int jz, const int descz[9],
+    const SizeType eigenvalues_index_begin, const SizeType eigenvalues_index_end,
+    int* info) DLAF_NOEXCEPT;
 
 #endif

@@ -12,6 +12,7 @@
 
 /// @file
 
+#include <algorithm>
 #include <cstddef>
 #include <functional>
 #include <iostream>
@@ -25,6 +26,7 @@
 #include <dlaf/matrix/copy_tile.h>
 #include <dlaf/matrix/index.h>
 #include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_ref.h>
 #include <dlaf/matrix/print_numpy.h>
 #include <dlaf/util_matrix.h>
 
@@ -79,8 +81,9 @@ auto checkerForIndexIn(const blas::Uplo uplo) {
 
 /// Given a local Matrix, it collects the full data locally, according @p to uplo
 /// Optionally, it is possible to specify the type of the return MatrixLocal (useful for const correctness)
-template <class T>
-MatrixLocal<T> allGather(blas::Uplo uplo, Matrix<const T, Device::CPU>& source) {
+template <class T, template <class, Device> class MatrixLike>
+MatrixLocal<T> allGather(blas::Uplo uplo,
+                         MatrixLike<const std::remove_const_t<T>, Device::CPU>& source) {
   DLAF_ASSERT(matrix::local_matrix(source), source);
 
   MatrixLocal<std::remove_const_t<T>> dest(source.size(), source.baseTileSize());
@@ -100,10 +103,8 @@ MatrixLocal<T> allGather(blas::Uplo uplo, Matrix<const T, Device::CPU>& source) 
   return MatrixLocal<T>(std::move(dest));
 }
 
-/// Given a distributed Matrix, it collects the full data locally, according to @p uplo
-/// Optionally, it is possible to specify the type of the return MatrixLocal (useful for const correctness)
-template <class T>
-MatrixLocal<T> allGather(blas::Uplo uplo, Matrix<const T, Device::CPU>& source,
+template <class T, template <class, Device> class MatrixLike>
+MatrixLocal<T> allGather(blas::Uplo uplo, MatrixLike<const std::remove_const_t<T>, Device::CPU>& source,
                          comm::CommunicatorGrid& comm_grid) {
   DLAF_ASSERT(matrix::equal_process_grid(source, comm_grid), source, comm_grid);
 

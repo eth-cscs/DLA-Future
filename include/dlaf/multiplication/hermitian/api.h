@@ -10,6 +10,7 @@
 #pragma once
 
 #include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_ref.h>
 #include <dlaf/types.h>
 
 namespace dlaf::multiplication::internal {
@@ -19,7 +20,7 @@ struct Hermitian {
                       Matrix<T, D>& mat_c);
 
   static void call_LL(comm::CommunicatorGrid& grid, const T alpha, Matrix<const T, D>& mat_a,
-                      Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c);
+                      matrix::internal::MatrixRef<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c);
 };
 
 // ETI

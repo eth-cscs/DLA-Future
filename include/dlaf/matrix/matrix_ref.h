@@ -55,11 +55,34 @@ public:
       : internal::MatrixBase(Distribution(mat.distribution(), spec)), mat_const_(mat),
         origin_(spec.origin) {}
 
+  MatrixRef(Matrix<const T, D>&& mat, const SubMatrixSpec& spec)
+      : internal::MatrixBase(Distribution(mat.distribution(), spec)), mat_const_(mat),
+        origin_(spec.origin) {}
+
+  /// Create a matrix reference of @p mat.
+  ///
+  /// @param[in] mat is the input matrix.
+  MatrixRef(Matrix<const T, D>& mat) : MatrixRef<const T, D>(mat, {{0, 0}, mat.distribution().size()}) {}
+
   MatrixRef() = delete;
   MatrixRef(MatrixRef&&) = delete;
   MatrixRef(const MatrixRef&) = delete;
   MatrixRef& operator=(MatrixRef&&) = delete;
   MatrixRef& operator=(const MatrixRef&) = delete;
+
+  /// Create a sub-pipelined, retiled matrix which can be accessed thread-safely with respect to the
+  /// original matrix
+  ///
+  /// All accesses to the sub-pipelined matrix are sequenced after previous accesses and before later
+  /// accesses to the original matrix, independently of when tiles are accessed in the sub-pipelined
+  /// matrix.
+  ///
+  /// @pre blockSize() is divisible by @p tiles_per_block
+  /// @pre blockSize() == tile_size()
+  MatrixRef<const T, D> retiledSubPipelineConst(const LocalTileSize& tiles_per_block) {
+    SubMatrixSpec spec = {this->distribution().offset(), this->distribution().size()};
+    return MatrixRef<const T, D>(std::move(mat_const_.retiledSubPipelineConst(tiles_per_block)), spec);
+  }
 
   /// Returns a read-only sender of the Tile with local index @p index.
   ///
@@ -127,11 +150,33 @@ public:
   MatrixRef(Matrix<T, D>& mat, const SubMatrixSpec& spec)
       : MatrixRef<const T, D>(mat, spec), mat_(mat) {}
 
+  MatrixRef(Matrix<T, D>&& mat, const SubMatrixSpec& spec)
+      : MatrixRef<const T, D>(mat, spec), mat_(mat) {}
+
+  /// Create a matrix reference of @p mat.
+  ///
+  /// @param[in] mat is the input matrix.
+  MatrixRef(Matrix<T, D>& mat) : MatrixRef<const T, D>(mat), mat_(mat) {}
+
   MatrixRef() = delete;
   MatrixRef(MatrixRef&&) = delete;
   MatrixRef(const MatrixRef&) = delete;
   MatrixRef& operator=(MatrixRef&&) = delete;
   MatrixRef& operator=(const MatrixRef&) = delete;
+
+  /// Create a sub-pipelined, retiled matrix which can be accessed thread-safely with respect to the
+  /// original matrix
+  ///
+  /// All accesses to the sub-pipelined matrix are sequenced after previous accesses and before later
+  /// accesses to the original matrix, independently of when tiles are accessed in the sub-pipelined
+  /// matrix.
+  ///
+  /// @pre blockSize() is divisible by @p tiles_per_block
+  /// @pre blockSize() == tile_size()
+  MatrixRef<T, D> retiledSubPipeline(const LocalTileSize& tiles_per_block) noexcept {
+    SubMatrixSpec spec = {this->distribution().offset(), this->distribution().size()};
+    return MatrixRef<T, D>(std::move(mat_.retiledSubPipeline(tiles_per_block)), spec);
+  }
 
   /// Returns a sender of the Tile with local index @p index.
   ///

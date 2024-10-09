@@ -114,6 +114,12 @@ void copy(MatrixRef<const T, Source>& src, MatrixRef<T, Destination>& dst) {
     }
   }
 }
+
+template <class T, Device Source, Device Destination>
+void copy(MatrixRef<const T, Source>& src, Matrix<T, Destination>& dst) {
+  MatrixRef<T, Destination> dst_ref = dst;
+  copy(src, dst_ref);
+}
 }
 
 /// Copy of a matrix performing data reshuffling

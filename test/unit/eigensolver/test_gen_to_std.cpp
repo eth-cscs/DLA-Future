@@ -8,7 +8,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <functional>
 #include <tuple>
 #include <utility>
 #include <vector>

@@ -25,7 +25,6 @@
 #include <dlaf_c/desc.h>
 #include <dlaf_c/grid.h>
 
-#include "../blacs.h"
 #include "../utils.h"
 
 template <typename T>

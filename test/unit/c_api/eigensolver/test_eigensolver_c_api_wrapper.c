@@ -84,7 +84,7 @@ void C_dlaf_pssyevd_partial_spectrum(char uplo, const int m, float* a, const int
                                      const int descz[9], const SizeType eigenvalues_index_begin,
                                      const SizeType eigenvalues_index_end, int* info) {
   dlaf_pssyevd_partial_spectrum(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, eigenvalues_index_begin,
-                                 eigenvalues_index_end, info);
+                                eigenvalues_index_end, info);
 }
 
 void C_dlaf_pdsyevd(const char uplo, const int m, double* a, const int ia, const int ja,

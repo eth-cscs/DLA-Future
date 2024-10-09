@@ -631,7 +631,7 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size,
   const LocalTileSize tiles_per_block_hh(mat_hh.blockSize().rows() / b, mat_hh.blockSize().cols() / b);
   Matrix<const T, Device::CPU> mat_hh_rt = mat_hh.retiledSubPipelineConst(tiles_per_block_hh);
   const LocalTileSize tiles_per_block_e(mat_e.blockSize().rows() / b, 1);
-  Matrix<T, D> mat_e_rt = mat_e.retiledSubPipeline(tiles_per_block_e);
+  matrix::internal::MatrixRef<T, D> mat_e_rt = mat_e.retiledSubPipeline(tiles_per_block_e);
 
   const auto& dist_hh_rt = mat_hh_rt.distribution();
   const auto& dist_e_rt = mat_e_rt.distribution();
@@ -760,7 +760,7 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid& grid, const Si
   const SizeType group_size = getTuneParameters().bt_band_to_tridiag_hh_apply_group_size;
 
   const LocalTileSize tiles_per_block(mat_e.blockSize().rows() / b, 1);
-  Matrix<T, D> mat_e_rt = mat_e.retiledSubPipeline(tiles_per_block);
+  matrix::internal::MatrixRef<T, D> mat_e_rt = mat_e.retiledSubPipeline(tiles_per_block);
 
   const auto& dist_hh = mat_hh.distribution();
   const auto& dist_e_rt = mat_e_rt.distribution();

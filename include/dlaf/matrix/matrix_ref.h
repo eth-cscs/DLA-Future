@@ -55,6 +55,10 @@ public:
       : internal::MatrixBase(Distribution(mat.distribution(), spec)), mat_const_(mat),
         origin_(spec.origin) {}
 
+  MatrixRef(Matrix<const T, D>&& mat, const SubMatrixSpec& spec)
+      : internal::MatrixBase(Distribution(mat.distribution(), spec)), mat_const_(mat),
+        origin_(spec.origin) {}
+
   /// Create a matrix reference of @p mat.
   ///
   /// @param[in] mat is the input matrix.
@@ -75,8 +79,9 @@ public:
   ///
   /// @pre blockSize() is divisible by @p tiles_per_block
   /// @pre blockSize() == tile_size()
-  Matrix<const T, D> retiledSubPipelineConst(const LocalTileSize& tiles_per_block) {
-    return mat_const_.retiledSubPipelineConst(tiles_per_block);
+  MatrixRef<const T, D> retiledSubPipelineConst(const LocalTileSize& tiles_per_block) {
+    SubMatrixSpec spec = {this->distribution().offset(), this->distribution().size()};
+    return MatrixRef<const T, D>(std::move(mat_const_.retiledSubPipelineConst(tiles_per_block)), spec);
   }
 
   /// Returns a read-only sender of the Tile with local index @p index.
@@ -145,6 +150,9 @@ public:
   MatrixRef(Matrix<T, D>& mat, const SubMatrixSpec& spec)
       : MatrixRef<const T, D>(mat, spec), mat_(mat) {}
 
+  MatrixRef(Matrix<T, D>&& mat, const SubMatrixSpec& spec)
+      : MatrixRef<const T, D>(mat, spec), mat_(mat) {}
+
   /// Create a matrix reference of @p mat.
   ///
   /// @param[in] mat is the input matrix.
@@ -165,8 +173,9 @@ public:
   ///
   /// @pre blockSize() is divisible by @p tiles_per_block
   /// @pre blockSize() == tile_size()
-  Matrix<T, D> retiledSubPipeline(const LocalTileSize& tiles_per_block) noexcept {
-    return mat_.retiledSubPipeline(tiles_per_block);
+  MatrixRef<T, D> retiledSubPipeline(const LocalTileSize& tiles_per_block) noexcept {
+    SubMatrixSpec spec = {this->distribution().offset(), this->distribution().size()};
+    return MatrixRef<T, D>(std::move(mat_.retiledSubPipeline(tiles_per_block)), spec);
   }
 
   /// Returns a sender of the Tile with local index @p index.

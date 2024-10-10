@@ -537,20 +537,24 @@ struct Helper<T, Device::CPU> {
     computePanelReflectors(heads, std::move(tile_tau), panel_view);
   }
 
-  static void prepare_2nd_panel(const matrix::Tile<const T, Device::CPU>& head_in,
-                                matrix::Tile<T, Device::CPU>&& head, const bool multi_tile) {
+  static void copy_2nd_head_input(const matrix::Tile<const T, Device::CPU>& head_in,
+                                  matrix::Tile<T, Device::CPU>&& head, const bool multi_tile) {
+    common::internal::SingleThreadedBlasScope single;
+
     // TODO FIXME workaround for over-sized panel
     if (head_in.size() != head.size())
       tile::internal::set0(head);
 
-    // TODO FIXME change copy and if possible just upper
-    // matrix::internal::copy(head_in, head);
-    lapack::lacpy(blas::Uplo::General, head_in.size().rows(), head_in.size().cols(), head_in.ptr(),
-                  head_in.ld(), head.ptr(), head.ld());
-
-    if (multi_tile)
-      lapack::laset(blas::Uplo::Lower, head.size().rows() - 1, head.size().cols(), T(0), T(0),
+    if (multi_tile) {
+      lapack::lacpy(blas::Uplo::Upper, head_in.size().rows(), head_in.size().cols(), head_in.ptr(),
+                    head_in.ld(), head.ptr(), head.ld());
+      lapack::laset(blas::Uplo::Lower, head.size().rows() - 1, head.size().cols() - 1, T(0), T(0),
                     head.ptr({1, 0}), head.ld());
+    }
+    else {
+      lapack::lacpy(blas::Uplo::General, head_in.size().rows(), head_in.size().cols(), head_in.ptr(),
+                    head_in.ld(), head.ptr(), head.ld());
+    }
   }
 
   static void copy_back_band(const matrix::Tile<const T, Device::CPU>& hoh,
@@ -574,6 +578,13 @@ struct Helper<T, Device::CPU> {
     common::internal::SingleThreadedBlasScope single;
     lapack::lacpy(blas::Uplo::General, head.size().rows(), head.size().cols(), head.ptr(), head.ld(),
                   head_a.ptr(), head_a.ld());
+  }
+
+  static void setup_reflector_2nd(const matrix::Tile<const T, Device::CPU>& head,
+                                  matrix::Tile<T, Device::CPU> tile_v) {
+    common::internal::SingleThreadedBlasScope single;
+    lapack::lacpy(blas::Uplo::General, tile_v.size().rows(), tile_v.size().cols(), head.ptr(), head.ld(),
+                  tile_v.ptr(), tile_v.ld());
   }
 };
 
@@ -619,9 +630,11 @@ struct Helper<T, Device::GPU> {
     copyFromCPU(panel_view, ws_heads, heads);
   }
 
-  static void prepare_2nd_panel(const matrix::Tile<const T, Device::GPU>& head_in,
-                                const matrix::Tile<T, Device::GPU>& head, const bool multi_tile,
-                                whip::stream_t stream) {
+  static void copy_2nd_head_input(const matrix::Tile<const T, Device::GPU>& head_in,
+                                  const matrix::Tile<T, Device::GPU>& head, const bool multi_tile,
+                                  whip::stream_t stream) {
+    common::internal::SingleThreadedBlasScope single;
+
     // TODO FIXME workaround for over-sized panel
     if (head_in.size() != head.size())
       tile::internal::set0(head, stream);
@@ -656,6 +669,13 @@ struct Helper<T, Device::GPU> {
     common::internal::SingleThreadedBlasScope single;
     gpulapack::lacpy(blas::Uplo::General, head.size().rows(), head.size().cols(), head.ptr(), head.ld(),
                      head_a.ptr(), head_a.ld(), stream);
+  }
+
+  static void setup_reflector_2nd(const matrix::Tile<const T, Device::GPU>& head,
+                                  matrix::Tile<T, Device::GPU>& tile_v, whip::stream_t stream) {
+    common::internal::SingleThreadedBlasScope single;
+    gpulapack::lacpy(blas::Uplo::General, tile_v.size().rows(), tile_v.size().cols(), head.ptr(),
+                     head.ld(), tile_v.ptr(), tile_v.ld(), stream);
   }
 
 protected:
@@ -841,13 +861,13 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
         dist.template next_local_tile_from_global_tile<Coord::Col>(at_offset.col()));
     matrix::SubMatrixView at_view(dist, at_offset_el);
 
-    const SizeType nrtiles_transf = dist.local_nr_tiles().rows() - at_view.begin().row();
-
     // PANEL: just ranks in the current column
     // QR local (HH reflectors stored in-place)
 
+    const SizeType hh1st_ntiles_lc = dist.local_nr_tiles().rows() - at_view.begin().row();
+
     if (rank_panel == rank.col()) {
-      if (nrtiles_transf > 1) {
+      if (hh1st_ntiles_lc > 1) {
         helper.compute_panel_1st(mat_a, get_tile_tau(), panel_view);
       }
     }
@@ -869,10 +889,10 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
           return false;
         }();
 
-        const SizeType nrtiles_transf =
+        const SizeType qr_ntiles =
             util::ceilDiv<SizeType>(dist.nr_tiles().rows() - head_qr, dist.grid_size().rows());
 
-        if (nrtiles_transf <= 1) {
+        if (qr_ntiles <= 1) {
           continue;
         }
 
@@ -885,7 +905,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
         const SizeType nrefls_this = [&]() {
           using matrix::internal::distribution::global_tile_from_local_tile_on_rank;
           const SizeType i_head = head_qr;
-          if (nrtiles_transf == 1) {
+          if (qr_ntiles == 1) {
             const TileElementSize tile_size = dist.tile_size_of({i_head, j});
             return std::min<SizeType>(tile_size.rows() - 1, tile_size.cols());
           }
@@ -1135,10 +1155,11 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
 
     const matrix::SubPanelView panel_heads_view(dist_heads_current, {0, 0}, band_size);
 
+    const GlobalTileIndex ij_hoh(panel_view.offset().row(), j);
+    const comm::IndexT_MPI rank_hoh = dist.template rank_global_tile<Coord::Row>(ij_hoh.row());
+
     const bool rank_has_head_row = !panel_view.iteratorLocal().empty();
     if (rank_panel == rank.col()) {
-      const comm::IndexT_MPI rank_hoh = dist.template rank_global_tile<Coord::Row>(panel_offset.row());
-
       for (int idx_head = 0; idx_head < n_qr_heads; ++idx_head) {
         using dlaf::comm::schedule_bcast_recv;
         using dlaf::comm::schedule_bcast_send;
@@ -1150,10 +1171,10 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
 
         if (rank.row() == rank_head) {
           // copy - set - send
-          DLAF_ASSERT(nrtiles_transf > 0, nrtiles_transf);
+          DLAF_ASSERT(hh1st_ntiles_lc > 0, hh1st_ntiles_lc);
           ex::start_detached(di::whenAllLift(mat_a.read(ij_head), panel_heads.readwrite(idx_panel_head),
-                                             nrtiles_transf > 1) |
-                             di::transform(di::Policy<B>(), helper.prepare_2nd_panel));
+                                             hh1st_ntiles_lc > 1) |
+                             di::transform(di::Policy<B>(), helper.copy_2nd_head_input));
           ex::start_detached(schedule_bcast_send(mpi_col_chain.exclusive(),
                                                  panel_heads.read(idx_panel_head)));
         }
@@ -1171,8 +1192,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
       {
         // - just head of heads upper to mat_a
         // - reflectors to hh_2nd
-        const GlobalTileIndex ij_hoh(panel_view.offset().row(), j);
-        if (rank.row() == dist.template rank_global_tile<Coord::Row>(ij_hoh.row()))
+        if (rank.row() == rank_hoh)
           ex::start_detached(ex::when_all(panel_heads.read({0, 0}), mat_a.readwrite(ij_hoh)) |
                              di::transform(di::Policy<B>(), helper.copy_back_band));
 
@@ -1217,19 +1237,26 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
       ws_V.setRange(at_offset, at_end_L);
       ws_V.setWidth(nrefls_step);
 
-      if (rank_panel == rank.col()) {
+      if (rank_panel == rank.col() && rank_has_head_row) {
         // setup reflector panel
         const LocalTileIndex ij_head(0, j_lc);
         const LocalTileIndex ij_vhh_lc(ws_V.rangeStartLocal(), 0);
 
-        if (rank_has_head_row) {
-          // TODO CHECK not fully sure why it is needed after 1st step skip
+        // Note: hh_2nd is well-formed, i.e. head tile upper part is set to 0 and diagonal to 1
+        ex::start_detached(ex::when_all(mat_hh_2nd.read(ij_head), ws_V.readwrite(ij_vhh_lc)) |
+                           di::transform(di::Policy<B>(), helper.setup_reflector_2nd));
+
+        // Note:
+        // if 1st stage had just 1 tile, it means it skipped the first QR. For this reason, the input to
+        // 2nd stage was not zero in the lower part. After applying 2nd stage QR, it is required to zero
+        // out the lower part to make it well-formed, because otherwise contains reflectors for the 2nd
+        // stage. For multi-tile case this is not needed since the reflectors calculated are already zero
+        // in 2nd stage head of heads, because they were already zeroed out in the copying input phase.
+        if (hh1st_ntiles_lc == 1) {
+          // Note: panel_heads has to be well-formed for T factor computation
           ex::start_detached(di::whenAllLift(blas::Uplo::Upper, T(0), T(1),
                                              panel_heads.readwrite({0, 0})) |
                              tile::laset(di::Policy<B>()));
-
-          ex::start_detached(ex::when_all(mat_hh_2nd.read(ij_head), ws_V.readwrite(ij_vhh_lc)) |
-                             dlaf::matrix::copy(di::Policy<B>()));
         }
 
         using factorization::internal::computeTFactor;

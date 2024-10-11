@@ -516,6 +516,13 @@ void her2k_2nd(const SizeType i_end, const SizeType j_end, const matrix::SubMatr
   }
 }
 
+template <class T, class MatrixLike>
+void prepare_2nd_input(const SizeType j, const matrix::Distribution& dist,
+                       const SizeType hh1st_ntiles_lc, const SizeType n_qr_heads, MatrixLike& panel_1st,
+                       const matrix::SubPanelView& panel_view,
+                       matrix::Panel<Coord::Col, T, Device::CPU>& panel_2nd,
+                       comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_chain);
+
 template <class T, Device D>
 struct Helper;
 
@@ -530,11 +537,16 @@ struct Helper<T, Device::CPU> {
     computePanelReflectors(mat_a, std::move(tile_tau), panel_view);
   }
 
-  void compute_panel_2nd(matrix::Panel<Coord::Col, T, Device::CPU>& heads,
-                         matrix::ReadWriteTileSender<T, Device::CPU> tile_tau,
-                         const matrix::SubPanelView& panel_view) {
+  void compute_panel_2nd(
+      const SizeType j, const matrix::Distribution& dist, const SizeType hh1st_ntiles_lc,
+      const SizeType n_qr_heads, matrix::Matrix<T, Device::CPU>& panel_1st,
+      const matrix::SubPanelView& panel1st_view, matrix::ReadWriteTileSender<T, Device::CPU> tile_tau,
+      matrix::Panel<Coord::Col, T, Device::CPU>& heads, const matrix::SubPanelView& panel2nd_view,
+      comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_chain) {
+    prepare_2nd_input(j, dist, hh1st_ntiles_lc, n_qr_heads, panel_1st, panel1st_view, heads,
+                      mpi_col_chain);
     using red2band::local::computePanelReflectors;
-    computePanelReflectors(heads, std::move(tile_tau), panel_view);
+    computePanelReflectors(heads, std::move(tile_tau), panel2nd_view);
   }
 
   static void copy_2nd_head_input(const matrix::Tile<const T, Device::CPU>& head_in,
@@ -612,22 +624,49 @@ struct Helper<T, Device::GPU> {
     copyFromCPU(panel_view, ws_panel, mat_a);
   }
 
-  void compute_panel_2nd(matrix::Panel<Coord::Col, T, Device::GPU>& heads,
-                         matrix::ReadWriteTileSender<T, Device::CPU> tile_tau,
-                         const matrix::SubPanelView& panel_view) {
+  void compute_panel_2nd(
+      const SizeType j, const matrix::Distribution& dist, const SizeType hh1st_ntiles_lc,
+      const SizeType n_qr_heads, matrix::Matrix<T, Device::GPU>& panel_1st,
+      const matrix::SubPanelView& panel1st_view, matrix::ReadWriteTileSender<T, Device::CPU> tile_tau,
+      matrix::Panel<Coord::Col, T, Device::GPU>& heads, const matrix::SubPanelView& panel2nd_view,
+      comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_chain) {
+    namespace ex = pika::execution::experimental;
+
     // Note:
     // - copy panel_view from GPU to CPU
     // - computePanelReflectors on CPU (on a matrix like, with just a panel)
     // - copy back matrix "panel" from CPU to GPU
 
+    auto& ws_panel_1st = [&]() -> decltype(auto) {
+      if (hh1st_ntiles_lc > 1)
+        return panels_v.currentResource();
+      else
+        return panels_v.nextResource();
+    }();
+
+    if (hh1st_ntiles_lc == 1) {
+      for (auto it : panel1st_view.iteratorLocal()) {
+        ex::start_detached(ex::when_all(panel_1st.read(it), ws_panel_1st.readwrite(it)) |
+                           dlaf::matrix::copy(dlaf::internal::Policy<Backend::MC>()));
+      }
+    }
+
     auto& ws_heads = panels_heads.nextResource();
 
-    copyToCPU(panel_view, heads, ws_heads);
+    prepare_2nd_input(j, dist, hh1st_ntiles_lc, n_qr_heads, ws_panel_1st, panel1st_view, ws_heads,
+                      mpi_col_chain);
 
     using red2band::local::computePanelReflectors;
-    computePanelReflectors(ws_heads, std::move(tile_tau), panel_view);
+    computePanelReflectors(ws_heads, std::move(tile_tau), panel2nd_view);
 
-    copyFromCPU(panel_view, ws_heads, heads);
+    // Note: this is a workaround
+    // on GPU panels are not of the actual size available, and they are always full-tile.
+    // copying back it might be that the last tile contains data that should be zeroed out.
+    // (computeTFactor uses the full-tile panel, and not-used part should be set to 0)
+    ex::start_detached(heads.readwrite({heads.rangeEndLocal() - 1, 0}) |
+                       dlaf::tile::set0(dlaf::internal::Policy<Backend::GPU>()));
+
+    copyFromCPU(panel2nd_view, ws_heads, heads);
   }
 
   static void copy_2nd_head_input(const matrix::Tile<const T, Device::GPU>& head_in,
@@ -722,6 +761,42 @@ protected:
   }
 };
 #endif
+
+template <class T, class MatrixLike>
+void prepare_2nd_input(const SizeType j, const matrix::Distribution& dist,
+                       const SizeType hh1st_ntiles_lc, const SizeType n_qr_heads, MatrixLike& panel_1st,
+                       const matrix::SubPanelView& panel_view,
+                       matrix::Panel<Coord::Col, T, Device::CPU>& panel_2nd,
+                       comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_chain) {
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
+
+  for (int idx_head = 0; idx_head < n_qr_heads; ++idx_head) {
+    using dlaf::comm::schedule_bcast_recv;
+    using dlaf::comm::schedule_bcast_send;
+
+    const LocalTileIndex idx_panel_head(idx_head, 0);
+
+    const GlobalTileIndex ij_head(panel_view.offset().row() + idx_head, j);
+    const comm::IndexT_MPI rank_head = dist.template rank_global_tile<Coord::Row>(ij_head.row());
+
+    if (dist.rank_index().row() == rank_head) {
+      // copy - set - send
+      DLAF_ASSERT(hh1st_ntiles_lc > 0, hh1st_ntiles_lc);
+      const LocalTileIndex ij_head_lc = dist.local_tile_index(ij_head);
+      ex::start_detached(di::whenAllLift(panel_1st.read(ij_head_lc), panel_2nd.readwrite(idx_panel_head),
+                                         hh1st_ntiles_lc > 1) |
+                         di::transform(di::Policy<Backend::MC>(),
+                                       Helper<T, Device::CPU>::copy_2nd_head_input));
+      ex::start_detached(schedule_bcast_send(mpi_col_chain.exclusive(), panel_2nd.read(idx_panel_head)));
+    }
+    else {
+      // receive
+      ex::start_detached(schedule_bcast_recv(mpi_col_chain.exclusive(), rank_head,
+                                             panel_2nd.readwrite(idx_panel_head)));
+    }
+  }
+}
 
 }
 
@@ -1160,33 +1235,9 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
 
     const bool rank_has_head_row = !panel_view.iteratorLocal().empty();
     if (rank_panel == rank.col()) {
-      for (int idx_head = 0; idx_head < n_qr_heads; ++idx_head) {
-        using dlaf::comm::schedule_bcast_recv;
-        using dlaf::comm::schedule_bcast_send;
-
-        const LocalTileIndex idx_panel_head(idx_head, 0);
-
-        const GlobalTileIndex ij_head(panel_view.offset().row() + idx_head, j);
-        const comm::IndexT_MPI rank_head = dist.template rank_global_tile<Coord::Row>(ij_head.row());
-
-        if (rank.row() == rank_head) {
-          // copy - set - send
-          DLAF_ASSERT(hh1st_ntiles_lc > 0, hh1st_ntiles_lc);
-          ex::start_detached(di::whenAllLift(mat_a.read(ij_head), panel_heads.readwrite(idx_panel_head),
-                                             hh1st_ntiles_lc > 1) |
-                             di::transform(di::Policy<B>(), helper.copy_2nd_head_input));
-          ex::start_detached(schedule_bcast_send(mpi_col_chain.exclusive(),
-                                                 panel_heads.read(idx_panel_head)));
-        }
-        else {
-          // receive
-          ex::start_detached(schedule_bcast_recv(mpi_col_chain.exclusive(), rank_head,
-                                                 panel_heads.readwrite(idx_panel_head)));
-        }
-      }
-
       // QR local on heads
-      helper.compute_panel_2nd(panel_heads, get_tile_tau2(), panel_heads_view);
+      helper.compute_panel_2nd(j, dist, hh1st_ntiles_lc, n_qr_heads, mat_a, panel_view, get_tile_tau2(),
+                               panel_heads, panel_heads_view, mpi_col_chain);
 
       // copy back data
       {

@@ -80,7 +80,7 @@ public:
   /// @pre blockSize() is divisible by @p tiles_per_block
   /// @pre blockSize() == tile_size()
   MatrixRef<const T, D> retiledSubPipelineConst(const LocalTileSize& tiles_per_block) {
-    SubMatrixSpec spec = {this->distribution().offset(), this->distribution().size()};
+    SubMatrixSpec spec = {this->distribution().origin(), this->distribution().size()};
     return MatrixRef<const T, D>(std::move(mat_const_.retiledSubPipelineConst(tiles_per_block)), spec);
   }
 
@@ -174,7 +174,7 @@ public:
   /// @pre blockSize() is divisible by @p tiles_per_block
   /// @pre blockSize() == tile_size()
   MatrixRef<T, D> retiledSubPipeline(const LocalTileSize& tiles_per_block) noexcept {
-    SubMatrixSpec spec = {this->distribution().offset(), this->distribution().size()};
+    SubMatrixSpec spec = {this->distribution().origin(), this->distribution().size()};
     return MatrixRef<T, D>(std::move(mat_.retiledSubPipeline(tiles_per_block)), spec);
   }
 

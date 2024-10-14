@@ -97,10 +97,4 @@ struct [[nodiscard]] ScopedInitializer {
   ScopedInitializer& operator=(ScopedInitializer&&) = delete;
   ScopedInitializer& operator=(const ScopedInitializer&) = delete;
 };
-
-/// Initialize the MPI pool.
-///
-///
-void initResourcePartitionerHandler(pika::resource::partitioner& rp,
-                                    const pika::program_options::variables_map& vm);
 }

@@ -103,7 +103,7 @@ GTEST_API_ int main(int argc, char** argv) {
 
   pika::init_params p;
   p.desc_cmdline = desc_commandline;
-  p.rp_callback = dlaf::initResourcePartitionerHandler;
+  p.pool_creation_mode = ::pika::resource::mode_pika_decides;
 
   // Initialize pika
   auto ret = pika::init(test_main, argc, argv, p);

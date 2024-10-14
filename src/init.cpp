@@ -60,13 +60,15 @@ template <>
 struct Init<Backend::MC> {
   static void initialize(const configuration& cfg) {
     memory::internal::initializeUmpireHostAllocator(cfg.umpire_host_memory_pool_initial_bytes);
-    // install mpi polling loop
-    // pika::mpi::experimental::init(false);
-    pika::mpi::experimental::init(false, true);
-    pika::mpi::experimental::register_polling();
+    if (pika::mpi::detail::environment::is_mpi_initialized()) {
+      pika::mpi::experimental::start_polling(pika::mpi::experimental::exception_mode::no_handler);
+    }
   }
 
   static void finalize() {
+    if (pika::mpi::detail::environment::is_mpi_initialized()) {
+      pika::mpi::experimental::stop_polling();
+    }
     memory::internal::finalizeUmpireHostAllocator();
   }
 };
@@ -111,10 +113,10 @@ template <>
 struct Init<Backend::GPU> {
   static void initialize(const configuration& cfg) {
     const int device = 0;
-    // setup polling on default pool, enable exceptions and init mpi internals
-    pika::mpi::experimental::init(false, true);
-    pika::mpi::experimental::register_polling();
 
+    if (pika::mpi::detail::environment::is_mpi_initialized()) {
+      pika::mpi::experimental::start_polling(pika::mpi::experimental::exception_mode::no_handler);
+    }
     memory::internal::initializeUmpireDeviceAllocator(cfg.umpire_device_memory_pool_initial_bytes);
     initializeGpuPool(device, cfg.num_np_gpu_streams_per_thread, cfg.num_hp_gpu_streams_per_thread,
                       cfg.num_gpu_blas_handles, cfg.num_gpu_lapack_handles);
@@ -122,6 +124,9 @@ struct Init<Backend::GPU> {
   }
 
   static void finalize() {
+    if (pika::mpi::detail::environment::is_mpi_initialized()) {
+      pika::mpi::experimental::stop_polling();
+    }
     memory::internal::finalizeUmpireDeviceAllocator();
     finalizeGpuPool();
   }
@@ -429,19 +434,5 @@ ScopedInitializer::ScopedInitializer(int argc, const char* const argv[], const c
 
 ScopedInitializer::~ScopedInitializer() {
   finalize();
-}
-
-void initResourcePartitionerHandler(pika::resource::partitioner&,
-                                    const pika::program_options::variables_map& vm) {
-  namespace mpi = pika::mpi::experimental;
-  // Create the MPI pool if needed and unless the user disabled it
-  mpi::pool_create_mode pool_mode = mpi::pool_create_mode::pika_decides;
-  namespace mpi = pika::mpi::experimental;
-  if (vm["dlaf:no-mpi-pool"].as<bool>())
-    pool_mode = mpi::pool_create_mode::force_no_create;
-
-  namespace mpix = pika::mpi::experimental;
-  // create a pool for mpi if necessary
-  mpix::create_pool(mpix::get_pool_name(), pool_mode);
 }
 }

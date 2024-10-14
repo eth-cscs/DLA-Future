@@ -77,7 +77,6 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
   // Here we need to resume it manually to build the matrices with DLA-Future
   pika::resume();
 
-  const LocalElementSize size(m, m);
   const TileElementSize block_size(mb, mb);
 
   Matrix<const T, Device::CPU> reference = [&]() {

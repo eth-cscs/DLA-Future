@@ -28,6 +28,7 @@
 #include <dlaf/common/vector.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/datatypes.h>
 #include <dlaf/communication/index.h>
 #include <dlaf/communication/kernels.h>
 #include <dlaf/eigensolver/band_to_tridiag/api.h>

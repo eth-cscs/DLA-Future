@@ -1082,7 +1082,6 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   namespace di = dlaf::internal;
   using pika::execution::thread_priority;
 
-  const GlobalTileIndex idx_gl_begin(i_begin, i_begin);
   const LocalTileIndex idx_loc_begin(i_begin, i_begin);
   const SizeType nrtiles = i_end - i_begin;
   const LocalTileSize sz_loc_tiles(nrtiles, nrtiles);
@@ -1834,7 +1833,6 @@ void mergeDistSubproblems(comm::CommunicatorPipeline<comm::CommunicatorType::Ful
   const SizeType n_lower = global_tile_element_distance<Coord::Row>(dist, i_split, i_end);
 
   // The local size of the subproblem
-  const GlobalTileIndex idx_gl_begin(i_begin, i_begin);
   const LocalTileIndex idx_loc_begin{dist.next_local_tile_from_global_tile<Coord::Row>(i_begin),
                                      dist.next_local_tile_from_global_tile<Coord::Col>(i_begin)};
   const LocalTileIndex idx_loc_end{dist.next_local_tile_from_global_tile<Coord::Row>(i_end),

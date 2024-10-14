@@ -66,7 +66,6 @@ void hermitian_multiplication(blas::Side side, blas::Uplo uplo, const T alpha, M
     switch (uplo) {
       case blas::Uplo::Lower:
         return multiplication::internal::Hermitian<B, D, T>::call_LL(alpha, mat_a, mat_b, beta, mat_c);
-        break;
       case blas::Uplo::Upper:
         DLAF_UNIMPLEMENTED(uplo);
         break;
@@ -130,7 +129,6 @@ void hermitian_multiplication(comm::CommunicatorGrid& grid, blas::Side side, bla
       case blas::Uplo::Lower:
         return multiplication::internal::Hermitian<B, D, T>::call_LL(grid, alpha, mat_a, mat_b, beta,
                                                                      mat_c);
-        break;
       case blas::Uplo::Upper:
         DLAF_UNIMPLEMENTED(uplo);
         break;

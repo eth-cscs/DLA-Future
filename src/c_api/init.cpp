@@ -26,7 +26,7 @@ void dlaf_initialize(int argc_pika, const char** argv_pika, int argc_dlaf,
 
     // pika initialization
     pika::init_params params;
-    params.rp_callback = dlaf::initResourcePartitionerHandler;
+    params.pool_creation_mode = ::pika::resource::mode_pika_decides;
     params.desc_cmdline = desc;
     // After pika 0.21.0 pika::start reports errors only by exception and returns void
 #if PIKA_VERSION_FULL >= 0x001500

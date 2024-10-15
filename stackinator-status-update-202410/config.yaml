@@ -1,8 +1,8 @@
 name: dlaf-env
 store: /user-environment
 spack:
-    repo: https://github.com/spack/spack.git
-    commit: develop-2024-10-06
+    repo: https://github.com/msimberg/spack.git
+    commit: dla-future-202410-develop
 mirror:
     enable: false
 modules: false

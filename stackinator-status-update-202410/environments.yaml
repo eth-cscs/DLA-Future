@@ -5,7 +5,8 @@ gcc-env:
   unify: true
   specs:
   - dla-future@git.202410-develop=0.7.0 +miniapps +hdf5 +mpi_gpu_aware +mpi_gpu_force_contiguous
-  - pika@0.29.0
+  - pika@0.29.0 cxxstd=20 +stdexec malloc=mimalloc
+  - stdexec@24.09
   - nvpl-blas
   - nvpl-lapack
   mpi:

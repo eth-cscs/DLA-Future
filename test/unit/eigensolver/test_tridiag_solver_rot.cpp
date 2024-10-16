@@ -97,7 +97,7 @@ void testApplyGivenRotations(comm::CommunicatorGrid& grid, const SizeType m, con
   matrix::Matrix<T, Device::CPU> mat_h(dist);
   matrix::util::set_random(mat_h);
 
-  matrix::test::MatrixLocal<T> mat_loc = matrix::test::allGather(blas::Uplo::General, mat_h, grid);
+  matrix::test::MatrixLocal<T> mat_loc = matrix::test::allGather<T>(blas::Uplo::General, mat_h, grid);
 
   {
     matrix::MatrixMirror<T, D, Device::CPU> mat(mat_h);

@@ -98,6 +98,7 @@ Distribution::Distribution(Distribution rhs, const SubDistributionSpec& spec)
   DLAF_ASSERT(spec.origin.row() + spec.size.rows() <= size_.rows(), spec.origin, spec.size, size_);
   DLAF_ASSERT(spec.origin.col() + spec.size.cols() <= size_.cols(), spec.origin, spec.size, size_);
 
+  origin_ = spec.origin;
   offset_ = offset_ + sizeFromOrigin(spec.origin);
   size_ = spec.size;
 

@@ -83,7 +83,7 @@ struct Options
 
     eval_idx_end = vm.count("eval-index-end") == 1 ? vm["eval-index-end"].as<SizeType>() : m;
 
-    DLAF_ASSERT(eval_idx_end >= 0 && eval_idx_end <= m, eval_idx_end);
+    DLAF_ASSERT(eval_idx_end >= 0 && eval_idx_end <= m, eval_idx_end, m);
 
 #ifdef DLAF_WITH_HDF5
     if (vm.count("input-file") == 1) {

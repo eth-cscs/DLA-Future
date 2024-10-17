@@ -19,6 +19,7 @@
 #include <optional>
 #include <string>
 
+#include <pika/mpi.hpp>
 #include <pika/runtime.hpp>
 
 #include <dlaf/common/assert.h>
@@ -37,7 +38,7 @@ std::ostream& operator<<(std::ostream& os, const configuration& cfg) {
      << std::endl;
   os << "  umpire_device_memory_pool_initial_bytes = " << cfg.umpire_device_memory_pool_initial_bytes
      << std::endl;
-  os << "  mpi_pool = " << cfg.mpi_pool << std::endl;
+  os << "  mpi_pool = " << pika::mpi::experimental::get_pool_name() << std::endl;
   return os;
 }
 
@@ -59,9 +60,15 @@ template <>
 struct Init<Backend::MC> {
   static void initialize(const configuration& cfg) {
     memory::internal::initializeUmpireHostAllocator(cfg.umpire_host_memory_pool_initial_bytes);
+    if (pika::mpi::detail::environment::is_mpi_initialized()) {
+      pika::mpi::experimental::start_polling(pika::mpi::experimental::exception_mode::no_handler);
+    }
   }
 
   static void finalize() {
+    if (pika::mpi::detail::environment::is_mpi_initialized()) {
+      pika::mpi::experimental::stop_polling();
+    }
     memory::internal::finalizeUmpireHostAllocator();
   }
 };
@@ -106,6 +113,10 @@ template <>
 struct Init<Backend::GPU> {
   static void initialize(const configuration& cfg) {
     const int device = 0;
+
+    if (pika::mpi::detail::environment::is_mpi_initialized()) {
+      pika::mpi::experimental::start_polling(pika::mpi::experimental::exception_mode::no_handler);
+    }
     memory::internal::initializeUmpireDeviceAllocator(cfg.umpire_device_memory_pool_initial_bytes);
     initializeGpuPool(device, cfg.num_np_gpu_streams_per_thread, cfg.num_hp_gpu_streams_per_thread,
                       cfg.num_gpu_blas_handles, cfg.num_gpu_lapack_handles);
@@ -113,6 +124,9 @@ struct Init<Backend::GPU> {
   }
 
   static void finalize() {
+    if (pika::mpi::detail::environment::is_mpi_initialized()) {
+      pika::mpi::experimental::stop_polling();
+    }
     memory::internal::finalizeUmpireDeviceAllocator();
     finalizeGpuPool();
   }
@@ -230,21 +244,21 @@ void updateConfiguration(const pika::program_options::variables_map& vm, configu
   updateConfigurationValue(vm, cfg.umpire_device_memory_pool_initial_bytes,
                            "UMPIRE_DEVICE_MEMORY_POOL_INITIAL_BYTES",
                            "umpire-device-memory-pool-initial-bytes");
-  cfg.mpi_pool = (pika::resource::pool_exists("mpi")) ? "mpi" : "default";
+  //  cfg.mpi_pool = (pika::resource::pool_exists("mpi")) ? "mpi" : "default";
 
   // Warn if not using MPI pool without --dlaf:no-mpi-pool
-  int mpi_initialized;
-  DLAF_MPI_CHECK_ERROR(MPI_Initialized(&mpi_initialized));
-  if (mpi_initialized) {
-    int ntasks;
-    DLAF_MPI_CHECK_ERROR(MPI_Comm_size(MPI_COMM_WORLD, &ntasks));
-    if (ntasks != 1 && cfg.mpi_pool == "default" && !vm["dlaf:no-mpi-pool"].as<bool>()) {
-      std::cerr << "Warning! DLA-Future is not using the \"mpi\" pika thread pool for "
-                   "MPI communication but --dlaf:no-mpi-pool is not set. This may "
-                   "indicate a bug in DLA-Future or pika. Performance may be degraded."
-                << std::endl;
-    }
-  }
+  // int mpi_initialized;
+  // DLAF_MPI_CHECK_ERROR(MPI_Initialized(&mpi_initialized));
+  // if (mpi_initialized) {
+  //   int ntasks;
+  //   DLAF_MPI_CHECK_ERROR(MPI_Comm_size(MPI_COMM_WORLD, &ntasks));
+  //   if (ntasks != 1 && cfg.mpi_pool == "default" && !vm["dlaf:no-mpi-pool"].as<bool>()) {
+  //     std::cerr << "Warning! DLA-Future is not using the \"mpi\" pika thread pool for "
+  //                  "MPI communication but --dlaf:no-mpi-pool is not set. This may "
+  //                  "indicate a bug in DLA-Future or pika. Performance may be degraded."
+  //               << std::endl;
+  //   }
+  // }
 
   // update tune parameters
   //
@@ -420,32 +434,5 @@ ScopedInitializer::ScopedInitializer(int argc, const char* const argv[], const c
 
 ScopedInitializer::~ScopedInitializer() {
   finalize();
-}
-
-void initResourcePartitionerHandler(pika::resource::partitioner& rp,
-                                    const pika::program_options::variables_map& vm) {
-  // Don't create the MPI pool if the user disabled it
-  if (vm["dlaf:no-mpi-pool"].as<bool>())
-    return;
-
-  // Don't create the MPI pool if there is a single process
-  int ntasks;
-  DLAF_MPI_CHECK_ERROR(MPI_Comm_size(MPI_COMM_WORLD, &ntasks));
-  if (ntasks == 1)
-    return;
-
-  // Disable idle backoff on the MPI pool
-  using pika::threads::scheduler_mode;
-  auto mode = scheduler_mode::default_mode;
-  mode = scheduler_mode(mode & ~scheduler_mode::enable_idle_backoff);
-
-  // Create a thread pool with a single core that we will use for all
-  // communication related tasks
-  rp.create_thread_pool("mpi", pika::resource::scheduling_policy::static_priority, mode);
-#if PIKA_VERSION_FULL >= 0x001C00  // >= 0.28.0
-  rp.add_resource(rp.sockets()[0].cores()[0].pus()[0], "mpi");
-#else
-  rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], "mpi");
-#endif
 }
 }

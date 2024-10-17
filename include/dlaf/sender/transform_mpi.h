@@ -123,31 +123,23 @@ template <typename F, typename Sender,
   namespace mpi = pika::mpi::experimental;
   namespace mpid = pika::mpi::experimental::detail;
 
-  if (mpi::get_completion_mode() >= static_cast<int>(mpid::handler_method::unspecified)) {
-    auto snd1 =
-        ex::continues_on(std::forward<Sender>(sender), dlaf::internal::getMPIScheduler()) |
-        ex::then(dlaf::common::internal::ConsumeRvalues{MPIYieldWhileCallHelper{std::forward<F>(f)}});
-    return ex::make_unique_any_sender(std::move(snd1));
-  }
-  else {
 #ifdef EXTRA_MPI_TYPES_DEBUGGING
-    auto snd1 =
-        std::forward<Sender>(sender) |
-        ex::let_value([=, f = std::move(f)]<typename... LArgs>(LArgs&&... largs) {
-          PIKA_DETAIL_DP(dla_debug<2>, debug(str<>("Args to MPI fn\n"),
-                                             pika::debug::print_type<LArgs...>(", "), "\nValues\n"));
-          return ex::just(std::move(largs)...) |
-                 mpi::transform_mpi(dlaf::common::internal::ConsumeRvalues{MPICallHelper{std::move(f)}});
-        });
-    return ex::make_unique_any_sender(std::move(snd1));
+  auto snd1 =
+      std::forward<Sender>(sender) |
+      ex::let_value([=, f = std::move(f)]<typename... LArgs>(LArgs&&... largs) {
+        PIKA_DETAIL_DP(dla_debug<2>, debug(str<>("Args to MPI fn\n"),
+                                           pika::debug::print_type<LArgs...>(", "), "\nValues\n"));
+        return ex::just(std::move(largs)...) |
+               mpi::transform_mpi(dlaf::common::internal::ConsumeRvalues{MPICallHelper{std::move(f)}});
+      });
+  return ex::make_unique_any_sender(std::move(snd1));
 #else
-    PIKA_DETAIL_DP(dla_debug<5>, debug(str<>("MPI fn\n")));
-    auto snd1 =
-        std::forward<Sender>(sender) |
-        mpi::transform_mpi(dlaf::common::internal::ConsumeRvalues{MPICallHelper{std::forward<F>(f)}});
-    return ex::make_unique_any_sender(std::move(snd1));
+  PIKA_DETAIL_DP(dla_debug<5>, debug(str<>("MPI fn\n")));
+  auto snd1 =
+      std::forward<Sender>(sender) |
+      mpi::transform_mpi(dlaf::common::internal::ConsumeRvalues{MPICallHelper{std::forward<F>(f)}});
+  return ex::make_unique_any_sender(std::move(snd1));
 #endif
-  }
 }
 
                                                               std::forward<Ts>(ts)...));

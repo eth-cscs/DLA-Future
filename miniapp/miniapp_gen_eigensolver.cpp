@@ -286,7 +286,6 @@ int main(int argc, char** argv) {
 
   pika::init_params p;
   p.desc_cmdline = desc_commandline;
-  p.pool_creation_mode = ::pika::resource::mode_pika_decides;
   return pika::init(pika_main, argc, argv, p);
 }
 

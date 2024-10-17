@@ -178,8 +178,13 @@ public:
   ///
   /// @pre blockSize() is divisible by @p tiles_per_block
   /// @pre blockSize() == tile_size()
+  Matrix retiledSubPipeline(const LocalTileSize& tiles_per_block,
+                            const SubDistributionSpec& spec) noexcept {
+    return Matrix(*this, tiles_per_block, spec);
+  }
   Matrix retiledSubPipeline(const LocalTileSize& tiles_per_block) noexcept {
-    return Matrix(*this, tiles_per_block);
+    SubDistributionSpec spec{this->distribution().origin(), this->distribution().size()};
+    return Matrix(*this, tiles_per_block, spec);
   }
 
 protected:
@@ -188,8 +193,8 @@ protected:
 private:
   using typename Matrix<const T, D>::SubPipelineTag;
   Matrix(Matrix& mat, const SubPipelineTag tag) noexcept : Matrix<const T, D>(mat, tag) {}
-  Matrix(Matrix& mat, const LocalTileSize& tiles_per_block) noexcept
-      : Matrix<const T, D>(mat, tiles_per_block) {}
+  Matrix(Matrix& mat, const LocalTileSize& tiles_per_block, const SubDistributionSpec& spec) noexcept
+      : Matrix<const T, D>(mat, tiles_per_block, spec) {}
 
   using Matrix<const T, D>::setUpTiles;
   using Matrix<const T, D>::tile_managers_;
@@ -276,8 +281,12 @@ public:
   ///
   /// @pre blockSize() is divisible by @p tiles_per_block
   /// @pre blockSize() == tile_size()
+  Matrix retiledSubPipelineConst(const LocalTileSize& tiles_per_block, const SubDistributionSpec& spec) {
+    return Matrix(*this, tiles_per_block, spec);
+  }
   Matrix retiledSubPipelineConst(const LocalTileSize& tiles_per_block) {
-    return Matrix(*this, tiles_per_block);
+    SubDistributionSpec spec{this->distribution().origin(), this->distribution().size()};
+    return retiledSubPipelineConst(tiles_per_block, spec);
   }
 
   /// Mark the tile at @p index as done
@@ -306,14 +315,15 @@ protected:
   Matrix(Matrix& mat, const SubPipelineTag) noexcept : MatrixBase(mat.distribution()) {
     setUpSubPipelines(mat);
   }
-  Matrix(Matrix& mat, const LocalTileSize& tiles_per_block) noexcept
+  Matrix(Matrix& mat, const LocalTileSize& tiles_per_block, const SubDistributionSpec& spec) noexcept
       : MatrixBase(mat.distribution(), tiles_per_block) {
-    setUpRetiledSubPipelines(mat, tiles_per_block);
+    setUpRetiledSubPipelines(mat, tiles_per_block, spec);
   }
 
   void setUpTiles(const memory::MemoryView<ElementType, D>& mem, const LayoutInfo& layout) noexcept;
   void setUpSubPipelines(Matrix<const T, D>&) noexcept;
-  void setUpRetiledSubPipelines(Matrix<const T, D>&, const LocalTileSize& tiles_per_block) noexcept;
+  void setUpRetiledSubPipelines(Matrix<const T, D>&, const LocalTileSize& tiles_per_block,
+                                const SubDistributionSpec& spec) noexcept;
 
   std::vector<internal::TilePipeline<T, D>> tile_managers_;
 };
@@ -376,19 +386,22 @@ void Matrix<const T, D>::setUpSubPipelines(Matrix<const T, D>& mat) noexcept {
 
 template <class T, Device D>
 void Matrix<const T, D>::setUpRetiledSubPipelines(Matrix<const T, D>& mat,
-                                                  const LocalTileSize& tiles_per_block) noexcept {
+                                                  const LocalTileSize& tiles_per_block,
+                                                  const SubDistributionSpec& spec) noexcept {
   DLAF_ASSERT(mat.blockSize() == mat.tile_size(), mat.blockSize(), mat.tile_size());
 
   using common::internal::vector;
   namespace ex = pika::execution::experimental;
 
-  const auto n = to_sizet(distribution().local_nr_tiles().linear_size());
+  Distribution dist(distribution(), spec);
+
+  const auto n = to_sizet(dist.local_nr_tiles().linear_size());
   tile_managers_.reserve(n);
   for (std::size_t i = 0; i < n; ++i) {
     tile_managers_.emplace_back(Tile<T, D>());
   }
 
-  const auto tile_size = distribution().tile_size();
+  const auto tile_size = dist.tile_size();
   vector<SubTileSpec> specs;
   vector<LocalTileIndex> indices;
   specs.reserve(tiles_per_block.linear_size());
@@ -405,8 +418,7 @@ void Matrix<const T, D>::setUpRetiledSubPipelines(Matrix<const T, D>& mat,
         indices.emplace_back(
             LocalTileIndex{orig_tile_index.row() * tiles_per_block.rows() + i / tile_size.rows(),
                            orig_tile_index.col() * tiles_per_block.cols() + j / tile_size.cols()});
-        specs.emplace_back(SubTileSpec{{i, j},
-                                       tileSize(distribution().global_tile_index(indices.back()))});
+        specs.emplace_back(SubTileSpec{{i, j}, tileSize(dist.global_tile_index(indices.back()))});
       }
 
     auto sub_tiles =

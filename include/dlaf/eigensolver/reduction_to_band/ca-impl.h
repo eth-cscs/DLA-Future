@@ -152,13 +152,12 @@ void hemm(comm::Index2D rank_qr, matrix::Panel<Coord::Col, T, D>& W3,
   // Note:
   // At this point partial results are all collected in X (Xt has been embedded in previous step),
   // so the last step needed is to reduce these last partial results in the final results.
-  if (mpi_row_chain.size() > 1) {
-    for (const auto& i_w1_lc : W1.iteratorLocal()) {
-      if (rank_qr.row() == rank.row())
-        continue;
-
-      ex::start_detached(comm::schedule_all_reduce_in_place(mpi_row_chain.exclusive(), MPI_SUM,
-                                                            W1.readwrite(i_w1_lc)));
+  if (rank_qr.row() != rank.row()) {
+    if (mpi_row_chain.size() > 1) {
+      for (const auto& i_w1_lc : W1.iteratorLocal()) {
+        ex::start_detached(comm::schedule_all_reduce_in_place(mpi_row_chain.exclusive(), MPI_SUM,
+                                                              W1.readwrite(i_w1_lc)));
+      }
     }
   }
 
@@ -1044,17 +1043,44 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
         // TFactor
         const LocalTileIndex zero_lc(0, 0);
         matrix::Matrix<T, D> ws_T({nrefls_this, nrefls_this}, dist.block_size());
+        const bool is_square_grid = dist.grid_size().rows() == dist.grid_size().cols();
+
         if (rank == rank_qr) {
           using factorization::internal::computeTFactor;
           computeTFactor<B>(ws_V, get_tile_tau_ro(), ws_T.readwrite(zero_lc));
-          // TODO not everyone is involved?!
-          ex::start_detached(comm::schedule_bcast_send(mpi_all_chain.exclusive(), ws_T.read(zero_lc)));
+        }
+
+        if (is_square_grid) {
+          if (rank.row() == rank_qr.row()) {
+            if (rank.col() == rank_qr.col())
+              ex::start_detached(comm::schedule_bcast_send(mpi_row_chain.exclusive(),
+                                                           ws_T.read(zero_lc)));
+            else
+              ex::start_detached(comm::schedule_bcast_recv(mpi_row_chain.exclusive(), rank_qr.col(),
+                                                           ws_T.readwrite(zero_lc)));
+          }
+
+          const comm::IndexT_MPI rank_k = rank_qr.row();
+          if (rank.col() == rank_k) {
+            if (rank.row() == rank_k) {
+              ex::start_detached(comm::schedule_bcast_send(mpi_col_chain.exclusive(),
+                                                           ws_T.read(zero_lc)));
+            }
+            else {
+              ex::start_detached(comm::schedule_bcast_recv(mpi_col_chain.exclusive(), rank_k,
+                                                           ws_T.readwrite(zero_lc)));
+            }
+          }
         }
         else {
-          // TODO not everyone is involved?!
-          ex::start_detached(comm::schedule_bcast_recv(mpi_all_chain.exclusive(),
-                                                       mpi_all_chain.rank_full_communicator(rank_qr),
-                                                       ws_T.readwrite(zero_lc)));
+          if (rank == rank_qr) {
+            ex::start_detached(comm::schedule_bcast_send(mpi_all_chain.exclusive(), ws_T.read(zero_lc)));
+          }
+          else {
+            ex::start_detached(comm::schedule_bcast_recv(mpi_all_chain.exclusive(),
+                                                         mpi_all_chain.rank_full_communicator(rank_qr),
+                                                         ws_T.readwrite(zero_lc)));
+          }
         }
 
         // W0

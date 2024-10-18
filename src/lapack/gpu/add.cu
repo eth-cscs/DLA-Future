@@ -33,15 +33,15 @@ __device__ inline void addAlpha(const T& alpha, const T& a, T& b) {
 }
 
 template <>
-__device__ inline void addAlpha<hipFloatComplex>(const hipFloatComplex& alpha, const hipFloatComplex& a,
-                                                 hipFloatComplex& b) {
-  b = b + hipCmulf(alpha, a);
+__device__ inline void addAlpha<cuFloatComplex>(const cuFloatComplex& alpha, const cuFloatComplex& a,
+                                                cuFloatComplex& b) {
+  b = b + cuCmulf(alpha, a);
 }
 
 template <>
-__device__ inline void addAlpha<hipDoubleComplex>(const hipDoubleComplex& alpha,
-                                                  const hipDoubleComplex& a, hipDoubleComplex& b) {
-  b = b + hipCmul(alpha, a);
+__device__ inline void addAlpha<cuDoubleComplex>(const cuDoubleComplex& alpha, const cuDoubleComplex& a,
+                                                 cuDoubleComplex& b) {
+  b = b + cuCmul(alpha, a);
 }
 
 template <class T>

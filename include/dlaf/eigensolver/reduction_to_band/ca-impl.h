@@ -294,9 +294,20 @@ void hemmA(comm::Index2D rank_qr, matrix::Panel<Coord::Col, T, D>& W1,
   // At this point partial results are all collected in X (Xt has been embedded in previous step),
   // so the last step needed is to reduce these last partial results in the final results.
   if (mpi_row_chain.size() > 1) {
+    const bool is_square_grid = dist.grid_size().rows() == dist.grid_size().cols();
     for (const auto& i_w1_lc : W1.iteratorLocal()) {
-      ex::start_detached(comm::schedule_all_reduce_in_place(mpi_row_chain.exclusive(), MPI_SUM,
-                                                            W1.readwrite(i_w1_lc)));
+      if (is_square_grid) {
+        const comm::IndexT_MPI rank_root = rank_qr.col();
+        if (rank.col() == rank_root)
+          ex::start_detached(comm::schedule_reduce_recv_in_place(mpi_row_chain.exclusive(), MPI_SUM,
+                                                                 W1.readwrite(i_w1_lc)));
+        else
+          ex::start_detached(comm::schedule_reduce_send(mpi_row_chain.exclusive(), rank_root, MPI_SUM,
+                                                        W1.read(i_w1_lc)));
+      }
+      else
+        ex::start_detached(comm::schedule_all_reduce_in_place(mpi_row_chain.exclusive(), MPI_SUM,
+                                                              W1.readwrite(i_w1_lc)));
     }
   }
 }

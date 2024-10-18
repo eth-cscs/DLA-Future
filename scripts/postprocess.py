@@ -380,7 +380,7 @@ def parse_jobs_cmdargs(description):
     parser.add_argument(
         "--path",
         action="append",
-        help="Plot results from this directory.",
+        help="Plot results from this directory. You can pass this option several times.",
     )
     parser.add_argument(
         "--distinguish-dir",

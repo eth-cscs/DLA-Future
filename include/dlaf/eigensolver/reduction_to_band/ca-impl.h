@@ -1119,6 +1119,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
           }
         }
         else {
+          // TODO probably it can be filtered
           if (rank == rank_qr) {
             ex::start_detached(comm::schedule_bcast_send(mpi_all_chain.exclusive(), ws_T.read(zero_lc)));
           }

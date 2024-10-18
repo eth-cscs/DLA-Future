@@ -121,14 +121,13 @@ void hemm(comm::Index2D rank_qr, matrix::Panel<Coord::Col, T, D>& W3,
   const bool is_square_grid = mpi_all_chain.size_2d().rows() == mpi_all_chain.size_2d().cols();
 
   if (is_square_grid) {
-    ex::start_detached(mpi_all_chain.exclusive() | ex::drop_value());
     for (SizeType k = at_view.offset().col(); k < dist.nr_tiles().cols(); ++k) {
       const comm::Index2D rank_k = dist.rank_global_tile({k, k});
 
       if (rank_k == rank)
         continue;
 
-      const comm::IndexT_MPI tag = k;
+      const comm::IndexT_MPI tag = rank_qr.row() + k * mpi_all_chain.size_2d().rows();
       const comm::IndexT_MPI rank_mate = mpi_all_chain.rank_full_communicator(transposed(rank));
 
       if (rank.col() == rank_k.col()) {
@@ -1273,6 +1272,7 @@ CARed2BandResult<T, D> CAReductionToBand<B, D, T>::call(comm::CommunicatorGrid& 
         ws_V.reset();
       }
     }
+    ex::start_detached(mpi_all_chain.exclusive() | ex::drop_value());
 
     // ===== 2nd pass
     const matrix::Distribution dist_heads_current = [&]() {

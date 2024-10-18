@@ -353,13 +353,23 @@ def parse_jobs(data_dirs, distinguish_dir=False):
         data_dirs = [data_dirs]
     data = []
     for data_dir in data_dirs:
+        bench_name_postfix = os.path.basename(os.path.dirname(data_dir))
+        if os.path.basename(data_dir) == "d":
+            bench_name_postfix += "-double"
+        elif os.path.basename(data_dir) == "z":
+            bench_name_postfix += "-complex"
+        else:
+            print(
+                "The base of the --path provided is not a z or d folder, the results",
+                f"for complex and double might be aggreted in the plot. Path provided: {data_dir}",
+            )
         for subdir, dirs, files in os.walk(os.path.expanduser(data_dir)):
             for f in files:
                 if f.endswith(".out"):
                     nodes = float(os.path.basename(subdir))
                     benchname = f[:-4]
                     if distinguish_dir:
-                        benchname += "@" + data_dir
+                        benchname += "@" + bench_name_postfix
 
                     with open(os.path.join(subdir, f), "r") as fout:
                         data.extend(_parse_line_based(fout, benchname, nodes))

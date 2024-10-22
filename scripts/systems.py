@@ -49,6 +49,7 @@ cscs["daint-mc"] = {
 #SBATCH --constraint=mc
 #SBATCH --output=output.txt
 #SBATCH --error=error.txt
+#SBATCH --no-requeue
 
 # Env
 export MPICH_MAX_THREAD_SAFETY=multiple
@@ -81,6 +82,7 @@ cscs["daint-gpu"] = {
 #SBATCH --constraint=gpu
 #SBATCH --output=output.txt
 #SBATCH --error=error.txt
+#SBATCH --no-requeue
 
 # Env
 export MPICH_MAX_THREAD_SAFETY=multiple
@@ -112,6 +114,7 @@ cscs["eiger"] = {
 #SBATCH --constraint=mc
 #SBATCH --output=output.txt
 #SBATCH --error=error.txt
+#SBATCH --no-requeue
 
 # Env
 export MPICH_MAX_THREAD_SAFETY=multiple
@@ -146,6 +149,7 @@ cscs["clariden-nvgpu"] = {
 #SBATCH --hint=multithread
 #SBATCH --output=output.txt
 #SBATCH --error=error.txt
+#SBATCH --no-requeue
 
 # Env
 export MPICH_MAX_THREAD_SAFETY=multiple
@@ -179,6 +183,7 @@ cscs["clariden-amdgpu"] = {
 #SBATCH --hint=multithread
 #SBATCH --output=output.txt
 #SBATCH --error=error.txt
+#SBATCH --no-requeue
 
 # Env
 export MPICH_MAX_THREAD_SAFETY=multiple
@@ -211,6 +216,7 @@ cscs["santis"] = {
 #SBATCH --hint=multithread
 #SBATCH --output=output.txt
 #SBATCH --error=error.txt
+#SBATCH --no-requeue
 
 # Env
 export MPICH_OPT_THREAD_SYNC=0 # Required to work around MPICH bug
@@ -245,6 +251,7 @@ csc["lumi-cpu"] = {
 #SBATCH --hint=multithread
 #SBATCH --output=output.txt
 #SBATCH --error=error.txt
+#SBATCH --no-requeue
 
 # Env
 export MPICH_MAX_THREAD_SAFETY=multiple
@@ -283,6 +290,7 @@ csc["lumi-gpu"] = {
 #SBATCH --gpus-per-node=8
 #SBATCH --output=output.txt
 #SBATCH --error=error.txt
+#SBATCH --no-requeue
 
 # Env
 export MPICH_MAX_THREAD_SAFETY=multiple

@@ -297,6 +297,7 @@ csc["lumi-gpu"] = {
 #SBATCH --error=error.txt
 
 # Env
+export DLAF_BAND_TO_TRIDIAG_1D_BLOCK_SIZE_BASE=2048
 export DLAF_BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE=128
 export FI_CXI_RDZV_THRESHOLD=262144
 export FI_MR_CACHE_MONITOR=disabled

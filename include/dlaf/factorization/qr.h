@@ -14,6 +14,7 @@
 /// @file
 
 #include <dlaf/communication/communicator_pipeline.h>
+#include <dlaf/eigensolver/internal/get_red2band_panel_nworkers.h>
 #include <dlaf/factorization/qr/api.h>
 #include <dlaf/matrix/index.h>
 #include <dlaf/matrix/tile.h>
@@ -44,7 +45,12 @@ template <Backend backend, Device device, class T>
 void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
                     matrix::ReadOnlyTileSender<T, Device::CPU> taus,
                     matrix::ReadWriteTileSender<T, device> t) {
-  QR_Tfactor<backend, device, T>::call(hh_panel, std::move(taus), std::move(t));
+  const SizeType nrefls_step = hh_panel.getWidth();
+  const SizeType nthreads = to_SizeType(eigensolver::internal::getReductionToBandPanelNWorkers());
+  matrix::Matrix<T, device> ws_T({nthreads * nrefls_step, nrefls_step}, {nrefls_step, nrefls_step});
+  QR_Tfactor<backend, device, T>::call(
+      hh_panel, std::move(taus), std::move(t),
+      select(ws_T, common::iterate_range2d(ws_T.distribution().local_nr_tiles())));
 }
 
 template <Backend backend, Device device, class T>

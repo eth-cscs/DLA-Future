@@ -51,7 +51,8 @@ struct QR_Tfactor {
   /// @pre v_start.isIn(v.nrTiles())
   static void call(matrix::Panel<Coord::Col, T, device>& panel_view,
                    matrix::ReadOnlyTileSender<T, Device::CPU> taus,
-                   matrix::ReadWriteTileSender<T, device> t);
+                   matrix::ReadWriteTileSender<T, device> t,
+                   std::vector<matrix::ReadWriteTileSender<T, device>> ws_t);
 
   /// Forms the triangular factor T of a block of reflectors H, which is defined as a product of k
   /// elementary reflectors.

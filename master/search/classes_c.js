@@ -9,11 +9,10 @@ var searchData=
   ['partialtransformdetach_6',['PartialTransformDetach',['../classdlaf_1_1internal_1_1_partial_transform_detach.html',1,'dlaf::internal']]],
   ['partialtransformmpi_7',['PartialTransformMPI',['../classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i.html',1,'dlaf::comm::internal']]],
   ['partialtransformmpibase_8',['PartialTransformMPIBase',['../structdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_base.html',1,'dlaf::comm::internal']]],
-  ['partialtransformmpidetach_9',['PartialTransformMPIDetach',['../classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_detach.html',1,'dlaf::comm::internal']]],
-  ['permutations_10',['Permutations',['../structdlaf_1_1permutations_1_1internal_1_1_permutations.html',1,'dlaf::permutations::internal']]],
-  ['pipeline_11',['Pipeline',['../classdlaf_1_1common_1_1_pipeline.html',1,'dlaf::common']]],
-  ['pipeline_3c_20communicator_20_3e_12',['Pipeline&lt; Communicator &gt;',['../classdlaf_1_1common_1_1_pipeline.html',1,'dlaf::common']]],
-  ['policy_13',['Policy',['../classdlaf_1_1internal_1_1_policy.html',1,'dlaf::internal']]],
-  ['prependpack_14',['PrependPack',['../structdlaf_1_1internal_1_1_prepend_pack.html',1,'dlaf::internal']]],
-  ['prependpack_3c_20pack_3c_20ts_2e_2e_2e_20_3e_2c_20t_20_3e_15',['PrependPack&lt; Pack&lt; Ts... &gt;, T &gt;',['../structdlaf_1_1internal_1_1_prepend_pack_3_01_pack_3_01_ts_8_8_8_01_4_00_01_t_01_4.html',1,'dlaf::internal']]]
+  ['permutations_9',['Permutations',['../structdlaf_1_1permutations_1_1internal_1_1_permutations.html',1,'dlaf::permutations::internal']]],
+  ['pipeline_10',['Pipeline',['../classdlaf_1_1common_1_1_pipeline.html',1,'dlaf::common']]],
+  ['pipeline_3c_20communicator_20_3e_11',['Pipeline&lt; Communicator &gt;',['../classdlaf_1_1common_1_1_pipeline.html',1,'dlaf::common']]],
+  ['policy_12',['Policy',['../classdlaf_1_1internal_1_1_policy.html',1,'dlaf::internal']]],
+  ['prependpack_13',['PrependPack',['../structdlaf_1_1internal_1_1_prepend_pack.html',1,'dlaf::internal']]],
+  ['prependpack_3c_20pack_3c_20ts_2e_2e_2e_20_3e_2c_20t_20_3e_14',['PrependPack&lt; Pack&lt; Ts... &gt;, T &gt;',['../structdlaf_1_1internal_1_1_prepend_pack_3_01_pack_3_01_ts_8_8_8_01_4_00_01_t_01_4.html',1,'dlaf::internal']]]
 ];

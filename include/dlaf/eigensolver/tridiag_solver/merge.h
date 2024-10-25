@@ -50,6 +50,7 @@
 #include <dlaf/permutations/general.h>
 #include <dlaf/permutations/general/impl.h>
 #include <dlaf/schedulers.h>
+#include <dlaf/sender/continues_on.h>
 #include <dlaf/sender/make_sender_algorithm_overloads.h>
 #include <dlaf/sender/policy.h>
 #include <dlaf/sender/transform.h>
@@ -823,7 +824,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
                    ex::when_all_vector(tc.readwrite(z)), ex::when_all_vector(tc.readwrite(evals)),
                    ex::when_all_vector(tc.read(i2)), ex::when_all_vector(tc.readwrite(evecs)),
                    ex::just(std::vector<memory::MemoryView<T, Device::CPU>>())) |
-      ex::transfer(di::getBackendScheduler<Backend::MC>(thread_priority::high)) |
+      di::continues_on(di::getBackendScheduler<Backend::MC>(thread_priority::high)) |
       ex::bulk(nthreads, [nthreads, n, nb](std::size_t thread_idx, auto& barrier_ptr, auto& k, auto& rho,
                                            auto& d_tiles, auto& z_tiles, auto& eval_tiles,
                                            const auto& i2_tile_arr, auto& evec_tiles, auto& ws_vecs) {
@@ -1031,11 +1032,12 @@ void multiplyEigenvectors(const SizeType sub_offset, const SizeType n, const Siz
   // └───┴────────┴────┘  └────────────┴────┘
 
   namespace ex = pika::execution::experimental;
+  using dlaf::internal::continues_on;
   using pika::execution::thread_priority;
 
   ex::start_detached(
       ex::when_all(std::forward<KSender>(k), std::forward<UDLSenders>(n_udl)) |
-      ex::transfer(dlaf::internal::getBackendScheduler<Backend::MC>(thread_priority::high)) |
+      continues_on(dlaf::internal::getBackendScheduler<Backend::MC>(thread_priority::high)) |
       ex::then([sub_offset, n, n_upper, n_lower, e0 = e0.subPipeline(), e1 = e1.subPipelineConst(),
                 e2 = e2.subPipelineConst()](const SizeType k, std::array<std::size_t, 3> n_udl) mutable {
         using dlaf::matrix::internal::MatrixRef;
@@ -1334,7 +1336,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                    // additional workspaces
                    ex::just(std::vector<memory::MemoryView<T, Device::CPU>>()),
                    ex::just(memory::MemoryView<T, Device::CPU>())) |
-      ex::transfer(hp_scheduler) |
+      di::continues_on(hp_scheduler) |
       ex::let_value([n, dist_sub, bcast_evals, all_reduce_in_place, hp_scheduler](
                         auto& row_comm_wrapper, auto& col_comm_wrapper, const SizeType k,
                         const SizeType k_lc, const auto& rho, const auto& d_tiles, auto& z_tiles,
@@ -1353,7 +1355,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
           return std::clamp(ideal_workers, min_workers, available_workers);
         }();
 
-        return ex::just(std::make_unique<pika::barrier<>>(nthreads)) | ex::transfer(hp_scheduler) |
+        return ex::just(std::make_unique<pika::barrier<>>(nthreads)) | di::continues_on(hp_scheduler) |
                ex::bulk(nthreads, [&row_comm_wrapper, &col_comm_wrapper, k, k_lc, &rho, &d_tiles,
                                    &z_tiles, &eval_tiles, &i4_tiles_arr, &i6_tiles_arr, &i2_tiles_arr,
                                    &evec_tiles, &ws_cols, &ws_row, nthreads, n, dist_sub, bcast_evals,
@@ -1762,11 +1764,12 @@ void multiplyEigenvectors(const GlobalElementIndex sub_offset, const matrix::Dis
   // └───┴────────┴────┘  └────────────┴────┘
 
   namespace ex = pika::execution::experimental;
+  using dlaf::internal::continues_on;
   using pika::execution::thread_priority;
 
   ex::start_detached(
       ex::when_all(std::forward<KLcSender>(k_lc), std::forward<UDLSenders>(n_udl)) |
-      ex::transfer(dlaf::internal::getBackendScheduler<Backend::MC>(thread_priority::high)) |
+      continues_on(dlaf::internal::getBackendScheduler<Backend::MC>(thread_priority::high)) |
       ex::then([dist_sub, sub_offset, n_upper, n_lower, e0 = e0.subPipeline(),
                 e1 = e1.subPipelineConst(), e2 = e2.subPipelineConst(),
                 sub_comm_row = row_task_chain.sub_pipeline(),

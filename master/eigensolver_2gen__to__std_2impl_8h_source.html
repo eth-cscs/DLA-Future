@@ -570,288 +570,286 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00487" name="l00487"></a><span class="lineno">  487</span>    <span class="keywordflow">if</span> (kk_rank.col() == this_rank.col()) {</div>
 <div class="line"><a id="l00488" name="l00488"></a><span class="lineno">  488</span>      <span class="comment">// panel partial update</span></div>
 <div class="line"><a id="l00489" name="l00489"></a><span class="lineno">  489</span>      <span class="keywordflow">for</span> (SizeType i_local = at_offset.rows(); i_local &lt; distr.localNrTiles().rows(); ++i_local) {</div>
-<div class="line"><a id="l00490" name="l00490"></a><span class="lineno">  490</span>        <span class="keyword">const</span> LocalTileIndex local_idx(Coord::Row, i_local);</div>
-<div class="line"><a id="l00491" name="l00491"></a><span class="lineno">  491</span>        <span class="keyword">const</span> LocalTileIndex ik(i_local, distr.localTileFromGlobalTile&lt;Coord::Col&gt;(k));</div>
-<div class="line"><a id="l00492" name="l00492"></a><span class="lineno">  492</span> </div>
-<div class="line"><a id="l00493" name="l00493"></a><span class="lineno">  493</span>        hemmPanelTile&lt;backend&gt;(thread_priority::high, a_diag, mat_l.read(ik), mat_a.readwrite(ik));</div>
-<div class="line"><a id="l00494" name="l00494"></a><span class="lineno">  494</span>      }</div>
-<div class="line"><a id="l00495" name="l00495"></a><span class="lineno">  495</span>    }</div>
-<div class="line"><a id="l00496" name="l00496"></a><span class="lineno">  496</span>  }</div>
-<div class="line"><a id="l00497" name="l00497"></a><span class="lineno">  497</span> </div>
-<div class="line"><a id="l00498" name="l00498"></a><span class="lineno">  498</span><span class="preprocessor">#ifdef DLAF_WITH_HDF5</span></div>
-<div class="line"><a id="l00499" name="l00499"></a><span class="lineno">  499</span>  <span class="keywordflow">if</span> (getTuneParameters().debug_dump_generalized_to_standard_data) {</div>
-<div class="line"><a id="l00500" name="l00500"></a><span class="lineno">  500</span>    file-&gt;write(mat_a, <span class="stringliteral">&quot;/std&quot;</span>);</div>
-<div class="line"><a id="l00501" name="l00501"></a><span class="lineno">  501</span>  }</div>
-<div class="line"><a id="l00502" name="l00502"></a><span class="lineno">  502</span> </div>
-<div class="line"><a id="l00503" name="l00503"></a><span class="lineno">  503</span>  num_gen_to_std_calls++;</div>
-<div class="line"><a id="l00504" name="l00504"></a><span class="lineno">  504</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00505" name="l00505"></a><span class="lineno">  505</span>}</div>
-<div class="line"><a id="l00506" name="l00506"></a><span class="lineno">  506</span> </div>
-<div class="line"><a id="l00507" name="l00507"></a><span class="lineno">  507</span><span class="keyword">template</span> &lt;Backend backend, Device device, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a id="l00508" name="l00508"></a><span class="lineno">  508</span><span class="keywordtype">void</span> GenToStd&lt;backend, device, T&gt;::call_U(Matrix&lt;T, device&gt;&amp; mat_a, Matrix&lt;T, device&gt;&amp; mat_u) {</div>
-<div class="line"><a id="l00509" name="l00509"></a><span class="lineno">  509</span>  <span class="keyword">using namespace </span>gentostd_u;</div>
-<div class="line"><a id="l00510" name="l00510"></a><span class="lineno">  510</span>  <span class="keyword">using </span>pika::execution::thread_priority;</div>
-<div class="line"><a id="l00511" name="l00511"></a><span class="lineno">  511</span> </div>
-<div class="line"><a id="l00512" name="l00512"></a><span class="lineno">  512</span>  <span class="comment">// Number of tile (rows = cols)</span></div>
-<div class="line"><a id="l00513" name="l00513"></a><span class="lineno">  513</span>  SizeType nrtile = mat_a.nrTiles().cols();</div>
-<div class="line"><a id="l00514" name="l00514"></a><span class="lineno">  514</span> </div>
-<div class="line"><a id="l00515" name="l00515"></a><span class="lineno">  515</span>  <span class="keywordflow">for</span> (SizeType k = 0; k &lt; nrtile; ++k) {</div>
-<div class="line"><a id="l00516" name="l00516"></a><span class="lineno">  516</span>    <span class="keyword">const</span> LocalTileIndex kk{k, k};</div>
-<div class="line"><a id="l00517" name="l00517"></a><span class="lineno">  517</span> </div>
-<div class="line"><a id="l00518" name="l00518"></a><span class="lineno">  518</span>    <span class="comment">// Direct transformation to standard eigenvalue problem of the diagonal tile</span></div>
-<div class="line"><a id="l00519" name="l00519"></a><span class="lineno">  519</span>    hegstDiagTile&lt;backend&gt;(thread_priority::high, mat_a.readwrite(kk), mat_u.readwrite(kk));</div>
-<div class="line"><a id="l00520" name="l00520"></a><span class="lineno">  520</span> </div>
-<div class="line"><a id="l00521" name="l00521"></a><span class="lineno">  521</span>    <span class="comment">// If there is no trailing matrix</span></div>
-<div class="line"><a id="l00522" name="l00522"></a><span class="lineno">  522</span>    <span class="keywordflow">if</span> (k == nrtile - 1)</div>
-<div class="line"><a id="l00523" name="l00523"></a><span class="lineno">  523</span>      <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l00524" name="l00524"></a><span class="lineno">  524</span> </div>
-<div class="line"><a id="l00525" name="l00525"></a><span class="lineno">  525</span>    <span class="keywordflow">for</span> (SizeType i = k + 1; i &lt; nrtile; ++i) {</div>
-<div class="line"><a id="l00526" name="l00526"></a><span class="lineno">  526</span>      <span class="keyword">const</span> LocalTileIndex ki{k, i};</div>
-<div class="line"><a id="l00527" name="l00527"></a><span class="lineno">  527</span>      trsmPanelTile&lt;backend&gt;(thread_priority::high, mat_u.read(kk), mat_a.readwrite(ki));</div>
-<div class="line"><a id="l00528" name="l00528"></a><span class="lineno">  528</span>      hemmPanelTile&lt;backend&gt;(thread_priority::high, mat_a.read(kk), mat_u.read(ki), mat_a.readwrite(ki));</div>
-<div class="line"><a id="l00529" name="l00529"></a><span class="lineno">  529</span>    }</div>
-<div class="line"><a id="l00530" name="l00530"></a><span class="lineno">  530</span> </div>
-<div class="line"><a id="l00531" name="l00531"></a><span class="lineno">  531</span>    <span class="keywordflow">for</span> (SizeType i = k + 1; i &lt; nrtile; ++i) {</div>
-<div class="line"><a id="l00532" name="l00532"></a><span class="lineno">  532</span>      <span class="keyword">const</span> LocalTileIndex ii{i, i};</div>
-<div class="line"><a id="l00533" name="l00533"></a><span class="lineno">  533</span>      <span class="keyword">const</span> LocalTileIndex ki{k, i};</div>
-<div class="line"><a id="l00534" name="l00534"></a><span class="lineno">  534</span>      <span class="comment">// first trailing panel gets high priority (look ahead).</span></div>
-<div class="line"><a id="l00535" name="l00535"></a><span class="lineno">  535</span>      <span class="keyword">const</span> <span class="keyword">auto</span> trailing_matrix_priority =</div>
-<div class="line"><a id="l00536" name="l00536"></a><span class="lineno">  536</span>          (i == k + 1) ? thread_priority::high : thread_priority::normal;</div>
-<div class="line"><a id="l00537" name="l00537"></a><span class="lineno">  537</span> </div>
-<div class="line"><a id="l00538" name="l00538"></a><span class="lineno">  538</span>      her2kTrailingDiagTile&lt;backend&gt;(trailing_matrix_priority, mat_a.read(ki), mat_u.read(ki),</div>
-<div class="line"><a id="l00539" name="l00539"></a><span class="lineno">  539</span>                                     mat_a.readwrite(ii));</div>
-<div class="line"><a id="l00540" name="l00540"></a><span class="lineno">  540</span> </div>
-<div class="line"><a id="l00541" name="l00541"></a><span class="lineno">  541</span>      <span class="keywordflow">for</span> (SizeType j = i + 1; j &lt; nrtile; ++j) {</div>
-<div class="line"><a id="l00542" name="l00542"></a><span class="lineno">  542</span>        <span class="keyword">const</span> LocalTileIndex kj{k, j};</div>
-<div class="line"><a id="l00543" name="l00543"></a><span class="lineno">  543</span>        <span class="keyword">const</span> LocalTileIndex ij{i, j};</div>
-<div class="line"><a id="l00544" name="l00544"></a><span class="lineno">  544</span>        gemmTrailingMatrixTile&lt;backend&gt;(trailing_matrix_priority, mat_a.read(ki), mat_u.read(kj),</div>
-<div class="line"><a id="l00545" name="l00545"></a><span class="lineno">  545</span>                                        mat_a.readwrite(ij));</div>
-<div class="line"><a id="l00546" name="l00546"></a><span class="lineno">  546</span>        gemmTrailingMatrixTile&lt;backend&gt;(trailing_matrix_priority, mat_u.read(ki), mat_a.read(kj),</div>
-<div class="line"><a id="l00547" name="l00547"></a><span class="lineno">  547</span>                                        mat_a.readwrite(ij));</div>
-<div class="line"><a id="l00548" name="l00548"></a><span class="lineno">  548</span>      }</div>
-<div class="line"><a id="l00549" name="l00549"></a><span class="lineno">  549</span>    }</div>
-<div class="line"><a id="l00550" name="l00550"></a><span class="lineno">  550</span> </div>
-<div class="line"><a id="l00551" name="l00551"></a><span class="lineno">  551</span>    <span class="keywordflow">for</span> (SizeType i = k + 1; i &lt; nrtile; ++i) {</div>
-<div class="line"><a id="l00552" name="l00552"></a><span class="lineno">  552</span>      <span class="keyword">const</span> LocalTileIndex ki{k, i};</div>
-<div class="line"><a id="l00553" name="l00553"></a><span class="lineno">  553</span>      hemmPanelTile&lt;backend&gt;(thread_priority::high, mat_a.read(kk), mat_u.read(ki), mat_a.readwrite(ki));</div>
-<div class="line"><a id="l00554" name="l00554"></a><span class="lineno">  554</span>    }</div>
-<div class="line"><a id="l00555" name="l00555"></a><span class="lineno">  555</span> </div>
-<div class="line"><a id="l00556" name="l00556"></a><span class="lineno">  556</span>    <span class="keywordflow">for</span> (SizeType i = k + 1; i &lt; nrtile; ++i) {</div>
-<div class="line"><a id="l00557" name="l00557"></a><span class="lineno">  557</span>      <span class="keyword">const</span> LocalTileIndex ii{i, i};</div>
-<div class="line"><a id="l00558" name="l00558"></a><span class="lineno">  558</span>      <span class="keyword">const</span> LocalTileIndex ki{k, i};</div>
-<div class="line"><a id="l00559" name="l00559"></a><span class="lineno">  559</span>      trsmPanelUpdateTile&lt;backend&gt;(thread_priority::high, mat_u.read(ii), mat_a.readwrite(ki));</div>
-<div class="line"><a id="l00560" name="l00560"></a><span class="lineno">  560</span> </div>
-<div class="line"><a id="l00561" name="l00561"></a><span class="lineno">  561</span>      <span class="keywordflow">for</span> (SizeType j = i + 1; j &lt; nrtile; ++j) {</div>
-<div class="line"><a id="l00562" name="l00562"></a><span class="lineno">  562</span>        <span class="keyword">const</span> LocalTileIndex ij{i, j};</div>
-<div class="line"><a id="l00563" name="l00563"></a><span class="lineno">  563</span>        <span class="keyword">const</span> LocalTileIndex kj{k, j};</div>
-<div class="line"><a id="l00564" name="l00564"></a><span class="lineno">  564</span>        gemmPanelUpdateTile&lt;backend&gt;(thread_priority::normal, mat_a.read(ki), mat_u.read(ij),</div>
-<div class="line"><a id="l00565" name="l00565"></a><span class="lineno">  565</span>                                     mat_a.readwrite(kj));</div>
-<div class="line"><a id="l00566" name="l00566"></a><span class="lineno">  566</span>      }</div>
-<div class="line"><a id="l00567" name="l00567"></a><span class="lineno">  567</span>    }</div>
-<div class="line"><a id="l00568" name="l00568"></a><span class="lineno">  568</span>  }</div>
-<div class="line"><a id="l00569" name="l00569"></a><span class="lineno">  569</span>}</div>
-<div class="line"><a id="l00570" name="l00570"></a><span class="lineno">  570</span> </div>
-<div class="line"><a id="l00571" name="l00571"></a><span class="lineno">  571</span><span class="keyword">template</span> &lt;Backend backend, Device device, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a id="l00572" name="l00572"></a><span class="lineno">  572</span><span class="keywordtype">void</span> GenToStd&lt;backend, device, T&gt;::call_U(comm::CommunicatorGrid&amp; grid, Matrix&lt;T, device&gt;&amp; mat_a,</div>
-<div class="line"><a id="l00573" name="l00573"></a><span class="lineno">  573</span>                                          Matrix&lt;T, device&gt;&amp; mat_u) {</div>
-<div class="line"><a id="l00574" name="l00574"></a><span class="lineno">  574</span>  <span class="keyword">using namespace </span>gentostd_u;</div>
-<div class="line"><a id="l00575" name="l00575"></a><span class="lineno">  575</span>  <span class="keyword">using </span>pika::execution::thread_priority;</div>
-<div class="line"><a id="l00576" name="l00576"></a><span class="lineno">  576</span> </div>
-<div class="line"><a id="l00577" name="l00577"></a><span class="lineno">  577</span>  <span class="comment">// Set up MPI executor pipelines</span></div>
-<div class="line"><a id="l00578" name="l00578"></a><span class="lineno">  578</span>  <span class="keyword">auto</span> mpi_row_task_chain = grid.row_communicator_pipeline();</div>
-<div class="line"><a id="l00579" name="l00579"></a><span class="lineno">  579</span>  <span class="keyword">auto</span> mpi_col_task_chain = grid.col_communicator_pipeline();</div>
-<div class="line"><a id="l00580" name="l00580"></a><span class="lineno">  580</span> </div>
-<div class="line"><a id="l00581" name="l00581"></a><span class="lineno">  581</span>  <span class="keyword">const</span> comm::Index2D this_rank = grid.rank();</div>
-<div class="line"><a id="l00582" name="l00582"></a><span class="lineno">  582</span> </div>
-<div class="line"><a id="l00583" name="l00583"></a><span class="lineno">  583</span>  <span class="keyword">const</span> matrix::Distribution&amp; distr = mat_a.distribution();</div>
-<div class="line"><a id="l00584" name="l00584"></a><span class="lineno">  584</span>  <span class="comment">// Number of tile (rows = cols)</span></div>
-<div class="line"><a id="l00585" name="l00585"></a><span class="lineno">  585</span>  SizeType nrtile = mat_a.nrTiles().rows();</div>
-<div class="line"><a id="l00586" name="l00586"></a><span class="lineno">  586</span> </div>
-<div class="line"><a id="l00587" name="l00587"></a><span class="lineno">  587</span>  <span class="keyword">constexpr</span> std::size_t n_workspaces = 2;</div>
-<div class="line"><a id="l00588" name="l00588"></a><span class="lineno">  588</span>  common::RoundRobin&lt;matrix::Panel&lt;Coord::Row, T, device&gt;&gt; a_panels(n_workspaces, distr);</div>
-<div class="line"><a id="l00589" name="l00589"></a><span class="lineno">  589</span>  common::RoundRobin&lt;matrix::Panel&lt;Coord::Col, T, device&gt;&gt; a_panelsT(n_workspaces, distr);</div>
-<div class="line"><a id="l00590" name="l00590"></a><span class="lineno">  590</span>  common::RoundRobin&lt;matrix::Panel&lt;Coord::Row, T, device&gt;&gt; u_panels(n_workspaces, distr);</div>
-<div class="line"><a id="l00591" name="l00591"></a><span class="lineno">  591</span>  common::RoundRobin&lt;matrix::Panel&lt;Coord::Col, T, device, matrix::StoreTransposed::Yes&gt;&gt; u_panelsT(</div>
-<div class="line"><a id="l00592" name="l00592"></a><span class="lineno">  592</span>      n_workspaces, distr);</div>
-<div class="line"><a id="l00593" name="l00593"></a><span class="lineno">  593</span> </div>
-<div class="line"><a id="l00594" name="l00594"></a><span class="lineno">  594</span>  <span class="keywordflow">for</span> (SizeType k = 0; k &lt; nrtile; ++k) {</div>
-<div class="line"><a id="l00595" name="l00595"></a><span class="lineno">  595</span>    <span class="keyword">const</span> GlobalTileIndex kk{k, k};</div>
-<div class="line"><a id="l00596" name="l00596"></a><span class="lineno">  596</span>    <span class="keyword">const</span> comm::Index2D kk_rank = distr.rankGlobalTile(kk);</div>
-<div class="line"><a id="l00597" name="l00597"></a><span class="lineno">  597</span>    <span class="keyword">const</span> GlobalTileIndex at{k + 1, k + 1};</div>
-<div class="line"><a id="l00598" name="l00598"></a><span class="lineno">  598</span> </div>
-<div class="line"><a id="l00599" name="l00599"></a><span class="lineno">  599</span>    <span class="keyword">const</span> LocalTileSize kk_offset{</div>
-<div class="line"><a id="l00600" name="l00600"></a><span class="lineno">  600</span>        distr.nextLocalTileFromGlobalTile&lt;Coord::Row&gt;(k),</div>
-<div class="line"><a id="l00601" name="l00601"></a><span class="lineno">  601</span>        distr.nextLocalTileFromGlobalTile&lt;Coord::Col&gt;(k),</div>
-<div class="line"><a id="l00602" name="l00602"></a><span class="lineno">  602</span>    };</div>
-<div class="line"><a id="l00603" name="l00603"></a><span class="lineno">  603</span> </div>
-<div class="line"><a id="l00604" name="l00604"></a><span class="lineno">  604</span>    <span class="keyword">const</span> LocalTileSize at_offset{</div>
-<div class="line"><a id="l00605" name="l00605"></a><span class="lineno">  605</span>        distr.nextLocalTileFromGlobalTile&lt;Coord::Row&gt;(k + 1),</div>
-<div class="line"><a id="l00606" name="l00606"></a><span class="lineno">  606</span>        distr.nextLocalTileFromGlobalTile&lt;Coord::Col&gt;(k + 1),</div>
-<div class="line"><a id="l00607" name="l00607"></a><span class="lineno">  607</span>    };</div>
-<div class="line"><a id="l00608" name="l00608"></a><span class="lineno">  608</span> </div>
-<div class="line"><a id="l00609" name="l00609"></a><span class="lineno">  609</span>    <span class="keyword">auto</span>&amp; u_panel = u_panels.nextResource();</div>
-<div class="line"><a id="l00610" name="l00610"></a><span class="lineno">  610</span>    <span class="keyword">auto</span>&amp; u_panelT = u_panelsT.nextResource();</div>
-<div class="line"><a id="l00611" name="l00611"></a><span class="lineno">  611</span>    <span class="keyword">auto</span>&amp; a_panel = a_panels.nextResource();</div>
-<div class="line"><a id="l00612" name="l00612"></a><span class="lineno">  612</span>    <span class="keyword">auto</span>&amp; a_panelT = a_panelsT.nextResource();</div>
-<div class="line"><a id="l00613" name="l00613"></a><span class="lineno">  613</span>    u_panel.setRangeStart(kk);</div>
-<div class="line"><a id="l00614" name="l00614"></a><span class="lineno">  614</span>    u_panelT.setRangeStart(kk);</div>
-<div class="line"><a id="l00615" name="l00615"></a><span class="lineno">  615</span>    a_panelT.setRange({0, 0}, kk);</div>
-<div class="line"><a id="l00616" name="l00616"></a><span class="lineno">  616</span> </div>
-<div class="line"><a id="l00617" name="l00617"></a><span class="lineno">  617</span>    <span class="keywordflow">if</span> (k == nrtile - 1) {</div>
-<div class="line"><a id="l00618" name="l00618"></a><span class="lineno">  618</span>      u_panel.setHeight(distr.tileSize(kk).rows());</div>
-<div class="line"><a id="l00619" name="l00619"></a><span class="lineno">  619</span>      a_panelT.setWidth(distr.tileSize(kk).cols());</div>
-<div class="line"><a id="l00620" name="l00620"></a><span class="lineno">  620</span>    }</div>
-<div class="line"><a id="l00621" name="l00621"></a><span class="lineno">  621</span> </div>
-<div class="line"><a id="l00622" name="l00622"></a><span class="lineno">  622</span>    <span class="keywordflow">if</span> (kk_rank.row() == this_rank.row()) {</div>
-<div class="line"><a id="l00623" name="l00623"></a><span class="lineno">  623</span>      <span class="keywordflow">for</span> (SizeType i_local = kk_offset.cols(); i_local &lt; distr.localNrTiles().cols(); ++i_local) {</div>
-<div class="line"><a id="l00624" name="l00624"></a><span class="lineno">  624</span>        <span class="keyword">const</span> LocalTileIndex ki_panel(Coord::Col, i_local);</div>
-<div class="line"><a id="l00625" name="l00625"></a><span class="lineno">  625</span>        <span class="keyword">const</span> LocalTileIndex ki(kk_offset.rows(), i_local);</div>
-<div class="line"><a id="l00626" name="l00626"></a><span class="lineno">  626</span> </div>
-<div class="line"><a id="l00627" name="l00627"></a><span class="lineno">  627</span>        u_panel.setTile(ki_panel, mat_u.read(ki));</div>
-<div class="line"><a id="l00628" name="l00628"></a><span class="lineno">  628</span>      }</div>
-<div class="line"><a id="l00629" name="l00629"></a><span class="lineno">  629</span>    }</div>
-<div class="line"><a id="l00630" name="l00630"></a><span class="lineno">  630</span> </div>
-<div class="line"><a id="l00631" name="l00631"></a><span class="lineno">  631</span>    <a class="code hl_function" href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">broadcast</a>(kk_rank.row(), u_panel, u_panelT, mpi_row_task_chain, mpi_col_task_chain);</div>
-<div class="line"><a id="l00632" name="l00632"></a><span class="lineno">  632</span> </div>
-<div class="line"><a id="l00633" name="l00633"></a><span class="lineno">  633</span>    <span class="comment">// continue update previous panels</span></div>
-<div class="line"><a id="l00634" name="l00634"></a><span class="lineno">  634</span>    <span class="comment">// Note: The tasks of the final huge TRSM of the HEGST step have been reshuffled to avoid extra</span></div>
-<div class="line"><a id="l00635" name="l00635"></a><span class="lineno">  635</span>    <span class="comment">//       communication of the matrix U.</span></div>
-<div class="line"><a id="l00636" name="l00636"></a><span class="lineno">  636</span>    <span class="comment">//       During k-th iteration only the tasks involving the k-th panel of U are executed.</span></div>
-<div class="line"><a id="l00637" name="l00637"></a><span class="lineno">  637</span>    <span class="comment">//       Therefore, all previous panels have to be updated at each step.</span></div>
-<div class="line"><a id="l00638" name="l00638"></a><span class="lineno">  638</span>    <span class="keywordflow">if</span> (kk_rank.col() == this_rank.col()) {</div>
-<div class="line"><a id="l00639" name="l00639"></a><span class="lineno">  639</span>      <span class="keywordflow">for</span> (SizeType i_local = 0; i_local &lt; kk_offset.rows(); ++i_local) {</div>
-<div class="line"><a id="l00640" name="l00640"></a><span class="lineno">  640</span>        <span class="keyword">const</span> LocalTileIndex kk_panel(Coord::Col, kk_offset.cols());</div>
-<div class="line"><a id="l00641" name="l00641"></a><span class="lineno">  641</span>        <span class="keyword">const</span> LocalTileIndex ki_panelT{Coord::Row, i_local};</div>
-<div class="line"><a id="l00642" name="l00642"></a><span class="lineno">  642</span>        <span class="keyword">const</span> LocalTileIndex ik(i_local, kk_offset.cols());</div>
-<div class="line"><a id="l00643" name="l00643"></a><span class="lineno">  643</span> </div>
-<div class="line"><a id="l00644" name="l00644"></a><span class="lineno">  644</span>        trsmPanelUpdateTile&lt;backend&gt;(thread_priority::high, u_panel.read(kk_panel), mat_a.readwrite(ik));</div>
-<div class="line"><a id="l00645" name="l00645"></a><span class="lineno">  645</span> </div>
-<div class="line"><a id="l00646" name="l00646"></a><span class="lineno">  646</span>        a_panelT.setTile(ki_panelT, mat_a.read(ik));</div>
-<div class="line"><a id="l00647" name="l00647"></a><span class="lineno">  647</span>      }</div>
-<div class="line"><a id="l00648" name="l00648"></a><span class="lineno">  648</span>    }</div>
-<div class="line"><a id="l00649" name="l00649"></a><span class="lineno">  649</span> </div>
-<div class="line"><a id="l00650" name="l00650"></a><span class="lineno">  650</span>    <span class="comment">// No next rows update if last col.</span></div>
-<div class="line"><a id="l00651" name="l00651"></a><span class="lineno">  651</span>    <span class="keywordflow">if</span> (k &lt; nrtile - 1) {</div>
-<div class="line"><a id="l00652" name="l00652"></a><span class="lineno">  652</span>      <a class="code hl_function" href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">broadcast</a>(kk_rank.col(), a_panelT, mpi_row_task_chain);</div>
-<div class="line"><a id="l00653" name="l00653"></a><span class="lineno">  653</span> </div>
-<div class="line"><a id="l00654" name="l00654"></a><span class="lineno">  654</span>      <span class="keywordflow">for</span> (SizeType i_local = 0; i_local &lt; kk_offset.rows(); ++i_local) {</div>
-<div class="line"><a id="l00655" name="l00655"></a><span class="lineno">  655</span>        <span class="keywordflow">for</span> (SizeType j_local = at_offset.cols(); j_local &lt; distr.localNrTiles().cols(); ++j_local) {</div>
-<div class="line"><a id="l00656" name="l00656"></a><span class="lineno">  656</span>          <span class="keyword">const</span> LocalTileIndex kj_panel{Coord::Col, j_local};</div>
-<div class="line"><a id="l00657" name="l00657"></a><span class="lineno">  657</span>          <span class="keyword">const</span> LocalTileIndex ik_panelT{Coord::Row, i_local};</div>
-<div class="line"><a id="l00658" name="l00658"></a><span class="lineno">  658</span>          <span class="keyword">const</span> LocalTileIndex ij{i_local, j_local};</div>
-<div class="line"><a id="l00659" name="l00659"></a><span class="lineno">  659</span> </div>
-<div class="line"><a id="l00660" name="l00660"></a><span class="lineno">  660</span>          gemmPanelUpdateTile&lt;backend&gt;(thread_priority::normal, a_panelT.read(ik_panelT),</div>
-<div class="line"><a id="l00661" name="l00661"></a><span class="lineno">  661</span>                                       u_panel.read(kj_panel), mat_a.readwrite(ij));</div>
-<div class="line"><a id="l00662" name="l00662"></a><span class="lineno">  662</span>        }</div>
-<div class="line"><a id="l00663" name="l00663"></a><span class="lineno">  663</span>      }</div>
-<div class="line"><a id="l00664" name="l00664"></a><span class="lineno">  664</span>    }</div>
-<div class="line"><a id="l00665" name="l00665"></a><span class="lineno">  665</span> </div>
-<div class="line"><a id="l00666" name="l00666"></a><span class="lineno">  666</span>    a_panelT.reset();</div>
-<div class="line"><a id="l00667" name="l00667"></a><span class="lineno">  667</span> </div>
-<div class="line"><a id="l00668" name="l00668"></a><span class="lineno">  668</span>    <span class="comment">// Direct transformation to standard eigenvalue problem of the diagonal tile</span></div>
-<div class="line"><a id="l00669" name="l00669"></a><span class="lineno">  669</span>    <span class="keywordflow">if</span> (kk_rank == this_rank)</div>
-<div class="line"><a id="l00670" name="l00670"></a><span class="lineno">  670</span>      hegstDiagTile&lt;backend&gt;(thread_priority::high, mat_a.readwrite(kk), mat_u.readwrite(kk));</div>
-<div class="line"><a id="l00671" name="l00671"></a><span class="lineno">  671</span> </div>
-<div class="line"><a id="l00672" name="l00672"></a><span class="lineno">  672</span>    <span class="comment">// If there is no trailing matrix</span></div>
-<div class="line"><a id="l00673" name="l00673"></a><span class="lineno">  673</span>    <span class="keywordflow">if</span> (k == nrtile - 1)</div>
-<div class="line"><a id="l00674" name="l00674"></a><span class="lineno">  674</span>      <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l00675" name="l00675"></a><span class="lineno">  675</span> </div>
-<div class="line"><a id="l00676" name="l00676"></a><span class="lineno">  676</span>    <span class="keyword">const</span> LocalTileIndex diag_wp_idx{kk_offset.rows(), 0};</div>
-<div class="line"><a id="l00677" name="l00677"></a><span class="lineno">  677</span> </div>
-<div class="line"><a id="l00678" name="l00678"></a><span class="lineno">  678</span>    a_panel.setRangeStart(at);</div>
-<div class="line"><a id="l00679" name="l00679"></a><span class="lineno">  679</span> </div>
-<div class="line"><a id="l00680" name="l00680"></a><span class="lineno">  680</span>    matrix::ReadOnlyTileSender&lt;T, device&gt; a_diag;</div>
-<div class="line"><a id="l00681" name="l00681"></a><span class="lineno">  681</span>    <span class="keywordflow">if</span> (kk_rank.row() == this_rank.row()) {</div>
-<div class="line"><a id="l00682" name="l00682"></a><span class="lineno">  682</span>      <span class="comment">// Note:</span></div>
-<div class="line"><a id="l00683" name="l00683"></a><span class="lineno">  683</span>      <span class="comment">// [a,u]_panelT shrinked to a single tile for temporarly storing and communicating the diagonal</span></div>
-<div class="line"><a id="l00684" name="l00684"></a><span class="lineno">  684</span>      <span class="comment">// tile used for the row update</span></div>
-<div class="line"><a id="l00685" name="l00685"></a><span class="lineno">  685</span>      a_panelT.setRange(kk, at);</div>
-<div class="line"><a id="l00686" name="l00686"></a><span class="lineno">  686</span> </div>
-<div class="line"><a id="l00687" name="l00687"></a><span class="lineno">  687</span>      <span class="keywordflow">if</span> (kk_rank.col() == this_rank.col()) {</div>
-<div class="line"><a id="l00688" name="l00688"></a><span class="lineno">  688</span>        a_panelT.setTile(diag_wp_idx, mat_a.read(kk));</div>
-<div class="line"><a id="l00689" name="l00689"></a><span class="lineno">  689</span>      }</div>
-<div class="line"><a id="l00690" name="l00690"></a><span class="lineno">  690</span>      <a class="code hl_function" href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">broadcast</a>(kk_rank.col(), a_panelT, mpi_row_task_chain);</div>
-<div class="line"><a id="l00691" name="l00691"></a><span class="lineno">  691</span> </div>
-<div class="line"><a id="l00692" name="l00692"></a><span class="lineno">  692</span>      <span class="comment">// panel partial update</span></div>
-<div class="line"><a id="l00693" name="l00693"></a><span class="lineno">  693</span>      <span class="keywordflow">for</span> (SizeType j_local = at_offset.cols(); j_local &lt; distr.localNrTiles().cols(); ++j_local) {</div>
-<div class="line"><a id="l00694" name="l00694"></a><span class="lineno">  694</span>        <span class="keyword">const</span> LocalTileIndex kj_panel(Coord::Col, j_local);</div>
-<div class="line"><a id="l00695" name="l00695"></a><span class="lineno">  695</span>        <span class="keyword">const</span> LocalTileIndex kj(distr.localTileFromGlobalTile&lt;Coord::Row&gt;(k), j_local);</div>
-<div class="line"><a id="l00696" name="l00696"></a><span class="lineno">  696</span> </div>
-<div class="line"><a id="l00697" name="l00697"></a><span class="lineno">  697</span>        trsmPanelTile&lt;backend&gt;(thread_priority::high, u_panelT.read(diag_wp_idx), mat_a.readwrite(kj));</div>
-<div class="line"><a id="l00698" name="l00698"></a><span class="lineno">  698</span>        hemmPanelTile&lt;backend&gt;(thread_priority::high, a_panelT.read(diag_wp_idx), mat_u.read(kj),</div>
-<div class="line"><a id="l00699" name="l00699"></a><span class="lineno">  699</span>                               mat_a.readwrite(kj));</div>
-<div class="line"><a id="l00700" name="l00700"></a><span class="lineno">  700</span> </div>
-<div class="line"><a id="l00701" name="l00701"></a><span class="lineno">  701</span>        a_panel.setTile(kj_panel, mat_a.read(kj));</div>
-<div class="line"><a id="l00702" name="l00702"></a><span class="lineno">  702</span>      }</div>
-<div class="line"><a id="l00703" name="l00703"></a><span class="lineno">  703</span> </div>
-<div class="line"><a id="l00704" name="l00704"></a><span class="lineno">  704</span>      <span class="comment">// keep diagonal tile for later.</span></div>
-<div class="line"><a id="l00705" name="l00705"></a><span class="lineno">  705</span>      <span class="keywordflow">if</span> (at_offset.cols() &lt; distr.localNrTiles().cols()) {</div>
-<div class="line"><a id="l00706" name="l00706"></a><span class="lineno">  706</span>        a_diag = a_panelT.read(diag_wp_idx);</div>
-<div class="line"><a id="l00707" name="l00707"></a><span class="lineno">  707</span>      }</div>
-<div class="line"><a id="l00708" name="l00708"></a><span class="lineno">  708</span> </div>
-<div class="line"><a id="l00709" name="l00709"></a><span class="lineno">  709</span>      <span class="comment">// col panel has been used for temporary storage of diagonal panel for row update</span></div>
-<div class="line"><a id="l00710" name="l00710"></a><span class="lineno">  710</span>      a_panelT.reset();</div>
-<div class="line"><a id="l00711" name="l00711"></a><span class="lineno">  711</span>    }</div>
-<div class="line"><a id="l00712" name="l00712"></a><span class="lineno">  712</span> </div>
-<div class="line"><a id="l00713" name="l00713"></a><span class="lineno">  713</span>    a_panelT.setRange(at, common::indexFromOrigin(distr.nrTiles()));</div>
-<div class="line"><a id="l00714" name="l00714"></a><span class="lineno">  714</span> </div>
-<div class="line"><a id="l00715" name="l00715"></a><span class="lineno">  715</span>    <a class="code hl_function" href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">broadcast</a>(kk_rank.row(), a_panel, a_panelT, mpi_row_task_chain, mpi_col_task_chain);</div>
-<div class="line"><a id="l00716" name="l00716"></a><span class="lineno">  716</span> </div>
-<div class="line"><a id="l00717" name="l00717"></a><span class="lineno">  717</span>    <span class="comment">// trailing matrix update</span></div>
-<div class="line"><a id="l00718" name="l00718"></a><span class="lineno">  718</span>    <span class="keywordflow">for</span> (SizeType i = k + 1; i &lt; nrtile; ++i) {</div>
-<div class="line"><a id="l00719" name="l00719"></a><span class="lineno">  719</span>      <span class="keyword">const</span> <span class="keyword">auto</span> owner = distr.rankGlobalTile({i, i});</div>
-<div class="line"><a id="l00720" name="l00720"></a><span class="lineno">  720</span> </div>
-<div class="line"><a id="l00721" name="l00721"></a><span class="lineno">  721</span>      <span class="keywordflow">if</span> (owner.row() != this_rank.row())</div>
-<div class="line"><a id="l00722" name="l00722"></a><span class="lineno">  722</span>        <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l00723" name="l00723"></a><span class="lineno">  723</span> </div>
-<div class="line"><a id="l00724" name="l00724"></a><span class="lineno">  724</span>      <span class="keyword">const</span> <span class="keyword">auto</span> i_local = distr.localTileFromGlobalTile&lt;Coord::Row&gt;(i);</div>
-<div class="line"><a id="l00725" name="l00725"></a><span class="lineno">  725</span>      <span class="comment">// first trailing panel gets high priority (look ahead).</span></div>
-<div class="line"><a id="l00726" name="l00726"></a><span class="lineno">  726</span>      <span class="keyword">const</span> <span class="keyword">auto</span> trailing_matrix_priority =</div>
-<div class="line"><a id="l00727" name="l00727"></a><span class="lineno">  727</span>          (i == k + 1) ? thread_priority::high : thread_priority::normal;</div>
-<div class="line"><a id="l00728" name="l00728"></a><span class="lineno">  728</span>      <span class="keywordflow">if</span> (this_rank.col() == owner.col()) {</div>
-<div class="line"><a id="l00729" name="l00729"></a><span class="lineno">  729</span>        <span class="keyword">const</span> <span class="keyword">auto</span> j_local = distr.localTileFromGlobalTile&lt;Coord::Col&gt;(i);</div>
-<div class="line"><a id="l00730" name="l00730"></a><span class="lineno">  730</span> </div>
-<div class="line"><a id="l00731" name="l00731"></a><span class="lineno">  731</span>        her2kTrailingDiagTile&lt;backend&gt;(trailing_matrix_priority, a_panel.read({Coord::Col, j_local}),</div>
-<div class="line"><a id="l00732" name="l00732"></a><span class="lineno">  732</span>                                       u_panel.read({Coord::Col, j_local}),</div>
-<div class="line"><a id="l00733" name="l00733"></a><span class="lineno">  733</span>                                       mat_a.readwrite(LocalTileIndex{i_local, j_local}));</div>
-<div class="line"><a id="l00734" name="l00734"></a><span class="lineno">  734</span>      }</div>
-<div class="line"><a id="l00735" name="l00735"></a><span class="lineno">  735</span> </div>
-<div class="line"><a id="l00736" name="l00736"></a><span class="lineno">  736</span>      <span class="keywordflow">for</span> (SizeType j = i + 1; j &lt; nrtile; ++j) {</div>
-<div class="line"><a id="l00737" name="l00737"></a><span class="lineno">  737</span>        <span class="keyword">const</span> <span class="keyword">auto</span> owner_col = distr.rankGlobalTile&lt;Coord::Col&gt;(j);</div>
-<div class="line"><a id="l00738" name="l00738"></a><span class="lineno">  738</span> </div>
-<div class="line"><a id="l00739" name="l00739"></a><span class="lineno">  739</span>        <span class="keywordflow">if</span> (owner_col != this_rank.col())</div>
-<div class="line"><a id="l00740" name="l00740"></a><span class="lineno">  740</span>          <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span> </div>
-<div class="line"><a id="l00742" name="l00742"></a><span class="lineno">  742</span>        <span class="keyword">const</span> <span class="keyword">auto</span> j_local = distr.localTileFromGlobalTile&lt;Coord::Col&gt;(j);</div>
-<div class="line"><a id="l00743" name="l00743"></a><span class="lineno">  743</span>        <span class="keyword">const</span> LocalTileIndex ki_panel{Coord::Row, i_local};</div>
-<div class="line"><a id="l00744" name="l00744"></a><span class="lineno">  744</span>        <span class="keyword">const</span> LocalTileIndex kj_panelT{Coord::Col, j_local};</div>
-<div class="line"><a id="l00745" name="l00745"></a><span class="lineno">  745</span>        <span class="keyword">const</span> LocalTileIndex ij{i_local, j_local};</div>
-<div class="line"><a id="l00746" name="l00746"></a><span class="lineno">  746</span> </div>
-<div class="line"><a id="l00747" name="l00747"></a><span class="lineno">  747</span>        gemmTrailingMatrixTile&lt;backend&gt;(thread_priority::normal, a_panelT.read(ki_panel),</div>
-<div class="line"><a id="l00748" name="l00748"></a><span class="lineno">  748</span>                                        u_panel.read(kj_panelT), mat_a.readwrite(ij));</div>
-<div class="line"><a id="l00749" name="l00749"></a><span class="lineno">  749</span>        gemmTrailingMatrixTile&lt;backend&gt;(thread_priority::normal, u_panelT.read(ki_panel),</div>
-<div class="line"><a id="l00750" name="l00750"></a><span class="lineno">  750</span>                                        a_panel.read(kj_panelT), mat_a.readwrite(ij));</div>
-<div class="line"><a id="l00751" name="l00751"></a><span class="lineno">  751</span>      }</div>
-<div class="line"><a id="l00752" name="l00752"></a><span class="lineno">  752</span>    }</div>
-<div class="line"><a id="l00753" name="l00753"></a><span class="lineno">  753</span> </div>
-<div class="line"><a id="l00754" name="l00754"></a><span class="lineno">  754</span>    a_panel.reset();</div>
-<div class="line"><a id="l00755" name="l00755"></a><span class="lineno">  755</span>    a_panelT.reset();</div>
-<div class="line"><a id="l00756" name="l00756"></a><span class="lineno">  756</span>    u_panel.reset();</div>
-<div class="line"><a id="l00757" name="l00757"></a><span class="lineno">  757</span>    u_panelT.reset();</div>
-<div class="line"><a id="l00758" name="l00758"></a><span class="lineno">  758</span> </div>
-<div class="line"><a id="l00759" name="l00759"></a><span class="lineno">  759</span>    <span class="keywordflow">if</span> (kk_rank.row() == this_rank.row()) {</div>
-<div class="line"><a id="l00760" name="l00760"></a><span class="lineno">  760</span>      <span class="comment">// panel partial update</span></div>
-<div class="line"><a id="l00761" name="l00761"></a><span class="lineno">  761</span>      <span class="keywordflow">for</span> (SizeType j_local = at_offset.cols(); j_local &lt; distr.localNrTiles().cols(); ++j_local) {</div>
-<div class="line"><a id="l00762" name="l00762"></a><span class="lineno">  762</span>        <span class="keyword">const</span> LocalTileIndex local_idx(Coord::Col, j_local);</div>
-<div class="line"><a id="l00763" name="l00763"></a><span class="lineno">  763</span>        <span class="keyword">const</span> LocalTileIndex ki(distr.localTileFromGlobalTile&lt;Coord::Row&gt;(k), j_local);</div>
-<div class="line"><a id="l00764" name="l00764"></a><span class="lineno">  764</span> </div>
-<div class="line"><a id="l00765" name="l00765"></a><span class="lineno">  765</span>        hemmPanelTile&lt;backend&gt;(thread_priority::high, a_diag, mat_u.read(ki), mat_a.readwrite(ki));</div>
-<div class="line"><a id="l00766" name="l00766"></a><span class="lineno">  766</span>      }</div>
-<div class="line"><a id="l00767" name="l00767"></a><span class="lineno">  767</span>    }</div>
-<div class="line"><a id="l00768" name="l00768"></a><span class="lineno">  768</span>  }</div>
+<div class="line"><a id="l00490" name="l00490"></a><span class="lineno">  490</span>        <span class="keyword">const</span> LocalTileIndex ik(i_local, distr.localTileFromGlobalTile&lt;Coord::Col&gt;(k));</div>
+<div class="line"><a id="l00491" name="l00491"></a><span class="lineno">  491</span> </div>
+<div class="line"><a id="l00492" name="l00492"></a><span class="lineno">  492</span>        hemmPanelTile&lt;backend&gt;(thread_priority::high, a_diag, mat_l.read(ik), mat_a.readwrite(ik));</div>
+<div class="line"><a id="l00493" name="l00493"></a><span class="lineno">  493</span>      }</div>
+<div class="line"><a id="l00494" name="l00494"></a><span class="lineno">  494</span>    }</div>
+<div class="line"><a id="l00495" name="l00495"></a><span class="lineno">  495</span>  }</div>
+<div class="line"><a id="l00496" name="l00496"></a><span class="lineno">  496</span> </div>
+<div class="line"><a id="l00497" name="l00497"></a><span class="lineno">  497</span><span class="preprocessor">#ifdef DLAF_WITH_HDF5</span></div>
+<div class="line"><a id="l00498" name="l00498"></a><span class="lineno">  498</span>  <span class="keywordflow">if</span> (getTuneParameters().debug_dump_generalized_to_standard_data) {</div>
+<div class="line"><a id="l00499" name="l00499"></a><span class="lineno">  499</span>    file-&gt;write(mat_a, <span class="stringliteral">&quot;/std&quot;</span>);</div>
+<div class="line"><a id="l00500" name="l00500"></a><span class="lineno">  500</span>  }</div>
+<div class="line"><a id="l00501" name="l00501"></a><span class="lineno">  501</span> </div>
+<div class="line"><a id="l00502" name="l00502"></a><span class="lineno">  502</span>  num_gen_to_std_calls++;</div>
+<div class="line"><a id="l00503" name="l00503"></a><span class="lineno">  503</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00504" name="l00504"></a><span class="lineno">  504</span>}</div>
+<div class="line"><a id="l00505" name="l00505"></a><span class="lineno">  505</span> </div>
+<div class="line"><a id="l00506" name="l00506"></a><span class="lineno">  506</span><span class="keyword">template</span> &lt;Backend backend, Device device, <span class="keyword">class</span> T&gt;</div>
+<div class="line"><a id="l00507" name="l00507"></a><span class="lineno">  507</span><span class="keywordtype">void</span> GenToStd&lt;backend, device, T&gt;::call_U(Matrix&lt;T, device&gt;&amp; mat_a, Matrix&lt;T, device&gt;&amp; mat_u) {</div>
+<div class="line"><a id="l00508" name="l00508"></a><span class="lineno">  508</span>  <span class="keyword">using namespace </span>gentostd_u;</div>
+<div class="line"><a id="l00509" name="l00509"></a><span class="lineno">  509</span>  <span class="keyword">using </span>pika::execution::thread_priority;</div>
+<div class="line"><a id="l00510" name="l00510"></a><span class="lineno">  510</span> </div>
+<div class="line"><a id="l00511" name="l00511"></a><span class="lineno">  511</span>  <span class="comment">// Number of tile (rows = cols)</span></div>
+<div class="line"><a id="l00512" name="l00512"></a><span class="lineno">  512</span>  SizeType nrtile = mat_a.nrTiles().cols();</div>
+<div class="line"><a id="l00513" name="l00513"></a><span class="lineno">  513</span> </div>
+<div class="line"><a id="l00514" name="l00514"></a><span class="lineno">  514</span>  <span class="keywordflow">for</span> (SizeType k = 0; k &lt; nrtile; ++k) {</div>
+<div class="line"><a id="l00515" name="l00515"></a><span class="lineno">  515</span>    <span class="keyword">const</span> LocalTileIndex kk{k, k};</div>
+<div class="line"><a id="l00516" name="l00516"></a><span class="lineno">  516</span> </div>
+<div class="line"><a id="l00517" name="l00517"></a><span class="lineno">  517</span>    <span class="comment">// Direct transformation to standard eigenvalue problem of the diagonal tile</span></div>
+<div class="line"><a id="l00518" name="l00518"></a><span class="lineno">  518</span>    hegstDiagTile&lt;backend&gt;(thread_priority::high, mat_a.readwrite(kk), mat_u.readwrite(kk));</div>
+<div class="line"><a id="l00519" name="l00519"></a><span class="lineno">  519</span> </div>
+<div class="line"><a id="l00520" name="l00520"></a><span class="lineno">  520</span>    <span class="comment">// If there is no trailing matrix</span></div>
+<div class="line"><a id="l00521" name="l00521"></a><span class="lineno">  521</span>    <span class="keywordflow">if</span> (k == nrtile - 1)</div>
+<div class="line"><a id="l00522" name="l00522"></a><span class="lineno">  522</span>      <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l00523" name="l00523"></a><span class="lineno">  523</span> </div>
+<div class="line"><a id="l00524" name="l00524"></a><span class="lineno">  524</span>    <span class="keywordflow">for</span> (SizeType i = k + 1; i &lt; nrtile; ++i) {</div>
+<div class="line"><a id="l00525" name="l00525"></a><span class="lineno">  525</span>      <span class="keyword">const</span> LocalTileIndex ki{k, i};</div>
+<div class="line"><a id="l00526" name="l00526"></a><span class="lineno">  526</span>      trsmPanelTile&lt;backend&gt;(thread_priority::high, mat_u.read(kk), mat_a.readwrite(ki));</div>
+<div class="line"><a id="l00527" name="l00527"></a><span class="lineno">  527</span>      hemmPanelTile&lt;backend&gt;(thread_priority::high, mat_a.read(kk), mat_u.read(ki), mat_a.readwrite(ki));</div>
+<div class="line"><a id="l00528" name="l00528"></a><span class="lineno">  528</span>    }</div>
+<div class="line"><a id="l00529" name="l00529"></a><span class="lineno">  529</span> </div>
+<div class="line"><a id="l00530" name="l00530"></a><span class="lineno">  530</span>    <span class="keywordflow">for</span> (SizeType i = k + 1; i &lt; nrtile; ++i) {</div>
+<div class="line"><a id="l00531" name="l00531"></a><span class="lineno">  531</span>      <span class="keyword">const</span> LocalTileIndex ii{i, i};</div>
+<div class="line"><a id="l00532" name="l00532"></a><span class="lineno">  532</span>      <span class="keyword">const</span> LocalTileIndex ki{k, i};</div>
+<div class="line"><a id="l00533" name="l00533"></a><span class="lineno">  533</span>      <span class="comment">// first trailing panel gets high priority (look ahead).</span></div>
+<div class="line"><a id="l00534" name="l00534"></a><span class="lineno">  534</span>      <span class="keyword">const</span> <span class="keyword">auto</span> trailing_matrix_priority =</div>
+<div class="line"><a id="l00535" name="l00535"></a><span class="lineno">  535</span>          (i == k + 1) ? thread_priority::high : thread_priority::normal;</div>
+<div class="line"><a id="l00536" name="l00536"></a><span class="lineno">  536</span> </div>
+<div class="line"><a id="l00537" name="l00537"></a><span class="lineno">  537</span>      her2kTrailingDiagTile&lt;backend&gt;(trailing_matrix_priority, mat_a.read(ki), mat_u.read(ki),</div>
+<div class="line"><a id="l00538" name="l00538"></a><span class="lineno">  538</span>                                     mat_a.readwrite(ii));</div>
+<div class="line"><a id="l00539" name="l00539"></a><span class="lineno">  539</span> </div>
+<div class="line"><a id="l00540" name="l00540"></a><span class="lineno">  540</span>      <span class="keywordflow">for</span> (SizeType j = i + 1; j &lt; nrtile; ++j) {</div>
+<div class="line"><a id="l00541" name="l00541"></a><span class="lineno">  541</span>        <span class="keyword">const</span> LocalTileIndex kj{k, j};</div>
+<div class="line"><a id="l00542" name="l00542"></a><span class="lineno">  542</span>        <span class="keyword">const</span> LocalTileIndex ij{i, j};</div>
+<div class="line"><a id="l00543" name="l00543"></a><span class="lineno">  543</span>        gemmTrailingMatrixTile&lt;backend&gt;(trailing_matrix_priority, mat_a.read(ki), mat_u.read(kj),</div>
+<div class="line"><a id="l00544" name="l00544"></a><span class="lineno">  544</span>                                        mat_a.readwrite(ij));</div>
+<div class="line"><a id="l00545" name="l00545"></a><span class="lineno">  545</span>        gemmTrailingMatrixTile&lt;backend&gt;(trailing_matrix_priority, mat_u.read(ki), mat_a.read(kj),</div>
+<div class="line"><a id="l00546" name="l00546"></a><span class="lineno">  546</span>                                        mat_a.readwrite(ij));</div>
+<div class="line"><a id="l00547" name="l00547"></a><span class="lineno">  547</span>      }</div>
+<div class="line"><a id="l00548" name="l00548"></a><span class="lineno">  548</span>    }</div>
+<div class="line"><a id="l00549" name="l00549"></a><span class="lineno">  549</span> </div>
+<div class="line"><a id="l00550" name="l00550"></a><span class="lineno">  550</span>    <span class="keywordflow">for</span> (SizeType i = k + 1; i &lt; nrtile; ++i) {</div>
+<div class="line"><a id="l00551" name="l00551"></a><span class="lineno">  551</span>      <span class="keyword">const</span> LocalTileIndex ki{k, i};</div>
+<div class="line"><a id="l00552" name="l00552"></a><span class="lineno">  552</span>      hemmPanelTile&lt;backend&gt;(thread_priority::high, mat_a.read(kk), mat_u.read(ki), mat_a.readwrite(ki));</div>
+<div class="line"><a id="l00553" name="l00553"></a><span class="lineno">  553</span>    }</div>
+<div class="line"><a id="l00554" name="l00554"></a><span class="lineno">  554</span> </div>
+<div class="line"><a id="l00555" name="l00555"></a><span class="lineno">  555</span>    <span class="keywordflow">for</span> (SizeType i = k + 1; i &lt; nrtile; ++i) {</div>
+<div class="line"><a id="l00556" name="l00556"></a><span class="lineno">  556</span>      <span class="keyword">const</span> LocalTileIndex ii{i, i};</div>
+<div class="line"><a id="l00557" name="l00557"></a><span class="lineno">  557</span>      <span class="keyword">const</span> LocalTileIndex ki{k, i};</div>
+<div class="line"><a id="l00558" name="l00558"></a><span class="lineno">  558</span>      trsmPanelUpdateTile&lt;backend&gt;(thread_priority::high, mat_u.read(ii), mat_a.readwrite(ki));</div>
+<div class="line"><a id="l00559" name="l00559"></a><span class="lineno">  559</span> </div>
+<div class="line"><a id="l00560" name="l00560"></a><span class="lineno">  560</span>      <span class="keywordflow">for</span> (SizeType j = i + 1; j &lt; nrtile; ++j) {</div>
+<div class="line"><a id="l00561" name="l00561"></a><span class="lineno">  561</span>        <span class="keyword">const</span> LocalTileIndex ij{i, j};</div>
+<div class="line"><a id="l00562" name="l00562"></a><span class="lineno">  562</span>        <span class="keyword">const</span> LocalTileIndex kj{k, j};</div>
+<div class="line"><a id="l00563" name="l00563"></a><span class="lineno">  563</span>        gemmPanelUpdateTile&lt;backend&gt;(thread_priority::normal, mat_a.read(ki), mat_u.read(ij),</div>
+<div class="line"><a id="l00564" name="l00564"></a><span class="lineno">  564</span>                                     mat_a.readwrite(kj));</div>
+<div class="line"><a id="l00565" name="l00565"></a><span class="lineno">  565</span>      }</div>
+<div class="line"><a id="l00566" name="l00566"></a><span class="lineno">  566</span>    }</div>
+<div class="line"><a id="l00567" name="l00567"></a><span class="lineno">  567</span>  }</div>
+<div class="line"><a id="l00568" name="l00568"></a><span class="lineno">  568</span>}</div>
+<div class="line"><a id="l00569" name="l00569"></a><span class="lineno">  569</span> </div>
+<div class="line"><a id="l00570" name="l00570"></a><span class="lineno">  570</span><span class="keyword">template</span> &lt;Backend backend, Device device, <span class="keyword">class</span> T&gt;</div>
+<div class="line"><a id="l00571" name="l00571"></a><span class="lineno">  571</span><span class="keywordtype">void</span> GenToStd&lt;backend, device, T&gt;::call_U(comm::CommunicatorGrid&amp; grid, Matrix&lt;T, device&gt;&amp; mat_a,</div>
+<div class="line"><a id="l00572" name="l00572"></a><span class="lineno">  572</span>                                          Matrix&lt;T, device&gt;&amp; mat_u) {</div>
+<div class="line"><a id="l00573" name="l00573"></a><span class="lineno">  573</span>  <span class="keyword">using namespace </span>gentostd_u;</div>
+<div class="line"><a id="l00574" name="l00574"></a><span class="lineno">  574</span>  <span class="keyword">using </span>pika::execution::thread_priority;</div>
+<div class="line"><a id="l00575" name="l00575"></a><span class="lineno">  575</span> </div>
+<div class="line"><a id="l00576" name="l00576"></a><span class="lineno">  576</span>  <span class="comment">// Set up MPI executor pipelines</span></div>
+<div class="line"><a id="l00577" name="l00577"></a><span class="lineno">  577</span>  <span class="keyword">auto</span> mpi_row_task_chain = grid.row_communicator_pipeline();</div>
+<div class="line"><a id="l00578" name="l00578"></a><span class="lineno">  578</span>  <span class="keyword">auto</span> mpi_col_task_chain = grid.col_communicator_pipeline();</div>
+<div class="line"><a id="l00579" name="l00579"></a><span class="lineno">  579</span> </div>
+<div class="line"><a id="l00580" name="l00580"></a><span class="lineno">  580</span>  <span class="keyword">const</span> comm::Index2D this_rank = grid.rank();</div>
+<div class="line"><a id="l00581" name="l00581"></a><span class="lineno">  581</span> </div>
+<div class="line"><a id="l00582" name="l00582"></a><span class="lineno">  582</span>  <span class="keyword">const</span> matrix::Distribution&amp; distr = mat_a.distribution();</div>
+<div class="line"><a id="l00583" name="l00583"></a><span class="lineno">  583</span>  <span class="comment">// Number of tile (rows = cols)</span></div>
+<div class="line"><a id="l00584" name="l00584"></a><span class="lineno">  584</span>  SizeType nrtile = mat_a.nrTiles().rows();</div>
+<div class="line"><a id="l00585" name="l00585"></a><span class="lineno">  585</span> </div>
+<div class="line"><a id="l00586" name="l00586"></a><span class="lineno">  586</span>  <span class="keyword">constexpr</span> std::size_t n_workspaces = 2;</div>
+<div class="line"><a id="l00587" name="l00587"></a><span class="lineno">  587</span>  common::RoundRobin&lt;matrix::Panel&lt;Coord::Row, T, device&gt;&gt; a_panels(n_workspaces, distr);</div>
+<div class="line"><a id="l00588" name="l00588"></a><span class="lineno">  588</span>  common::RoundRobin&lt;matrix::Panel&lt;Coord::Col, T, device&gt;&gt; a_panelsT(n_workspaces, distr);</div>
+<div class="line"><a id="l00589" name="l00589"></a><span class="lineno">  589</span>  common::RoundRobin&lt;matrix::Panel&lt;Coord::Row, T, device&gt;&gt; u_panels(n_workspaces, distr);</div>
+<div class="line"><a id="l00590" name="l00590"></a><span class="lineno">  590</span>  common::RoundRobin&lt;matrix::Panel&lt;Coord::Col, T, device, matrix::StoreTransposed::Yes&gt;&gt; u_panelsT(</div>
+<div class="line"><a id="l00591" name="l00591"></a><span class="lineno">  591</span>      n_workspaces, distr);</div>
+<div class="line"><a id="l00592" name="l00592"></a><span class="lineno">  592</span> </div>
+<div class="line"><a id="l00593" name="l00593"></a><span class="lineno">  593</span>  <span class="keywordflow">for</span> (SizeType k = 0; k &lt; nrtile; ++k) {</div>
+<div class="line"><a id="l00594" name="l00594"></a><span class="lineno">  594</span>    <span class="keyword">const</span> GlobalTileIndex kk{k, k};</div>
+<div class="line"><a id="l00595" name="l00595"></a><span class="lineno">  595</span>    <span class="keyword">const</span> comm::Index2D kk_rank = distr.rankGlobalTile(kk);</div>
+<div class="line"><a id="l00596" name="l00596"></a><span class="lineno">  596</span>    <span class="keyword">const</span> GlobalTileIndex at{k + 1, k + 1};</div>
+<div class="line"><a id="l00597" name="l00597"></a><span class="lineno">  597</span> </div>
+<div class="line"><a id="l00598" name="l00598"></a><span class="lineno">  598</span>    <span class="keyword">const</span> LocalTileSize kk_offset{</div>
+<div class="line"><a id="l00599" name="l00599"></a><span class="lineno">  599</span>        distr.nextLocalTileFromGlobalTile&lt;Coord::Row&gt;(k),</div>
+<div class="line"><a id="l00600" name="l00600"></a><span class="lineno">  600</span>        distr.nextLocalTileFromGlobalTile&lt;Coord::Col&gt;(k),</div>
+<div class="line"><a id="l00601" name="l00601"></a><span class="lineno">  601</span>    };</div>
+<div class="line"><a id="l00602" name="l00602"></a><span class="lineno">  602</span> </div>
+<div class="line"><a id="l00603" name="l00603"></a><span class="lineno">  603</span>    <span class="keyword">const</span> LocalTileSize at_offset{</div>
+<div class="line"><a id="l00604" name="l00604"></a><span class="lineno">  604</span>        distr.nextLocalTileFromGlobalTile&lt;Coord::Row&gt;(k + 1),</div>
+<div class="line"><a id="l00605" name="l00605"></a><span class="lineno">  605</span>        distr.nextLocalTileFromGlobalTile&lt;Coord::Col&gt;(k + 1),</div>
+<div class="line"><a id="l00606" name="l00606"></a><span class="lineno">  606</span>    };</div>
+<div class="line"><a id="l00607" name="l00607"></a><span class="lineno">  607</span> </div>
+<div class="line"><a id="l00608" name="l00608"></a><span class="lineno">  608</span>    <span class="keyword">auto</span>&amp; u_panel = u_panels.nextResource();</div>
+<div class="line"><a id="l00609" name="l00609"></a><span class="lineno">  609</span>    <span class="keyword">auto</span>&amp; u_panelT = u_panelsT.nextResource();</div>
+<div class="line"><a id="l00610" name="l00610"></a><span class="lineno">  610</span>    <span class="keyword">auto</span>&amp; a_panel = a_panels.nextResource();</div>
+<div class="line"><a id="l00611" name="l00611"></a><span class="lineno">  611</span>    <span class="keyword">auto</span>&amp; a_panelT = a_panelsT.nextResource();</div>
+<div class="line"><a id="l00612" name="l00612"></a><span class="lineno">  612</span>    u_panel.setRangeStart(kk);</div>
+<div class="line"><a id="l00613" name="l00613"></a><span class="lineno">  613</span>    u_panelT.setRangeStart(kk);</div>
+<div class="line"><a id="l00614" name="l00614"></a><span class="lineno">  614</span>    a_panelT.setRange({0, 0}, kk);</div>
+<div class="line"><a id="l00615" name="l00615"></a><span class="lineno">  615</span> </div>
+<div class="line"><a id="l00616" name="l00616"></a><span class="lineno">  616</span>    <span class="keywordflow">if</span> (k == nrtile - 1) {</div>
+<div class="line"><a id="l00617" name="l00617"></a><span class="lineno">  617</span>      u_panel.setHeight(distr.tileSize(kk).rows());</div>
+<div class="line"><a id="l00618" name="l00618"></a><span class="lineno">  618</span>      a_panelT.setWidth(distr.tileSize(kk).cols());</div>
+<div class="line"><a id="l00619" name="l00619"></a><span class="lineno">  619</span>    }</div>
+<div class="line"><a id="l00620" name="l00620"></a><span class="lineno">  620</span> </div>
+<div class="line"><a id="l00621" name="l00621"></a><span class="lineno">  621</span>    <span class="keywordflow">if</span> (kk_rank.row() == this_rank.row()) {</div>
+<div class="line"><a id="l00622" name="l00622"></a><span class="lineno">  622</span>      <span class="keywordflow">for</span> (SizeType i_local = kk_offset.cols(); i_local &lt; distr.localNrTiles().cols(); ++i_local) {</div>
+<div class="line"><a id="l00623" name="l00623"></a><span class="lineno">  623</span>        <span class="keyword">const</span> LocalTileIndex ki_panel(Coord::Col, i_local);</div>
+<div class="line"><a id="l00624" name="l00624"></a><span class="lineno">  624</span>        <span class="keyword">const</span> LocalTileIndex ki(kk_offset.rows(), i_local);</div>
+<div class="line"><a id="l00625" name="l00625"></a><span class="lineno">  625</span> </div>
+<div class="line"><a id="l00626" name="l00626"></a><span class="lineno">  626</span>        u_panel.setTile(ki_panel, mat_u.read(ki));</div>
+<div class="line"><a id="l00627" name="l00627"></a><span class="lineno">  627</span>      }</div>
+<div class="line"><a id="l00628" name="l00628"></a><span class="lineno">  628</span>    }</div>
+<div class="line"><a id="l00629" name="l00629"></a><span class="lineno">  629</span> </div>
+<div class="line"><a id="l00630" name="l00630"></a><span class="lineno">  630</span>    <a class="code hl_function" href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">broadcast</a>(kk_rank.row(), u_panel, u_panelT, mpi_row_task_chain, mpi_col_task_chain);</div>
+<div class="line"><a id="l00631" name="l00631"></a><span class="lineno">  631</span> </div>
+<div class="line"><a id="l00632" name="l00632"></a><span class="lineno">  632</span>    <span class="comment">// continue update previous panels</span></div>
+<div class="line"><a id="l00633" name="l00633"></a><span class="lineno">  633</span>    <span class="comment">// Note: The tasks of the final huge TRSM of the HEGST step have been reshuffled to avoid extra</span></div>
+<div class="line"><a id="l00634" name="l00634"></a><span class="lineno">  634</span>    <span class="comment">//       communication of the matrix U.</span></div>
+<div class="line"><a id="l00635" name="l00635"></a><span class="lineno">  635</span>    <span class="comment">//       During k-th iteration only the tasks involving the k-th panel of U are executed.</span></div>
+<div class="line"><a id="l00636" name="l00636"></a><span class="lineno">  636</span>    <span class="comment">//       Therefore, all previous panels have to be updated at each step.</span></div>
+<div class="line"><a id="l00637" name="l00637"></a><span class="lineno">  637</span>    <span class="keywordflow">if</span> (kk_rank.col() == this_rank.col()) {</div>
+<div class="line"><a id="l00638" name="l00638"></a><span class="lineno">  638</span>      <span class="keywordflow">for</span> (SizeType i_local = 0; i_local &lt; kk_offset.rows(); ++i_local) {</div>
+<div class="line"><a id="l00639" name="l00639"></a><span class="lineno">  639</span>        <span class="keyword">const</span> LocalTileIndex kk_panel(Coord::Col, kk_offset.cols());</div>
+<div class="line"><a id="l00640" name="l00640"></a><span class="lineno">  640</span>        <span class="keyword">const</span> LocalTileIndex ki_panelT{Coord::Row, i_local};</div>
+<div class="line"><a id="l00641" name="l00641"></a><span class="lineno">  641</span>        <span class="keyword">const</span> LocalTileIndex ik(i_local, kk_offset.cols());</div>
+<div class="line"><a id="l00642" name="l00642"></a><span class="lineno">  642</span> </div>
+<div class="line"><a id="l00643" name="l00643"></a><span class="lineno">  643</span>        trsmPanelUpdateTile&lt;backend&gt;(thread_priority::high, u_panel.read(kk_panel), mat_a.readwrite(ik));</div>
+<div class="line"><a id="l00644" name="l00644"></a><span class="lineno">  644</span> </div>
+<div class="line"><a id="l00645" name="l00645"></a><span class="lineno">  645</span>        a_panelT.setTile(ki_panelT, mat_a.read(ik));</div>
+<div class="line"><a id="l00646" name="l00646"></a><span class="lineno">  646</span>      }</div>
+<div class="line"><a id="l00647" name="l00647"></a><span class="lineno">  647</span>    }</div>
+<div class="line"><a id="l00648" name="l00648"></a><span class="lineno">  648</span> </div>
+<div class="line"><a id="l00649" name="l00649"></a><span class="lineno">  649</span>    <span class="comment">// No next rows update if last col.</span></div>
+<div class="line"><a id="l00650" name="l00650"></a><span class="lineno">  650</span>    <span class="keywordflow">if</span> (k &lt; nrtile - 1) {</div>
+<div class="line"><a id="l00651" name="l00651"></a><span class="lineno">  651</span>      <a class="code hl_function" href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">broadcast</a>(kk_rank.col(), a_panelT, mpi_row_task_chain);</div>
+<div class="line"><a id="l00652" name="l00652"></a><span class="lineno">  652</span> </div>
+<div class="line"><a id="l00653" name="l00653"></a><span class="lineno">  653</span>      <span class="keywordflow">for</span> (SizeType i_local = 0; i_local &lt; kk_offset.rows(); ++i_local) {</div>
+<div class="line"><a id="l00654" name="l00654"></a><span class="lineno">  654</span>        <span class="keywordflow">for</span> (SizeType j_local = at_offset.cols(); j_local &lt; distr.localNrTiles().cols(); ++j_local) {</div>
+<div class="line"><a id="l00655" name="l00655"></a><span class="lineno">  655</span>          <span class="keyword">const</span> LocalTileIndex kj_panel{Coord::Col, j_local};</div>
+<div class="line"><a id="l00656" name="l00656"></a><span class="lineno">  656</span>          <span class="keyword">const</span> LocalTileIndex ik_panelT{Coord::Row, i_local};</div>
+<div class="line"><a id="l00657" name="l00657"></a><span class="lineno">  657</span>          <span class="keyword">const</span> LocalTileIndex ij{i_local, j_local};</div>
+<div class="line"><a id="l00658" name="l00658"></a><span class="lineno">  658</span> </div>
+<div class="line"><a id="l00659" name="l00659"></a><span class="lineno">  659</span>          gemmPanelUpdateTile&lt;backend&gt;(thread_priority::normal, a_panelT.read(ik_panelT),</div>
+<div class="line"><a id="l00660" name="l00660"></a><span class="lineno">  660</span>                                       u_panel.read(kj_panel), mat_a.readwrite(ij));</div>
+<div class="line"><a id="l00661" name="l00661"></a><span class="lineno">  661</span>        }</div>
+<div class="line"><a id="l00662" name="l00662"></a><span class="lineno">  662</span>      }</div>
+<div class="line"><a id="l00663" name="l00663"></a><span class="lineno">  663</span>    }</div>
+<div class="line"><a id="l00664" name="l00664"></a><span class="lineno">  664</span> </div>
+<div class="line"><a id="l00665" name="l00665"></a><span class="lineno">  665</span>    a_panelT.reset();</div>
+<div class="line"><a id="l00666" name="l00666"></a><span class="lineno">  666</span> </div>
+<div class="line"><a id="l00667" name="l00667"></a><span class="lineno">  667</span>    <span class="comment">// Direct transformation to standard eigenvalue problem of the diagonal tile</span></div>
+<div class="line"><a id="l00668" name="l00668"></a><span class="lineno">  668</span>    <span class="keywordflow">if</span> (kk_rank == this_rank)</div>
+<div class="line"><a id="l00669" name="l00669"></a><span class="lineno">  669</span>      hegstDiagTile&lt;backend&gt;(thread_priority::high, mat_a.readwrite(kk), mat_u.readwrite(kk));</div>
+<div class="line"><a id="l00670" name="l00670"></a><span class="lineno">  670</span> </div>
+<div class="line"><a id="l00671" name="l00671"></a><span class="lineno">  671</span>    <span class="comment">// If there is no trailing matrix</span></div>
+<div class="line"><a id="l00672" name="l00672"></a><span class="lineno">  672</span>    <span class="keywordflow">if</span> (k == nrtile - 1)</div>
+<div class="line"><a id="l00673" name="l00673"></a><span class="lineno">  673</span>      <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l00674" name="l00674"></a><span class="lineno">  674</span> </div>
+<div class="line"><a id="l00675" name="l00675"></a><span class="lineno">  675</span>    <span class="keyword">const</span> LocalTileIndex diag_wp_idx{kk_offset.rows(), 0};</div>
+<div class="line"><a id="l00676" name="l00676"></a><span class="lineno">  676</span> </div>
+<div class="line"><a id="l00677" name="l00677"></a><span class="lineno">  677</span>    a_panel.setRangeStart(at);</div>
+<div class="line"><a id="l00678" name="l00678"></a><span class="lineno">  678</span> </div>
+<div class="line"><a id="l00679" name="l00679"></a><span class="lineno">  679</span>    matrix::ReadOnlyTileSender&lt;T, device&gt; a_diag;</div>
+<div class="line"><a id="l00680" name="l00680"></a><span class="lineno">  680</span>    <span class="keywordflow">if</span> (kk_rank.row() == this_rank.row()) {</div>
+<div class="line"><a id="l00681" name="l00681"></a><span class="lineno">  681</span>      <span class="comment">// Note:</span></div>
+<div class="line"><a id="l00682" name="l00682"></a><span class="lineno">  682</span>      <span class="comment">// [a,u]_panelT shrinked to a single tile for temporarly storing and communicating the diagonal</span></div>
+<div class="line"><a id="l00683" name="l00683"></a><span class="lineno">  683</span>      <span class="comment">// tile used for the row update</span></div>
+<div class="line"><a id="l00684" name="l00684"></a><span class="lineno">  684</span>      a_panelT.setRange(kk, at);</div>
+<div class="line"><a id="l00685" name="l00685"></a><span class="lineno">  685</span> </div>
+<div class="line"><a id="l00686" name="l00686"></a><span class="lineno">  686</span>      <span class="keywordflow">if</span> (kk_rank.col() == this_rank.col()) {</div>
+<div class="line"><a id="l00687" name="l00687"></a><span class="lineno">  687</span>        a_panelT.setTile(diag_wp_idx, mat_a.read(kk));</div>
+<div class="line"><a id="l00688" name="l00688"></a><span class="lineno">  688</span>      }</div>
+<div class="line"><a id="l00689" name="l00689"></a><span class="lineno">  689</span>      <a class="code hl_function" href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">broadcast</a>(kk_rank.col(), a_panelT, mpi_row_task_chain);</div>
+<div class="line"><a id="l00690" name="l00690"></a><span class="lineno">  690</span> </div>
+<div class="line"><a id="l00691" name="l00691"></a><span class="lineno">  691</span>      <span class="comment">// panel partial update</span></div>
+<div class="line"><a id="l00692" name="l00692"></a><span class="lineno">  692</span>      <span class="keywordflow">for</span> (SizeType j_local = at_offset.cols(); j_local &lt; distr.localNrTiles().cols(); ++j_local) {</div>
+<div class="line"><a id="l00693" name="l00693"></a><span class="lineno">  693</span>        <span class="keyword">const</span> LocalTileIndex kj_panel(Coord::Col, j_local);</div>
+<div class="line"><a id="l00694" name="l00694"></a><span class="lineno">  694</span>        <span class="keyword">const</span> LocalTileIndex kj(distr.localTileFromGlobalTile&lt;Coord::Row&gt;(k), j_local);</div>
+<div class="line"><a id="l00695" name="l00695"></a><span class="lineno">  695</span> </div>
+<div class="line"><a id="l00696" name="l00696"></a><span class="lineno">  696</span>        trsmPanelTile&lt;backend&gt;(thread_priority::high, u_panelT.read(diag_wp_idx), mat_a.readwrite(kj));</div>
+<div class="line"><a id="l00697" name="l00697"></a><span class="lineno">  697</span>        hemmPanelTile&lt;backend&gt;(thread_priority::high, a_panelT.read(diag_wp_idx), mat_u.read(kj),</div>
+<div class="line"><a id="l00698" name="l00698"></a><span class="lineno">  698</span>                               mat_a.readwrite(kj));</div>
+<div class="line"><a id="l00699" name="l00699"></a><span class="lineno">  699</span> </div>
+<div class="line"><a id="l00700" name="l00700"></a><span class="lineno">  700</span>        a_panel.setTile(kj_panel, mat_a.read(kj));</div>
+<div class="line"><a id="l00701" name="l00701"></a><span class="lineno">  701</span>      }</div>
+<div class="line"><a id="l00702" name="l00702"></a><span class="lineno">  702</span> </div>
+<div class="line"><a id="l00703" name="l00703"></a><span class="lineno">  703</span>      <span class="comment">// keep diagonal tile for later.</span></div>
+<div class="line"><a id="l00704" name="l00704"></a><span class="lineno">  704</span>      <span class="keywordflow">if</span> (at_offset.cols() &lt; distr.localNrTiles().cols()) {</div>
+<div class="line"><a id="l00705" name="l00705"></a><span class="lineno">  705</span>        a_diag = a_panelT.read(diag_wp_idx);</div>
+<div class="line"><a id="l00706" name="l00706"></a><span class="lineno">  706</span>      }</div>
+<div class="line"><a id="l00707" name="l00707"></a><span class="lineno">  707</span> </div>
+<div class="line"><a id="l00708" name="l00708"></a><span class="lineno">  708</span>      <span class="comment">// col panel has been used for temporary storage of diagonal panel for row update</span></div>
+<div class="line"><a id="l00709" name="l00709"></a><span class="lineno">  709</span>      a_panelT.reset();</div>
+<div class="line"><a id="l00710" name="l00710"></a><span class="lineno">  710</span>    }</div>
+<div class="line"><a id="l00711" name="l00711"></a><span class="lineno">  711</span> </div>
+<div class="line"><a id="l00712" name="l00712"></a><span class="lineno">  712</span>    a_panelT.setRange(at, common::indexFromOrigin(distr.nrTiles()));</div>
+<div class="line"><a id="l00713" name="l00713"></a><span class="lineno">  713</span> </div>
+<div class="line"><a id="l00714" name="l00714"></a><span class="lineno">  714</span>    <a class="code hl_function" href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">broadcast</a>(kk_rank.row(), a_panel, a_panelT, mpi_row_task_chain, mpi_col_task_chain);</div>
+<div class="line"><a id="l00715" name="l00715"></a><span class="lineno">  715</span> </div>
+<div class="line"><a id="l00716" name="l00716"></a><span class="lineno">  716</span>    <span class="comment">// trailing matrix update</span></div>
+<div class="line"><a id="l00717" name="l00717"></a><span class="lineno">  717</span>    <span class="keywordflow">for</span> (SizeType i = k + 1; i &lt; nrtile; ++i) {</div>
+<div class="line"><a id="l00718" name="l00718"></a><span class="lineno">  718</span>      <span class="keyword">const</span> <span class="keyword">auto</span> owner = distr.rankGlobalTile({i, i});</div>
+<div class="line"><a id="l00719" name="l00719"></a><span class="lineno">  719</span> </div>
+<div class="line"><a id="l00720" name="l00720"></a><span class="lineno">  720</span>      <span class="keywordflow">if</span> (owner.row() != this_rank.row())</div>
+<div class="line"><a id="l00721" name="l00721"></a><span class="lineno">  721</span>        <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l00722" name="l00722"></a><span class="lineno">  722</span> </div>
+<div class="line"><a id="l00723" name="l00723"></a><span class="lineno">  723</span>      <span class="keyword">const</span> <span class="keyword">auto</span> i_local = distr.localTileFromGlobalTile&lt;Coord::Row&gt;(i);</div>
+<div class="line"><a id="l00724" name="l00724"></a><span class="lineno">  724</span>      <span class="comment">// first trailing panel gets high priority (look ahead).</span></div>
+<div class="line"><a id="l00725" name="l00725"></a><span class="lineno">  725</span>      <span class="keyword">const</span> <span class="keyword">auto</span> trailing_matrix_priority =</div>
+<div class="line"><a id="l00726" name="l00726"></a><span class="lineno">  726</span>          (i == k + 1) ? thread_priority::high : thread_priority::normal;</div>
+<div class="line"><a id="l00727" name="l00727"></a><span class="lineno">  727</span>      <span class="keywordflow">if</span> (this_rank.col() == owner.col()) {</div>
+<div class="line"><a id="l00728" name="l00728"></a><span class="lineno">  728</span>        <span class="keyword">const</span> <span class="keyword">auto</span> j_local = distr.localTileFromGlobalTile&lt;Coord::Col&gt;(i);</div>
+<div class="line"><a id="l00729" name="l00729"></a><span class="lineno">  729</span> </div>
+<div class="line"><a id="l00730" name="l00730"></a><span class="lineno">  730</span>        her2kTrailingDiagTile&lt;backend&gt;(trailing_matrix_priority, a_panel.read({Coord::Col, j_local}),</div>
+<div class="line"><a id="l00731" name="l00731"></a><span class="lineno">  731</span>                                       u_panel.read({Coord::Col, j_local}),</div>
+<div class="line"><a id="l00732" name="l00732"></a><span class="lineno">  732</span>                                       mat_a.readwrite(LocalTileIndex{i_local, j_local}));</div>
+<div class="line"><a id="l00733" name="l00733"></a><span class="lineno">  733</span>      }</div>
+<div class="line"><a id="l00734" name="l00734"></a><span class="lineno">  734</span> </div>
+<div class="line"><a id="l00735" name="l00735"></a><span class="lineno">  735</span>      <span class="keywordflow">for</span> (SizeType j = i + 1; j &lt; nrtile; ++j) {</div>
+<div class="line"><a id="l00736" name="l00736"></a><span class="lineno">  736</span>        <span class="keyword">const</span> <span class="keyword">auto</span> owner_col = distr.rankGlobalTile&lt;Coord::Col&gt;(j);</div>
+<div class="line"><a id="l00737" name="l00737"></a><span class="lineno">  737</span> </div>
+<div class="line"><a id="l00738" name="l00738"></a><span class="lineno">  738</span>        <span class="keywordflow">if</span> (owner_col != this_rank.col())</div>
+<div class="line"><a id="l00739" name="l00739"></a><span class="lineno">  739</span>          <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l00740" name="l00740"></a><span class="lineno">  740</span> </div>
+<div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span>        <span class="keyword">const</span> <span class="keyword">auto</span> j_local = distr.localTileFromGlobalTile&lt;Coord::Col&gt;(j);</div>
+<div class="line"><a id="l00742" name="l00742"></a><span class="lineno">  742</span>        <span class="keyword">const</span> LocalTileIndex ki_panel{Coord::Row, i_local};</div>
+<div class="line"><a id="l00743" name="l00743"></a><span class="lineno">  743</span>        <span class="keyword">const</span> LocalTileIndex kj_panelT{Coord::Col, j_local};</div>
+<div class="line"><a id="l00744" name="l00744"></a><span class="lineno">  744</span>        <span class="keyword">const</span> LocalTileIndex ij{i_local, j_local};</div>
+<div class="line"><a id="l00745" name="l00745"></a><span class="lineno">  745</span> </div>
+<div class="line"><a id="l00746" name="l00746"></a><span class="lineno">  746</span>        gemmTrailingMatrixTile&lt;backend&gt;(thread_priority::normal, a_panelT.read(ki_panel),</div>
+<div class="line"><a id="l00747" name="l00747"></a><span class="lineno">  747</span>                                        u_panel.read(kj_panelT), mat_a.readwrite(ij));</div>
+<div class="line"><a id="l00748" name="l00748"></a><span class="lineno">  748</span>        gemmTrailingMatrixTile&lt;backend&gt;(thread_priority::normal, u_panelT.read(ki_panel),</div>
+<div class="line"><a id="l00749" name="l00749"></a><span class="lineno">  749</span>                                        a_panel.read(kj_panelT), mat_a.readwrite(ij));</div>
+<div class="line"><a id="l00750" name="l00750"></a><span class="lineno">  750</span>      }</div>
+<div class="line"><a id="l00751" name="l00751"></a><span class="lineno">  751</span>    }</div>
+<div class="line"><a id="l00752" name="l00752"></a><span class="lineno">  752</span> </div>
+<div class="line"><a id="l00753" name="l00753"></a><span class="lineno">  753</span>    a_panel.reset();</div>
+<div class="line"><a id="l00754" name="l00754"></a><span class="lineno">  754</span>    a_panelT.reset();</div>
+<div class="line"><a id="l00755" name="l00755"></a><span class="lineno">  755</span>    u_panel.reset();</div>
+<div class="line"><a id="l00756" name="l00756"></a><span class="lineno">  756</span>    u_panelT.reset();</div>
+<div class="line"><a id="l00757" name="l00757"></a><span class="lineno">  757</span> </div>
+<div class="line"><a id="l00758" name="l00758"></a><span class="lineno">  758</span>    <span class="keywordflow">if</span> (kk_rank.row() == this_rank.row()) {</div>
+<div class="line"><a id="l00759" name="l00759"></a><span class="lineno">  759</span>      <span class="comment">// panel partial update</span></div>
+<div class="line"><a id="l00760" name="l00760"></a><span class="lineno">  760</span>      <span class="keywordflow">for</span> (SizeType j_local = at_offset.cols(); j_local &lt; distr.localNrTiles().cols(); ++j_local) {</div>
+<div class="line"><a id="l00761" name="l00761"></a><span class="lineno">  761</span>        <span class="keyword">const</span> LocalTileIndex ki(distr.localTileFromGlobalTile&lt;Coord::Row&gt;(k), j_local);</div>
+<div class="line"><a id="l00762" name="l00762"></a><span class="lineno">  762</span> </div>
+<div class="line"><a id="l00763" name="l00763"></a><span class="lineno">  763</span>        hemmPanelTile&lt;backend&gt;(thread_priority::high, a_diag, mat_u.read(ki), mat_a.readwrite(ki));</div>
+<div class="line"><a id="l00764" name="l00764"></a><span class="lineno">  764</span>      }</div>
+<div class="line"><a id="l00765" name="l00765"></a><span class="lineno">  765</span>    }</div>
+<div class="line"><a id="l00766" name="l00766"></a><span class="lineno">  766</span>  }</div>
+<div class="line"><a id="l00767" name="l00767"></a><span class="lineno">  767</span>}</div>
+<div class="line"><a id="l00768" name="l00768"></a><span class="lineno">  768</span> </div>
 <div class="line"><a id="l00769" name="l00769"></a><span class="lineno">  769</span>}</div>
-<div class="line"><a id="l00770" name="l00770"></a><span class="lineno">  770</span> </div>
-<div class="line"><a id="l00771" name="l00771"></a><span class="lineno">  771</span>}</div>
 <div class="ttc" id="ablas_2tile_8h_html"><div class="ttname"><a href="blas_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="abroadcast__panel_8h_html"><div class="ttname"><a href="broadcast__panel_8h.html">broadcast_panel.h</a></div></div>
 <div class="ttc" id="abroadcast__panel_8h_html_a5e63a7fa440a442aa538d89b580eb3ed"><div class="ttname"><a href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">dlaf::comm::broadcast</a></div><div class="ttdeci">void broadcast(comm::IndexT_MPI rank_root, matrix::Panel&lt; axis, T, D, storage &gt; &amp;panel, comm::CommunicatorPipeline&lt; coord_to_communicator_type(orthogonal(axis))&gt; &amp;serial_comm)</div><div class="ttdef"><b>Definition</b> broadcast_panel.h:61</div></div>

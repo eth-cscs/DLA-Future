@@ -76,8 +76,8 @@ public:
   /// @pre blockSize() is divisible by @p tiles_per_block
   /// @pre blockSize() == tile_size()
   Matrix<const T, D> retiledSubPipelineConst(const LocalTileSize& tiles_per_block) {
-    SubMatrixSpec spec = {this->distribution().origin(), this->distribution().size()};
-    return mat_const_.retiledSubPipelineConst(tiles_per_block, spec);
+    auto submatrix_const = Matrix<const T, D>(this->distribution());
+    return submatrix_const.retiledSubPipelineConst(tiles_per_block);
   }
 
   /// Returns a read-only sender of the Tile with local index @p index.
@@ -146,9 +146,6 @@ public:
   MatrixRef(Matrix<T, D>& mat, const SubMatrixSpec& spec)
       : MatrixRef<const T, D>(mat, spec), mat_(mat) {}
 
-  MatrixRef(Matrix<T, D>&& mat, const SubMatrixSpec& spec)
-      : MatrixRef<const T, D>(mat, spec), mat_(mat) {}
-
   /// Create a matrix reference of @p mat.
   ///
   /// @param[in] mat is the input matrix.
@@ -170,8 +167,8 @@ public:
   /// @pre blockSize() is divisible by @p tiles_per_block
   /// @pre blockSize() == tile_size()
   Matrix<T, D> retiledSubPipeline(const LocalTileSize& tiles_per_block) noexcept {
-    SubMatrixSpec spec = {this->distribution().origin(), this->distribution().size()};
-    return mat_.retiledSubPipeline(tiles_per_block, spec);
+    auto submatrix = Matrix<T, D>(this->distribution());
+    return submatrix.retiledSubPipeline(tiles_per_block);
   }
 
   /// Returns a sender of the Tile with local index @p index.

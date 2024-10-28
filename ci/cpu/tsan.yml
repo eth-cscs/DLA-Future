@@ -1,0 +1,35 @@
+include:
+  - local: 'ci/common-ci.yml'
+
+cpu tsan deps:
+  extends: .build_deps_common
+  variables:
+    EXTRA_APTGET: "clang-18 libclang-rt-18-dev libomp-18-dev"
+    COMPILER: clang@18
+    SPACK_ENVIRONMENT: ci/docker/tsan.yaml
+    USE_MKL: "ON"
+    DEPS_IMAGE: $CSCS_REGISTRY_PATH/cpu-tsan/deps
+
+cpu tsan build:
+  extends:
+    - .build_common
+    - .build_for_daint-mc
+  needs:
+    - cpu tsan deps
+  variables:
+    DLAF_IMAGE: $CSCS_REGISTRY_PATH/cpu-tsan/dlaf:$CI_COMMIT_SHA
+
+cpu tsan test:
+  extends: .run_common
+  needs:
+    - cpu tsan build
+  variables:
+    TSAN_OPTIONS: "ignore_noninstrumented_modules=1:halt_on_error=1:history_size=0"
+    PIKA_SMALL_STACK_SIZE: "0x100000"
+    PIKA_MEDIUM_STACK_SIZE: "0x100000"
+    # Override use of libSegFault, not necessary with sanitizers
+    LD_PRELOAD: ""
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cpu tsan build

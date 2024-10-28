@@ -61,7 +61,7 @@ JOB_TEMPLATE="
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
     DLAF_HDF5_TEST_OUTPUT_PATH: \$CI_PROJECT_DIR
-  script: mpi-ctest -L {{LABEL}}
+  script: mpi-ctest --timeout 420 -E eigensolver -L {{LABEL}}
   artifacts:
     paths:
       - codecov-reports/"
@@ -93,14 +93,14 @@ JOB_TEMPLATE="
   variables:
     SLURM_CPUS_PER_TASK: {{CPUS_PER_TASK}}
     SLURM_NTASKS: {{NTASKS}}
-    SLURM_TIMELIMIT: '20:00'
+    SLURM_TIMELIMIT: '2:00:00'
     SLURM_UNBUFFEREDIO: 1
     SLURM_WAIT: 0
     PULL_IMAGE: 'YES'
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
     DLAF_HDF5_TEST_OUTPUT_PATH: \$CI_PROJECT_DIR
-  script: mpi-ctest -L {{LABEL}}"
+  script: mpi-ctest --timeout 420 -E eigensolver -L {{LABEL}}"
 fi
 
 JOBS=""

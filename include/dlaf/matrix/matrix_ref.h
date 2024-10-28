@@ -15,12 +15,22 @@
 #include <utility>
 
 #include <dlaf/matrix/distribution.h>
-#include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_base.h>
 #include <dlaf/matrix/tile.h>
 #include <dlaf/types.h>
 
-namespace dlaf::matrix::internal {
+namespace dlaf::matrix {
+
+// Pre-declaration of MatrixRef
+// MatrixRef is a friend of Matrix
+template <class T, Device D>
+class Matrix;
+
+template <class T, Device D>
+class Matrix<const T, D>;
+
+namespace internal {
+
 /// Contains information to create a sub-matrix.
 using SubMatrixSpec = SubDistributionSpec;
 
@@ -34,7 +44,7 @@ template <class T, Device D>
 class MatrixRef;
 
 template <class T, Device D>
-class MatrixRef<const T, D> : public internal::MatrixBase {
+class MatrixRef<const T, D> : public MatrixBase {
 public:
   static constexpr Device device = D;
 
@@ -76,8 +86,7 @@ public:
   /// @pre blockSize() is divisible by @p tiles_per_block
   /// @pre blockSize() == tile_size()
   Matrix<const T, D> retiledSubPipelineConst(const LocalTileSize& tiles_per_block) {
-    auto submatrix_const = Matrix<const T, D>(this->distribution());
-    return submatrix_const.retiledSubPipelineConst(tiles_per_block);
+    return Matrix<const T, D>(*this, tiles_per_block);
   }
 
   /// Returns a read-only sender of the Tile with local index @p index.
@@ -116,6 +125,10 @@ public:
     const auto ij_tile =
         parent_dist.tileElementOffsetFromSubDistribution(origin_, distribution(), index);
     return splitTile(std::move(tile_sender), SubTileSpec{ij_tile, tile_size});
+  }
+
+  Matrix<const T, D>& reference() const noexcept {
+    return mat_const_;
   }
 
 private:
@@ -167,8 +180,7 @@ public:
   /// @pre blockSize() is divisible by @p tiles_per_block
   /// @pre blockSize() == tile_size()
   Matrix<T, D> retiledSubPipeline(const LocalTileSize& tiles_per_block) noexcept {
-    auto submatrix = Matrix<T, D>(this->distribution());
-    return submatrix.retiledSubPipeline(tiles_per_block);
+    return Matrix<T, D>(*this, tiles_per_block);
   }
 
   /// Returns a sender of the Tile with local index @p index.
@@ -209,6 +221,10 @@ public:
     return splitTile(std::move(tile_sender), SubTileSpec{ij_tile, tile_size});
   }
 
+  Matrix<T, D>& reference() const noexcept {
+    return mat_;
+  }
+
 private:
   Matrix<T, D>& mat_;
   using MatrixRef<const T, D>::origin_;
@@ -231,4 +247,5 @@ DLAF_MATRIX_REF_ETI(extern, double, Device::GPU)
 DLAF_MATRIX_REF_ETI(extern, std::complex<float>, Device::GPU)
 DLAF_MATRIX_REF_ETI(extern, std::complex<double>, Device::GPU)
 #endif
-}
+}  // namespace internal
+}  // namespace dlaf::matrix

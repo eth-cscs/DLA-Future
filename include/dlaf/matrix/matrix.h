@@ -34,6 +34,12 @@ namespace matrix {
 
 namespace internal {
 
+template <class T, Device D>
+class MatrixRef;
+
+template <class T, Device D>
+class MatrixRef<const T, D>;
+
 /// Helper function returning a vector with the results of calling a function over a IterableRange2D
 ///
 /// @param f non-void function accepting LocalTileIndex as parameter
@@ -47,7 +53,7 @@ auto selectGeneric(Func&& f, common::IterableRange2D<SizeType, LocalTile_TAG> ra
                  [&](auto idx) { return f(idx); });
   return tiles;
 }
-}
+} // namespace internal
 
 /// A @c Matrix object represents a collection of tiles which contain all the elements of a matrix.
 ///
@@ -65,6 +71,8 @@ public:
   using TileDataType = internal::TileData<const ElementType, D>;
   using ReadWriteSenderType = ReadWriteTileSender<T, D>;
   friend Matrix<const ElementType, D>;
+  friend internal::MatrixRef<ElementType, D>;
+  using MatrixRef = internal::MatrixRef<ElementType, D>;
 
   /// Create a non distributed matrix of size @p size and block size @p block_size.
   ///
@@ -189,9 +197,12 @@ private:
   using typename Matrix<const T, D>::SubPipelineTag;
   Matrix(Matrix& mat, const SubPipelineTag tag) noexcept : Matrix<const T, D>(mat, tag) {}
 
-  template<class MatrixLike>
-  Matrix(MatrixLike& mat, const LocalTileSize& tiles_per_block) noexcept
+  Matrix(Matrix& mat, const LocalTileSize& tiles_per_block) noexcept
       : Matrix<const T, D>(mat, tiles_per_block) {}
+  
+  Matrix(MatrixRef& mat_ref, const LocalTileSize& tiles_per_block) noexcept
+      : Matrix<const T, D>(mat_ref, tiles_per_block) {}
+
 
   using Matrix<const T, D>::setUpTiles;
   using Matrix<const T, D>::tile_managers_;
@@ -208,6 +219,8 @@ public:
   using TileDataType = internal::TileData<ElementType, D>;
   using ReadOnlySenderType = ReadOnlyTileSender<T, D>;
   friend Matrix<ElementType, D>;
+  friend internal::MatrixRef<const ElementType, D>;
+  using MatrixRef = internal::MatrixRef<const ElementType, D>;
 
   Matrix(const LayoutInfo& layout, ElementType* ptr) noexcept
       : MatrixBase({layout.size(), layout.blockSize()}) {
@@ -310,17 +323,20 @@ protected:
     setUpSubPipelines(mat);
   }
 
-  template <class MatrixLike>
-  Matrix(MatrixLike& mat, const LocalTileSize& tiles_per_block) noexcept
+  Matrix(Matrix& mat, const LocalTileSize& tiles_per_block) noexcept
       : MatrixBase(mat.distribution(), tiles_per_block) {
     setUpRetiledSubPipelines(mat, tiles_per_block);
+  }
+ 
+  Matrix(MatrixRef& mat_ref, const LocalTileSize& tiles_per_block) noexcept
+      : MatrixBase(mat_ref.distribution(), tiles_per_block) {
+    setUpRetiledSubPipelines(mat_ref.reference(), tiles_per_block);
   }
   
   void setUpTiles(const memory::MemoryView<ElementType, D>& mem, const LayoutInfo& layout) noexcept;
   void setUpSubPipelines(Matrix<const T, D>&) noexcept;
 
-  template<class MatrixLike>
-  void setUpRetiledSubPipelines(MatrixLike& mat, const LocalTileSize& tiles_per_block) noexcept;
+  void setUpRetiledSubPipelines(Matrix& mat, const LocalTileSize& tiles_per_block) noexcept;
 
   std::vector<internal::TilePipeline<T, D>> tile_managers_;
 };
@@ -381,8 +397,8 @@ void Matrix<const T, D>::setUpSubPipelines(Matrix<const T, D>& mat) noexcept {
   }
 }
 
-template <class T, Device D> template <class MatrixLike>
-void Matrix<const T, D>::setUpRetiledSubPipelines(MatrixLike& mat,
+template <class T, Device D>
+void Matrix<const T, D>::setUpRetiledSubPipelines(Matrix<const T, D>& mat,
                                                   const LocalTileSize& tiles_per_block) noexcept {
   DLAF_ASSERT(mat.blockSize() == mat.tile_size(), mat.blockSize(), mat.tile_size());
 

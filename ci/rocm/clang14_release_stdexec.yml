@@ -9,7 +9,7 @@ rocm clang14 stdexec release deps:
     COMPILER: clang@14
     USE_ROCBLAS: "ON"
     SPACK_ENVIRONMENT: ci/docker/release-rocm533-stdexec.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/rocm-clang14-stdexec-release/build
+    DEPS_IMAGE: $CSCS_REGISTRY_PATH/rocm-clang14-stdexec-release/deps
 
 rocm clang14 stdexec release build:
   extends:
@@ -18,5 +18,4 @@ rocm clang14 stdexec release build:
   needs:
     - rocm clang14 stdexec release deps
   variables:
-    DEPLOY_BASE_IMAGE: $CSCS_REGISTRY_PATH/rocm-patched:5.3.3
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/rocm-clang14-stdexec-release/deploy:$CI_COMMIT_SHA
+    DLAF_IMAGE: $CSCS_REGISTRY_PATH/rocm-clang14-stdexec-release/dlaf:$CI_COMMIT_SHA

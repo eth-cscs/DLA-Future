@@ -1,18 +1,17 @@
-ARG BUILD_IMAGE
-ARG DEPLOY_BASE_IMAGE
+ARG DEPS_IMAGE
+FROM $DEPS_IMAGE
 
-# This is the folder where the project is built
+LABEL com.jfrog.artifactory.retention.maxDays="7"
+LABEL com.jfrog.artifactory.retention.maxCount="10"
+
+# Directory where the project is built
 ARG BUILD=/DLA-Future-build
-# This is where we copy the sources to
+# Directory where the miniapps are built as separate project
+ARG BUILD_MINIAPP=/DLA-Future-miniapp-build
+# Directory where the sources are copied to
 ARG SOURCE=/DLA-Future
-# Where a bunch of shared libs live
-ARG DEPLOY=/root/DLA-Future.bundle
-
-FROM $BUILD_IMAGE as builder
-
-ARG BUILD
-ARG SOURCE
-ARG DEPLOY
+# Directory for some helper executables
+ARG BIN=/DLA-Future-build/bin
 
 # Build DLA-Future
 COPY . ${SOURCE}
@@ -30,73 +29,16 @@ RUN spack repo rm --scope site dlaf && \
     spack -e ci concretize -f && \
     spack -e ci --config "config:flags:keep_werror:all" install --jobs ${NUM_PROCS} --keep-stage --verbose
 
-# Prune and bundle binaries
-RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
-    export TEST_BINARIES=`PATH=${SOURCE}/ci:$PATH ctest --show-only=json-v1 | jq '.tests | map(.command | .[] | select(contains("check-threads") | not)) | .[]' | tr -d \"` && \
-    echo "Binary sizes:" && \
-    ls -lh ${TEST_BINARIES} && \
-    ls -lh src/lib* && \
-    libtree -d ${DEPLOY} ${TEST_BINARIES} && \
-    rm -rf ${DEPLOY}/usr/bin && \
-    libtree -d ${DEPLOY} $(which ctest gcov addr2line) && \
-    cp -L ${SOURCE}/ci/{mpi-ctest,check-threads,upload_codecov} ${DEPLOY}/usr/bin && \
-    echo "$TEST_BINARIES" | xargs -I{file} find -samefile {file} -exec cp --parents '{}' ${BUILD}-tmp ';' && \
-    find '(' -name CTestTestfile.cmake -o -iname "*.gcno" ')' -exec cp --parents '{}' ${BUILD}-tmp ';' && \
-    rm -rf ${BUILD} && \
-    mv ${BUILD}-tmp ${BUILD} && \
-    rm -rf ${SOURCE}/.git
+RUN mkdir -p ${BIN} && cp -L ${SOURCE}/ci/{mpi-ctest,check-threads,upload_codecov} ${BIN}
 
-# Deploy Extra RocBlas files separately.
-ARG USE_ROCBLAS=OFF
-RUN mkdir ${DEPLOY}/usr/lib/rocblas; \
-    if [ "$USE_ROCBLAS" = "ON" ]; then \
-      cp -r `spack -e ci location -i rocblas`/lib/rocblas/library ${DEPLOY}/usr/lib/rocblas ; \
-    fi
-
-# Multistage build, this is the final small image
-FROM $DEPLOY_BASE_IMAGE
-
-# set jfrog autoclean policy
-LABEL com.jfrog.artifactory.retention.maxDays="7"
-LABEL com.jfrog.artifactory.retention.maxCount="10"
-
-ENV DEBIAN_FRONTEND noninteractive
-
-ARG BUILD
-ARG SOURCE
-ARG DEPLOY
-
-ARG EXTRA_APTGET_DEPLOY
 ARG PIP_OPTS
-# python is needed for fastcov
 # pip is needed only to install fastcov (it is removed with
 #     its dependencies after fastcov installation)
-# codecov upload needs curl + ca-certificates
-# glibc-tools is needed for libSegFault on ubuntu:22.04
-# jq, strace are needed for check-threads
-# tzdata is needed to print correct time
 RUN apt-get update -qq && \
-    apt-get install -qq -y --no-install-recommends \
-      ${EXTRA_APTGET_DEPLOY} \
-      python3 python3-pip \
-      curl \
-      ca-certificates \
-      glibc-tools jq strace \
-      tzdata && \
+    apt-get install -qq -y --no-install-recommends python3-pip && \
     pip install ${PIP_OPTS} fastcov && \
     apt-get autoremove -qq -y python3-pip && \
     apt-get clean
-
-# Copy the executables and the codecov gcno files
-COPY --from=builder ${BUILD} ${BUILD}
-COPY --from=builder ${DEPLOY} ${DEPLOY}
-
-# Copy the source files into the image as well.
-# This is necessary for code coverage of MPI tests: gcov has to have write temporary
-# data into the source folder. In distributed applications we can therefore not mount
-# the git repo folder at runtime in the container, because it is shared and would
-# cause race conditions in gcov.
-COPY --from=builder ${SOURCE} ${SOURCE}
 
 RUN cd /usr/local/bin && \
   curl -Ls https://codecov.io/bash > codecov.sh && \
@@ -104,7 +46,7 @@ RUN cd /usr/local/bin && \
   chmod +x codecov.sh
 
 # Make it easy to call our binaries.
-ENV PATH="${DEPLOY}/usr/bin:$PATH"
+ENV PATH="${BIN}:$PATH"
 ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
 ENV NVIDIA_REQUIRE_CUDA "cuda>=10.2"
@@ -114,7 +56,5 @@ ENV ENABLE_COVERAGE="YES"
 
 # Automatically print stacktraces on segfault
 ENV LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so
-
-RUN echo "${DEPLOY}/usr/lib/" > /etc/ld.so.conf.d/dlaf.conf && ldconfig
 
 WORKDIR ${BUILD}

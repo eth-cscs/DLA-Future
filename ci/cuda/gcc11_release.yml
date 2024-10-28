@@ -6,10 +6,9 @@ cuda gcc11 release deps:
   variables:
     BASE_IMAGE: docker.io/nvidia/cuda:11.7.1-devel-ubuntu22.04
     COMPILER: gcc@11
-    CXXSTD: 17
     SPACK_ENVIRONMENT: ci/docker/release-cuda.yaml
     USE_MKL: "ON"
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-release/build
+    DEPS_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-release/deps
 
 cuda gcc11 release build:
   extends:
@@ -18,8 +17,7 @@ cuda gcc11 release build:
   needs:
     - cuda gcc11 release deps
   variables:
-    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-release/deploy:$CI_COMMIT_SHA
+    DLAF_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-release/dlaf:$CI_COMMIT_SHA
 
 cuda gcc11 release test:
   extends: .run_common

@@ -6,9 +6,9 @@ cpu clang16 release deps:
   variables:
     EXTRA_APTGET: "clang-16 libomp-16-dev"
     COMPILER: clang@16
-    USE_MKL: "ON"
     SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cpu-clang16-release/build
+    USE_MKL: "ON"
+    DEPS_IMAGE: $CSCS_REGISTRY_PATH/cpu-clang16-release/deps
 
 cpu clang16 release build:
   extends:
@@ -17,7 +17,7 @@ cpu clang16 release build:
   needs:
     - cpu clang16 release deps
   variables:
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cpu-clang16-release/deploy:$CI_COMMIT_SHA
+    DLAF_IMAGE: $CSCS_REGISTRY_PATH/cpu-clang16-release/dlaf:$CI_COMMIT_SHA
 
 cpu clang16 release test:
   extends: .run_common

@@ -157,7 +157,12 @@ struct reductionToBandMiniapp {
           res.hh_2nd.waitLocalTiles();
         }
         else {
-          auto taus = dlaf::eigensolver::internal::reduction_to_band<backend>(comm_grid, matrix, opts.b);
+          auto taus = [&]() {
+            if (opts.local)
+              return dlaf::eigensolver::internal::reduction_to_band<backend>(matrix, opts.b);
+            else
+              return dlaf::eigensolver::internal::reduction_to_band<backend>(comm_grid, matrix, opts.b);
+          }();
           taus.waitLocalTiles();
         }
 

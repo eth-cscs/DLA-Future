@@ -55,6 +55,9 @@ const std::vector<
     local_sizes_tests({
         // size, tile_size, tiles_per_block, distribution origin, distribution size
         {{8, 8}, {2, 2}, {2, 2}, {0, 0}, {4, 4}},
+        {{8, 8}, {2, 2}, {2, 2}, {0, 0}, {8, 4}},
+        {{8, 8}, {2, 2}, {2, 2}, {0, 0}, {4, 8}},
+//        {{8, 8}, {2, 2}, {2, 2}, {2, 2}, {4, 4}},
         // {{0, 0}, {2, 3}, {2, 2}},
         // {{0, 0}, {2, 3}, {2, 2}},
         // {{3, 0}, {5, 2}, {1, 3}},
@@ -135,12 +138,6 @@ TYPED_TEST(RetiledMatrixTest, LocalConstructor) {
     const TileElementSize block_size(tile_size.rows() * tiles_per_block.rows(),
                                      tile_size.cols() * tiles_per_block.cols());
 
-    auto el1_shifted = [&dist_size](const GlobalElementIndex& index) {
-      SizeType i = index.row();
-      SizeType j = index.col() + dist_size.cols();
-      return TypeUtilities<Type>::element(i + j / 1024., j - i / 128.);
-    };
-
     // Expected distribution of the retiled matrix should match the distribution of the matrix reference
     Distribution expected_distribution({dist_size.rows(), dist_size.cols()}, block_size, tile_size,
                                        {1, 1}, {0, 0}, {0, 0});
@@ -166,7 +163,7 @@ TYPED_TEST(RetiledMatrixTest, LocalConstructor) {
 
       check(el1, el2, mat, spec);
     }
-
+    
     // // Const retiled matrix from non-const matrix reference
     // {
     //   set(mat, el1);

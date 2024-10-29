@@ -76,6 +76,46 @@ const std::vector<
 //     {{36, 14}, {2, 3}, {3, 2}},
 // });
 
+template <typename T, Device D, typename F1, typename F2>
+void check(F1 el1, F2 el2, dlaf::matrix::Matrix<T, D>& mat, SubMatrixSpec& spec) {
+  auto dist = mat.distribution();
+
+  auto el1_shifted_rows = [&spec, &el1](const GlobalElementIndex& index) {
+    auto shifted_idx = GlobalElementIndex{index.row() + spec.size.rows(), index.col()};
+    return el1(shifted_idx);
+  };
+
+  auto el1_shifted_cols = [&spec, &el1](const GlobalElementIndex& index) {
+    auto shifted_idx = GlobalElementIndex{index.row(), index.col() + spec.size.cols()};
+    return el1(shifted_idx);
+  };
+
+  // TODO: Remove
+  DLAF_ASSERT(spec.origin.row() == 0, spec.origin.row());
+  DLAF_ASSERT(spec.origin.col() == 0, spec.origin.col());
+
+  // Check modified part (el2)
+  MatrixRef<T, D> mat_ref(mat, spec);
+  CHECK_MATRIX_EQ(el2, mat_ref);
+
+  // Check unmodified part (el1)
+  // Double pass on parts of the matrix is possible, but harmless
+
+  if (dist.size().rows() - spec.size.rows() > 0) {
+    SubMatrixSpec spec2{{spec.size.rows(), 0},
+                        {dist.size().rows() - spec.size.rows(), dist.size().cols()}};
+    MatrixRef<T, D> mat_ref2(mat, spec2);
+    CHECK_MATRIX_EQ(el1_shifted_rows, mat_ref2);
+  }
+
+  if (dist.size().cols() - spec.size.cols() > 0) {
+    SubMatrixSpec spec2{{0, spec.size.cols()},
+                        {dist.size().rows(), dist.size().cols() - spec.size.cols()}};
+    MatrixRef<T, D> mat_ref2(mat, spec2);
+    CHECK_MATRIX_EQ(el1_shifted_cols, mat_ref2);
+  }
+}
+
 TYPED_TEST(RetiledMatrixTest, LocalConstructor) {
   using Type = TypeParam;
 
@@ -84,6 +124,7 @@ TYPED_TEST(RetiledMatrixTest, LocalConstructor) {
     SizeType j = index.col();
     return TypeUtilities<Type>::element(i + j / 1024., j - i / 128.);
   };
+
   auto el2 = [](const GlobalElementIndex& index) {
     SizeType i = index.row();
     SizeType j = index.col();
@@ -93,6 +134,12 @@ TYPED_TEST(RetiledMatrixTest, LocalConstructor) {
   for (const auto& [size, tile_size, tiles_per_block, dist_origin, dist_size] : local_sizes_tests) {
     const TileElementSize block_size(tile_size.rows() * tiles_per_block.rows(),
                                      tile_size.cols() * tiles_per_block.cols());
+
+    auto el1_shifted = [&dist_size](const GlobalElementIndex& index) {
+      SizeType i = index.row();
+      SizeType j = index.col() + dist_size.cols();
+      return TypeUtilities<Type>::element(i + j / 1024., j - i / 128.);
+    };
 
     // Expected distribution of the retiled matrix should match the distribution of the matrix reference
     Distribution expected_distribution({dist_size.rows(), dist_size.cols()}, block_size, tile_size,
@@ -113,10 +160,11 @@ TYPED_TEST(RetiledMatrixTest, LocalConstructor) {
         EXPECT_EQ(expected_distribution, rt_mat.distribution());
         CHECK_MATRIX_EQ(el1, rt_mat);
 
-        // set(rt_mat, el2);
-        // CHECK_MATRIX_EQ(el2, rt_mat);
+        set(rt_mat, el2);
+        CHECK_MATRIX_EQ(el2, rt_mat);
       }
-      // CHECK_MATRIX_EQ(el2, mat);
+
+      check(el1, el2, mat, spec);
     }
 
     // // Const retiled matrix from non-const matrix reference

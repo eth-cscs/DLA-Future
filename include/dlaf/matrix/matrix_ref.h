@@ -16,6 +16,7 @@
 
 #include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/matrix_base.h>
+#include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/tile.h>
 #include <dlaf/types.h>
 
@@ -23,11 +24,8 @@ namespace dlaf::matrix {
 
 // Pre-declaration of MatrixRef
 // MatrixRef is a friend of Matrix
-template <class T, Device D>
-class Matrix;
-
-template <class T, Device D>
-class Matrix<const T, D>;
+// template <class T, Device D>
+// class Matrix;
 
 namespace internal {
 
@@ -85,9 +83,9 @@ public:
   ///
   /// @pre blockSize() is divisible by @p tiles_per_block
   /// @pre blockSize() == tile_size()
-  Matrix<const T, D> retiledSubPipelineConst(const LocalTileSize& tiles_per_block) {
-    return Matrix<const T, D>(*this, tiles_per_block);
-  }
+  // Matrix<const T, D> retiledSubPipelineConst(const LocalTileSize& tiles_per_block) {
+  //   return Matrix<const T, D>(*this, tiles_per_block);
+  // }
 
   /// Returns a read-only sender of the Tile with local index @p index.
   ///
@@ -125,10 +123,6 @@ public:
     const auto ij_tile =
         parent_dist.tileElementOffsetFromSubDistribution(origin_, distribution(), index);
     return splitTile(std::move(tile_sender), SubTileSpec{ij_tile, tile_size});
-  }
-
-  Matrix<const T, D>& reference() const noexcept {
-    return mat_const_;
   }
 
 private:
@@ -219,10 +213,6 @@ public:
     const auto ij_tile =
         parent_dist.tileElementOffsetFromSubDistribution(origin_, this->distribution(), index);
     return splitTile(std::move(tile_sender), SubTileSpec{ij_tile, tile_size});
-  }
-
-  Matrix<T, D>& reference() const noexcept {
-    return mat_;
   }
 
 private:

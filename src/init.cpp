@@ -30,8 +30,13 @@
 namespace dlaf {
 std::ostream& operator<<(std::ostream& os, const configuration& cfg) {
   // clang-format off
+#if PIKA_VERSION_FULL >= 0x001F00  // >= 0.31.0
+  os << "  num_np_gpu_streams = " << cfg.num_np_gpu_streams << std::endl;
+  os << "  num_hp_gpu_streams = " << cfg.num_hp_gpu_streams << std::endl;
+#else
   os << "  num_np_gpu_streams_per_thread = " << cfg.num_np_gpu_streams_per_thread << std::endl;
   os << "  num_hp_gpu_streams_per_thread = " << cfg.num_hp_gpu_streams_per_thread << std::endl;
+#endif
   os << "  umpire_host_memory_pool_initial_block_bytes = " << cfg.umpire_host_memory_pool_initial_block_bytes << std::endl;
   os << "  umpire_host_memory_pool_next_block_bytes = " << cfg.umpire_host_memory_pool_next_block_bytes << std::endl;
   os << "  umpire_host_memory_pool_alignment_bytes = " << cfg.umpire_host_memory_pool_alignment_bytes << std::endl;
@@ -122,8 +127,13 @@ struct Init<Backend::GPU> {
         cfg.umpire_device_memory_pool_initial_block_bytes, cfg.umpire_device_memory_pool_alignment_bytes,
         cfg.umpire_host_memory_pool_coalescing_free_ratio,
         cfg.umpire_host_memory_pool_coalescing_reallocation_ratio);
+#if PIKA_VERSION_FULL >= 0x001F00  // >= 0.31.0
+    initializeGpuPool(device, cfg.num_np_gpu_streams, cfg.num_hp_gpu_streams, cfg.num_gpu_blas_handles,
+                      cfg.num_gpu_lapack_handles);
+#else
     initializeGpuPool(device, cfg.num_np_gpu_streams_per_thread, cfg.num_hp_gpu_streams_per_thread,
                       cfg.num_gpu_blas_handles, cfg.num_gpu_lapack_handles);
+#endif
     pika::cuda::experimental::detail::register_polling(pika::resource::get_thread_pool("default"));
   }
 
@@ -240,8 +250,17 @@ void warnUnusedConfigurationOption(const pika::program_options::variables_map& v
 void updateConfiguration(const pika::program_options::variables_map& vm, configuration& cfg) {
   // clang-format off
   updateConfigurationValue(vm, cfg.print_config, "PRINT_CONFIG", "print-config");
+#if PIKA_VERSION_FULL >= 0x001F00  // >= 0.31.0
+  updateConfigurationValue(vm, cfg.num_np_gpu_streams, "NUM_NP_GPU_STREAMS", "num-np-gpu-streams");
+  updateConfigurationValue(vm, cfg.num_hp_gpu_streams, "NUM_HP_GPU_STREAMS", "num-hp-gpu-streams");
+  warnUnusedConfigurationOption(vm, "NUM_NP_GPU_STREAMS_PER_THREAD", "num-np-gpu-streams-per-thread", "only supported with pika 0.30.X or older");
+  warnUnusedConfigurationOption(vm, "NUM_HP_GPU_STREAMS_PER_THREAD", "num-hp-gpu-streams-per-thread", "only supported with pika 0.30.X or older");
+#else
   updateConfigurationValue(vm, cfg.num_np_gpu_streams_per_thread, "NUM_NP_GPU_STREAMS_PER_THREAD", "num-np-gpu-streams-per-thread");
   updateConfigurationValue(vm, cfg.num_hp_gpu_streams_per_thread, "NUM_HP_GPU_STREAMS_PER_THREAD", "num-hp-gpu-streams-per-thread");
+  warnUnusedConfigurationOption(vm, "NUM_NP_GPU_STREAMS", "num-np-gpu-streams", "only supported with pika 0.31.0 or newer");
+  warnUnusedConfigurationOption(vm, "NUM_HP_GPU_STREAMS", "num-hp-gpu-streams", "only supported with pika 0.31.0 or newer");
+#endif
   updateConfigurationValue(vm, cfg.umpire_host_memory_pool_initial_block_bytes, "UMPIRE_HOST_MEMORY_POOL_INITIAL_BLOCK_BYTES", "umpire-host-memory-pool-initial-block-bytes");
   updateConfigurationValue(vm, cfg.umpire_host_memory_pool_next_block_bytes, "UMPIRE_HOST_MEMORY_POOL_NEXT_BLOCK_BYTES", "umpire-host-memory-pool-next-block-bytes");
   updateConfigurationValue(vm, cfg.umpire_host_memory_pool_alignment_bytes, "UMPIRE_HOST_MEMORY_POOL_ALIGNMENT_BYTES", "umpire-host-memory-pool-alignment-bytes");
@@ -316,6 +335,8 @@ pika::program_options::options_description getOptionsDescription() {
   // clang-format off
   desc.add_options()("dlaf:help", "Print help message");
   desc.add_options()("dlaf:print-config", "Print the DLA-Future configuration");
+  desc.add_options()("dlaf:num-np-gpu-streams", pika::program_options::value<std::size_t>(), "Number of normal priority GPU streams");
+  desc.add_options()("dlaf:num-hp-gpu-streams", pika::program_options::value<std::size_t>(), "Number of high priority GPU streams");
   desc.add_options()("dlaf:num-np-gpu-streams-per-thread", pika::program_options::value<std::size_t>(), "Number of normal priority GPU streams per worker thread");
   desc.add_options()("dlaf:num-hp-gpu-streams-per-thread", pika::program_options::value<std::size_t>(), "Number of high priority GPU streams per worker thread");
   desc.add_options()("dlaf:umpire-host-memory-pool-initial-block-bytes", pika::program_options::value<std::size_t>(), "Number of bytes to preallocate for pinned host memory pool");

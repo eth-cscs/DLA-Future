@@ -157,21 +157,21 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
                                                 const matrix::Tile<const T, Device::CPU>& taus,
                                                 matrix::Tile<T, Device::GPU>& tile_t, SizeType begin = 0,
                                                 SizeType end = -1) noexcept {
-    const SizeType k = tile_t.size().cols();
+    const SizeType k = tile_t.size().rows();
+
     if (end == -1)
       end = k;
-    DLAF_ASSERT(tile_v.size().cols() == k, tile_v.size().cols(), k);
+
+    // DLAF_ASSERT(tile_v.size().cols() == (end - begin), tile_v.size().cols(), end - begin);
     DLAF_ASSERT(taus.size().rows() == k, taus.size().rows(), k);
     DLAF_ASSERT(taus.size().cols() == 1, taus.size().cols());
 
     for (SizeType j = begin; j < end; ++j) {
-      const auto mtau = util::blasToCublasCast(-taus({j, 0}));
+      const auto neg_tau = util::blasToCublasCast(-taus({j, 0}));
       const auto one = util::blasToCublasCast(T{1});
 
-      const TileElementIndex t_start{0, j};
-
       // Position of the 1 in the diagonal in the current column.
-      SizeType i_diag = j - first_row_tile;
+      const SizeType i_diag = j - first_row_tile;
       const SizeType first_element_in_col = std::max<SizeType>(0, i_diag);
 
       // Break if the reflector starts in the next tile.
@@ -180,12 +180,13 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 
       // T(0:j, j) = -tau . V(j:, 0:j)* . V(j:, j)
       // [j x 1] = [(n-j) x j]* . [(n-j) x 1]
-      TileElementIndex va_start{first_element_in_col, 0};
-      TileElementIndex vb_start{first_element_in_col, j};
-      TileElementSize va_size{tile_v.size().rows() - first_element_in_col, j};
+      const TileElementIndex t_start{0, j - begin};
+      const TileElementIndex va_start{first_element_in_col, 0};
+      const TileElementIndex vb_start{first_element_in_col, j};
+      const TileElementSize va_size{tile_v.size().rows() - first_element_in_col, j};
 
       gpublas::internal::Gemv<T>::call(handle, CUBLAS_OP_C, to_int(va_size.rows()),
-                                       to_int(va_size.cols()), &mtau,
+                                       to_int(va_size.cols()), &neg_tau,
                                        util::blasToCublasCast(tile_v.ptr(va_start)), to_int(tile_v.ld()),
                                        util::blasToCublasCast(tile_v.ptr(vb_start)), 1, &one,
                                        util::blasToCublasCast(tile_t.ptr(t_start)), 1);
@@ -305,36 +306,88 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
         }));
   }
   else if constexpr (backend == Backend::GPU) {
+    dlaf::internal::silenceUnusedWarningFor(ws_t);
+
     t = Helpers::set0(std::move(t));
 
-    const auto hp_scheduler = di::getBackendScheduler<Backend::GPU>(thread_priority::high);
-    t = di::whenAllLift(std::move(first_rows), ex::when_all_vector(std::move(hh_tiles)), taus,
-                        std::move(t), ex::when_all_vector(std::move(ws_t))) |
-        di::transform<dlaf::internal::TransformDispatchType::Blas>(
-            di::Policy<Backend::GPU>(thread_priority::high),
-            [](cublasHandle_t handle, const std::vector<SizeType>& first_rows, auto&& hh_tiles,
-               auto&& taus, matrix::Tile<T, Device::GPU>& t, auto&& /*ws_t*/) {
-              whip::stream_t stream;
-              DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
+    t = ex::when_all(std::move(t), taus) |
+        di::transform(di::Policy<Backend::GPU>(thread_priority::high),
+                      [](matrix::Tile<T, Device::GPU>& t, const matrix::Tile<const T, Device::CPU>& taus,
+                         whip::stream_t stream) {
+                        // This assumes that elements in taus are contiguous, i.e. that it is a
+                        // column vector of size k
+                        const SizeType k = t.size().cols();
+                        whip::memcpy_2d_async(t.ptr(), to_sizet(t.ld() + 1) * sizeof(T), taus.ptr(),
+                                              sizeof(T), sizeof(T), to_sizet(k),
+                                              whip::memcpy_host_to_device, stream);
 
-              // This assumes that elements in taus are contiguous, i.e. that it is a column vector of size k
-              const SizeType k = t.size().cols();
-              whip::memcpy_2d_async(t.ptr(), to_sizet(t.ld() + 1) * sizeof(T), taus.ptr(), sizeof(T),
-                                    sizeof(T), to_sizet(k), whip::memcpy_host_to_device, stream);
+                        return std::move(t);
+                      });
 
-              for (std::size_t index = 0; index < hh_tiles.size(); ++index) {
-                const SizeType first_row_tile = first_rows[index];
-                const matrix::Tile<const T, Device::GPU>& tile_v = hh_tiles[index].get();
-                t = Helpers::gemv_func(handle, first_row_tile, tile_v, taus, t);
-              }
+    const SizeType k = hh_panel.getWidth();
+    const std::size_t n_gpu_streams = to_sizet(std::min<SizeType>(8, k));
+    const std::size_t chunk_size = util::ceilDiv<std::size_t>(to_sizet(k), n_gpu_streams);
 
-              return std::move(t);
-            });
+    std::vector<std::pair<std::size_t, std::size_t>> gpu_stream_limits;
+    gpu_stream_limits.reserve(n_gpu_streams);
+    std::vector<matrix::SubTileSpec> t_specs;
+    t_specs.reserve(n_gpu_streams);
+    for (std::size_t id_stream = 0; id_stream < n_gpu_streams; ++id_stream) {
+      const std::size_t begin = std::min(to_sizet(k), id_stream * chunk_size);
+      const std::size_t end = std::min(to_sizet(k), (id_stream + 1) * chunk_size);
+      gpu_stream_limits.emplace_back(std::make_pair(begin, end));
+      t_specs.emplace_back(matrix::SubTileSpec{{0, to_SizeType(begin)}, {k, to_SizeType(end - begin)}});
+    }
+
+    std::vector<matrix::ReadWriteTileSender<T, device>> ts;
+    ts = matrix::splitTileDisjoint(std::move(t), std::move(t_specs));
+
+    std::vector<matrix::ReadWriteTileSender<T, device>> ts2;
+    ts2.reserve(n_gpu_streams);
+    for (std::size_t id_stream = 0; id_stream < n_gpu_streams; ++id_stream) {
+      if (to_SizeType(gpu_stream_limits[id_stream].first) >= k)
+        break;
+
+      ts2.emplace_back(di::whenAllLift(first_rows, gpu_stream_limits[id_stream],
+                                       ex::when_all_vector(hh_tiles), taus, std::move(ts[id_stream])) |
+                       di::transform<dlaf::internal::TransformDispatchType::Blas>(
+                           di::Policy<Backend::GPU>(thread_priority::high),
+                           [id_stream](cublasHandle_t handle, const std::vector<SizeType>& first_rows,
+                                       std::pair<std::size_t, std::size_t> limits, auto&& hh_tiles,
+                                       auto&& taus, matrix::Tile<T, Device::GPU>& t) {
+                             for (std::size_t index = 0; index < hh_tiles.size(); ++index) {
+                               const SizeType first_row_tile = first_rows[index];
+                               const matrix::Tile<const T, Device::GPU>& tile_v = hh_tiles[index].get();
+                               t = Helpers::gemv_func(handle, first_row_tile, tile_v, taus, t,
+                                                      to_SizeType(limits.first),
+                                                      to_SizeType(limits.second));
+                             }
+                             return std::move(t);
+                           }));
+    }
 
     // 2nd step: compute the T factor, by performing the last step on each column
     // each column depends on the previous part (all reflectors that comes before)
     // so it is performed sequentially
-    ex::start_detached(Helpers::trmvUpdateColumn(std::move(t)));
+    auto task_sequence =
+        di::whenAllLift(ex::when_all_vector(std::move(ts2))) |
+        di::transform<dlaf::internal::TransformDispatchType::Blas>(
+            dlaf::internal::Policy<Backend::GPU>(pika::execution::thread_priority::high),
+            [k, n_gpu_streams](cublasHandle_t handle, auto&& ts2) {
+              auto& tile_t = ts2[0];
+              for (SizeType j = 0; j < k; ++j) {
+                const TileElementIndex t_start{0, j};
+                const TileElementSize t_size{j, 1};
+
+                gpublas::internal::Trmv<T>::call(handle, CUBLAS_FILL_MODE_UPPER, CUBLAS_OP_N,
+                                                 CUBLAS_DIAG_NON_UNIT, to_int(t_size.rows()),
+                                                 util::blasToCublasCast(tile_t.ptr()),
+                                                 to_int(tile_t.ld()),
+                                                 util::blasToCublasCast(tile_t.ptr(t_start)), 1);
+              }
+            });
+
+    ex::start_detached(std::move(task_sequence));
   }
 }
 

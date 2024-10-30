@@ -207,8 +207,13 @@ void updateConfigurationValue(const pika::program_options::variables_map& vm, T&
   }
 
   const std::string dlaf_cmdline_option = "dlaf:" + cmdline_option;
-  if (vm.count(dlaf_cmdline_option)) {
-    var = parseFromCommandLine<T>::call(vm, dlaf_cmdline_option);
+  if constexpr (std::is_same_v<T, bool>) {
+    var = var || vm.count(dlaf_cmdline_option) > 0;
+  }
+  else {
+    if (vm.count(dlaf_cmdline_option)) {
+      var = parseFromCommandLine<T>::call(vm, dlaf_cmdline_option);
+    }
   }
 }
 
@@ -234,6 +239,7 @@ void warnUnusedConfigurationOption(const pika::program_options::variables_map& v
 
 void updateConfiguration(const pika::program_options::variables_map& vm, configuration& cfg) {
   // clang-format off
+  updateConfigurationValue(vm, cfg.print_config, "PRINT_CONFIG", "print-config");
   updateConfigurationValue(vm, cfg.num_np_gpu_streams_per_thread, "NUM_NP_GPU_STREAMS_PER_THREAD", "num-np-gpu-streams-per-thread");
   updateConfigurationValue(vm, cfg.num_hp_gpu_streams_per_thread, "NUM_HP_GPU_STREAMS_PER_THREAD", "num-hp-gpu-streams-per-thread");
   updateConfigurationValue(vm, cfg.umpire_host_memory_pool_initial_block_bytes, "UMPIRE_HOST_MEMORY_POOL_INITIAL_BLOCK_BYTES", "umpire-host-memory-pool-initial-block-bytes");
@@ -351,7 +357,7 @@ void initialize(const pika::program_options::variables_map& vm, const configurat
   internal::updateConfiguration(vm, cfg);
   internal::getConfiguration() = cfg;
 
-  if (vm.count("dlaf:print-config") > 0) {
+  if (cfg.print_config) {
     std::cout << "DLA-Future configuration options:" << std::endl;
     std::cout << cfg << std::endl;
     std::cout << "DLA-Future tune parameters at startup:" << std::endl;

@@ -35,6 +35,7 @@ struct configuration {
   // - updateConfiguration in init.cpp to update the value from command line options and environment
   //   values
   // - getOptionsDescription to add a corresponding command line option
+  bool print_config = false;
   std::size_t num_np_gpu_streams_per_thread = 3;
   std::size_t num_hp_gpu_streams_per_thread = 3;
   std::size_t umpire_host_memory_pool_initial_block_bytes = 1 << 30;

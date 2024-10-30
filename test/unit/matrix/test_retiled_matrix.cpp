@@ -78,7 +78,7 @@ const std::vector<std::tuple<LocalElementSize, TileElementSize, LocalTileSize>> 
     {{4, 4}, {4, 4}, {1, 1}},
 });
 
-TYPED_TEST(RetiledMatrixTest, LocalConstructor) {
+TYPED_TEST(RetiledMatrixLocalTest, LocalConstructor) {
   using Type = TypeParam;
 
   auto el1 = [](const GlobalElementIndex& index) {

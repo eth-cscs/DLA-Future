@@ -34,6 +34,9 @@ namespace matrix {
 
 namespace internal {
 
+template <class T, Device D>
+class MatrixRef;
+
 // template <class T, Device D>
 // class MatrixRef;
 
@@ -68,7 +71,6 @@ public:
   using TileDataType = internal::TileData<const ElementType, D>;
   using ReadWriteSenderType = ReadWriteTileSender<T, D>;
   friend Matrix<const ElementType, D>;
-  // friend internal::MatrixRef<ElementType, D>;
   // using MatrixRef = internal::MatrixRef<ElementType, D>;
 
   /// Create a non distributed matrix of size @p size and block size @p block_size.
@@ -213,7 +215,7 @@ public:
   using TileDataType = internal::TileData<ElementType, D>;
   using ReadOnlySenderType = ReadOnlyTileSender<T, D>;
   using ReadWriteSenderType = ReadWriteTileSender<T, D>;
-  friend Matrix<ElementType, D>;
+  friend class internal::MatrixRef<const ElementType, D>;
   // friend internal::MatrixRef<const ElementType, D>;
   // using MatrixRef = internal::MatrixRef<const ElementType, D>;
 

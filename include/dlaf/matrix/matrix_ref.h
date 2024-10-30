@@ -15,8 +15,8 @@
 #include <utility>
 
 #include <dlaf/matrix/distribution.h>
-#include <dlaf/matrix/matrix_base.h>
 #include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_base.h>
 #include <dlaf/matrix/tile.h>
 #include <dlaf/types.h>
 
@@ -51,6 +51,8 @@ public:
   using ConstTileType = Tile<const ElementType, D>;
   using TileDataType = internal::TileData<ElementType, D>;
   using ReadOnlySenderType = ReadOnlyTileSender<T, D>;
+  using ReadWriteSenderType = ReadWriteTileSender<T, D>;
+  friend class Matrix<const ElementType, D>;
 
   /// Create a sub-matrix of @p mat specified by @p spec.
   ///
@@ -83,9 +85,9 @@ public:
   ///
   /// @pre blockSize() is divisible by @p tiles_per_block
   /// @pre blockSize() == tile_size()
-  // Matrix<const T, D> retiledSubPipelineConst(const LocalTileSize& tiles_per_block) {
-  //   return Matrix<const T, D>(*this, tiles_per_block);
-  // }
+  Matrix<const T, D> retiledSubPipelineConst(const LocalTileSize& tiles_per_block) {
+    return Matrix<const T, D>(*this, tiles_per_block);
+  }
 
   /// Returns a read-only sender of the Tile with local index @p index.
   ///
@@ -130,6 +132,44 @@ private:
 
 protected:
   GlobalElementIndex origin_;
+
+  /// Returns a sender of the Tile with local index @p index.
+  ///
+  /// @pre index.isIn(distribution().localNrTiles()).
+  ReadWriteSenderType readwrite(const LocalTileIndex& index) noexcept {
+    // Note: this forwards to the overload with GlobalTileIndex which will
+    // handle taking a subtile if needed
+    return readwrite(this->distribution().globalTileIndex(index));
+  }
+
+  /// Returns a sender of the Tile with global index @p index.
+  ///
+  /// @pre the global tile is stored in the current process,
+  /// @pre index.isIn(globalNrTiles()).
+  ReadWriteSenderType readwrite(const GlobalTileIndex& index) {
+    DLAF_ASSERT(index.isIn(this->distribution().nrTiles()), index, this->distribution().nrTiles());
+
+    const auto parent_index(mat_const_.distribution().globalTileIndexFromSubDistribution(
+        origin_, this->distribution(), index));
+    auto tile_sender = mat_const_.readwrite(parent_index);
+
+    const auto parent_dist = mat_const_.distribution();
+    const auto parent_tile_size = parent_dist.tileSize(parent_index);
+    const auto tile_size = this->tileSize(index);
+
+    // If the corresponding tile in the parent distribution is exactly the same
+    // size as the tile in the sub-distribution, we don't need to take a subtile
+    // and can return the tile sender directly. This avoids unnecessary wrapping.
+    if (parent_tile_size == tile_size) {
+      return tile_sender;
+    }
+
+    // Otherwise we have to extract a subtile from the tile in the parent
+    // distribution.
+    const auto ij_tile =
+        parent_dist.tileElementOffsetFromSubDistribution(origin_, this->distribution(), index);
+    return splitTile(std::move(tile_sender), SubTileSpec{ij_tile, tile_size});
+  }
 };
 
 template <class T, Device D>

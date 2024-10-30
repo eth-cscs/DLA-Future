@@ -71,7 +71,6 @@ public:
   using TileDataType = internal::TileData<const ElementType, D>;
   using ReadWriteSenderType = ReadWriteTileSender<T, D>;
   friend Matrix<const ElementType, D>;
-  // using MatrixRef = internal::MatrixRef<ElementType, D>;
 
   /// Create a non distributed matrix of size @p size and block size @p block_size.
   ///
@@ -216,8 +215,6 @@ public:
   using ReadOnlySenderType = ReadOnlyTileSender<T, D>;
   using ReadWriteSenderType = ReadWriteTileSender<T, D>;
   friend class internal::MatrixRef<const ElementType, D>;
-  // friend internal::MatrixRef<const ElementType, D>;
-  // using MatrixRef = internal::MatrixRef<const ElementType, D>;
 
   Matrix(const LayoutInfo& layout, ElementType* ptr) noexcept
       : MatrixBase({layout.size(), layout.blockSize()}) {
@@ -423,7 +420,8 @@ void Matrix<const T, D>::setUpRetiledSubPipelines(MatrixLike& mat,
   // TODO: Optimize read-after-read. This is currently forced to access the base matrix in readwrite
   // mode so that we can move the tile into the sub-pipeline. This is semantically not required and
   // should eventually be optimized.
-  for (const auto& orig_tile_index : common::iterate_range2d(mat.distribution().local_nr_tiles())) {
+  for (const auto& orig_tile_index :
+       common::iterate_range2d(mat.distribution().local_nr_tiles())) {
     const auto original_tile_size = mat.tileSize(mat.distribution().global_tile_index(orig_tile_index));
 
     for (SizeType j = 0; j < original_tile_size.cols(); j += tile_size.cols())

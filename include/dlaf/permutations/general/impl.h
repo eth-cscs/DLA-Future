@@ -167,6 +167,7 @@ template <Backend B, Device D, class T, Coord C>
 void Permutations<B, D, T, C>::call(const SizeType i_begin, const SizeType i_end,
                                     Matrix<const SizeType, D>& perms, Matrix<const T, D>& mat_in,
                                     Matrix<T, D>& mat_out) {
+  namespace di = dlaf::internal;
   namespace ex = pika::execution::experimental;
   namespace dist_extra = dlaf::matrix::internal::distribution;
   using dist_extra::local_element_distance_from_global_tile;
@@ -210,7 +211,7 @@ void Permutations<B, D, T, C>::call(const SizeType i_begin, const SizeType i_end
       applyPermutationOnCPU<T, C>(i_perm, subm_dist, perm_arr, mat_in_tiles, mat_out_tiles);
     };
 
-    ex::start_detached(std::move(sender) | ex::transfer(dlaf::internal::getBackendScheduler<B>()) |
+    ex::start_detached(std::move(sender) | di::continues_on(dlaf::internal::getBackendScheduler<B>()) |
                        ex::bulk(nperms, std::move(permute_fn)));
   }
   else {
@@ -430,7 +431,7 @@ void applyPackingIndex(const matrix::Distribution& subm_dist, IndexMapSender&& i
       applyPermutationOnCPU<T, C>(i_perm, subm_dist, perm_arr, mat_in_tiles, mat_out_tiles);
     };
 
-    ex::start_detached(std::move(sender) | ex::transfer(di::getBackendScheduler<Backend::MC>()) |
+    ex::start_detached(std::move(sender) | di::continues_on(di::getBackendScheduler<Backend::MC>()) |
                        ex::bulk(nperms, std::move(permute_fn)));
   }
   else {

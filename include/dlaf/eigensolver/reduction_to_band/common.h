@@ -301,7 +301,7 @@ void computePanelReflectors(MatrixLikeA& mat_a, matrix::ReadWriteTileSender<T, D
       ex::when_all(ex::just(std::make_unique<pika::barrier<>>(nthreads),
                             std::vector<common::internal::vector<T>>{}),  // w (internally required)
                    std::move(tile_tau), ex::when_all_vector(std::move(panel_tiles))) |
-      ex::transfer(di::getBackendScheduler<Backend::MC>(thread_priority::high)) |
+      di::continues_on(di::getBackendScheduler<Backend::MC>(thread_priority::high)) |
       ex::bulk(nthreads, [nthreads, cols = panel_view.cols()](const std::size_t index, auto& barrier_ptr,
                                                               auto& w, auto& taus, auto& tiles) {
         const auto barrier_busy_wait = getReductionToBandBarrierBusyWait();

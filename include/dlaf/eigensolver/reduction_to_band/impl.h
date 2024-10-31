@@ -213,7 +213,7 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
                    mat_taus.readwrite(GlobalTileIndex(j_sub, 0)),
                    ex::when_all_vector(std::move(panel_tiles)),
                    std::forward<CommSender>(mpi_col_chain_panel), std::forward<TriggerSender>(trigger)) |
-      ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
+      di::continues_on(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
       ex::bulk(nthreads, [nthreads, rank_v0,
                           cols = panel_view.cols()](const std::size_t index, auto& barrier_ptr, auto& w,
                                                     auto& taus, auto& tiles, auto&& pcomm) {

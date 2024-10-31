@@ -266,7 +266,7 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
     ex::start_detached(
         di::whenAllLift(std::move(first_rows), ex::when_all_vector(std::move(hh_tiles)), taus,
                         std::move(t), ex::when_all_vector(std::move(ws_t))) |
-        ex::transfer(hp_scheduler) |
+        di::continues_on(hp_scheduler) |
         ex::let_value([hp_scheduler](const std::vector<SizeType>& first_rows, auto&& hh_tiles,
                                      auto&& taus, auto&& t, auto&& ws_t) {
           const std::size_t nworkers = eigensolver::internal::getReductionToBandPanelNWorkers();
@@ -274,7 +274,7 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
 
           DLAF_ASSERT(nworkers == ws_t.size(), nworkers, ws_t.size());
 
-          return ex::just(std::make_unique<pika::barrier<>>(nworkers)) | ex::transfer(hp_scheduler) |
+          return ex::just(std::make_unique<pika::barrier<>>(nworkers)) | di::continues_on(hp_scheduler) |
                  ex::bulk(nworkers, [=, &first_rows, &hh_tiles, &taus, &t,
                                      &ws_t](const std::size_t worker_id, auto& barrier_ptr) mutable {
                    const std::size_t batch_size = util::ceilDiv(hh_tiles.size(), nworkers);

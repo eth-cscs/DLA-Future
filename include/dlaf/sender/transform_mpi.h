@@ -123,7 +123,7 @@ template <typename F, typename Sender,
 
 //   if (mpi::get_completion_mode() >= static_cast<int>(mpid::handler_mode::unspecified)) {
 //     auto snd1 =
-//         ex::transfer(std::forward<Sender>(sender), dlaf::internal::getMPIScheduler()) |
+//         di::continues_on(std::forward<Sender>(sender), dlaf::internal::getMPIScheduler()) |
 //         ex::then(dlaf::common::internal::ConsumeRvalues{MPIYieldWhileCallHelper{std::forward<F>(f)}});
 //     return ex::make_unique_any_sender(std::move(snd1));
 //   }

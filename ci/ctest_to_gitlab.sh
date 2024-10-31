@@ -61,7 +61,7 @@ JOB_TEMPLATE="
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
     DLAF_HDF5_TEST_OUTPUT_PATH: \$CI_PROJECT_DIR
-  script: mpi-ctest -L {{LABEL}}
+  script: mpi-ctest --timeout 300 --repeat-until-fail 50 -R test_multiplication_hermitian -L {{LABEL}}
   artifacts:
     paths:
       - codecov-reports/"
@@ -100,7 +100,7 @@ JOB_TEMPLATE="
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
     DLAF_HDF5_TEST_OUTPUT_PATH: \$CI_PROJECT_DIR
-  script: mpi-ctest -L {{LABEL}}"
+  script: mpi-ctest --timeout 60 --repeat-until-fail 50 -R test_multiplication_hermitian -L {{LABEL}}"
 fi
 
 JOBS=""

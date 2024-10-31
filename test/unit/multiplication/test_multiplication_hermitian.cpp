@@ -159,6 +159,7 @@ TYPED_TEST(HermitianMultiplicationTestMC, CorrectnessLocal) {
 
         testHermitianMultiplication<TypeParam, Backend::MC, Device::CPU>(side, uplo, m, n, mb, nb, alpha,
                                                                          beta);
+        pika::wait();
       }
     }
   }
@@ -196,6 +197,7 @@ TYPED_TEST(HermitianMultiplicationTestGPU, CorrectnessLocal) {
 
         testHermitianMultiplication<TypeParam, Backend::GPU, Device::GPU>(side, uplo, m, n, mb, nb,
                                                                           alpha, beta);
+        pika::wait();
       }
     }
   }

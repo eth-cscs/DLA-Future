@@ -24,6 +24,7 @@
 #include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/communication/kernels/all_reduce.h>
 #include <dlaf/factorization/qr/api.h>
+#include <dlaf/lapack/gpu/larft.h>
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/tile.h>
@@ -172,28 +173,15 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
     auto gemv_func = [](cublasHandle_t handle, const matrix::Tile<const T, Device::GPU>& tile_v,
                         const matrix::Tile<const T, Device::CPU>& taus,
                         matrix::Tile<T, Device::GPU>& tile_t) noexcept {
+      const SizeType m = tile_v.size().rows();
       const SizeType k = tile_t.size().cols();
       DLAF_ASSERT(tile_v.size().cols() == k, tile_v.size().cols(), k);
       DLAF_ASSERT(taus.size().rows() == k, taus.size().rows(), k);
       DLAF_ASSERT(taus.size().cols() == 1, taus.size().cols());
 
-      for (SizeType j = 0; j < k; ++j) {
-        // T(0:j, j) = -tau . V(j:, 0:j)* . V(j:, j)
-        // [j x 1] = [(n-j) x j]* . [(n-j) x 1]
-        const TileElementIndex va_start{0, 0};
-        const TileElementIndex vb_start{0, j};
-        const TileElementSize va_size{tile_v.size().rows(), j};
-        const TileElementIndex t_start{0, j};
-        const auto neg_tau = util::blasToCublasCast(-taus({j, 0}));
-        const auto one = util::blasToCublasCast(T{1});
+      gpulapack::larft_gemv0(handle, m, k, tile_v.ptr(), tile_v.ld(), taus.ptr(), tile_t.ptr(),
+                             tile_t.ld());
 
-        gpublas::internal::Gemv<T>::call(handle, CUBLAS_OP_C, to_int(va_size.rows()),
-                                         to_int(va_size.cols()), &neg_tau,
-                                         util::blasToCublasCast(tile_v.ptr(va_start)),
-                                         to_int(tile_v.ld()),
-                                         util::blasToCublasCast(tile_v.ptr(vb_start)), 1, &one,
-                                         util::blasToCublasCast(tile_t.ptr(t_start)), 1);
-      }
       return std::move(tile_t);
     };
 

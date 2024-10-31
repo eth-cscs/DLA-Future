@@ -352,8 +352,13 @@ def parse_jobs(data_dirs, distinguish_dir=False):
     if not isinstance(data_dirs, list):
         data_dirs = [data_dirs]
     data = []
-    for data_dir in data_dirs:
-        bench_name_postfix = os.path.basename(os.path.dirname(data_dir))
+    for data_dir_label in data_dirs:
+        dir_label = data_dir_label.split(":")
+        data_dir = dir_label[0]
+        if len(dir_label) == 2:
+            bench_name_postfix = dir_label[1]
+        else:
+            bench_name_postfix = os.path.basename(os.path.dirname(data_dir))
         if os.path.basename(data_dir) == "d":
             bench_name_postfix += "-double"
         elif os.path.basename(data_dir) == "z":
@@ -390,7 +395,9 @@ def parse_jobs_cmdargs(description):
     parser.add_argument(
         "--path",
         action="append",
-        help="Plot results from this directory. You can pass this option several times.",
+        help="Plot results from this directory. You can pass this option several times. \
+                Optional: --path=<path>:<label> to specify the label displayed in the \
+                caption of the plot (label associated with the results in <path>).",
     )
     parser.add_argument(
         "--distinguish-dir",

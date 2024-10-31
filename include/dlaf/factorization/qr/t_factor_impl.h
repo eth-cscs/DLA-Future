@@ -157,6 +157,9 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
                                                 const matrix::Tile<const T, Device::CPU>& taus,
                                                 matrix::Tile<T, Device::GPU>& tile_t, SizeType begin = 0,
                                                 SizeType end = -1) noexcept {
+    whip::stream_t stream;
+    DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
+
     const SizeType k = tile_t.size().rows();
 
     if (end == -1)
@@ -167,9 +170,6 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
     DLAF_ASSERT(taus.size().cols() == 1, taus.size().cols());
 
     for (SizeType j = begin; j < end; ++j) {
-      const auto neg_tau = util::blasToCublasCast(-taus({j, 0}));
-      const auto one = util::blasToCublasCast(T{1});
-
       // Position of the 1 in the diagonal in the current column.
       const SizeType i_diag = j - first_row_tile;
       const SizeType first_element_in_col = std::max<SizeType>(0, i_diag);
@@ -185,11 +185,12 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
       const TileElementIndex vb_start{first_element_in_col, j};
       const TileElementSize va_size{tile_v.size().rows() - first_element_in_col, j};
 
-      gpublas::internal::Gemv<T>::call(handle, CUBLAS_OP_C, to_int(va_size.rows()),
-                                       to_int(va_size.cols()), &neg_tau,
-                                       util::blasToCublasCast(tile_v.ptr(va_start)), to_int(tile_v.ld()),
-                                       util::blasToCublasCast(tile_v.ptr(vb_start)), 1, &one,
-                                       util::blasToCublasCast(tile_t.ptr(t_start)), 1);
+      const T one = 1;
+      const auto neg_tau = -taus({j, 0});
+
+      dlaf::gpulapack::gemv_conj_gpu(to_int(va_size.rows()), to_int(va_size.cols()), neg_tau,
+                                     tile_v.ptr(va_start), to_int(tile_v.ld()), tile_v.ptr(vb_start),
+                                     one, tile_t.ptr(t_start), stream);
     }
     return std::move(tile_t);
   }

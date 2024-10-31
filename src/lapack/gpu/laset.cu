@@ -13,6 +13,7 @@
 #include <dlaf/gpu/assert.cu.h>
 #include <dlaf/lapack/gpu/laset.h>
 #include <dlaf/util_cublas.h>
+#include <dlaf/util_cuda.h>
 #include <dlaf/util_math.h>
 
 namespace dlaf::gpulapack {
@@ -99,6 +100,50 @@ __global__ void laset(cublasFillMode_t uplo, const unsigned m, const unsigned n,
       setAll(m, n, alpha, a, lda);
   }
 }
+
+constexpr std::size_t DIM = 32;
+
+template <class T>
+__global__ void gemv_conj_kernel_v1(int m, int n, const T alpha, const T* A, int lda, const T* x,
+                                    const T beta, T* y) {
+  const std::size_t j = threadIdx.y + blockIdx.y * DIM;
+
+  if (j >= n)
+    return;
+
+  const T* a_col = &A[j * static_cast<std::size_t>(lda)];
+
+  T resY;
+  memset(&resY, 0, sizeof(resY));
+  for (std::size_t i = 0; i < static_cast<std::size_t>(m); i++)
+    resY = fma(conj(a_col[i]), x[i], resY);
+
+  y[j] = fma(alpha, resY, beta * y[j]);
+}
+
+template <class T>
+__global__ void gemv_conj_kernel_v2(int m, int n, const T alpha, const T* A, int lda, const T* x,
+                                    const T beta, T* y) {
+  const std::size_t j0 = threadIdx.x * 4 + blockIdx.x * blockDim.x;
+  const std::size_t j1 = j0 + 1;
+  const std::size_t j2 = j0 + 2;
+  const std::size_t j3 = j0 + 3;
+
+  T resY[4], xi;
+  memset(resY, 0, sizeof(resY));
+  for (std::size_t i = 0; i < static_cast<std::size_t>(m); i++) {
+    xi = x[i];
+    resY[0] = conj(A[i + j0 * static_cast<std::size_t>(lda)]) * xi + resY[0];
+    resY[1] = conj(A[i + j1 * static_cast<std::size_t>(lda)]) * xi + resY[1];
+    resY[2] = conj(A[i + j2 * static_cast<std::size_t>(lda)]) * xi + resY[2];
+    resY[3] = conj(A[i + j3 * static_cast<std::size_t>(lda)]) * xi + resY[3];
+  }
+  y[j0] = alpha * resY[0] + beta * y[j0];
+  y[j1] = alpha * resY[1] + beta * y[j1];
+  y[j2] = alpha * resY[2] + beta * y[j2];
+  y[j3] = alpha * resY[3] + beta * y[j3];
+}
+
 }
 
 template <class T>
@@ -121,4 +166,26 @@ DLAF_CUBLAS_LASET_ETI(, float);
 DLAF_CUBLAS_LASET_ETI(, double);
 DLAF_CUBLAS_LASET_ETI(, std::complex<float>);
 DLAF_CUBLAS_LASET_ETI(, std::complex<double>);
+
+template <class T>
+void gemv_conj_gpu(int m, int n, const T alpha, const T* A, int lda, const T* x, const T beta, T* y,
+                   whip::stream_t stream) {
+  // V1
+  dim3 blocks(1, util::ceilDiv(to_sizet(n), kernels::DIM));
+  dim3 threads(1, kernels::DIM);
+
+  // V2
+  // dim3 blocks(util::ceilDiv(to_sizet(m), 4 * kernels::DIM), 1);
+  // dim3 threads(kernels::DIM, 1);
+
+  kernels::gemv_conj_kernel_v1<<<blocks, threads, 0, stream>>>(
+      m, n, util::cppToCudaCast(alpha), util::cppToCudaCast(A), lda, util::cppToCudaCast(x),
+      util::cppToCudaCast(beta), util::cppToCudaCast(y));
+}
+
+DLAF_CUSTOM_GEMV_ETI(, float);
+DLAF_CUSTOM_GEMV_ETI(, double);
+DLAF_CUSTOM_GEMV_ETI(, std::complex<float>);
+DLAF_CUSTOM_GEMV_ETI(, std::complex<double>);
+
 }

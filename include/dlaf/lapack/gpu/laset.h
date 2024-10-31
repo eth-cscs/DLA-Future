@@ -32,6 +32,20 @@ DLAF_CUBLAS_LASET_ETI(extern, float);
 DLAF_CUBLAS_LASET_ETI(extern, double);
 DLAF_CUBLAS_LASET_ETI(extern, std::complex<float>);
 DLAF_CUBLAS_LASET_ETI(extern, std::complex<double>);
+
+template <class T>
+void gemv_conj_gpu(int m, int n, const T alpha, const T* A, int lda, const T* x, const T beta, T* y,
+                   whip::stream_t stream);
+
+#define DLAF_CUSTOM_GEMV_ETI(kword, Type)                                                   \
+  kword template void gemv_conj_gpu(int m, int n, const Type alpha, const Type* A, int lda, \
+                                    const Type* x, const Type beta, Type* y, whip::stream_t stream)
+
+DLAF_CUSTOM_GEMV_ETI(extern, float);
+DLAF_CUSTOM_GEMV_ETI(extern, double);
+DLAF_CUSTOM_GEMV_ETI(extern, std::complex<float>);
+DLAF_CUSTOM_GEMV_ETI(extern, std::complex<double>);
+
 }
 
 #endif

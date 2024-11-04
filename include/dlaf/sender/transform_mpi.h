@@ -14,6 +14,7 @@
 
 #include <pika/debugging/print.hpp>
 #include <pika/execution.hpp>
+#include <pika/mpi.hpp>
 
 #include <dlaf/common/consume_rvalues.h>
 #include <dlaf/common/unwrap.h>
@@ -21,12 +22,6 @@
 #include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/sender/continues_on.h>
 #include <dlaf/sender/transform.h>
-//
-#include <pika/mpi.hpp>
-//
-#ifdef EXTRA_MPI_TYPES_DEBUGGING
-#include <pika/debugging/demangle_helper.hpp>
-#endif
 
 namespace dlaf::comm::internal {
 
@@ -51,42 +46,6 @@ void consumeCommunicatorWrapper(T&) {}
 /// callable. The wrapper then waits for the request to complete with
 /// yield_while.
 ///
-/// This could in theory be a lambda inside transformMPI.  However, clang at
-/// least until version 12 fails with an internal compiler error with a trailing
-/// decltype for SFINAE. GCC has no problems with a lambda.
-template <typename F>
-struct MPIYieldWhileCallHelper {
-  std::decay_t<F> f;
-  template <typename... Ts>
-  auto operator()(Ts&&... ts) {
-    namespace mpid = pika::mpi::experimental::detail;
-    MPI_Request req;
-
-    // Note:
-    // Callables passed to transformMPI have their arguments passed by reference, but doing so
-    // with PromiseGuard would keep the guard alive until the completion of the MPI operation,
-    // whereas we are only looking to guard the submission of the MPI operation. We therefore
-    // explicitly release CommunicatorPipelineExclusiveWrapper after submitting the MPI operation
-    // with consumeCommunicatorWrapper.
-    //
-    // We also use unwrap various types passed to the MPI operation, including PromiseGuards of
-    // any type, to allow the MPI operation not to care whether a Communicator was wrapped in a
-    // PromiseGuard or not.
-    using result_type = decltype(std::move(f)(dlaf::common::internal::unwrap(ts)..., &req));
-    if constexpr (std::is_void_v<result_type>) {
-      std::move(f)(dlaf::common::internal::unwrap(ts)..., &req);
-      (internal::consumeCommunicatorWrapper(ts), ...);
-      pika::util::yield_while([req]() { return !mpid::poll_request(req); });
-    }
-    else {
-      /*auto r = */ std::move(f)(dlaf::common::internal::unwrap(ts)..., &req);
-      (internal::consumeCommunicatorWrapper(ts), ...);
-      pika::util::yield_while([req]() { return !mpid::poll_request(req); });
-    }
-  }
-};
-
-/// Helper type for wrapping MPI calls.
 template <typename F>
 struct MPICallHelper {
   std::decay_t<F> f;
@@ -109,9 +68,6 @@ struct MPICallHelper {
 };
 
 template <typename F>
-MPIYieldWhileCallHelper(F&&) -> MPIYieldWhileCallHelper<std::decay_t<F>>;
-
-template <typename F>
 MPICallHelper(F&&) -> MPICallHelper<std::decay_t<F>>;
 
 /// Lazy transformMPI. This does not submit the work and returns a sender.
@@ -123,26 +79,12 @@ template <typename F, typename Sender,
   namespace mpi = pika::mpi::experimental;
   namespace mpid = pika::mpi::experimental::detail;
 
-#ifdef EXTRA_MPI_TYPES_DEBUGGING
-  auto snd1 =
-      std::forward<Sender>(sender) |
-      ex::let_value([=, f = std::move(f)]<typename... LArgs>(LArgs&&... largs) {
-        PIKA_DETAIL_DP(dla_debug<2>, debug(str<>("Args to MPI fn\n"),
-                                           pika::debug::print_type<LArgs...>(", "), "\nValues\n"));
-        return ex::just(std::move(largs)...) |
-               mpi::transform_mpi(dlaf::common::internal::ConsumeRvalues{MPICallHelper{std::move(f)}});
-      });
-  return ex::make_unique_any_sender(std::move(snd1));
-#else
   PIKA_DETAIL_DP(dla_debug<5>, debug(str<>("MPI fn\n")));
   auto snd1 =
       std::forward<Sender>(sender) |
       mpi::transform_mpi(dlaf::common::internal::ConsumeRvalues{MPICallHelper{std::forward<F>(f)}});
   return ex::make_unique_any_sender(std::move(snd1));
-#endif
 }
-
-                                                              std::forward<Ts>(ts)...));
 
 template <typename F>
 struct PartialTransformMPIBase {

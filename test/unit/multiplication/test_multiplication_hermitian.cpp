@@ -97,8 +97,8 @@ void testHermitianMultiplication(const blas::Side side, const blas::Uplo uplo, c
   }
 
   // SCOPED_TRACE cannot yield.
-  mat_ch.waitLocalTiles();
-  SCOPED_TRACE(::testing::Message() << "m " << m << "n " << n << ", mb " << mb << ", nb " << nb);
+  // mat_ch.waitLocalTiles();
+  // SCOPED_TRACE(::testing::Message() << "m " << m << "n " << n << ", mb " << mb << ", nb " << nb);
   CHECK_MATRIX_NEAR(res_c, mat_ch, 10 * (m + 1) * TypeUtilities<T>::error,
                     10 * (m + 1) * TypeUtilities<T>::error);
 }
@@ -166,6 +166,7 @@ TYPED_TEST(HermitianMultiplicationTestMC, CorrectnessLocal) {
         testHermitianMultiplication<TypeParam, Backend::MC, Device::CPU>(side, uplo, m, n, mb, nb, alpha,
                                                                          beta);
         pika::wait();
+        std::cerr << "done\n";
       }
     }
   }

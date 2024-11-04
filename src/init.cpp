@@ -46,7 +46,7 @@ std::ostream& operator<<(std::ostream& os, const configuration& cfg) {
   os << "  num_gpu_blas_handles = " << cfg.num_gpu_blas_handles << std::endl;
   os << "  num_gpu_lapack_handles = " << cfg.num_gpu_lapack_handles << std::endl;
   // clang-format on
-  return os;0
+  return os;
 }
 
 namespace internal {
@@ -129,12 +129,8 @@ struct Init<Backend::GPU> {
         cfg.umpire_device_memory_pool_initial_block_bytes, cfg.umpire_device_memory_pool_alignment_bytes,
         cfg.umpire_host_memory_pool_coalescing_free_ratio,
         cfg.umpire_host_memory_pool_coalescing_reallocation_ratio);
-    memory::internal::initializeUmpireDeviceAllocator(cfg.umpire_device_memory_pool_initial_bytes);
     initializeGpuPool(device, cfg.num_np_gpu_streams_per_thread, cfg.num_hp_gpu_streams_per_thread,
                       cfg.num_gpu_blas_handles, cfg.num_gpu_lapack_handles);
-    if (pika::mpi::detail::environment::is_mpi_initialized()) {
-      pika::mpi::experimental::start_polling(pika::mpi::experimental::exception_mode::no_handler);
-    }
     pika::cuda::experimental::detail::register_polling(pika::resource::get_thread_pool("default"));
   }
 

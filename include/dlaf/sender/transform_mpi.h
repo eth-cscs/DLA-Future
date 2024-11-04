@@ -12,7 +12,6 @@
 #include <type_traits>
 #include <utility>
 
-#include <pika/debugging/print.hpp>
 #include <pika/execution.hpp>
 #include <pika/mpi.hpp>
 
@@ -24,9 +23,6 @@
 #include <dlaf/sender/transform.h>
 
 namespace dlaf::comm::internal {
-
-template <int Level>
-static pika::debug::detail::print_threshold<Level, 0> dla_debug("DLA_MPI");
 
 /// This helper "consumes" a CommunicatorPipelineExclusiveWrapper ensuring that after this call
 /// the one passed as argument gets destroyed. All other types left as they are
@@ -52,8 +48,6 @@ struct MPICallHelper {
 
   template <typename... Ts>
   auto operator()(Ts&&... ts) -> decltype(std::move(f)(dlaf::common::internal::unwrap(ts)...)) {
-    using namespace pika::debug::detail;
-    PIKA_DETAIL_DP(dla_debug<5>, debug(str<>("MPICallHelper"), pika::debug::print_type<Ts...>(", ")));
     using result_type = decltype(std::move(f)(dlaf::common::internal::unwrap(ts)...));
     if constexpr (std::is_void_v<result_type>) {
       std::move(f)(dlaf::common::internal::unwrap(ts)...);
@@ -74,16 +68,11 @@ MPICallHelper(F&&) -> MPICallHelper<std::decay_t<F>>;
 template <typename F, typename Sender,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 [[nodiscard]] decltype(auto) transformMPI(F&& f, Sender&& sender) {
-  using dlaf::internal::continues_on;
   namespace ex = pika::execution::experimental;
   namespace mpi = pika::mpi::experimental;
-  namespace mpid = pika::mpi::experimental::detail;
-
-  PIKA_DETAIL_DP(dla_debug<5>, debug(str<>("MPI fn\n")));
-  auto snd1 =
-      std::forward<Sender>(sender) |
-      mpi::transform_mpi(dlaf::common::internal::ConsumeRvalues{MPICallHelper{std::forward<F>(f)}});
-  return ex::make_unique_any_sender(std::move(snd1));
+  namespace dci = dlaf::common::internal;
+  return std::forward<Sender>(sender)                                                   //
+         | mpi::transform_mpi(dci::ConsumeRvalues{MPICallHelper{std::forward<F>(f)}});  //
 }
 
 template <typename F>

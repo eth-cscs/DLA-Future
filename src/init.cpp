@@ -45,6 +45,7 @@ std::ostream& operator<<(std::ostream& os, const configuration& cfg) {
   os << "  umpire_device_memory_pool_coalescing_reallocation_ratio = " << cfg.umpire_device_memory_pool_coalescing_reallocation_ratio << std::endl;
   os << "  num_gpu_blas_handles = " << cfg.num_gpu_blas_handles << std::endl;
   os << "  num_gpu_lapack_handles = " << cfg.num_gpu_lapack_handles << std::endl;
+  os << "  mpi_pool = " << pika::mpi::experimental::get_pool_name() << std::endl;
   // clang-format on
   return os;
 }

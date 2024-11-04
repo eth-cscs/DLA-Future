@@ -354,6 +354,7 @@ def parse_jobs(data_dirs, distinguish_dir=False):
     data = []
     for data_dir_label in data_dirs:
         dir_label = data_dir_label.split(":")
+        assert 1 <= len(dir_label) <= 2
         data_dir = dir_label[0]
         if len(dir_label) == 2:
             bench_name_postfix = dir_label[1]

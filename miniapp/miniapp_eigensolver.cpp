@@ -37,6 +37,7 @@
 #include <dlaf/miniapp/scale_eigenvectors.h>
 #include <dlaf/multiplication/hermitian.h>
 #include <dlaf/types.h>
+#include <dlaf/util_math.h>
 
 namespace {
 using dlaf::Backend;
@@ -81,7 +82,23 @@ struct Options
     DLAF_ASSERT(m > 0, m);
     DLAF_ASSERT(mb > 0, mb);
 
-    eval_idx_end = vm.count("eval-index-end") == 1 ? vm["eval-index-end"].as<SizeType>() : m;
+    if (vm.count("percent-evals") == 1 && vm.count("eval-index-end") == 1) {
+      std::cerr << "ERROR! "
+                   "You can't specify both --percent-evals and --eval-index-end at the same time."
+                << std::endl;
+      std::exit(EXIT_FAILURE);
+    }
+
+    if (vm.count("percent-evals") == 1) {
+      double percent = vm["percent-evals"].as<double>();
+      eval_idx_end = dlaf::util::internal::percent_to_index(m, percent);
+    }
+    else if (vm.count("eval-index-end") == 1) {
+      eval_idx_end = vm["eval-index-end"].as<SizeType>();
+    }
+    else {
+      eval_idx_end = m;
+    }
 
     DLAF_ASSERT(eval_idx_end >= 0 && eval_idx_end <= m, eval_idx_end, m);
 
@@ -193,7 +210,7 @@ struct EigensolverMiniapp {
       if (0 == world.rank() && run_index >= 0) {
         std::cout << "[" << run_index << "]" << " " << elapsed_time << "s" << " "
                   << dlaf::internal::FormatShort{opts.type} << dlaf::internal::FormatShort{opts.uplo}
-                  << " " << matrix_host.size() << " (" << 0l << ", " << opts.eval_idx_end << ")" << " "
+                  << " " << matrix_host.size() << " (" << 0l << ", " << opts.eval_idx_end << ") "
                   << matrix_host.blockSize() << " "
                   << dlaf::eigensolver::internal::getBandSize(matrix_host.blockSize().rows()) << " "
                   << comm_grid.size() << " " << pika::get_os_thread_count() << " " << backend
@@ -247,9 +264,10 @@ int main(int argc, char** argv) {
 
   // clang-format off
   desc_commandline.add_options()
-    ("matrix-size",     value<SizeType>() ->default_value(4096), "Matrix size")
-    ("block-size",      value<SizeType>() ->default_value( 256), "Block cyclic distribution size")
-    ("eval-index-end", value<SizeType>()                       , "Index of last eigenvalue of interest/eigenvector to transform (exclusive)")
+    ("matrix-size",    value<SizeType>() ->default_value(4096), "Matrix size")
+    ("block-size",     value<SizeType>() ->default_value( 256), "Block cyclic distribution size")
+    ("eval-index-end", value<SizeType>()                      , "Index of last eigenvalue of interest/eigenvector to transform (exclusive)")
+    ("percent-evals",  value<double>()                        , "Percentage of eigenvalues of interest/eigenvectors to transform")
 #ifdef DLAF_WITH_HDF5
     ("input-file",    value<std::filesystem::path>()                            , "Load matrix from given HDF5 file")
     ("input-dataset", value<std::string>()           -> default_value("/input") , "Name of HDF5 dataset to load as matrix")

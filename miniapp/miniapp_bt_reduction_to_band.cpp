@@ -33,6 +33,7 @@
 #include <dlaf/miniapp/dispatch.h>
 #include <dlaf/miniapp/options.h>
 #include <dlaf/types.h>
+#include <dlaf/util_math.h>
 #include <dlaf/util_matrix.h>
 
 namespace {
@@ -68,9 +69,25 @@ struct Options
     DLAF_ASSERT(m > 0, m);
     DLAF_ASSERT(mb > 0, mb);
 
-    eval_idx_end = vm.count("eval-index-end") == 1 ? vm["eval-index-end"].as<SizeType>() : m;
+    if (vm.count("percent-evals") == 1 && vm.count("eval-index-end") == 1) {
+      std::cerr << "ERROR! "
+                   "You can't specify both --percent-evals and --eval-index-end at the same time."
+                << std::endl;
+      std::exit(EXIT_FAILURE);
+    }
 
-    DLAF_ASSERT(eval_idx_end >= 0 && eval_idx_end <= m, eval_idx_end);
+    if (vm.count("percent-evals") == 1) {
+      double percent = vm["percent-evals"].as<double>();
+      eval_idx_end = dlaf::util::internal::percent_to_index(n, percent);
+    }
+    else if (vm.count("eval-index-end") == 1) {
+      eval_idx_end = vm["eval-index-end"].as<SizeType>();
+    }
+    else {
+      eval_idx_end = n;
+    }
+
+    DLAF_ASSERT(eval_idx_end >= 0 && eval_idx_end <= n, eval_idx_end);
 
     if (do_check != dlaf::miniapp::CheckIterFreq::None) {
       std::cerr << "Warning! At the moment result checking it is not implemented." << std::endl;
@@ -182,9 +199,9 @@ struct BacktransformBandToTridiagMiniapp {
       if (0 == world.rank() && run_index >= 0) {
         std::cout << "[" << run_index << "]" << " " << elapsed_time << "s" << " " << gigaflops
                   << "GFlop/s" << " " << dlaf::internal::FormatShort{opts.type} << " "
-                  << mat_e_host.size() << " " << mat_e_host.blockSize() << " " << opts.b << " "
-                  << comm_grid.size() << " " << pika::get_os_thread_count() << " " << backend << " ("
-                  << 0l << ", " << opts.eval_idx_end << ")" << std::endl;
+                  << mat_e_host.size() << " (" << 0l << ", " << opts.eval_idx_end << ") "
+                  << mat_e_host.blockSize() << " " << opts.b << " " << comm_grid.size() << " "
+                  << pika::get_os_thread_count() << " " << backend << std::endl;
         if (opts.csv_output) {
           // CSV formatted output with column names that can be read by pandas to simplify
           // post-processing CSVData{-version}, value_0, title_0, value_1, title_1
@@ -230,12 +247,13 @@ int main(int argc, char** argv) {
 
   // clang-format off
   desc_commandline.add_options()
-    ("m",               value<SizeType>()   ->default_value(2048), "Matrix E rows")
-    ("n",               value<SizeType>()   ->default_value(4096), "Matrix E columns")
-    ("mb",              value<SizeType>()   ->default_value( 256), "Matrix E block rows")
-    ("nb",              value<SizeType>()   ->default_value( 512), "Matrix E block columns")
-    ("b",               value<SizeType>()   ->default_value(  64), "Band size")
-    ("eval-index-end", value<SizeType>()                        , "Index of last eigenvalue of interest/eigenvector to transform")
+    ("m",              value<SizeType>() ->default_value(2048), "Matrix E rows")
+    ("n",              value<SizeType>() ->default_value(4096), "Matrix E columns")
+    ("mb",             value<SizeType>() ->default_value( 256), "Matrix E block rows")
+    ("nb",             value<SizeType>() ->default_value( 512), "Matrix E block columns")
+    ("b",              value<SizeType>() ->default_value(  64), "Band size")
+    ("eval-index-end", value<SizeType>()                      , "Index of last eigenvalue of interest/eigenvector to transform")
+    ("percent-evals",  value<double>()                        , "Percentage of eigenvalues of interest/eigenvectors to transform")
   ;
   // clang-format on
   dlaf::miniapp::addUploOption(desc_commandline);

@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <cmath>
 #include <cstddef>
 #include <functional>
 #include <type_traits>
@@ -104,6 +105,16 @@ namespace internal {
 template <class ArithmeticT, class TA, class TB, class BinaryOp>
 constexpr ArithmeticT generic_integer_op(const TA a, const TB b, BinaryOp op) {
   return op(integral_cast<ArithmeticT>(a), integral_cast<ArithmeticT>(b));
+}
+
+/// Convert a percentage to an index.
+///
+template <typename ArithmeticT>
+SizeType percent_to_index(SizeType size, ArithmeticT percent) {
+  DLAF_ASSERT(percent >= 0 && percent <= 100, percent);
+  SizeType idx = std::lround(size * percent / 100.0);
+  DLAF_ASSERT(idx >= 0 && idx <= size, idx, size);
+  return idx;
 }
 
 }

@@ -18,13 +18,6 @@ import argparse
 import miniapps as mp
 import systems
 
-system = systems.cscs["daint-gpu"]
-
-dlafpath = "<path_to_dlaf_miniapp_dir>"
-matrixrefpath = "<path_to_h5_refs>"
-
-run_dir = "~/ws/runs/strong"
-
 time = 400  # minutes
 nruns = 5
 nodes_arr = [1, 2, 4, 8, 16]
@@ -39,12 +32,46 @@ extra_flags = "--dlaf:bt-band-to-tridiag-hh-apply-group-size=128"
 
 parser = argparse.ArgumentParser(description="Run strong scaling benchmarks.")
 parser.add_argument(
+    "--miniapps",
+    default="<path_to_dlaf_miniapp_dir>",
+    help="Path to DLA-Future miniapps directory.",
+    type=str,
+)
+parser.add_argument(
+    "--references",
+    default="<path_to_h5_refs>",
+    help="Path to reference matrices in HDF5 format.",
+    type=str,
+)
+parser.add_argument(
+    "--rundir",
+    default="~/ws/runs/strong",
+    help="Directory where to run the benchmarks.",
+    type=str,
+)
+parser.add_argument(
+    "--system",
+    default="daint-gpu",
+    help="System to run the benchmarks on.",
+    type=str,
+)
+parser.add_argument(
     "--debug",
     help="Don't submit jobs, only create job scripts instead.",
     action="store_true",
 )
+parser.add_argument(
+    "--percent-evals",
+    help="Apply back transformation to a percentage of eigenvectors.",
+    default=None,
+    type=float,
+)
 args = parser.parse_args()
 
+system = systems.cscs[args.system]
+dlafpath = args.miniapps
+matrixrefpath = args.references
+run_dir = args.rundir
 debug = args.debug
 
 
@@ -65,6 +92,10 @@ def createAndSubmitRun(run_dir, nodes_arr, dtype, **kwargs):
     full_kwargs["miniapp_dir"] = dlafpath
     full_kwargs["nruns"] = nruns
     full_kwargs["dtype"] = dtype
+    
+    fullbt_kwargs = full_kwargs.copy()
+    if args.percent_evals is not None:
+        fullbt_kwargs["extra_flags"] = fullbt_kwargs.get("extra_flags", "") + f" --percent-evals={args.percent_evals}"
 
     run = mp.StrongScaling(system, "DLAF_test_strong", "job_dlaf", nodes_arr, time)
 
@@ -96,20 +127,21 @@ def createAndSubmitRun(run_dir, nodes_arr, dtype, **kwargs):
     run.add(
         mp.bt_band2trid,
         params={"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128, "n_sz": None},
-        **full_kwargs,
+        **fullbt_kwargs,
     )
     run.add(
         mp.bt_red2band,
         params={"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128, "n_sz": None},
-        **full_kwargs,
+        **fullbt_kwargs,
     )
+    # TODO: Partial trsm for Cholesky
     run.add(
         mp.trsm,
         params={"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "n_sz": None},
         **full_kwargs,
     )
 
-    fullsolver_args = full_kwargs.copy()
+    fullsolver_args = fullbt_kwargs.copy()
     fullsolver_args["extra_flags"] = fullsolver_args.get("extra_flags", "") + " --check=last"
 
     run.add(

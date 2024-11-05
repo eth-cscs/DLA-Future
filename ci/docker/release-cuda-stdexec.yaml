@@ -27,6 +27,3 @@ spack:
     pika:
       require:
         - '+stdexec'
-    stdexec:
-      require:
-        - '@git.8bc7c7f06fe39831dea6852407ebe7f6be8fa9fd=main'

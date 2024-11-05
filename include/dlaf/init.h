@@ -35,12 +35,21 @@ struct configuration {
   // - updateConfiguration in init.cpp to update the value from command line options and environment
   //   values
   // - getOptionsDescription to add a corresponding command line option
+  bool print_config = false;
   std::size_t num_np_gpu_streams_per_thread = 3;
   std::size_t num_hp_gpu_streams_per_thread = 3;
+  std::size_t umpire_host_memory_pool_initial_block_bytes = 1 << 30;
+  std::size_t umpire_host_memory_pool_next_block_bytes = 1 << 30;
+  std::size_t umpire_host_memory_pool_alignment_bytes = 16;
+  double umpire_host_memory_pool_coalescing_free_ratio = 1.0;
+  double umpire_host_memory_pool_coalescing_reallocation_ratio = 1.0;
+  std::size_t umpire_device_memory_pool_initial_block_bytes = 1 << 30;
+  std::size_t umpire_device_memory_pool_next_block_bytes = 1 << 30;
+  std::size_t umpire_device_memory_pool_alignment_bytes = 16;
+  double umpire_device_memory_pool_coalescing_free_ratio = 1.0;
+  double umpire_device_memory_pool_coalescing_reallocation_ratio = 1.0;
   std::size_t num_gpu_blas_handles = 16;
   std::size_t num_gpu_lapack_handles = 16;
-  std::size_t umpire_host_memory_pool_initial_bytes = 1 << 30;
-  std::size_t umpire_device_memory_pool_initial_bytes = 1 << 30;
   std::string mpi_pool = "mpi";
 };
 

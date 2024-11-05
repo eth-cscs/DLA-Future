@@ -29,15 +29,23 @@
 
 namespace dlaf {
 std::ostream& operator<<(std::ostream& os, const configuration& cfg) {
+  // clang-format off
   os << "  num_np_gpu_streams_per_thread = " << cfg.num_np_gpu_streams_per_thread << std::endl;
   os << "  num_hp_gpu_streams_per_thread = " << cfg.num_hp_gpu_streams_per_thread << std::endl;
+  os << "  umpire_host_memory_pool_initial_block_bytes = " << cfg.umpire_host_memory_pool_initial_block_bytes << std::endl;
+  os << "  umpire_host_memory_pool_next_block_bytes = " << cfg.umpire_host_memory_pool_next_block_bytes << std::endl;
+  os << "  umpire_host_memory_pool_alignment_bytes = " << cfg.umpire_host_memory_pool_alignment_bytes << std::endl;
+  os << "  umpire_host_memory_pool_coalescing_free_ratio = " << cfg.umpire_host_memory_pool_coalescing_free_ratio << std::endl;
+  os << "  umpire_host_memory_pool_coalescing_reallocation_ratio = " << cfg.umpire_host_memory_pool_coalescing_reallocation_ratio << std::endl;
+  os << "  umpire_device_memory_pool_initial_block_bytes = " << cfg.umpire_device_memory_pool_initial_block_bytes << std::endl;
+  os << "  umpire_device_memory_pool_next_block_bytes = " << cfg.umpire_device_memory_pool_next_block_bytes << std::endl;
+  os << "  umpire_device_memory_pool_alignment_bytes = " << cfg.umpire_device_memory_pool_alignment_bytes << std::endl;
+  os << "  umpire_device_memory_pool_coalescing_free_ratio = " << cfg.umpire_device_memory_pool_coalescing_free_ratio << std::endl;
+  os << "  umpire_device_memory_pool_coalescing_reallocation_ratio = " << cfg.umpire_device_memory_pool_coalescing_reallocation_ratio << std::endl;
   os << "  num_gpu_blas_handles = " << cfg.num_gpu_blas_handles << std::endl;
   os << "  num_gpu_lapack_handles = " << cfg.num_gpu_lapack_handles << std::endl;
-  os << "  umpire_host_memory_pool_initial_bytes = " << cfg.umpire_host_memory_pool_initial_bytes
-     << std::endl;
-  os << "  umpire_device_memory_pool_initial_bytes = " << cfg.umpire_device_memory_pool_initial_bytes
-     << std::endl;
   os << "  mpi_pool = " << cfg.mpi_pool << std::endl;
+  // clang-format on
   return os;
 }
 
@@ -58,7 +66,10 @@ struct Init {
 template <>
 struct Init<Backend::MC> {
   static void initialize(const configuration& cfg) {
-    memory::internal::initializeUmpireHostAllocator(cfg.umpire_host_memory_pool_initial_bytes);
+    memory::internal::initializeUmpireHostAllocator(
+        cfg.umpire_host_memory_pool_initial_block_bytes, cfg.umpire_host_memory_pool_next_block_bytes,
+        cfg.umpire_host_memory_pool_alignment_bytes, cfg.umpire_host_memory_pool_coalescing_free_ratio,
+        cfg.umpire_host_memory_pool_coalescing_reallocation_ratio);
   }
 
   static void finalize() {
@@ -106,7 +117,11 @@ template <>
 struct Init<Backend::GPU> {
   static void initialize(const configuration& cfg) {
     const int device = 0;
-    memory::internal::initializeUmpireDeviceAllocator(cfg.umpire_device_memory_pool_initial_bytes);
+    memory::internal::initializeUmpireDeviceAllocator(
+        cfg.umpire_device_memory_pool_initial_block_bytes,
+        cfg.umpire_device_memory_pool_initial_block_bytes, cfg.umpire_device_memory_pool_alignment_bytes,
+        cfg.umpire_host_memory_pool_coalescing_free_ratio,
+        cfg.umpire_host_memory_pool_coalescing_reallocation_ratio);
     initializeGpuPool(device, cfg.num_np_gpu_streams_per_thread, cfg.num_hp_gpu_streams_per_thread,
                       cfg.num_gpu_blas_handles, cfg.num_gpu_lapack_handles);
     pika::cuda::experimental::detail::register_polling(pika::resource::get_thread_pool("default"));
@@ -137,6 +152,13 @@ template <>
 struct parseFromString<SizeType> {
   static std::optional<SizeType> call(const std::string& var) {
     return std::stoll(var);
+  }
+};
+
+template <>
+struct parseFromString<double> {
+  static std::optional<double> call(const std::string& var) {
+    return std::stod(var);
   }
 };
 
@@ -185,8 +207,13 @@ void updateConfigurationValue(const pika::program_options::variables_map& vm, T&
   }
 
   const std::string dlaf_cmdline_option = "dlaf:" + cmdline_option;
-  if (vm.count(dlaf_cmdline_option)) {
-    var = parseFromCommandLine<T>::call(vm, dlaf_cmdline_option);
+  if constexpr (std::is_same_v<T, bool>) {
+    var = var || vm.count(dlaf_cmdline_option) > 0;
+  }
+  else {
+    if (vm.count(dlaf_cmdline_option)) {
+      var = parseFromCommandLine<T>::call(vm, dlaf_cmdline_option);
+    }
   }
 }
 
@@ -211,25 +238,27 @@ void warnUnusedConfigurationOption(const pika::program_options::variables_map& v
 }
 
 void updateConfiguration(const pika::program_options::variables_map& vm, configuration& cfg) {
-  updateConfigurationValue(vm, cfg.num_np_gpu_streams_per_thread, "NUM_NP_GPU_STREAMS_PER_THREAD",
-                           "num-np-gpu-streams-per-thread");
-  updateConfigurationValue(vm, cfg.num_hp_gpu_streams_per_thread, "NUM_HP_GPU_STREAMS_PER_THREAD",
-                           "num-hp-gpu-streams-per-thread");
+  // clang-format off
+  updateConfigurationValue(vm, cfg.print_config, "PRINT_CONFIG", "print-config");
+  updateConfigurationValue(vm, cfg.num_np_gpu_streams_per_thread, "NUM_NP_GPU_STREAMS_PER_THREAD", "num-np-gpu-streams-per-thread");
+  updateConfigurationValue(vm, cfg.num_hp_gpu_streams_per_thread, "NUM_HP_GPU_STREAMS_PER_THREAD", "num-hp-gpu-streams-per-thread");
+  updateConfigurationValue(vm, cfg.umpire_host_memory_pool_initial_block_bytes, "UMPIRE_HOST_MEMORY_POOL_INITIAL_BLOCK_BYTES", "umpire-host-memory-pool-initial-block-bytes");
+  updateConfigurationValue(vm, cfg.umpire_host_memory_pool_next_block_bytes, "UMPIRE_HOST_MEMORY_POOL_NEXT_BLOCK_BYTES", "umpire-host-memory-pool-next-block-bytes");
+  updateConfigurationValue(vm, cfg.umpire_host_memory_pool_alignment_bytes, "UMPIRE_HOST_MEMORY_POOL_ALIGNMENT_BYTES", "umpire-host-memory-pool-alignment-bytes");
+  updateConfigurationValue(vm, cfg.umpire_host_memory_pool_coalescing_free_ratio, "UMPIRE_HOST_MEMORY_POOL_COALESCING_FREE_RATIO", "umpire-host-memory-pool-coalescing-free-ratio");
+  updateConfigurationValue(vm, cfg.umpire_host_memory_pool_coalescing_reallocation_ratio, "UMPIRE_HOST_MEMORY_POOL_COALESCING_REALLOCATION_RATIO", "umpire-host-memory-pool-coalescing-reallocation-ratio");
+  updateConfigurationValue(vm, cfg.umpire_device_memory_pool_initial_block_bytes, "UMPIRE_DEVICE_MEMORY_POOL_INITIAL_BLOCK_BYTES", "umpire-device-memory-pool-initial-block-bytes");
+  updateConfigurationValue(vm, cfg.umpire_device_memory_pool_next_block_bytes, "UMPIRE_DEVICE_MEMORY_POOL_NEXT_BLOCK_BYTES", "umpire-device-memory-pool-next-block-bytes");
+  updateConfigurationValue(vm, cfg.umpire_device_memory_pool_alignment_bytes, "UMPIRE_DEVICE_MEMORY_POOL_ALIGNMENT_BYTES", "umpire-device-memory-pool-alignment-bytes");
+  updateConfigurationValue(vm, cfg.umpire_device_memory_pool_coalescing_free_ratio, "UMPIRE_DEVICE_MEMORY_POOL_COALESCING_FREE_RATIO", "umpire-device-memory-pool-coalescing-free-ratio");
+  updateConfigurationValue(vm, cfg.umpire_device_memory_pool_coalescing_reallocation_ratio, "UMPIRE_DEVICE_MEMORY_POOL_COALESCING_REALLOCATION_RATIO", "umpire-device-memory-pool-coalescing-reallocation-ratio");
   updateConfigurationValue(vm, cfg.num_gpu_blas_handles, "NUM_GPU_BLAS_HANDLES", "num-gpu-blas-handles");
-  updateConfigurationValue(vm, cfg.num_gpu_lapack_handles, "NUM_GPU_LAPACK_HANDLES",
-                           "num-gpu-lapack-handles");
+  updateConfigurationValue(vm, cfg.num_gpu_lapack_handles, "NUM_GPU_LAPACK_HANDLES", "num-gpu-lapack-handles");
 #if PIKA_VERSION_FULL < 0x001D00  // < 0.29.0
-  warnUnusedConfigurationOption(vm, "NUM_GPU_BLAS_HANDLES", "num-gpu-blas-handles",
-                                "only supported with pika 0.29.0 or newer");
-  warnUnusedConfigurationOption(vm, "NUM_GPU_LAPACK_HANDLES", "num-gpu-lapack-handles",
-                                "only supported with pika 0.29.0 or newer");
+  warnUnusedConfigurationOption(vm, "NUM_GPU_BLAS_HANDLES", "num-gpu-blas-handles", "only supported with pika 0.29.0 or newer");
+  warnUnusedConfigurationOption(vm, "NUM_GPU_LAPACK_HANDLES", "num-gpu-lapack-handles", "only supported with pika 0.29.0 or newer");
 #endif
-  updateConfigurationValue(vm, cfg.umpire_host_memory_pool_initial_bytes,
-                           "UMPIRE_HOST_MEMORY_POOL_INITIAL_BYTES",
-                           "umpire-host-memory-pool-initial-bytes");
-  updateConfigurationValue(vm, cfg.umpire_device_memory_pool_initial_bytes,
-                           "UMPIRE_DEVICE_MEMORY_POOL_INITIAL_BYTES",
-                           "umpire-device-memory-pool-initial-bytes");
+  // clang-format on
   cfg.mpi_pool = (pika::resource::pool_exists("mpi")) ? "mpi" : "default";
 
   // Warn if not using MPI pool without --dlaf:no-mpi-pool
@@ -251,44 +280,28 @@ void updateConfiguration(const pika::program_options::variables_map& vm, configu
   // NOTE: Environment variables should omit the DLAF_ prefix and command line options the dlaf: prefix.
   // These are added automatically by updateConfigurationValue.
   auto& param = getTuneParameters();
-  updateConfigurationValue(vm, param.red2band_panel_nworkers, "RED2BAND_PANEL_NWORKERS",
-                           "red2band-panel-nworkers");
+  // clang-format off
+  updateConfigurationValue(vm, param.red2band_panel_nworkers, "RED2BAND_PANEL_NWORKERS", "red2band-panel-nworkers");
+  updateConfigurationValue(vm, param.red2band_barrier_busy_wait_us, "RED2BAND_BARRIER_BUSY_WAIT_US", "red2band-barrier-busy-wait-us");
+  updateConfigurationValue(vm, param.eigensolver_min_band, "EIGENSOLVER_MIN_BAND", "eigensolver-min-band");
+  updateConfigurationValue(vm, param.band_to_tridiag_1d_block_size_base, "BAND_TO_TRIDIAG_1D_BLOCK_SIZE_BASE", "band-to-tridiag-1d-block-size-base");
 
-  updateConfigurationValue(vm, param.red2band_barrier_busy_wait_us, "RED2BAND_BARRIER_BUSY_WAIT_US",
-                           "red2band-barrier-busy-wait-us");
-
-  updateConfigurationValue(vm, param.eigensolver_min_band, "EIGENSOLVER_MIN_BAND",
-                           "eigensolver-min-band");
-
-  updateConfigurationValue(vm, param.band_to_tridiag_1d_block_size_base,
-                           "BAND_TO_TRIDIAG_1D_BLOCK_SIZE_BASE", "band-to-tridiag-1d-block-size-base");
-
-  updateConfigurationValue(vm, param.debug_dump_cholesky_factorization_data,
-                           "DEBUG_DUMP_CHOLESKY_FACTORIZATION_DATA", "");
-  updateConfigurationValue(vm, param.debug_dump_generalized_eigensolver_data,
-                           "DEBUG_DUMP_GENERALIZED_EIGENSOLVER_DATA", "");
-  updateConfigurationValue(vm, param.debug_dump_generalized_to_standard_data,
-                           "DEBUG_DUMP_GENERALIZED_TO_STANDARD_DATA", "");
+  updateConfigurationValue(vm, param.debug_dump_cholesky_factorization_data, "DEBUG_DUMP_CHOLESKY_FACTORIZATION_DATA", "");
+  updateConfigurationValue(vm, param.debug_dump_generalized_eigensolver_data, "DEBUG_DUMP_GENERALIZED_EIGENSOLVER_DATA", "");
+  updateConfigurationValue(vm, param.debug_dump_generalized_to_standard_data, "DEBUG_DUMP_GENERALIZED_TO_STANDARD_DATA", "");
   updateConfigurationValue(vm, param.debug_dump_eigensolver_data, "DEBUG_DUMP_EIGENSOLVER_DATA", "");
-  updateConfigurationValue(vm, param.debug_dump_reduction_to_band_data,
-                           "DEBUG_DUMP_REDUCTION_TO_BAND_DATA", "");
-  updateConfigurationValue(vm, param.debug_dump_band_to_tridiagonal_data,
-                           "DEBUG_DUMP_BAND_TO_TRIDIAGONAL_DATA", "");
-  updateConfigurationValue(vm, param.debug_dump_tridiag_solver_data, "DEBUG_DUMP_TRIDIAG_SOLVER_DATA",
-                           "");
+  updateConfigurationValue(vm, param.debug_dump_reduction_to_band_data, "DEBUG_DUMP_REDUCTION_TO_BAND_DATA", "");
+  updateConfigurationValue(vm, param.debug_dump_band_to_tridiagonal_data, "DEBUG_DUMP_BAND_TO_TRIDIAGONAL_DATA", "");
+  updateConfigurationValue(vm, param.debug_dump_tridiag_solver_data, "DEBUG_DUMP_TRIDIAG_SOLVER_DATA", "");
 
-  updateConfigurationValue(vm, param.tridiag_rank1_nworkers, "TRIDIAG_RANK1_NWORKERS",
-                           "tridiag-rank1-nworkers");
+  updateConfigurationValue(vm, param.tridiag_rank1_nworkers, "TRIDIAG_RANK1_NWORKERS", "tridiag-rank1-nworkers");
 
-  updateConfigurationValue(vm, param.tridiag_rank1_barrier_busy_wait_us,
-                           "TRIDIAG_RANK1_BARRIER_BUSY_WAIT_US", "tridiag-rank1-barrier-busy-wait-us");
+  updateConfigurationValue(vm, param.tridiag_rank1_barrier_busy_wait_us, "TRIDIAG_RANK1_BARRIER_BUSY_WAIT_US", "tridiag-rank1-barrier-busy-wait-us");
 
-  updateConfigurationValue(vm, param.bt_band_to_tridiag_hh_apply_group_size,
-                           "BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE",
-                           "bt-band-to-tridiag-hh-apply-group-size");
+  updateConfigurationValue(vm, param.bt_band_to_tridiag_hh_apply_group_size, "BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE", "bt-band-to-tridiag-hh-apply-group-size");
 
-  updateConfigurationValue(vm, param.communicator_grid_num_pipelines, "COMMUNICATOR_GRID_NUM_PIPELINES",
-                           "communicator-grid-num-pipelines");
+  updateConfigurationValue(vm, param.communicator_grid_num_pipelines, "COMMUNICATOR_GRID_NUM_PIPELINES", "communicator-grid-num-pipelines");
+  // clang-format on
 }
 
 configuration& getConfiguration() {
@@ -300,49 +313,35 @@ configuration& getConfiguration() {
 pika::program_options::options_description getOptionsDescription() {
   pika::program_options::options_description desc("DLA-Future options");
 
+  // clang-format off
   desc.add_options()("dlaf:help", "Print help message");
   desc.add_options()("dlaf:print-config", "Print the DLA-Future configuration");
-  desc.add_options()("dlaf:num-np-gpu-streams-per-thread", pika::program_options::value<std::size_t>(),
-                     "Number of normal priority GPU streams per worker thread");
-  desc.add_options()("dlaf:num-hp-gpu-streams-per-thread", pika::program_options::value<std::size_t>(),
-                     "Number of high priority GPU streams per worker thread");
-  desc.add_options()("dlaf:num-gpu-blas-handles", pika::program_options::value<std::size_t>(),
-                     "Number of GPU BLAS (cuBLAS/rocBLAS) handles");
-  desc.add_options()("dlaf:num-gpu-lapack-handles", pika::program_options::value<std::size_t>(),
-                     "Number of GPU LAPACK (cuSOLVER/rocSOLVER) handles");
-  desc.add_options()("dlaf:umpire-host-memory-pool-initial-bytes",
-                     pika::program_options::value<std::size_t>(),
-                     "Number of bytes to preallocate for pinned host memory pool");
-  desc.add_options()("dlaf:umpire-device-memory-pool-initial-bytes",
-                     pika::program_options::value<std::size_t>(),
-                     "Number of bytes to preallocate for device memory pool");
+  desc.add_options()("dlaf:num-np-gpu-streams-per-thread", pika::program_options::value<std::size_t>(), "Number of normal priority GPU streams per worker thread");
+  desc.add_options()("dlaf:num-hp-gpu-streams-per-thread", pika::program_options::value<std::size_t>(), "Number of high priority GPU streams per worker thread");
+  desc.add_options()("dlaf:umpire-host-memory-pool-initial-block-bytes", pika::program_options::value<std::size_t>(), "Number of bytes to preallocate for pinned host memory pool");
+  desc.add_options()("dlaf:umpire-host-memory-pool-next-block-bytes", pika::program_options::value<std::size_t>(), "Number of bytes to allocate in blocks after the first block for pinned host memory pool");
+  desc.add_options()("dlaf:umpire-host-memory-pool-alignment-bytes", pika::program_options::value<std::size_t>(), "Alignment of allocations in bytes in pinned host memory pool");
+  desc.add_options()("dlaf:umpire-host-memory-pool-coalescing-free-ratio", pika::program_options::value<double>(), "Required ratio of free memory in pinned host memory pool before performing coalescing of free blocks");
+  desc.add_options()("dlaf:umpire-host-memory-pool-coalescing-reallocation-ratio", pika::program_options::value<double>(), "Ratio of current used memory in pinned host memory pool to use for reallocation of new blocks when coalescing free blocks");
+  desc.add_options()("dlaf:umpire-device-memory-pool-initial-block-bytes", pika::program_options::value<std::size_t>(), "Number of bytes to preallocate for device memory pool");
+  desc.add_options()("dlaf:umpire-device-memory-pool-next-block-bytes", pika::program_options::value<std::size_t>(), "Number of bytes to allocate in blocks after the first block for device memory pool");
+  desc.add_options()("dlaf:umpire-device-memory-pool-alignment-bytes", pika::program_options::value<std::size_t>(), "Alignment of allocations in bytes in device memory pool");
+  desc.add_options()("dlaf:umpire-device-memory-pool-coalescing-free-ratio", pika::program_options::value<double>(), "Required ratio of free memory in device memory pool before performing coalescing of free blocks");
+  desc.add_options()("dlaf:umpire-device-memory-pool-coalescing-reallocation-ratio", pika::program_options::value<double>(), "Ratio of current used memory in device memory pool to use for reallocation of new blocks when coalescing free blocks");
+  desc.add_options()("dlaf:num-gpu-blas-handles", pika::program_options::value<std::size_t>(), "Number of GPU BLAS (cuBLAS/rocBLAS) handles");
+  desc.add_options()("dlaf:num-gpu-lapack-handles", pika::program_options::value<std::size_t>(), "Number of GPU LAPACK (cuSOLVER/rocSOLVER) handles");
   desc.add_options()("dlaf:no-mpi-pool", pika::program_options::bool_switch(), "Disable the MPI pool.");
 
   // Tune parameters command line options
-  desc.add_options()(
-      "dlaf:red2band-panel-nworkers", pika::program_options::value<std::size_t>(),
-      "The maximum number of threads to use for computing the panel in the reduction to band algorithm.");
-  desc.add_options()(
-      "dlaf:red2band-barrier-busy-wait-us", pika::program_options::value<std::size_t>(),
-      "The duration in microseconds to busy-wait in barriers in the reduction to band algorithm.");
-  desc.add_options()(
-      "dlaf:eigensolver-min-band", pika::program_options::value<SizeType>(),
-      "The minimum value to start looking for a divisor of the block size. When larger than the block size, the block size will be used instead.");
-  desc.add_options()(
-      "dlaf:band-to-tridiag-1d-block-size-base", pika::program_options::value<SizeType>(),
-      "The 1D block size for band_to_tridiagonal is computed as 1d_block_size_base / nb * nb. (The input matrix is distributed with a {nb x nb} block size.)");
-  desc.add_options()(
-      "dlaf:tridiag-rank1-nworkers", pika::program_options::value<std::size_t>(),
-      "The maximum number of threads to use for computing rank1 problem solution in tridiagonal solver algorithm.");
-  desc.add_options()(
-      "dlaf:tridiag-rank1-barrier-busy-wait-us", pika::program_options::value<std::size_t>(),
-      "The duration in microseconds to busy-wait in barriers when computing rank1 problem solution in the tridiagonal solver algorithm.");
-  desc.add_options()(
-      "dlaf:bt-band-to-tridiag-hh-apply-group-size", pika::program_options::value<SizeType>(),
-      "The application of the HH reflector is splitted in smaller applications of group size reflectors.");
-  desc.add_options()(
-      "dlaf:communicator-grid-num-pipelines", pika::program_options::value<std::size_t>(),
-      "The default number of row, column, and full communicator pipelines to initialize in CommunicatorGrid.");
+  desc.add_options()( "dlaf:red2band-panel-nworkers", pika::program_options::value<std::size_t>(), "The maximum number of threads to use for computing the panel in the reduction to band algorithm.");
+  desc.add_options()( "dlaf:red2band-barrier-busy-wait-us", pika::program_options::value<std::size_t>(), "The duration in microseconds to busy-wait in barriers in the reduction to band algorithm.");
+  desc.add_options()( "dlaf:eigensolver-min-band", pika::program_options::value<SizeType>(), "The minimum value to start looking for a divisor of the block size. When larger than the block size, the block size will be used instead.");
+  desc.add_options()( "dlaf:band-to-tridiag-1d-block-size-base", pika::program_options::value<SizeType>(), "The 1D block size for band_to_tridiagonal is computed as 1d_block_size_base / nb * nb. (The input matrix is distributed with a {nb x nb} block size.)");
+  desc.add_options()( "dlaf:tridiag-rank1-nworkers", pika::program_options::value<std::size_t>(), "The maximum number of threads to use for computing rank1 problem solution in tridiagonal solver algorithm.");
+  desc.add_options()( "dlaf:tridiag-rank1-barrier-busy-wait-us", pika::program_options::value<std::size_t>(), "The duration in microseconds to busy-wait in barriers when computing rank1 problem solution in the tridiagonal solver algorithm.");
+  desc.add_options()( "dlaf:bt-band-to-tridiag-hh-apply-group-size", pika::program_options::value<SizeType>(), "The application of the HH reflector is splitted in smaller applications of group size reflectors.");
+  desc.add_options()( "dlaf:communicator-grid-num-pipelines", pika::program_options::value<std::size_t>(), "The default number of row, column, and full communicator pipelines to initialize in CommunicatorGrid.");
+  // clang-format on
 
   return desc;
 }
@@ -358,7 +357,7 @@ void initialize(const pika::program_options::variables_map& vm, const configurat
   internal::updateConfiguration(vm, cfg);
   internal::getConfiguration() = cfg;
 
-  if (vm.count("dlaf:print-config") > 0) {
+  if (cfg.print_config) {
     std::cout << "DLA-Future configuration options:" << std::endl;
     std::cout << cfg << std::endl;
     std::cout << "DLA-Future tune parameters at startup:" << std::endl;

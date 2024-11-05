@@ -55,7 +55,7 @@ const std::vector<
     local_sizes_tests({
         // size, tile_size (target), tiles_per_block (target), distribution origin (ref), distribution size (ref)
         {{8, 8}, {2, 2}, {2, 2}, {0, 0}, {4, 4}},
-       // {{8, 8}, {2, 2}, {2, 2}, {2, 2}, {4, 4}},
+        // {{8, 8}, {2, 2}, {2, 2}, {2, 2}, {4, 4}},
         {{8, 8}, {2, 2}, {2, 2}, {0, 0}, {8, 4}},
         {{8, 8}, {2, 2}, {2, 2}, {0, 0}, {4, 8}},
         {{0, 0}, {2, 3}, {2, 2}, {0, 0}, {0, 0}},

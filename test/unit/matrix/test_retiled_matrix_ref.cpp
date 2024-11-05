@@ -55,6 +55,7 @@ const std::vector<
     local_sizes_tests({
         // size, tile_size (target), tiles_per_block (target), distribution origin (ref), distribution size (ref)
         {{8, 8}, {2, 2}, {2, 2}, {0, 0}, {4, 4}},
+       // {{8, 8}, {2, 2}, {2, 2}, {2, 2}, {4, 4}},
         {{8, 8}, {2, 2}, {2, 2}, {0, 0}, {8, 4}},
         {{8, 8}, {2, 2}, {2, 2}, {0, 0}, {4, 8}},
         {{0, 0}, {2, 3}, {2, 2}, {0, 0}, {0, 0}},
@@ -100,8 +101,8 @@ void check(F1 el1, F2 el2, dlaf::matrix::Matrix<T, D>& mat, SubMatrixSpec& spec)
   // DLAF_ASSERT(spec.origin.col() == 0, spec.origin.col());
 
   // Check modified part (el2)
-  // MatrixRef<T, D> mat_ref(mat, spec);
-  // CHECK_MATRIX_EQ(el2, mat_ref);
+  MatrixRef<T, D> mat_ref(mat, spec);
+  CHECK_MATRIX_EQ(el2, mat_ref);
 
   // Check unmodified part (el1)
   // Double pass on parts of the matrix is possible, but harmless
@@ -273,69 +274,3 @@ TYPED_TEST(RetiledMatrixRefTest, GlobalConstructor) {
     }
   }
 }
-
-// TYPED_TEST(RetiledMatrixTest, GlobalConstructor) {
-//   using Type = TypeParam;
-//
-//   auto el1 = [](const GlobalElementIndex& index) {
-//     SizeType i = index.row();
-//     SizeType j = index.col();
-//     return TypeUtilities<Type>::element(i + j / 1024., j - i / 128.);
-//   };
-//   auto el2 = [](const GlobalElementIndex& index) {
-//     SizeType i = index.row();
-//     SizeType j = index.col();
-//     return TypeUtilities<Type>::element(2. * i + j / 1024., j / 3. - i / 18.);
-//   };
-//
-//   for (auto& comm_grid : this->commGrids()) {
-//     for (const auto& [size, tile_size, tiles_per_block] : global_sizes_tests) {
-//       const TileElementSize block_size(tile_size.rows() * tiles_per_block.rows(),
-//                                        tile_size.cols() * tiles_per_block.cols());
-//       Distribution expected_distribution(size, block_size, tile_size, comm_grid.size(), comm_grid.rank(),
-//                                          {0, 0});
-//
-//       Matrix<Type, Device::CPU> mat(size, block_size, comm_grid);
-//
-//       // Non-const retiled matrix
-//       {
-//         set(mat, el1);
-//
-//         {
-//           Matrix<Type, Device::CPU> rt_mat = mat.retiledSubPipeline(tiles_per_block);
-//           EXPECT_EQ(expected_distribution, rt_mat.distribution());
-//           CHECK_MATRIX_EQ(el1, rt_mat);
-//
-//           set(rt_mat, el2);
-//           CHECK_MATRIX_EQ(el2, rt_mat);
-//         }
-//         CHECK_MATRIX_EQ(el2, mat);
-//       }
-//
-//       // Const retiled matrix from non-const matrix
-//       {
-//         set(mat, el1);
-//
-//         {
-//           Matrix<const Type, Device::CPU> rt_mat = mat.retiledSubPipelineConst(tiles_per_block);
-//           EXPECT_EQ(expected_distribution, rt_mat.distribution());
-//           CHECK_MATRIX_EQ(el1, rt_mat);
-//         }
-//         CHECK_MATRIX_EQ(el1, mat);
-//       }
-//
-//       // Const retiled matrix from const matrix
-//       {
-//         set(mat, el1);
-//         Matrix<const Type, Device::CPU>& mat_const = mat;
-//
-//         {
-//           Matrix<const Type, Device::CPU> rt_mat = mat_const.retiledSubPipelineConst(tiles_per_block);
-//           EXPECT_EQ(expected_distribution, rt_mat.distribution());
-//           CHECK_MATRIX_EQ(el1, rt_mat);
-//         }
-//         CHECK_MATRIX_EQ(el1, mat);
-//       }
-//     }
-//   }
-// }

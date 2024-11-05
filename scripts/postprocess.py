@@ -352,14 +352,30 @@ def parse_jobs(data_dirs, distinguish_dir=False):
     if not isinstance(data_dirs, list):
         data_dirs = [data_dirs]
     data = []
-    for data_dir in data_dirs:
+    for data_dir_label in data_dirs:
+        dir_label = data_dir_label.split(":")
+        assert 1 <= len(dir_label) <= 2
+        data_dir = dir_label[0]
+        if len(dir_label) == 2:
+            bench_name_postfix = dir_label[1]
+        else:
+            bench_name_postfix = os.path.basename(os.path.dirname(data_dir))
+        if os.path.basename(data_dir) == "d":
+            bench_name_postfix += "-double"
+        elif os.path.basename(data_dir) == "z":
+            bench_name_postfix += "-complex"
+        else:
+            print(
+                "The base of the --path provided is not a z or d folder, the results",
+                f"for complex and double might be aggreted in the plot. Path provided: {data_dir}",
+            )
         for subdir, dirs, files in os.walk(os.path.expanduser(data_dir)):
             for f in files:
                 if f.endswith(".out"):
                     nodes = float(os.path.basename(subdir))
                     benchname = f[:-4]
                     if distinguish_dir:
-                        benchname += "@" + data_dir
+                        benchname += "@" + bench_name_postfix
 
                     with open(os.path.join(subdir, f), "r") as fout:
                         data.extend(_parse_line_based(fout, benchname, nodes))
@@ -380,7 +396,9 @@ def parse_jobs_cmdargs(description):
     parser.add_argument(
         "--path",
         action="append",
-        help="Plot results from this directory.",
+        help="Plot results from this directory. You can pass this option several times. \
+                Optional: --path=<path>:<label> to specify the label displayed in the \
+                caption of the plot (label associated with the results in <path>).",
     )
     parser.add_argument(
         "--distinguish-dir",

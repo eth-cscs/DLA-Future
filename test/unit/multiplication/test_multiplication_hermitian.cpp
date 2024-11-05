@@ -97,10 +97,18 @@ void testHermitianMultiplication(const blas::Side side, const blas::Uplo uplo, c
   }
 
   // SCOPED_TRACE cannot yield.
-  // mat_ch.waitLocalTiles();
-  // SCOPED_TRACE(::testing::Message() << "m " << m << "n " << n << ", mb " << mb << ", nb " << nb);
+  mat_ch.waitLocalTiles();
+  SCOPED_TRACE(::testing::Message() << "m " << m << "n " << n << ", mb " << mb << ", nb " << nb);
+  auto t_before = pika::get_worker_thread_num();
   CHECK_MATRIX_NEAR(res_c, mat_ch, 10 * (m + 1) * TypeUtilities<T>::error,
                     10 * (m + 1) * TypeUtilities<T>::error);
+  auto t_after = pika::get_worker_thread_num();
+  if (t_before != t_after) {
+    std::cerr << "worker thread index changed from " << t_before << " to " << t_after << std::endl;
+  }
+  else {
+    std::cerr << "worker thread index is still " << t_before << std::endl;
+  }
 }
 
 template <class T, Backend B, Device D>

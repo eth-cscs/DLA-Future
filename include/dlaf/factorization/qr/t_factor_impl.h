@@ -39,6 +39,7 @@
 #include <whip.hpp>
 
 #include <dlaf/blas/tile.h>
+#include <dlaf/lapack/gpu/larft.h>
 #endif
 
 namespace dlaf::factorization::internal {
@@ -305,30 +306,35 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
         }));
   }
   else if constexpr (backend == Backend::GPU) {
-    t = Helpers::set0(std::move(t));
+    dlaf::internal::silenceUnusedWarningFor(first_rows);
 
     const auto hp_scheduler = di::getBackendScheduler<Backend::GPU>(thread_priority::high);
-    t = di::whenAllLift(std::move(first_rows), ex::when_all_vector(std::move(hh_tiles)), taus,
-                        std::move(t), ex::when_all_vector(std::move(ws_t))) |
-        di::transform<dlaf::internal::TransformDispatchType::Blas>(
+    t = di::whenAllLift(ex::when_all_vector(std::move(hh_tiles)), taus, std::move(t),
+                        ex::when_all_vector(std::move(ws_t))) |
+        di::transform<dlaf::internal::TransformDispatchType::Plain>(
             di::Policy<Backend::GPU>(thread_priority::high),
-            [](cublasHandle_t handle, const std::vector<SizeType>& first_rows, auto&& hh_tiles,
-               auto&& taus, matrix::Tile<T, Device::GPU>& t, auto&& /*ws_t*/) {
-              whip::stream_t stream;
-              DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
+            [](auto&& hh_tiles, auto&& taus, matrix::Tile<T, Device::GPU>& tile_t, auto&& /*ws_t*/,
+               whip::stream_t stream) {
+              const SizeType k = tile_t.size().cols();
 
-              // This assumes that elements in taus are contiguous, i.e. that it is a column vector of size k
-              const SizeType k = t.size().cols();
-              whip::memcpy_2d_async(t.ptr(), to_sizet(t.ld() + 1) * sizeof(T), taus.ptr(), sizeof(T),
-                                    sizeof(T), to_sizet(k), whip::memcpy_host_to_device, stream);
+              // Note:
+              // prepare the diagonal of taus in t
+              whip::memset_2d_async(tile_t.ptr(), sizeof(T) * to_sizet(tile_t.ld()), 0,
+                                    sizeof(T) * to_sizet(k), to_sizet(k), stream);
+              whip::memcpy_2d_async(tile_t.ptr(), to_sizet(tile_t.ld() + 1) * sizeof(T), taus.ptr(),
+                                    sizeof(T), sizeof(T), to_sizet(k), whip::memcpy_host_to_device,
+                                    stream);
 
+              // Note:
+              // - call one gemv per tile
+              // - being on the same stream, they are already serialised on GPU
               for (std::size_t index = 0; index < hh_tiles.size(); ++index) {
-                const SizeType first_row_tile = first_rows[index];
                 const matrix::Tile<const T, Device::GPU>& tile_v = hh_tiles[index].get();
-                t = Helpers::gemv_func(handle, first_row_tile, tile_v, taus, t);
+                gpulapack::larftJustGEMVs(tile_v.size().rows(), k, tile_v.ptr(), tile_v.ld(),
+                                          tile_t.ptr(), tile_t.ld(), stream);
               }
 
-              return std::move(t);
+              return std::move(tile_t);
             });
 
     // 2nd step: compute the T factor, by performing the last step on each column

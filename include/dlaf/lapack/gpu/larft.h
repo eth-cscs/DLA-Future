@@ -21,6 +21,19 @@
 namespace dlaf::gpulapack {
 
 template <class T>
+void larftJustGEMVs(const SizeType n, SizeType k, const T* v, const SizeType ldv, T* t,
+                    const SizeType ldt, whip::stream_t stream);
+
+#define DLAF_CUBLAS_LARFTJUSTGEMVs_ETI(kword, Type)                                                   \
+  kword template void larftJustGEMVs(const SizeType n, SizeType k, const Type* v, const SizeType ldv, \
+                                     Type* t, const SizeType ldt, whip::stream_t stream)
+
+DLAF_CUBLAS_LARFTJUSTGEMVs_ETI(extern, float);
+DLAF_CUBLAS_LARFTJUSTGEMVs_ETI(extern, double);
+DLAF_CUBLAS_LARFTJUSTGEMVs_ETI(extern, std::complex<float>);
+DLAF_CUBLAS_LARFTJUSTGEMVs_ETI(extern, std::complex<double>);
+
+template <class T>
 void larft(const SizeType n, SizeType k, const T* v, const SizeType ldv, const T* tau, T* t,
            const SizeType ldt, whip::stream_t stream);
 

@@ -18,11 +18,10 @@ import argparse
 import miniapps as mp
 import systems
 
-time = 400  # minutes
+time = 120  # minutes
 nruns = 5
 nodes_arr = [1, 2, 4, 8, 16]
 
-rpn = 1
 m_szs_d = [10240, 20480, 30097, 40960]
 mb_szs_d = 512
 m_szs_z = [10240, 20480]
@@ -66,6 +65,12 @@ parser.add_argument(
     default=None,
     type=float,
 )
+parser.add_argument(
+    "--rpns",
+    help="Ranks per node.",
+    default=1,
+    type=int,
+)
 args = parser.parse_args()
 
 system = systems.cscs[args.system]
@@ -73,6 +78,7 @@ dlafpath = args.miniapps
 matrixrefpath = args.references
 run_dir = args.rundir
 debug = args.debug
+rpn = args.rpns
 
 
 def createAndSubmitRun(run_dir, nodes_arr, dtype, **kwargs):

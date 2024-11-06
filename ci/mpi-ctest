@@ -30,7 +30,7 @@ if [[ $SLURM_PROCID == "0" ]]; then
     ctest --output-log "$CTEST_OUTPUT" -V $@
     TZ=CET date +"Run finished at: %H:%M:%S %z"
 else
-    ctest --output-log "$CTEST_OUTPUT" -Q $@
+    ctest --output-log "$CTEST_OUTPUT" -V -Q $@
 fi
 
 if [ $START_MPS -eq 1 ]; then

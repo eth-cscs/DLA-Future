@@ -63,6 +63,7 @@ JOB_TEMPLATE="
     DLAF_HDF5_TEST_OUTPUT_PATH: \$CI_PROJECT_DIR
   script: mpi-ctest -L {{LABEL}}
   artifacts:
+    when: always
     paths:
       - codecov-reports/
       - output/"
@@ -103,6 +104,7 @@ JOB_TEMPLATE="
     DLAF_HDF5_TEST_OUTPUT_PATH: \$CI_PROJECT_DIR
   script: mpi-ctest -L {{LABEL}}
   artifacts:
+    when: always
     paths:
       - output/"
 fi

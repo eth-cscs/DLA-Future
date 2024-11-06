@@ -64,7 +64,8 @@ JOB_TEMPLATE="
   script: mpi-ctest -L {{LABEL}}
   artifacts:
     paths:
-      - codecov-reports/"
+      - codecov-reports/
+      - output/"
 else
 # CRAY_CUDA_MPS set to 0 to avoid test hanging on daint (See PR #1197)
 BASE_TEMPLATE="
@@ -100,7 +101,10 @@ JOB_TEMPLATE="
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
     DLAF_HDF5_TEST_OUTPUT_PATH: \$CI_PROJECT_DIR
-  script: mpi-ctest -L {{LABEL}}"
+  script: mpi-ctest -L {{LABEL}}
+  artifacts:
+    paths:
+      - output/"
 fi
 
 JOBS=""

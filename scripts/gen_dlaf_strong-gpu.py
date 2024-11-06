@@ -98,7 +98,7 @@ def createAndSubmitRun(run_dir, nodes_arr, dtype, **kwargs):
     full_kwargs["miniapp_dir"] = dlafpath
     full_kwargs["nruns"] = nruns
     full_kwargs["dtype"] = dtype
-    
+
     fullbt_kwargs = full_kwargs.copy()
     if args.percent_evals is not None:
         fullbt_kwargs["extra_flags"] = fullbt_kwargs.get("extra_flags", "") + f" --percent-evals={args.percent_evals}"

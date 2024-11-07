@@ -219,6 +219,8 @@ cscs["santis"] = {
 # Env
 export MIMALLOC_EAGER_COMMIT_DELAY=0
 export MIMALLOC_LARGE_OS_PAGES=1
+export DLAF_BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE=128
+export DLAF_UMPIRE_DEVICE_MEMORY_POOL_ALIGNMENT_BYTES=$((1 << 21))
 
 # Debug
 module list &> modules_{bs_name}.txt

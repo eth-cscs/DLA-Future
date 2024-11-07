@@ -54,7 +54,7 @@ cscs["daint-mc"] = {
 # Env
 export MPICH_MAX_THREAD_SAFETY=multiple
 export MIMALLOC_EAGER_COMMIT_DELAY=0
-export MIMALLOC_LARGE_OS_PAGES=1
+export MIMALLOC_ALLOW_LARGE_OS_PAGES=1
 
 # Debug
 module list &> modules_{bs_name}.txt
@@ -87,7 +87,7 @@ cscs["daint-gpu"] = {
 # Env
 export MPICH_MAX_THREAD_SAFETY=multiple
 export MIMALLOC_EAGER_COMMIT_DELAY=0
-export MIMALLOC_LARGE_OS_PAGES=1
+export MIMALLOC_ALLOW_LARGE_OS_PAGES=1
 
 # Debug
 module list &> modules_{bs_name}.txt
@@ -118,7 +118,7 @@ cscs["eiger"] = {
 
 # Env
 export MIMALLOC_EAGER_COMMIT_DELAY=0
-export MIMALLOC_LARGE_OS_PAGES=1
+export MIMALLOC_ALLOW_LARGE_OS_PAGES=1
 
 # Debug
 module list &> modules_{bs_name}.txt
@@ -152,7 +152,7 @@ cscs["clariden-nvgpu"] = {
 
 # Env
 export MIMALLOC_EAGER_COMMIT_DELAY=0
-export MIMALLOC_LARGE_OS_PAGES=1
+export MIMALLOC_ALLOW_LARGE_OS_PAGES=1
 
 # Debug
 module list &> modules_{bs_name}.txt
@@ -185,7 +185,7 @@ cscs["clariden-amdgpu"] = {
 
 # Env
 export MIMALLOC_EAGER_COMMIT_DELAY=0
-export MIMALLOC_LARGE_OS_PAGES=1
+export MIMALLOC_ALLOW_LARGE_OS_PAGES=1
 
 # Debug
 module list &> modules_{bs_name}.txt
@@ -216,7 +216,7 @@ cscs["santis"] = {
 # Env
 export FI_MR_CACHE_MONITOR=disabled
 export MIMALLOC_EAGER_COMMIT_DELAY=0
-export MIMALLOC_LARGE_OS_PAGES=1
+export MIMALLOC_ALLOW_LARGE_OS_PAGES=1
 export DLAF_BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE=128
 export DLAF_UMPIRE_DEVICE_MEMORY_POOL_ALIGNMENT_BYTES=$((1 << 21))
 
@@ -252,7 +252,7 @@ csc["lumi-cpu"] = {
 
 # Env
 export MIMALLOC_EAGER_COMMIT_DELAY=0
-export MIMALLOC_LARGE_OS_PAGES=1
+export MIMALLOC_ALLOW_LARGE_OS_PAGES=1
 
 # Debug
 module list &> modules_{bs_name}.txt
@@ -291,7 +291,7 @@ csc["lumi-gpu"] = {
 # Env
 export FI_MR_CACHE_MONITOR=disabled
 export MIMALLOC_EAGER_COMMIT_DELAY=0
-export MIMALLOC_LARGE_OS_PAGES=1
+export MIMALLOC_ALLOW_LARGE_OS_PAGES=1
 export DLAF_BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE=128
 
 # Debug

@@ -198,15 +198,13 @@ printenv > env_{bs_name}.txt
 """,
 }
 
-# NOTE: Here is assumed that `gpu2ranks_slurm_cuda` is in PATH!
-#       modify "Run command" if it is not the case.
 cscs["santis"] = {
     "Cores": 288,
     "Threads per core": 1,
     "Allowed rpns": [4],
     "Multiple rpn in same job": True,
     "GPU": True,
-    "Run command": "srun -u {srun_args} -n {total_ranks} --cpu-bind=core -c {threads_per_rank} gpu2ranks_slurm_cuda",
+    "Run command": "srun -u {srun_args} -n {total_ranks} --gpus-per-task=1 --cpu-bind=core -c {threads_per_rank}",
     "Launch command": "sbatch --chdir={job_path} {job_file}",
     "Batch preamble": """
 #!/bin/bash -l

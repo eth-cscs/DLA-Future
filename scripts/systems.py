@@ -217,7 +217,6 @@ cscs["santis"] = {
 #SBATCH --no-requeue
 
 # Env
-export MPICH_OPT_THREAD_SYNC=0 # Required to work around MPICH bug
 export MIMALLOC_EAGER_COMMIT_DELAY=0
 export MIMALLOC_LARGE_OS_PAGES=1
 

@@ -117,7 +117,6 @@ cscs["eiger"] = {
 #SBATCH --no-requeue
 
 # Env
-export MPICH_MAX_THREAD_SAFETY=multiple
 export MIMALLOC_EAGER_COMMIT_DELAY=0
 export MIMALLOC_LARGE_OS_PAGES=1
 
@@ -152,7 +151,6 @@ cscs["clariden-nvgpu"] = {
 #SBATCH --no-requeue
 
 # Env
-export MPICH_MAX_THREAD_SAFETY=multiple
 export MIMALLOC_EAGER_COMMIT_DELAY=0
 export MIMALLOC_LARGE_OS_PAGES=1
 
@@ -186,7 +184,6 @@ cscs["clariden-amdgpu"] = {
 #SBATCH --no-requeue
 
 # Env
-export MPICH_MAX_THREAD_SAFETY=multiple
 export MIMALLOC_EAGER_COMMIT_DELAY=0
 export MIMALLOC_LARGE_OS_PAGES=1
 
@@ -254,7 +251,6 @@ csc["lumi-cpu"] = {
 #SBATCH --no-requeue
 
 # Env
-export MPICH_MAX_THREAD_SAFETY=multiple
 export MIMALLOC_EAGER_COMMIT_DELAY=0
 export MIMALLOC_LARGE_OS_PAGES=1
 

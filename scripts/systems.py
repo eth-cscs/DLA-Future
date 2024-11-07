@@ -217,6 +217,7 @@ cscs["santis"] = {
 #SBATCH --no-requeue
 
 # Env
+export FI_MR_CACHE_MONITOR=disabled
 export MIMALLOC_EAGER_COMMIT_DELAY=0
 export MIMALLOC_LARGE_OS_PAGES=1
 export DLAF_BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE=128

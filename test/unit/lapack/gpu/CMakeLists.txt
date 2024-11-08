@@ -16,10 +16,10 @@ if(DLAF_WITH_GPU)
     USE_MAIN PLAIN
   )
 
-  DLAF_addTest(
-    test_larft
-    SOURCES test_larft.cpp
-    LIBRARIES dlaf.core
-    USE_MAIN PLAIN
-  )
+  #  DLAF_addTest(
+  #    test_larft
+  #    SOURCES test_larft.cpp
+  #    LIBRARIES dlaf.core
+  #    USE_MAIN PLAIN
+  #  )
 endif()

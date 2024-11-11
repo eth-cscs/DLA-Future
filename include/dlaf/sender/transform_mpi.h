@@ -71,8 +71,9 @@ template <typename F, typename Sender,
   namespace ex = pika::execution::experimental;
   namespace mpi = pika::mpi::experimental;
   namespace dci = dlaf::common::internal;
-  return std::forward<Sender>(sender)                                                   //
-         | mpi::transform_mpi(dci::ConsumeRvalues{MPICallHelper{std::forward<F>(f)}});  //
+  return std::forward<Sender>(sender)                                                  //
+         | mpi::transform_mpi(dci::ConsumeRvalues{MPICallHelper{std::forward<F>(f)}})  //
+         | ex::drop_operation_state();
 }
 
 template <typename F>

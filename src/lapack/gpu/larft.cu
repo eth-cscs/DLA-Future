@@ -26,7 +26,7 @@ using namespace dlaf::util::cuda_operators;
 
 template <unsigned kts_rows_v, unsigned kts_rows_t, unsigned kts_cols_t, class T>
 __global__ void larft_gemv10(const unsigned m, const unsigned k, const T* v, unsigned ldv, T* t,
-                            unsigned ldt) {
+                             unsigned ldt) {
   // Note: kts_cols_v = kts_rows_t
   constexpr unsigned kts_cols_v = kts_rows_t;
 
@@ -137,7 +137,7 @@ __global__ void larft_gemv11(const unsigned m, const unsigned k, const T* v, uns
       // loop over the entire chunk of the block
       for (unsigned l_t = 0; l_t < l_t_end; ++l_t) {
         const unsigned l = l_b + l_t;
-        tmp_ij = fma(shared[l_t + i_t * lds], v[l + j * ldv] , tmp_ij);
+        tmp_ij = fma(shared[l_t + i_t * lds], v[l + j * ldv], tmp_ij);
       }
     }
 
@@ -382,7 +382,8 @@ __global__ void larft_gemv22(const unsigned m, const unsigned k, const T* v, uns
 }
 
 template <class T>
-void larft_gemv0(cublasHandle_t handle, const SizeType m, const SizeType k, const T* v, const SizeType ldv, const T* tau, T* t, const SizeType ldt) {
+void larft_gemv0(cublasHandle_t handle, const SizeType m, const SizeType k, const T* v,
+                 const SizeType ldv, const T* tau, T* t, const SizeType ldt) {
   DLAF_ASSERT(m >= 0, m);
   DLAF_ASSERT(k >= 0, k);
   DLAF_ASSERT(ldv >= m, ldv, m);
@@ -400,7 +401,7 @@ void larft_gemv0(cublasHandle_t handle, const SizeType m, const SizeType k, cons
     const auto mtau = util::blasToCublasCast(-tau[j]);
     const auto one = util::blasToCublasCast(T{1});
     gpublas::internal::Gemv<T>::call(handle, CUBLAS_OP_C, m, j, &mtau, v_(0, 0), ldv_, v_(0, j), 1, &one,
-                           t_(0, j), 1);
+                                     t_(0, j), 1);
   }
 }
 
@@ -408,7 +409,7 @@ namespace internal {
 
 template <unsigned kts_rows_v, unsigned kts_rows_t, unsigned kts_cols_t, class T>
 void larft_gemv10(const SizeType m, const SizeType k, const T* v, const SizeType ldv, T* t,
-                const SizeType ldt, whip::stream_t stream) {
+                  const SizeType ldt, whip::stream_t stream) {
   DLAF_ASSERT(m >= 0, m);
   DLAF_ASSERT(k >= 0, k);
   DLAF_ASSERT(ldv >= m, ldv, m);
@@ -428,12 +429,14 @@ void larft_gemv10(const SizeType m, const SizeType k, const T* v, const SizeType
   dim3 nr_threads(kts_rows_t);
   dim3 nr_blocks(util::ceilDiv(uk, kts_rows_t), util::ceilDiv(uk, kts_cols_t));
 
-  kernels::larft_gemv10<kts_rows_v, kts_rows_t, kts_cols_t><<<nr_blocks, nr_threads, 0, stream>>>(um, uk, util::blasToCublasCast(v), uldv, util::blasToCublasCast(t), uldt);
+  kernels::larft_gemv10<kts_rows_v, kts_rows_t, kts_cols_t>
+      <<<nr_blocks, nr_threads, 0, stream>>>(um, uk, util::blasToCublasCast(v), uldv,
+                                             util::blasToCublasCast(t), uldt);
 }
 
 template <unsigned kts_rows_v, unsigned kts_rows_t, unsigned kts_cols_t, class T>
 void larft_gemv11(const SizeType m, const SizeType k, const T* v, const SizeType ldv, T* t,
-                 const SizeType ldt, whip::stream_t stream) {
+                  const SizeType ldt, whip::stream_t stream) {
   DLAF_ASSERT(m >= 0, m);
   DLAF_ASSERT(k >= 0, k);
   DLAF_ASSERT(ldv >= m, ldv, m);
@@ -453,13 +456,14 @@ void larft_gemv11(const SizeType m, const SizeType k, const T* v, const SizeType
   dim3 nr_threads(kts_rows_t, kts_cols_t);
   dim3 nr_blocks(util::ceilDiv(uk, kts_rows_t), util::ceilDiv(uk, kts_cols_t));
 
-  kernels::larft_gemv11<kts_rows_v, kts_rows_t, kts_cols_t><<<nr_blocks, nr_threads, 0, stream>>>(um, uk, util::blasToCublasCast(v), uldv, util::blasToCublasCast(t), uldt);
+  kernels::larft_gemv11<kts_rows_v, kts_rows_t, kts_cols_t>
+      <<<nr_blocks, nr_threads, 0, stream>>>(um, uk, util::blasToCublasCast(v), uldv,
+                                             util::blasToCublasCast(t), uldt);
 }
 
 template <unsigned kts_rows_v, unsigned kts_rows_t, unsigned kts_cols_t, class T>
 void larft_gemv20(const SizeType m, const SizeType k, const T* v, const SizeType ldv, T* t,
                   const SizeType ldt, whip::stream_t stream) {
-
   DLAF_ASSERT(m >= 0, m);
   DLAF_ASSERT(k >= 0, k);
   DLAF_ASSERT(ldv >= m, ldv, m);
@@ -479,13 +483,14 @@ void larft_gemv20(const SizeType m, const SizeType k, const T* v, const SizeType
   dim3 nr_threads(kts_rows_t);
   dim3 nr_blocks(util::ceilDiv(uk, kts_rows_t), util::ceilDiv(uk, kts_cols_t));
 
-  kernels::larft_gemv20<kts_rows_v, kts_rows_t, kts_cols_t><<<nr_blocks, nr_threads, 0, stream>>>(um, uk, util::blasToCublasCast(v), uldv, util::blasToCublasCast(t), uldt);
+  kernels::larft_gemv20<kts_rows_v, kts_rows_t, kts_cols_t>
+      <<<nr_blocks, nr_threads, 0, stream>>>(um, uk, util::blasToCublasCast(v), uldv,
+                                             util::blasToCublasCast(t), uldt);
 }
 
 template <unsigned kts_rows_v, unsigned kts_rows_t, unsigned kts_cols_t, unsigned cols, class T>
 void larft_gemv21(const SizeType m, const SizeType k, const T* v, const SizeType ldv, T* t,
-                 const SizeType ldt, whip::stream_t stream) {
-
+                  const SizeType ldt, whip::stream_t stream) {
   static_assert(kts_cols_t % cols == 0);
 
   DLAF_ASSERT(m >= 0, m);
@@ -507,13 +512,14 @@ void larft_gemv21(const SizeType m, const SizeType k, const T* v, const SizeType
   dim3 nr_threads(kts_rows_t, kts_cols_t / cols);
   dim3 nr_blocks(util::ceilDiv(uk, kts_rows_t), util::ceilDiv(uk, kts_cols_t));
 
-  kernels::larft_gemv21<kts_rows_v, kts_rows_t, kts_cols_t, cols><<<nr_blocks, nr_threads, 0, stream>>>(um, uk, util::blasToCublasCast(v), uldv, util::blasToCublasCast(t), uldt);
+  kernels::larft_gemv21<kts_rows_v, kts_rows_t, kts_cols_t, cols>
+      <<<nr_blocks, nr_threads, 0, stream>>>(um, uk, util::blasToCublasCast(v), uldv,
+                                             util::blasToCublasCast(t), uldt);
 }
 
 template <unsigned kts_rows_v, unsigned kts_rows_t, unsigned kts_cols_t, unsigned cols, class T>
 void larft_gemv22(const SizeType m, const SizeType k, const T* v, const SizeType ldv, T* t,
-                 const SizeType ldt, whip::stream_t stream) {
-
+                  const SizeType ldt, whip::stream_t stream) {
   static_assert(kts_cols_t % cols == 0);
 
   DLAF_ASSERT(m >= 0, m);
@@ -535,7 +541,9 @@ void larft_gemv22(const SizeType m, const SizeType k, const T* v, const SizeType
   dim3 nr_threads(kts_rows_t, kts_cols_t / cols);
   dim3 nr_blocks(util::ceilDiv(uk, kts_rows_t), util::ceilDiv(uk, kts_cols_t));
 
-  kernels::larft_gemv22<kts_rows_v, kts_rows_t, kts_cols_t, cols><<<nr_blocks, nr_threads, 0, stream>>>(um, uk, util::blasToCublasCast(v), uldv, util::blasToCublasCast(t), uldt);
+  kernels::larft_gemv22<kts_rows_v, kts_rows_t, kts_cols_t, cols>
+      <<<nr_blocks, nr_threads, 0, stream>>>(um, uk, util::blasToCublasCast(v), uldv,
+                                             util::blasToCublasCast(t), uldt);
 }
 }
 
@@ -546,7 +554,8 @@ void larft_gemv100(const SizeType m, const SizeType k, const T* v, const SizeTyp
   constexpr unsigned kernel_tile_size_rows_t = 32;
   constexpr unsigned kernel_tile_size_cols_t = 32;
 
-  internal::larft_gemv10<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t>(m, k, v, ldv, t, ldt, stream);
+  internal::larft_gemv10<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t>(
+      m, k, v, ldv, t, ldt, stream);
 }
 
 template <class T>
@@ -556,7 +565,8 @@ void larft_gemv101(const SizeType m, const SizeType k, const T* v, const SizeTyp
   constexpr unsigned kernel_tile_size_rows_t = 32;
   constexpr unsigned kernel_tile_size_cols_t = 8;
 
-  internal::larft_gemv10<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t>(m, k, v, ldv, t, ldt, stream);
+  internal::larft_gemv10<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t>(
+      m, k, v, ldv, t, ldt, stream);
 }
 
 template <class T>
@@ -566,7 +576,8 @@ void larft_gemv102(const SizeType m, const SizeType k, const T* v, const SizeTyp
   constexpr unsigned kernel_tile_size_rows_t = 32;
   constexpr unsigned kernel_tile_size_cols_t = 4;
 
-  internal::larft_gemv10<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t>(m, k, v, ldv, t, ldt, stream);
+  internal::larft_gemv10<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t>(
+      m, k, v, ldv, t, ldt, stream);
 }
 
 template <class T>
@@ -576,7 +587,8 @@ void larft_gemv103(const SizeType m, const SizeType k, const T* v, const SizeTyp
   constexpr unsigned kernel_tile_size_rows_t = 32;
   constexpr unsigned kernel_tile_size_cols_t = 1;
 
-  internal::larft_gemv10<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t>(m, k, v, ldv, t, ldt, stream);
+  internal::larft_gemv10<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t>(
+      m, k, v, ldv, t, ldt, stream);
 }
 
 template <class T>
@@ -586,7 +598,8 @@ void larft_gemv110(const SizeType m, const SizeType k, const T* v, const SizeTyp
   constexpr unsigned kernel_tile_size_rows_t = 32;
   constexpr unsigned kernel_tile_size_cols_t = 32;
 
-  internal::larft_gemv11<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t>(m, k, v, ldv, t, ldt, stream);
+  internal::larft_gemv11<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t>(
+      m, k, v, ldv, t, ldt, stream);
 }
 
 template <class T>
@@ -596,7 +609,8 @@ void larft_gemv200(const SizeType m, const SizeType k, const T* v, const SizeTyp
   constexpr unsigned kernel_tile_size_rows_t = 32;
   constexpr unsigned kernel_tile_size_cols_t = 32;
 
-  internal::larft_gemv20<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t>(m, k, v, ldv, t, ldt, stream);
+  internal::larft_gemv20<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t>(
+      m, k, v, ldv, t, ldt, stream);
 }
 
 template <class T>
@@ -606,7 +620,8 @@ void larft_gemv201(const SizeType m, const SizeType k, const T* v, const SizeTyp
   constexpr unsigned kernel_tile_size_rows_t = 32;
   constexpr unsigned kernel_tile_size_cols_t = 8;
 
-  internal::larft_gemv20<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t>(m, k, v, ldv, t, ldt, stream);
+  internal::larft_gemv20<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t>(
+      m, k, v, ldv, t, ldt, stream);
 }
 
 template <class T>
@@ -616,7 +631,8 @@ void larft_gemv202(const SizeType m, const SizeType k, const T* v, const SizeTyp
   constexpr unsigned kernel_tile_size_rows_t = 32;
   constexpr unsigned kernel_tile_size_cols_t = 4;
 
-  internal::larft_gemv20<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t>(m, k, v, ldv, t, ldt, stream);
+  internal::larft_gemv20<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t>(
+      m, k, v, ldv, t, ldt, stream);
 }
 
 template <class T>
@@ -626,7 +642,8 @@ void larft_gemv203(const SizeType m, const SizeType k, const T* v, const SizeTyp
   constexpr unsigned kernel_tile_size_rows_t = 32;
   constexpr unsigned kernel_tile_size_cols_t = 1;
 
-  internal::larft_gemv20<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t>(m, k, v, ldv, t, ldt, stream);
+  internal::larft_gemv20<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t>(
+      m, k, v, ldv, t, ldt, stream);
 }
 
 template <class T>
@@ -637,7 +654,8 @@ void larft_gemv210(const SizeType m, const SizeType k, const T* v, const SizeTyp
   constexpr unsigned kernel_tile_size_cols_t = 32;
   constexpr unsigned cols = 2;
 
-  internal::larft_gemv21<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t, cols>(m, k, v, ldv, t, ldt, stream);
+  internal::larft_gemv21<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t, cols>(
+      m, k, v, ldv, t, ldt, stream);
 }
 
 template <class T>
@@ -648,7 +666,8 @@ void larft_gemv211(const SizeType m, const SizeType k, const T* v, const SizeTyp
   constexpr unsigned kernel_tile_size_cols_t = 32;
   constexpr unsigned cols = 4;
 
-  internal::larft_gemv21<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t, cols>(m, k, v, ldv, t, ldt, stream);
+  internal::larft_gemv21<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t, cols>(
+      m, k, v, ldv, t, ldt, stream);
 }
 
 template <class T>
@@ -659,7 +678,8 @@ void larft_gemv212(const SizeType m, const SizeType k, const T* v, const SizeTyp
   constexpr unsigned kernel_tile_size_cols_t = 32;
   constexpr unsigned cols = 8;
 
-  internal::larft_gemv21<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t, cols>(m, k, v, ldv, t, ldt, stream);
+  internal::larft_gemv21<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t, cols>(
+      m, k, v, ldv, t, ldt, stream);
 }
 
 template <class T>
@@ -670,7 +690,8 @@ void larft_gemv213(const SizeType m, const SizeType k, const T* v, const SizeTyp
   constexpr unsigned kernel_tile_size_cols_t = 32;
   constexpr unsigned cols = 16;
 
-  internal::larft_gemv21<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t, cols>(m, k, v, ldv, t, ldt, stream);
+  internal::larft_gemv21<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t, cols>(
+      m, k, v, ldv, t, ldt, stream);
 }
 
 template <class T>
@@ -681,7 +702,8 @@ void larft_gemv220(const SizeType m, const SizeType k, const T* v, const SizeTyp
   constexpr unsigned kernel_tile_size_cols_t = 32;
   constexpr unsigned cols = 2;
 
-  internal::larft_gemv22<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t, cols>(m, k, v, ldv, t, ldt, stream);
+  internal::larft_gemv22<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t, cols>(
+      m, k, v, ldv, t, ldt, stream);
 }
 
 template <class T>
@@ -692,7 +714,8 @@ void larft_gemv221(const SizeType m, const SizeType k, const T* v, const SizeTyp
   constexpr unsigned kernel_tile_size_cols_t = 32;
   constexpr unsigned cols = 4;
 
-  internal::larft_gemv22<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t, cols>(m, k, v, ldv, t, ldt, stream);
+  internal::larft_gemv22<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t, cols>(
+      m, k, v, ldv, t, ldt, stream);
 }
 
 template <class T>
@@ -703,7 +726,8 @@ void larft_gemv222(const SizeType m, const SizeType k, const T* v, const SizeTyp
   constexpr unsigned kernel_tile_size_cols_t = 32;
   constexpr unsigned cols = 8;
 
-  internal::larft_gemv22<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t, cols>(m, k, v, ldv, t, ldt, stream);
+  internal::larft_gemv22<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t, cols>(
+      m, k, v, ldv, t, ldt, stream);
 }
 
 template <class T>
@@ -714,7 +738,8 @@ void larft_gemv223(const SizeType m, const SizeType k, const T* v, const SizeTyp
   constexpr unsigned kernel_tile_size_cols_t = 32;
   constexpr unsigned cols = 16;
 
-  internal::larft_gemv22<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t, cols>(m, k, v, ldv, t, ldt, stream);
+  internal::larft_gemv22<kernel_tile_size_rows_v, kernel_tile_size_rows_t, kernel_tile_size_cols_t, cols>(
+      m, k, v, ldv, t, ldt, stream);
 }
 
 DLAF_CUBLAS_LARFT_GEMV_ETI(, float);

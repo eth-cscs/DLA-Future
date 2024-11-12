@@ -21,11 +21,13 @@
 #include <dlaf/miniapp/work_tiles.h>
 #include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
+
 #include <dlaf_test/matrix/util_tile.h>
 
+// TODO remove
+#include <dlaf/blas/tile_extensions.h>
 #include <dlaf/matrix/print_csv.h>
 #include <dlaf/matrix/print_gpu.h>
-#include <dlaf/blas/tile_extensions.h>
 
 using namespace dlaf;
 using namespace dlaf::miniapp;
@@ -41,8 +43,9 @@ struct Options : MiniappKernelOptions<SupportReal::Yes, SupportComplex::Yes> {
   SizeType kernel_id;
 
   Options(const pika::program_options::variables_map& vm)
-      : MiniappKernelOptions(vm), m(vm["m"].as<SizeType>()), n(vm["n"].as<SizeType>()), k(vm["k"].as<SizeType>()),
-        ldv(vm["ldv"].as<SizeType>()), ldt(vm["ldt"].as<SizeType>()), kernel_id(vm["kernel_id"].as<SizeType>()) {
+      : MiniappKernelOptions(vm), m(vm["m"].as<SizeType>()), n(vm["n"].as<SizeType>()),
+        k(vm["k"].as<SizeType>()), ldv(vm["ldv"].as<SizeType>()), ldt(vm["ldt"].as<SizeType>()),
+        kernel_id(vm["kernel_id"].as<SizeType>()) {
     DLAF_ASSERT(m > 0, m);
     DLAF_ASSERT(n > 0, n);
     DLAF_ASSERT(k > 0, k);
@@ -67,12 +70,13 @@ double ops(const double m, const double k) {
 }
 
 template <class T>
-void MC_reference(const SizeType m, const SizeType k, const T* v, const SizeType ldv, const T* tau, T* t, const SizeType ldt){
+void MC_reference(const SizeType m, const SizeType k, const T* v, const SizeType ldv, const T* tau, T* t,
+                  const SizeType ldt) {
   for (int j = 1; j < k; ++j) {
     auto v_ = [v, ldv](SizeType i, SizeType j) { return v + i + j * ldv; };
     auto t_ = [t, ldt](SizeType i, SizeType j) { return t + i + j * ldt; };
-    blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, m, j, -tau[j], v_(0, 0), ldv, v_(0, j), 1, T{1},
-                           t_(0, j), 1);
+    blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, m, j, -tau[j], v_(0, 0), ldv, v_(0, j), 1,
+               T{1}, t_(0, j), 1);
   }
 }
 
@@ -89,9 +93,7 @@ struct Test {
 
     // Note: GPU implementation requires the first reflector element to be set to 1.
     getter_random<T> random_value(25698);
-    auto rnd = [&random_value](const TileElementIndex&) {
-      return random_value();
-    };
+    auto rnd = [&random_value](const TileElementIndex&) { return random_value(); };
     auto tau = createTile<T, Device::CPU>(rnd, {k, 1}, k);
     auto v = createTile<T, Device::CPU>(rnd, {m, k}, ldv);
 
@@ -115,10 +117,10 @@ struct Test {
     [[maybe_unused]] auto kernel_GPU0 = [m, k, &vs, &tau, &ts](SizeType i, cublasHandle_t handle) {
       gpulapack::larft_gemv0(handle, m, k, vs(i).ptr(), vs(i).ld(), tau.ptr(), ts(i).ptr(), ts(i).ld());
     };
-#define KERNEL_GPU(id) \
-    [[maybe_unused]] auto kernel_GPU##id = [m, k, &vs, &ts](SizeType i, cudaStream_t stream) { \
-      gpulapack::larft_gemv##id(m, k, vs(i).ptr(), vs(i).ld(), ts(i).ptr(), ts(i).ld(), stream);  \
-    }
+#define KERNEL_GPU(id)                                                                         \
+  [[maybe_unused]] auto kernel_GPU##id = [m, k, &vs, &ts](SizeType i, cudaStream_t stream) {   \
+    gpulapack::larft_gemv##id(m, k, vs(i).ptr(), vs(i).ld(), ts(i).ptr(), ts(i).ld(), stream); \
+  }
 
     KERNEL_GPU(100);
     KERNEL_GPU(101);
@@ -152,30 +154,31 @@ struct Test {
       }
 #ifdef DLAF_WITH_CUDA
 
-#define KERNEL_CASE(id) case id: elapsed_time = runner.runStream(kernel_GPU##id); break;
-         
+#define KERNEL_CASE(id)                              \
+  case id:                                           \
+    elapsed_time = runner.runStream(kernel_GPU##id); \
+    break;
+
       if constexpr (backend == Backend::GPU) {
-        switch(opts.kernel_id) {
-        case 0:
-          elapsed_time = runner.runHandle(kernel_GPU0);
-          break;
-        KERNEL_CASE(100);
-        KERNEL_CASE(101);
-        KERNEL_CASE(102);
-        KERNEL_CASE(103);
-        KERNEL_CASE(110);
-        KERNEL_CASE(200);
-        KERNEL_CASE(201);
-        KERNEL_CASE(202);
-        KERNEL_CASE(203);
-        KERNEL_CASE(210);
-        KERNEL_CASE(211);
-        KERNEL_CASE(212);
-        KERNEL_CASE(213);
-        KERNEL_CASE(220);
-        KERNEL_CASE(221);
-        KERNEL_CASE(222);
-        KERNEL_CASE(223);
+        switch (opts.kernel_id) {
+          KERNEL_CASE(0);
+          KERNEL_CASE(100);
+          KERNEL_CASE(101);
+          KERNEL_CASE(102);
+          KERNEL_CASE(103);
+          KERNEL_CASE(110);
+          KERNEL_CASE(200);
+          KERNEL_CASE(201);
+          KERNEL_CASE(202);
+          KERNEL_CASE(203);
+          KERNEL_CASE(210);
+          KERNEL_CASE(211);
+          KERNEL_CASE(212);
+          KERNEL_CASE(213);
+          KERNEL_CASE(220);
+          KERNEL_CASE(221);
+          KERNEL_CASE(222);
+          KERNEL_CASE(223);
         }
       }
 #endif
@@ -184,12 +187,11 @@ struct Test {
       std::cout << "[" << run_index << "]"
                 << " " << elapsed_time << "s"
                 << " " << gflops << "GFlop/s"
-                << " " << dlaf::internal::FormatShort{opts.type} << " "
-                << m << " " << k << " " << ldv << " " << ldt << " "
-                << opts.nparallel << " " << backend;
+                << " " << dlaf::internal::FormatShort{opts.type} << " ";
+      std::cout << m << " " << k << " " << ldv << " " << ldt << " " << opts.nparallel << " " << backend;
       if (backend == Backend::GPU)
         std::cout << " " << opts.kernel_id;
-      std::cout  << std::endl;
+      std::cout << std::endl;
 
       if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
           opts.do_check == dlaf::miniapp::CheckIterFreq::All) {

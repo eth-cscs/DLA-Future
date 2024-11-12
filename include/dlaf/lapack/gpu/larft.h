@@ -21,38 +21,37 @@
 namespace dlaf::gpulapack {
 
 template <class T>
-void larft_gemv0(cublasHandle_t handle, const SizeType n, SizeType k, const T* v, const SizeType ldv, const T* tau, T* t,
-                  const SizeType ldt);
+void larft_gemv0(cublasHandle_t handle, const SizeType n, SizeType k, const T* v, const SizeType ldv,
+                 const T* tau, T* t, const SizeType ldt);
 
-#define DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, id) \
-kword void larft_gemv##id(const SizeType n, SizeType k, const Type* v, \
-                          const SizeType ldv, Type* t, const SizeType ldt, \
-                          whip::stream_t stream)
+#define DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, id)                                              \
+  kword void larft_gemv##id(const SizeType n, SizeType k, const Type* v, const SizeType ldv, Type* t, \
+                            const SizeType ldt, whip::stream_t stream)
 
 #define DLAF_CUBLAS_LARFT_GEMV_INTERNAL_SET(kword, Type) \
-DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 100); \
-DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 101); \
-DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 102); \
-DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 103); \
-DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 110); \
-DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 200); \
-DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 201); \
-DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 202); \
-DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 203); \
-DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 210); \
-DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 211); \
-DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 212); \
-DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 213); \
-DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 220); \
-DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 221); \
-DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 222); \
-DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 223)
+  DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 100);     \
+  DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 101);     \
+  DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 102);     \
+  DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 103);     \
+  DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 110);     \
+  DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 200);     \
+  DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 201);     \
+  DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 202);     \
+  DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 203);     \
+  DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 210);     \
+  DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 211);     \
+  DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 212);     \
+  DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 213);     \
+  DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 220);     \
+  DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 221);     \
+  DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 222);     \
+  DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 223)
 
 DLAF_CUBLAS_LARFT_GEMV_INTERNAL_SET(template <class T>, T);
 
-#define DLAF_CUBLAS_LARFT_GEMV_ETI(kword, Type)                                                   \
-  kword template void larft_gemv0(cublasHandle_t handle, const SizeType n, SizeType k, const Type* v, const SizeType ldv, const Type* tau, \
-                                   Type* t, const SizeType ldt); \
+#define DLAF_CUBLAS_LARFT_GEMV_ETI(kword, Type)                                                       \
+  kword template void larft_gemv0(cublasHandle_t handle, const SizeType n, SizeType k, const Type* v, \
+                                  const SizeType ldv, const Type* tau, Type* t, const SizeType ldt);  \
   DLAF_CUBLAS_LARFT_GEMV_INTERNAL_SET(kword template, Type)
 
 DLAF_CUBLAS_LARFT_GEMV_ETI(extern, float);

@@ -25,6 +25,7 @@
 
 #include <dlaf/matrix/print_csv.h>
 #include <dlaf/matrix/print_gpu.h>
+#include <dlaf/blas/tile_extensions.h>
 
 using namespace dlaf;
 using namespace dlaf::miniapp;
@@ -59,7 +60,9 @@ struct Options : MiniappKernelOptions<SupportReal::Yes, SupportComplex::Yes> {
 
 template <class T>
 double ops(const double m, const double k) {
-  double add_mul = m * k * (k - 1) / 2;
+  if (m == 0)
+    return 0;
+  double add_mul = (m + 1) * k * (k - 1) / 2;
   return dlaf::total_ops<T>(add_mul, add_mul);
 }
 
@@ -112,10 +115,29 @@ struct Test {
     [[maybe_unused]] auto kernel_GPU0 = [m, k, &vs, &tau, &ts](SizeType i, cublasHandle_t handle) {
       gpulapack::larft_gemv0(handle, m, k, vs(i).ptr(), vs(i).ld(), tau.ptr(), ts(i).ptr(), ts(i).ld());
     };
+#define KERNEL_GPU(id) \
+    [[maybe_unused]] auto kernel_GPU##id = [m, k, &vs, &ts](SizeType i, cudaStream_t stream) { \
+      gpulapack::larft_gemv##id(m, k, vs(i).ptr(), vs(i).ld(), ts(i).ptr(), ts(i).ld(), stream);  \
+    }
 
-    [[maybe_unused]] auto kernel_GPU1 = [m, k, &vs, &ts](SizeType i, cudaStream_t stream) {
-      gpulapack::larft_gemv1(m, k, vs(i).ptr(), vs(i).ld(), ts(i).ptr(), ts(i).ld(), stream);
-    };
+    KERNEL_GPU(100);
+    KERNEL_GPU(101);
+    KERNEL_GPU(102);
+    KERNEL_GPU(103);
+    KERNEL_GPU(110);
+    KERNEL_GPU(200);
+    KERNEL_GPU(201);
+    KERNEL_GPU(202);
+    KERNEL_GPU(203);
+    KERNEL_GPU(210);
+    KERNEL_GPU(211);
+    KERNEL_GPU(212);
+    KERNEL_GPU(213);
+    KERNEL_GPU(220);
+    KERNEL_GPU(221);
+    KERNEL_GPU(222);
+    KERNEL_GPU(223);
+
 #endif
     const double flop = ops<T>(n, k);
 
@@ -129,14 +151,31 @@ struct Test {
         elapsed_time = runner.run(kernel_MC);
       }
 #ifdef DLAF_WITH_CUDA
+
+#define KERNEL_CASE(id) case id: elapsed_time = runner.runStream(kernel_GPU##id); break;
+         
       if constexpr (backend == Backend::GPU) {
         switch(opts.kernel_id) {
         case 0:
           elapsed_time = runner.runHandle(kernel_GPU0);
           break;
-        case 1:
-          elapsed_time = runner.runStream(kernel_GPU1);
-          break;
+        KERNEL_CASE(100);
+        KERNEL_CASE(101);
+        KERNEL_CASE(102);
+        KERNEL_CASE(103);
+        KERNEL_CASE(110);
+        KERNEL_CASE(200);
+        KERNEL_CASE(201);
+        KERNEL_CASE(202);
+        KERNEL_CASE(203);
+        KERNEL_CASE(210);
+        KERNEL_CASE(211);
+        KERNEL_CASE(212);
+        KERNEL_CASE(213);
+        KERNEL_CASE(220);
+        KERNEL_CASE(221);
+        KERNEL_CASE(222);
+        KERNEL_CASE(223);
         }
       }
 #endif
@@ -146,20 +185,30 @@ struct Test {
                 << " " << elapsed_time << "s"
                 << " " << gflops << "GFlop/s"
                 << " " << dlaf::internal::FormatShort{opts.type} << " "
-                << n << " " << k << " " << ldv << " " << ldt << " "
+                << m << " " << k << " " << ldv << " " << ldt << " "
                 << opts.nparallel << " " << backend;
       if (backend == Backend::GPU)
         std::cout << " " << opts.kernel_id;
       std::cout  << std::endl;
 
-      //print(format::csv{}, ts(0));
-
       if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
           opts.do_check == dlaf::miniapp::CheckIterFreq::All) {
         auto t = createTile<T, Device::CPU>(el_t, {k, k}, k);
         MC_reference(m, k, v.ptr(), v.ld(), tau.ptr(), t.ptr(), t.ld());
-        //print(format::csv{}, t);
 
+        /*
+        print(format::csv{}, ts(0));
+        auto tt = createTile<T, Device::CPU>(el_t, {k, k}, k);
+        if constexpr (backend == Backend::GPU) {
+          whip::stream_t stream = NULL;
+          matrix::internal::copy_o(ts(0), tt, stream);
+        }
+        else
+          matrix::internal::copy_o(ts(0), tt);
+
+        tile::internal::add_o(T{-1}, t, tt);
+        print(format::csv{}, tt);
+        */
         auto error = ts.check(t);
         if (error > k)
           std::cout << "CHECK FAILED!!!: ";

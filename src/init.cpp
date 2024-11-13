@@ -72,13 +72,17 @@ struct Init<Backend::MC> {
         cfg.umpire_host_memory_pool_alignment_bytes, cfg.umpire_host_memory_pool_coalescing_free_ratio,
         cfg.umpire_host_memory_pool_coalescing_reallocation_ratio);
     // install mpi polling loop
-    if (pika::mpi::detail::environment::is_mpi_initialized()) {
+    int mpi_initialized;
+    DLAF_MPI_CHECK_ERROR(MPI_Initialized(&mpi_initialized));
+    if (mpi_initialized) {
       pika::mpi::experimental::start_polling(pika::mpi::experimental::exception_mode::no_handler);
     }
   }
 
   static void finalize() {
-    if (pika::mpi::detail::environment::is_mpi_initialized()) {
+    int mpi_initialized;
+    DLAF_MPI_CHECK_ERROR(MPI_Initialized(&mpi_initialized));
+    if (mpi_initialized) {
       pika::mpi::experimental::stop_polling();
     }
     memory::internal::finalizeUmpireHostAllocator();

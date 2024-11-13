@@ -12,7 +12,6 @@
 /// @file
 
 #include <pika/execution.hpp>
-#include <pika/mpi.hpp>
 #include <pika/runtime.hpp>
 #include <pika/thread.hpp>
 
@@ -47,10 +46,5 @@ auto getBackendScheduler(
     return ex::with_priority(cu::cuda_scheduler{internal::getGpuPool()}, priority);
   }
 #endif
-}
-
-inline auto getMPIScheduler() {
-  return pika::execution::experimental::thread_pool_scheduler{
-      &pika::resource::get_thread_pool(pika::mpi::experimental::get_pool_name())};
 }
 }  // namespace dlaf::internal

@@ -31,16 +31,17 @@ inline void consumeCommunicatorWrapper(CommunicatorPipelineExclusiveWrapper& com
   [[maybe_unused]] auto comm_wrapper_local = std::move(comm_wrapper);
 }
 
-/// \overload consumeCommunicatorWrapper
+/// \overload consumeCommunicatorWrapper (for non communicator types)
 template <typename T>
 void consumeCommunicatorWrapper(T&) {}
 
 /// Helper type for wrapping MPI calls.
 ///
-/// Wrapper type around calls to MPI functions. Provides a call operator that
-/// creates an MPI request and passes it as the last argument to the provided
-/// callable. The wrapper then waits for the request to complete with
-/// yield_while.
+/// The wrapper explicitly releases any dla communicator objects when the pika::transform_mpi
+/// function returns (e.g. a message has been sent/posted) to prevent blocking access to many
+/// queued mpi operations.
+/// The mpi operations can complete asynchronously later, but the commmunicator is
+/// released/made available once the mpi task has been safely initiated
 ///
 template <typename F>
 struct MPICallHelper {
@@ -68,12 +69,12 @@ MPICallHelper(F&&) -> MPICallHelper<std::decay_t<F>>;
 template <typename F, typename Sender,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 [[nodiscard]] decltype(auto) transformMPI(F&& f, Sender&& sender) {
-  namespace ex = pika::execution::experimental;
-  namespace mpi = pika::mpi::experimental;
-  namespace dci = dlaf::common::internal;
-  return std::forward<Sender>(sender)                                                  //
-         | mpi::transform_mpi(dci::ConsumeRvalues{MPICallHelper{std::forward<F>(f)}})  //
-         | ex::drop_operation_state();
+  using pika::execution::experimental::drop_operation_state;
+  using pika::mpi::experimental::transform_mpi;
+  using dlaf::common::internal::ConsumeRvalues;
+  return std::forward<Sender>(sender)                                        //
+         | transform_mpi(ConsumeRvalues{MPICallHelper{std::forward<F>(f)}})  //
+         | drop_operation_state();
 }
 
 template <typename F>

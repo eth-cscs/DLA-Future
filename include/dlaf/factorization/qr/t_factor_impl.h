@@ -330,7 +330,7 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
               // - being on the same stream, they are already serialised on GPU
               for (std::size_t index = 0; index < hh_tiles.size(); ++index) {
                 const matrix::Tile<const T, Device::GPU>& tile_v = hh_tiles[index].get();
-                gpulapack::larft_gemv100(tile_v.size().rows(), k, tile_v.ptr(), tile_v.ld(),
+                gpulapack::larft_gemv110(tile_v.size().rows(), k, tile_v.ptr(), tile_v.ld(),
                                          tile_t.ptr(), tile_t.ld(), stream);
               }
 

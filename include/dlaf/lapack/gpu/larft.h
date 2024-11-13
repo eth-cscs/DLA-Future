@@ -34,6 +34,10 @@ void larft_gemv0(cublasHandle_t handle, const SizeType n, SizeType k, const T* v
   DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 102);     \
   DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 103);     \
   DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 110);     \
+  DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 111);     \
+  DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 120);     \
+  DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 121);     \
+  DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 122);     \
   DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 200);     \
   DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 201);     \
   DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 202);     \
@@ -42,10 +46,13 @@ void larft_gemv0(cublasHandle_t handle, const SizeType n, SizeType k, const T* v
   DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 211);     \
   DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 212);     \
   DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 213);     \
+  DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 214);     \
   DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 220);     \
   DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 221);     \
   DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 222);     \
-  DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 223)
+  DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 223);     \
+  DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 224);     \
+  DLAF_CUBLAS_LARFT_GEMV_INTERNAL(kword, Type, 225)
 
 DLAF_CUBLAS_LARFT_GEMV_INTERNAL_SET(template <class T>, T);
 

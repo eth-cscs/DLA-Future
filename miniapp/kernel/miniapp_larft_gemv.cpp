@@ -127,6 +127,10 @@ struct Test {
     KERNEL_GPU(102);
     KERNEL_GPU(103);
     KERNEL_GPU(110);
+    KERNEL_GPU(111);
+    KERNEL_GPU(120);
+    KERNEL_GPU(121);
+    KERNEL_GPU(122);
     KERNEL_GPU(200);
     KERNEL_GPU(201);
     KERNEL_GPU(202);
@@ -135,10 +139,13 @@ struct Test {
     KERNEL_GPU(211);
     KERNEL_GPU(212);
     KERNEL_GPU(213);
+    KERNEL_GPU(214);
     KERNEL_GPU(220);
     KERNEL_GPU(221);
     KERNEL_GPU(222);
     KERNEL_GPU(223);
+    KERNEL_GPU(224);
+    KERNEL_GPU(225);
 
 #endif
     const double flop = ops<T>(n, k);
@@ -161,12 +168,15 @@ struct Test {
 
       if constexpr (backend == Backend::GPU) {
         switch (opts.kernel_id) {
-          KERNEL_CASE(0);
           KERNEL_CASE(100);
           KERNEL_CASE(101);
           KERNEL_CASE(102);
           KERNEL_CASE(103);
           KERNEL_CASE(110);
+          KERNEL_CASE(111);
+          KERNEL_CASE(120);
+          KERNEL_CASE(121);
+          KERNEL_CASE(122);
           KERNEL_CASE(200);
           KERNEL_CASE(201);
           KERNEL_CASE(202);
@@ -175,10 +185,16 @@ struct Test {
           KERNEL_CASE(211);
           KERNEL_CASE(212);
           KERNEL_CASE(213);
+          KERNEL_CASE(214);
           KERNEL_CASE(220);
           KERNEL_CASE(221);
           KERNEL_CASE(222);
           KERNEL_CASE(223);
+          KERNEL_CASE(224);
+          KERNEL_CASE(225);
+          case 0:
+            elapsed_time = runner.runHandle(kernel_GPU0);
+            break;
         }
       }
 #endif

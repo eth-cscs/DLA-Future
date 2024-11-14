@@ -348,7 +348,8 @@ template <Backend backend, Device device, class T>
 void QR_Tfactor<backend, device, T>::call(
     matrix::Panel<Coord::Col, T, device>& hh_panel, matrix::ReadOnlyTileSender<T, Device::CPU> taus,
     matrix::ReadWriteTileSender<T, device> tile_t,
-    comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_task_chain) {
+    comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_task_chain,
+    std::vector<matrix::ReadWriteTileSender<T, device>> workspaces) {
   namespace ex = pika::execution::experimental;
 
   using Helpers = tfactor_l::Helpers<backend, device, T>;
@@ -377,12 +378,9 @@ void QR_Tfactor<backend, device, T>::call(
   // 1st step: compute the column partial result `t`
   // First we compute the matrix vector multiplication for each column
   // -tau(j) . V(j:, 0:j)* . V(j:, j)
-  for (const auto& i_lc : hh_panel.iteratorLocal()) {
-    // Note:
-    // Since we are writing always on the same t, the gemv are serialized
-    // A possible solution to this would be to have multiple places where to store partial
-    // results, and then locally reduce them just before the reduce over ranks
-    tile_t = Helpers::stepGEMV(hh_panel.read(i_lc), taus, std::move(tile_t));
+  if constexpr (backend == Backend::MC) {
+    tile_t = Helpers::stepGEMVAll(matrix::selectRead(hh_panel, hh_panel.iteratorLocal()), taus,
+                                  std::move(tile_t), std::move(workspaces));
   }
 
   // at this point each rank has its partial result for each column

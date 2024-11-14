@@ -156,10 +156,13 @@ struct triangularSolverMiniapp {
 
     const T alpha = 2.0;
 
-    double m = size_b.rows();
-    double n = size_b.cols();
-    auto add_mul = n * m * (side == Side::Left ? m : n) / 2;
-    const double total_ops = dlaf::total_ops<T>(add_mul, add_mul);
+    double total_ops;
+    {
+      double m = size_b.rows();
+      double n = opts.eval_idx_end;
+      auto add_mul = n * m * (side == Side::Left ? m : n) / 2;
+      total_ops = dlaf::total_ops<T>(add_mul, add_mul);
+    }
 
     for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
       if (0 == world.rank() && run_index >= 0)

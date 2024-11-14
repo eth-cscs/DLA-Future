@@ -103,8 +103,7 @@ def createAndSubmitRun(run_dir, nodes_arr, dtype, **kwargs):
     fullbt_kwargs = full_kwargs.copy()
     if args.percent_evals is not None:
         fullbt_kwargs["extra_flags"] = (
-            fullbt_kwargs.get("extra_flags", "")
-            + f" --percent-evals={args.percent_evals}"
+            fullbt_kwargs.get("extra_flags", "") + f" --percent-evals={args.percent_evals}"
         )
 
     run = mp.StrongScaling(system, "DLAF_test_strong", "job_dlaf", nodes_arr, time)
@@ -152,9 +151,7 @@ def createAndSubmitRun(run_dir, nodes_arr, dtype, **kwargs):
     )
 
     fullsolver_args = fullbt_kwargs.copy()
-    fullsolver_args["extra_flags"] = (
-        fullsolver_args.get("extra_flags", "") + " --check=last"
-    )
+    fullsolver_args["extra_flags"] = fullsolver_args.get("extra_flags", "") + " --check=last"
 
     run.add(
         mp.evp,
@@ -169,15 +166,12 @@ def createAndSubmitRun(run_dir, nodes_arr, dtype, **kwargs):
 
     run.submit(run_dir, debug=debug)
 
-    run = mp.StrongScaling(
-        system, "DLAF_test_strong", "job_dlaf-norandom", nodes_arr, time
-    )
+    run = mp.StrongScaling(system, "DLAF_test_strong", "job_dlaf-norandom", nodes_arr, time)
     for m_sz in m_szs:
         trid_kwargs = full_kwargs.copy()
         trid_kwargs["suffix"] = "fromfile"
         trid_kwargs["extra_flags"] = (
-            trid_kwargs.get("extra_flags", "")
-            + f" --input-file={matrixrefpath}/trid-ref-{m_sz}.h5"
+            trid_kwargs.get("extra_flags", "") + f" --input-file={matrixrefpath}/trid-ref-{m_sz}.h5"
         )
 
         run.add(
@@ -193,9 +187,5 @@ createAndSubmitRun(run_dir, nodes_arr, "d", extra_flags=extra_flags)
 createAndSubmitRun(run_dir, nodes_arr, "z", extra_flags=extra_flags)
 
 # additional benchmark collecting "local" implementation results in <run_dir>-local directory
-createAndSubmitRun(
-    run_dir + "-local", [1 / rpn], "d", extra_flags=extra_flags + " --local"
-)
-createAndSubmitRun(
-    run_dir + "-local", [1 / rpn], "z", extra_flags=extra_flags + " --local"
-)
+createAndSubmitRun(run_dir + "-local", [1 / rpn], "d", extra_flags=extra_flags + " --local")
+createAndSubmitRun(run_dir + "-local", [1 / rpn], "z", extra_flags=extra_flags + " --local")

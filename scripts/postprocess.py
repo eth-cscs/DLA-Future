@@ -450,9 +450,7 @@ def parse_jobs_cmdargs(description):
 
     df = parse_jobs(paths, args.distinguish_dir)
     if df.empty:
-        print(
-            "Parsed zero results, is the path correct? (paths are " + str(paths) + ")"
-        )
+        print("Parsed zero results, is the path correct? (paths are " + str(paths) + ")")
         exit(1)
 
     return df
@@ -463,15 +461,11 @@ def calc_chol_metrics(df):
 
 
 def calc_trsm_metrics(df):
-    return _calc_metrics(
-        ["matrix_rows", "matrix_cols", "block_rows", "nodes", "bench_name"], df
-    )
+    return _calc_metrics(["matrix_rows", "matrix_cols", "block_rows", "nodes", "bench_name"], df)
 
 
 def calc_trmm_metrics(df):
-    return _calc_metrics(
-        ["matrix_rows", "matrix_cols", "block_rows", "nodes", "bench_name"], df
-    )
+    return _calc_metrics(["matrix_rows", "matrix_cols", "block_rows", "nodes", "bench_name"], df)
 
 
 def calc_gen2std_metrics(df):
@@ -479,15 +473,11 @@ def calc_gen2std_metrics(df):
 
 
 def calc_red2band_metrics(df):
-    return _calc_metrics(
-        ["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df
-    )
+    return _calc_metrics(["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df)
 
 
 def calc_band2trid_metrics(df):
-    return _calc_metrics(
-        ["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df
-    )
+    return _calc_metrics(["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df)
 
 
 def calc_trid_evp_metrics(df):
@@ -495,27 +485,19 @@ def calc_trid_evp_metrics(df):
 
 
 def calc_bt_band2trid_metrics(df):
-    return _calc_metrics(
-        ["matrix_rows", "matrix_cols", "block_rows", "band", "nodes", "bench_name"], df
-    )
+    return _calc_metrics(["matrix_rows", "matrix_cols", "block_rows", "band", "nodes", "bench_name"], df)
 
 
 def calc_bt_red2band_metrics(df):
-    return _calc_metrics(
-        ["matrix_rows", "matrix_cols", "block_rows", "band", "nodes", "bench_name"], df
-    )
+    return _calc_metrics(["matrix_rows", "matrix_cols", "block_rows", "band", "nodes", "bench_name"], df)
 
 
 def calc_evp_metrics(df):
-    return _calc_metrics(
-        ["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df
-    )
+    return _calc_metrics(["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df)
 
 
 def calc_gevp_metrics(df):
-    return _calc_metrics(
-        ["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df
-    )
+    return _calc_metrics(["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df)
 
 
 # Customization that add a simple legend

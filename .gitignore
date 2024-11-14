@@ -50,6 +50,7 @@
 
 CMakeLists.txt.user
 CMakeCache.txt
+!/CMakeCache.txt
 CMakeFiles
 CMakeScripts
 Testing
@@ -89,5 +90,9 @@ ENV/
 env.bak/
 venv.bak/
 
+# ------------------- misc
+
 # Spack
 /spack-*
+
+*.png

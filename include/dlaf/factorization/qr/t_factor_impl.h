@@ -64,40 +64,38 @@ struct Helpers<Backend::MC, Device::CPU, T> {
                          });
   }
 
+  static matrix::Tile<T, Device::CPU> gemvLoop(const matrix::Tile<const T, Device::CPU>& tile_v,
+                                               const matrix::Tile<const T, Device::CPU>& taus,
+                                               matrix::Tile<T, Device::CPU> tile_t) noexcept {
+    const SizeType k = tile_t.size().cols();
+
+    DLAF_ASSERT(tile_v.size().cols() == k, tile_v.size().cols(), k);
+    DLAF_ASSERT(taus.size().rows() == k, taus.size().rows(), k);
+
+    common::internal::SingleThreadedBlasScope single;
+    for (SizeType j = 0; j < k; ++j) {
+      // T(0:j, j) = -tau . V(j:, 0:j)* . V(j:, j)
+      // [j x 1] = [(n-j) x j]* . [(n-j) x 1]
+      const TileElementIndex t_start{0, j};
+      const TileElementIndex va_start{0, 0};
+      const TileElementIndex vb_start{0, j};
+      const TileElementSize va_size{tile_v.size().rows(), j};
+      const T tau = tile_t({j, j});
+
+      blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, va_size.rows(), va_size.cols(), -tau,
+                 tile_v.ptr(va_start), tile_v.ld(), tile_v.ptr(vb_start), 1, 1, tile_t.ptr(t_start), 1);
+    }
+    return tile_t;
+  }
+
   static auto stepGEMV(matrix::ReadOnlyTileSender<T, Device::CPU> tile_vi,
                        matrix::ReadOnlyTileSender<T, Device::CPU> taus,
                        matrix::ReadWriteTileSender<T, Device::CPU> tile_t) {
-    auto gemv_func = [](const matrix::Tile<const T, Device::CPU>& tile_v,
-                        const matrix::Tile<const T, Device::CPU>& taus,
-                        matrix::Tile<T, Device::CPU> tile_t) noexcept {
-      const SizeType k = tile_t.size().cols();
-
-      DLAF_ASSERT(tile_v.size().cols() == k, tile_v.size().cols(), k);
-      DLAF_ASSERT(taus.size().rows() == k, taus.size().rows(), k);
-
-      common::internal::SingleThreadedBlasScope single;
-      for (SizeType j = 0; j < k; ++j) {
-        // T(0:j, j) = -tau . V(j:, 0:j)* . V(j:, j)
-        // [j x 1] = [(n-j) x j]* . [(n-j) x 1]
-        const TileElementIndex t_start{0, j};
-        const TileElementIndex va_start{0, 0};
-        const TileElementIndex vb_start{0, j};
-        const TileElementSize va_size{tile_v.size().rows(), j};
-        const T tau = tile_t({j, j});
-
-        blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, va_size.rows(), va_size.cols(), -tau,
-                   tile_v.ptr(va_start), tile_v.ld(), tile_v.ptr(vb_start), 1, 1, tile_t.ptr(t_start),
-                   1);
-      }
-      return tile_t;
-    };
-
     namespace ex = pika::execution::experimental;
     namespace di = dlaf::internal;
 
     return ex::when_all(tile_vi, std::move(taus), std::move(tile_t)) |
-           di::transform(di::Policy<Backend::MC>(pika::execution::thread_priority::high),
-                         std::move(gemv_func));
+           di::transform(di::Policy<Backend::MC>(pika::execution::thread_priority::high), gemvLoop);
   }
 
   static void trmvLoop(const matrix::Tile<T, Device::CPU>& tile_t) {

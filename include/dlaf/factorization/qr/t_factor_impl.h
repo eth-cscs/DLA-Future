@@ -14,8 +14,10 @@
 
 #include <blas.hh>
 
+#include <pika/barrier.hpp>
 #include <pika/execution.hpp>
 
+#include <dlaf/blas/tile_extensions.h>
 #include <dlaf/common/assert.h>
 #include <dlaf/common/data.h>
 #include <dlaf/common/index2d.h>
@@ -23,6 +25,7 @@
 #include <dlaf/common/single_threaded_blas.h>
 #include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/communication/kernels/all_reduce.h>
+#include <dlaf/eigensolver/internal/get_red2band_panel_nworkers.h>
 #include <dlaf/factorization/qr/api.h>
 #include <dlaf/lapack/gpu/larft.h>
 #include <dlaf/lapack/tile.h>
@@ -30,6 +33,7 @@
 #include <dlaf/matrix/tile.h>
 #include <dlaf/matrix/views.h>
 #include <dlaf/types.h>
+#include <dlaf/util_math.h>
 #include <dlaf/util_matrix.h>
 
 #ifdef DLAF_WITH_GPU
@@ -55,11 +59,6 @@ struct Helpers<Backend::MC, Device::CPU, T> {
                          [](const matrix::Tile<const T, Device::CPU>& taus,
                             matrix::Tile<T, Device::CPU>&& tile_t) {
                            tile::internal::set0<T>(tile_t);
-
-                           const SizeType k = tile_t.size().cols();
-                           lapack::lacpy(blas::Uplo::General, 1, k, taus.ptr(), 1, tile_t.ptr(),
-                                         tile_t.ld() + 1);
-
                            return std::move(tile_t);
                          });
   }
@@ -96,6 +95,64 @@ struct Helpers<Backend::MC, Device::CPU, T> {
 
     return ex::when_all(tile_vi, std::move(taus), std::move(tile_t)) |
            di::transform(di::Policy<Backend::MC>(pika::execution::thread_priority::high), gemvLoop);
+  }
+
+  static matrix::ReadWriteTileSender<T, Device::CPU> stepGEMVAll(
+      std::vector<matrix::ReadOnlyTileSender<T, Device::CPU>> hh_tiles,
+      matrix::ReadOnlyTileSender<T, Device::CPU> taus,
+      matrix::ReadWriteTileSender<T, Device::CPU> tile_t,
+      std::vector<matrix::ReadWriteTileSender<T, Device::CPU>> workspaces) {
+    namespace ex = pika::execution::experimental;
+    namespace di = dlaf::internal;
+
+    using pika::execution::thread_priority;
+
+    const auto hp_scheduler = di::getBackendScheduler<Backend::MC>(thread_priority::high);
+    return ex::when_all(ex::when_all_vector(std::move(hh_tiles)), std::move(taus), std::move(tile_t),
+                        ex::when_all_vector(std::move(workspaces))) |
+           di::continues_on(hp_scheduler) |
+           ex::let_value([hp_scheduler](auto&& hh_tiles, auto&& taus, auto&& tile_t, auto&& workspaces) {
+             const std::size_t nworkers = eigensolver::internal::getReductionToBandPanelNWorkers();
+             const std::chrono::duration<double> barrier_busy_wait = std::chrono::microseconds(1000);
+
+             DLAF_ASSERT(nworkers == workspaces.size(), nworkers, workspaces.size());
+
+             return ex::just(std::make_unique<pika::barrier<>>(nworkers)) |
+                    di::continues_on(hp_scheduler) |
+                    ex::bulk(nworkers,
+                             [=, &hh_tiles, &taus, &tile_t, &workspaces](const std::size_t worker_id,
+                                                                         auto& barrier_ptr) mutable {
+                               const SizeType k = tile_t.size().cols();
+
+                               const std::size_t batch_size = util::ceilDiv(hh_tiles.size(), nworkers);
+                               const std::size_t begin = worker_id * batch_size;
+                               const std::size_t end =
+                                   std::min(worker_id * batch_size + batch_size, hh_tiles.size());
+
+                               auto&& ws_worker = workspaces[worker_id];
+                               tile::internal::set0<T>(ws_worker);
+                               lapack::lacpy(blas::Uplo::General, 1, k, taus.get().ptr(), 1,
+                                             ws_worker.ptr(), ws_worker.ld() + 1);
+
+                               // make it work on worker_id section of tiles
+                               for (std::size_t index = begin; index < end; ++index) {
+                                 auto&& tile_snd = hh_tiles[index];
+                                 ws_worker = gemvLoop(tile_snd.get(), taus.get(), std::move(ws_worker));
+                               }
+                               barrier_ptr->arrive_and_wait(barrier_busy_wait);
+
+                               // reduce ws_T in tile_t
+                               if (worker_id == 0) {
+                                 tile::internal::set0<T>(tile_t);
+                                 for (std::size_t other_worker = 0; other_worker < nworkers;
+                                      ++other_worker) {
+                                   tile::internal::add(T(1), workspaces[other_worker], tile_t);
+                                 }
+                               }
+                             }) |
+                    // Note: drop the barrier sent by the bulk and return tile_t
+                    ex::then([&tile_t](auto&&) mutable { return std::move(tile_t); });
+           });
   }
 
   static void trmvLoop(const matrix::Tile<T, Device::CPU>& tile_t) {
@@ -243,9 +300,10 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 }
 
 template <Backend backend, Device device, class T>
-void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& hh_panel,
-                                          matrix::ReadOnlyTileSender<T, Device::CPU> taus,
-                                          matrix::ReadWriteTileSender<T, device> tile_t) {
+void QR_Tfactor<backend, device, T>::call(
+    matrix::Panel<Coord::Col, T, device>& hh_panel, matrix::ReadOnlyTileSender<T, Device::CPU> taus,
+    matrix::ReadWriteTileSender<T, device> tile_t,
+    std::vector<matrix::ReadWriteTileSender<T, device>> workspaces) {
   namespace ex = pika::execution::experimental;
 
   using Helpers = tfactor_l::Helpers<backend, device, T>;
@@ -274,12 +332,10 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
   // 1st step: compute the column partial result `t`
   // First we compute the matrix vector multiplication for each column
   // -tau(j) . V(j:, 0:j)* . V(j:, j)
-  for (const auto& i_lc : hh_panel.iteratorLocal()) {
-    // Note:
-    // Since we are writing always on the same t, the gemv are serialized
-    // A possible solution to this would be to have multiple places where to store partial
-    // results, and then locally reduce them just before the reduce over ranks
-    tile_t = Helpers::stepGEMV(hh_panel.read(i_lc), taus, std::move(tile_t));
+
+  if constexpr (backend == Backend::MC) {
+    tile_t = Helpers::stepGEMVAll(matrix::selectRead(hh_panel, hh_panel.iteratorLocal()), taus,
+                                  std::move(tile_t), std::move(workspaces));
   }
 
   // 2nd step: compute the T factor, by performing the last step on each column

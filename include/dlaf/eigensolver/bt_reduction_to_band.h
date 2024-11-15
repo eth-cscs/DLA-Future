@@ -42,8 +42,8 @@ namespace dlaf::eigensolver::internal {
 /// @param mat_taus is the tau vector as returned by reductionToBand. The j-th element is the scaling
 /// factor for the j-th HH tranformation.
 template <Backend backend, Device device, class T>
-void bt_reduction_to_band(const SizeType b, matrix::internal::MatrixRef<T, device>& mat_c,
-                          Matrix<const T, device>& mat_v, Matrix<const T, Device::CPU>& mat_taus) {
+void bt_reduction_to_band(const SizeType b, MatrixRef<T, device>& mat_c, Matrix<const T, device>& mat_v,
+                          Matrix<const T, Device::CPU>& mat_taus) {
   DLAF_ASSERT(matrix::local_matrix(mat_c), mat_c);
   DLAF_ASSERT(matrix::local_matrix(mat_v), mat_v);
   DLAF_ASSERT(square_size(mat_v), mat_v);
@@ -83,9 +83,8 @@ void bt_reduction_to_band(const SizeType b, matrix::internal::MatrixRef<T, devic
 /// @param mat_taus is the tau vector as returned by reductionToBand. The j-th element is the scaling
 /// factor for the j-th HH tranformation.
 template <Backend backend, Device device, class T>
-void bt_reduction_to_band(comm::CommunicatorGrid& grid, const SizeType b,
-                          matrix::internal::MatrixRef<T, device>& mat_c, Matrix<const T, device>& mat_v,
-                          Matrix<const T, Device::CPU>& mat_taus) {
+void bt_reduction_to_band(comm::CommunicatorGrid& grid, const SizeType b, MatrixRef<T, device>& mat_c,
+                          Matrix<const T, device>& mat_v, Matrix<const T, Device::CPU>& mat_taus) {
   DLAF_ASSERT(matrix::equal_process_grid(mat_c, grid), mat_c, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_v, grid), mat_v, grid);
   DLAF_ASSERT(square_size(mat_v), mat_v);

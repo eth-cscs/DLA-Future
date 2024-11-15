@@ -44,8 +44,8 @@ void GenEigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<
   auto spec = matrix::util::internal::sub_matrix_spec_slice_cols(eigenvectors, eigenvalues_index_begin,
                                                                  eigenvalues_index_end);
   matrix::internal::MatrixRef eigenvectors_ref(eigenvectors, spec);
-  triangular_solver<B>(blas::Side::Left, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1), mat_b,
-                       eigenvectors_ref);
+  solver::internal::triangular_solver<B>(blas::Side::Left, uplo, blas::Op::ConjTrans,
+                                         blas::Diag::NonUnit, T(1), mat_b, eigenvectors_ref);
 }
 
 template <Backend B, Device D, class T>
@@ -90,8 +90,8 @@ void GenEigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo
   auto spec = matrix::util::internal::sub_matrix_spec_slice_cols(eigenvectors, eigenvalues_index_begin,
                                                                  eigenvalues_index_end);
   matrix::internal::MatrixRef eigenvectors_ref(eigenvectors, spec);
-  triangular_solver<B>(grid, blas::Side::Left, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1),
-                       mat_b, eigenvectors_ref);
+  solver::internal::triangular_solver<B>(grid, blas::Side::Left, uplo, blas::Op::ConjTrans,
+                                         blas::Diag::NonUnit, T(1), mat_b, eigenvectors_ref);
 
 #ifdef DLAF_WITH_HDF5
   if (getTuneParameters().debug_dump_generalized_eigensolver_data) {

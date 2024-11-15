@@ -18,6 +18,8 @@
 #include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 
+#include "dlaf/matrix/matrix_base.h"
+
 namespace dlaf::eigensolver::internal {
 
 /// Eigenvalue back-transformation implementation on local memory, which applies the inverse of the
@@ -57,7 +59,7 @@ namespace dlaf::eigensolver::internal {
 /// @param band_size size of the reflectors (normal one, not constrained by any matrix size limit)
 /// @pre @p band_size is a divisor of `mat_hh.blockSize().cols()`
 template <Backend B, Device D, class T>
-void bt_band_to_tridiagonal(const SizeType band_size, matrix::internal::MatrixRef<T, D>& mat_e,
+void bt_band_to_tridiagonal(const SizeType band_size, MatrixRef<T, D>& mat_e,
                             matrix::Matrix<const T, Device::CPU>& mat_hh) {
   DLAF_ASSERT(matrix::local_matrix(mat_e), mat_e);
   DLAF_ASSERT(matrix::local_matrix(mat_hh), mat_hh);
@@ -115,8 +117,7 @@ void bt_band_to_tridiagonal(const SizeType band_size, matrix::internal::MatrixRe
 /// @pre @p band_size is a divisor of `mat_hh.blockSize().cols()`
 template <Backend B, Device D, class T>
 void bt_band_to_tridiagonal(comm::CommunicatorGrid& grid, const SizeType band_size,
-                            matrix::internal::MatrixRef<T, D>& mat_e,
-                            Matrix<const T, Device::CPU>& mat_hh) {
+                            MatrixRef<T, D>& mat_e, Matrix<const T, Device::CPU>& mat_hh) {
   DLAF_ASSERT(matrix::equal_process_grid(mat_e, grid), mat_e, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_hh, grid), mat_hh, grid);
 

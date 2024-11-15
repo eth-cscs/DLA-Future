@@ -95,9 +95,8 @@ void testTriangularSolver(blas::Side side, blas::Uplo uplo, blas::Op op, blas::D
   {
     MatrixMirror<T, D, Device::CPU> mat_a(mat_ah);
     MatrixMirror<T, D, Device::CPU> mat_b(mat_bh);
-    dlaf::matrix::internal::MatrixRef<T, D> mat_b_ref(mat_b.get());
 
-    triangular_solver<B>(side, uplo, op, diag, alpha, mat_a.get(), mat_b_ref);
+    triangular_solver<B>(side, uplo, op, diag, alpha, mat_a.get(), mat_b.get());
   }
 
   CHECK_MATRIX_NEAR(res_b, mat_bh, 40 * (mat_bh.size().rows() + 1) * TypeUtilities<T>::error,
@@ -134,9 +133,8 @@ void testTriangularSolver(comm::CommunicatorGrid& grid, blas::Side side, blas::U
   {
     MatrixMirror<T, D, Device::CPU> mat_a(mat_ah);
     MatrixMirror<T, D, Device::CPU> mat_b(mat_bh);
-    dlaf::matrix::internal::MatrixRef<T, D> mat_b_ref(mat_b.get());
 
-    triangular_solver<B, D, T>(grid, side, uplo, op, diag, alpha, mat_a.get(), mat_b_ref);
+    triangular_solver<B, D, T>(grid, side, uplo, op, diag, alpha, mat_a.get(), mat_b.get());
   }
 
   CHECK_MATRIX_NEAR(res_b, mat_bh, 20 * (mat_bh.size().rows() + 1) * TypeUtilities<T>::error,

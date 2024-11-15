@@ -38,8 +38,6 @@
 
 namespace dlaf::solver::internal {
 
-using dlaf::matrix::internal::MatrixRef;
-
 namespace triangular_lln {
 template <Backend backend, class T, typename InSender, typename OutSender>
 void trsmBPanelTile(pika::execution::thread_priority priority, blas::Diag diag, T alpha,

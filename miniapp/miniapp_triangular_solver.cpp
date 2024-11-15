@@ -180,12 +180,11 @@ struct triangularSolverMiniapp {
 
       dlaf::common::Timer<> timeit;
       if (opts.local)
-        dlaf::triangular_solver<backend, dlaf::DefaultDevice_v<backend>, T>(side, uplo, op, diag, alpha,
-                                                                            a.get(), mat_b_ref);
+        dlaf::solver::internal::triangular_solver<backend, dlaf::DefaultDevice_v<backend>, T>(
+            side, uplo, op, diag, alpha, a.get(), mat_b_ref);
       else
-        dlaf::triangular_solver<backend, dlaf::DefaultDevice_v<backend>, T>(comm_grid, side, uplo, op,
-                                                                            diag, alpha, a.get(),
-                                                                            mat_b_ref);
+        dlaf::solver::internal::triangular_solver<backend, dlaf::DefaultDevice_v<backend>, T>(
+            comm_grid, side, uplo, op, diag, alpha, a.get(), mat_b_ref);
 
       sync_barrier();
 

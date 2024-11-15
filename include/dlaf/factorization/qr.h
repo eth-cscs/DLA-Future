@@ -46,8 +46,7 @@ void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
                     matrix::ReadOnlyTileSender<T, Device::CPU> taus,
                     matrix::ReadWriteTileSender<T, device> t) {
   const std::size_t nthreads = eigensolver::internal::getReductionToBandPanelNWorkers();
-  // TODO FIXME std::max<std::size_t>(0, nthreads - 1);
-  const SizeType nworkspaces = to_SizeType(nthreads);
+  const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, nthreads - 1));
   const SizeType nrefls_step = hh_panel.getWidth();
 
   matrix::Matrix<T, device> ws_T({nworkspaces * nrefls_step, nrefls_step}, {nrefls_step, nrefls_step});
@@ -63,8 +62,7 @@ void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
                     matrix::ReadWriteTileSender<T, device> t,
                     comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_task_chain) {
   const std::size_t nthreads = eigensolver::internal::getReductionToBandPanelNWorkers();
-  // TODO FIXME std::max<std::size_t>(0, nthreads - 1);
-  const SizeType nworkspaces = to_SizeType(nthreads);
+  const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, nthreads - 1));
   const SizeType nrefls_step = hh_panel.getWidth();
 
   matrix::Matrix<T, device> ws_T({nworkspaces * nrefls_step, nrefls_step}, {nrefls_step, nrefls_step});

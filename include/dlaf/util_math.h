@@ -109,8 +109,15 @@ constexpr ArithmeticT generic_integer_op(const TA a, const TB b, BinaryOp op) {
 
 /// Convert a percentage to an index.
 ///
+/// @tparam ArithmeticT must be a floating point type
+/// @param size the size of the array
+/// @pre @p size >= 0,
+/// @param percent index corresponding to the first @percent percent of elements
+/// @pre @p percent >= 0 and @p percent <= 100,
+/// @return the end index corresponding to the first @percent percent of elements
 template <typename ArithmeticT>
 SizeType percent_to_index(SizeType size, ArithmeticT percent) {
+  DLAF_ASSERT(size >= 0, size);
   DLAF_ASSERT(percent >= 0 && percent <= 100, percent);
   SizeType idx = std::lround(size * percent / 100.0);
   DLAF_ASSERT(idx >= 0 && idx <= size, idx, size);

@@ -18,8 +18,6 @@
 #include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 
-#include "dlaf/matrix/matrix_base.h"
-
 namespace dlaf::eigensolver::internal {
 
 /// Eigenvalue back-transformation implementation on local memory, which applies the inverse of the

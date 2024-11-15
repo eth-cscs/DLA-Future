@@ -18,7 +18,6 @@
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_mirror.h>
-#include <dlaf/matrix/matrix_ref.h>
 #include <dlaf/solver/triangular.h>
 #include <dlaf/util_matrix.h>
 

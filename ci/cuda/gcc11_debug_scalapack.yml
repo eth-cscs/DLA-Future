@@ -20,6 +20,8 @@ cuda gcc11 debug scalapack build:
 
 cuda gcc11 debug scalapack test:
   extends: .run_common
+  variables:
+    PIKA_MPI_ENABLE_POOL: 1
   needs:
     - cuda gcc11 debug scalapack build
   trigger:

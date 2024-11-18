@@ -9,6 +9,7 @@
 //
 #pragma once
 
+#include <cstddef>
 #include <utility>
 
 /// @file
@@ -18,6 +19,7 @@
 #include <dlaf/factorization/qr/api.h>
 #include <dlaf/matrix/index.h>
 #include <dlaf/matrix/tile.h>
+#include <dlaf/types.h>
 
 namespace dlaf::factorization::internal {
 

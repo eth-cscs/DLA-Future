@@ -10,7 +10,10 @@
 
 #pragma once
 
+#include <chrono>
+#include <cstddef>
 #include <utility>
+#include <vector>
 
 #include <blas.hh>
 

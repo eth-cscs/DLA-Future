@@ -278,9 +278,8 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 
                 whip::memset_2d_async(tile_t.ptr(), sizeof(T) * to_sizet(tile_t.ld()), 0,
                                       sizeof(T) * to_sizet(k), to_sizet(k), stream);
-                whip::memcpy_2d_async(tile_t.ptr(), to_sizet(tile_t.ld() + 1) * sizeof(T), taus.ptr(),
-                                      sizeof(T), sizeof(T), to_sizet(k), whip::memcpy_host_to_device,
-                                      stream);
+                gpulapack::lacpy(blas::Uplo::General, 1, k, taus.ptr(), 1, tile_t.ptr(), tile_t.ld() + 1,
+                                 stream);
 
                 // Note:
                 // - call one gemv per tile
@@ -334,8 +333,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
       DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
 
       const SizeType k = tile_t.size().cols();
-      whip::memcpy_2d_async(tile_t.ptr(), to_sizet(tile_t.ld() + 1) * sizeof(T), taus.ptr(), sizeof(T),
-                            sizeof(T), to_sizet(k), whip::memcpy_host_to_device, stream);
+      gpulapack::lacpy(blas::Uplo::General, 1, k, taus.ptr(), 1, tile_t.ptr(), tile_t.ld() + 1, stream);
 
       trmvLoop(handle, tile_t);
     };

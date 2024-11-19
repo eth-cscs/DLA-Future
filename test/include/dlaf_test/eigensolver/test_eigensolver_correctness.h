@@ -34,13 +34,11 @@ namespace dlaf::test {
 template <class T, Device D, class... GridIfDistributed>
 void testEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::CPU>& reference,
                                 Matrix<const BaseType<T>, D>& eigenvalues,
-                                Matrix<const T, D>& eigenvectors, SizeType eigenvalue_index_start,
+                                Matrix<const T, D>& eigenvectors, SizeType eigenvalue_index_begin,
                                 SizeType eval_index_end, GridIfDistributed&... grid) {
   using dlaf::matrix::MatrixMirror;
   using dlaf::matrix::test::allGather;
   using dlaf::matrix::test::MatrixLocal;
-
-  DLAF_ASSERT(eigenvalue_index_start == 0l, eigenvalue_index_start);
 
   // Note:
   // Wait for the algorithm to finish all scheduled tasks, because verification has MPI blocking
@@ -60,7 +58,7 @@ void testEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::C
   auto mat_e_local = [&]() {
     MatrixMirror<const T, Device::CPU, D> mat_e(eigenvectors);
     // Reference to sub-matrix representing only valid (i.e. back-transformed) eigenvectors
-    auto spec = matrix::util::internal::sub_matrix_spec_slice_cols(reference, eigenvalue_index_start,
+    auto spec = matrix::util::internal::sub_matrix_spec_slice_cols(reference, eigenvalue_index_begin,
                                                                    eval_index_end);
     matrix::internal::MatrixRef mat_e_ref(mat_e.get(), spec);
 
@@ -71,8 +69,8 @@ void testEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::C
   const SizeType n = mat_e_local.size().cols();
 
   // eigenvalues are contiguous in the mat_local buffer
-  const BaseType<T>* evals_start = mat_evalues_local.ptr({0, 0});
-  EXPECT_TRUE(std::is_sorted(evals_start, evals_start + m));
+  const BaseType<T>* evals_begin = mat_evalues_local.ptr({0, 0});
+  EXPECT_TRUE(std::is_sorted(evals_begin, evals_begin + m));
 
   MatrixLocal<T> workspace1({n, n}, reference.blockSize());
 

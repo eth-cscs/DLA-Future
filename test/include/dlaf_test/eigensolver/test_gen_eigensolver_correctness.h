@@ -40,8 +40,6 @@ void testGenEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device
   using dlaf::matrix::test::allGather;
   using dlaf::matrix::test::MatrixLocal;
 
-  DLAF_ASSERT(eval_index_begin == 0l, eval_index_begin);
-
   // Note:
   // Wait for the algorithm to finish all scheduled tasks, because verification has MPI blocking
   // calls that might lead to deadlocks.
@@ -72,8 +70,8 @@ void testGenEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device
   const SizeType n = mat_e_local.size().cols();
 
   // eigenvalues are contiguous in the mat_local buffer
-  const BaseType<T>* evals_start = mat_evalues_local.ptr({0, 0});
-  EXPECT_TRUE(std::is_sorted(evals_start, evals_start + m));
+  const BaseType<T>* evals_begin = mat_evalues_local.ptr({0, 0});
+  EXPECT_TRUE(std::is_sorted(evals_begin, evals_begin + m));
 
   MatrixLocal<T> mat_be_local({m, n}, reference_a.blockSize());
 

@@ -65,13 +65,13 @@ struct MPICallHelper {
 template <typename F>
 MPICallHelper(F&&) -> MPICallHelper<std::decay_t<F>>;
 
-/// Lazy transformMPI. This does not submit the work and returns a sender.
+/// Lazy transformMPI. Returns a sender that will submit the work passed in
 template <typename F, typename Sender,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 [[nodiscard]] decltype(auto) transformMPI(F&& f, Sender&& sender) {
+  using dlaf::common::internal::ConsumeRvalues;
   using pika::execution::experimental::drop_operation_state;
   using pika::mpi::experimental::transform_mpi;
-  using dlaf::common::internal::ConsumeRvalues;
   return std::forward<Sender>(sender)                                        //
          | transform_mpi(ConsumeRvalues{MPICallHelper{std::forward<F>(f)}})  //
          | drop_operation_state();

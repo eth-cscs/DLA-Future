@@ -58,8 +58,8 @@ bool& initialized() {
 }
 
 int& mpi_initialized() {
-    static int i = 0;
-    return i;
+  static int i = 0;
+  return i;
 }
 
 template <Backend D>
@@ -396,7 +396,7 @@ void finalize() {
   internal::Init<Backend::GPU>::finalize();
 #endif
   if (dlaf::internal::mpi_initialized()) {
-      pika::mpi::experimental::stop_polling();
+    pika::mpi::experimental::stop_polling();
   }
   internal::getConfiguration() = {};
   internal::initialized() = false;

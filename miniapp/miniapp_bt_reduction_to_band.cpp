@@ -197,11 +197,13 @@ struct BacktransformBandToTridiagMiniapp {
 
       // print benchmark results
       if (0 == world.rank() && run_index >= 0) {
-        std::cout << "[" << run_index << "]" << " " << elapsed_time << "s" << " " << gigaflops
-                  << "GFlop/s" << " " << dlaf::internal::FormatShort{opts.type} << " "
-                  << mat_e_host.size() << " (" << 0l << ", " << opts.eval_idx_end << ") "
-                  << mat_e_host.blockSize() << " " << opts.b << " " << comm_grid.size() << " "
-                  << pika::get_os_thread_count() << " " << backend << std::endl;
+        std::cout << "[" << run_index << "]"
+                  << " " << elapsed_time << "s"
+                  << " " << gigaflops << "GFlop/s"
+                  << " " << dlaf::internal::FormatShort{opts.type} << " " << mat_e_host.size() << " ("
+                  << 0l << ", " << opts.eval_idx_end << ") " << mat_e_host.blockSize() << " " << opts.b
+                  << " " << comm_grid.size() << " " << pika::get_os_thread_count() << " " << backend
+                  << std::endl;
         if (opts.csv_output) {
           // CSV formatted output with column names that can be read by pandas to simplify
           // post-processing CSVData{-version}, value_0, title_0, value_1, title_1

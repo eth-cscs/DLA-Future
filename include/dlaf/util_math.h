@@ -115,7 +115,7 @@ constexpr ArithmeticT generic_integer_op(const TA a, const TB b, BinaryOp op) {
 /// @param percent index corresponding to the first @percent percent of elements
 /// @pre @p percent >= 0 and @p percent <= 100,
 /// @return the end index corresponding to the first @percent percent of elements
-template <typename ArithmeticT>
+template <class ArithmeticT>
 SizeType percent_to_index(SizeType size, ArithmeticT percent) {
   DLAF_ASSERT(size >= 0, size);
   DLAF_ASSERT(percent >= 0 && percent <= 100, percent);

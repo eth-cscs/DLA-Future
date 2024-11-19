@@ -143,11 +143,10 @@ def createAndSubmitRun(run_dir, nodes_arr, dtype, **kwargs):
         params={"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128, "n_sz": None},
         **fullbt_kwargs,
     )
-    # TODO: Partial trsm for Cholesky
     run.add(
         mp.trsm,
         params={"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "n_sz": None},
-        **full_kwargs,
+        **fullbt_kwargs,
     )
 
     fullsolver_args = fullbt_kwargs.copy()

@@ -20,14 +20,7 @@
 #include <dlaf/matrix/tile.h>
 #include <dlaf/types.h>
 
-namespace dlaf::matrix {
-
-// Pre-declaration of MatrixRef
-// MatrixRef is a friend of Matrix
-// template <class T, Device D>
-// class Matrix;
-
-namespace internal {
+namespace dlaf::matrix::internal {
 
 /// Contains information to create a sub-matrix.
 using SubMatrixSpec = SubDistributionSpec;
@@ -42,7 +35,7 @@ template <class T, Device D>
 class MatrixRef;
 
 template <class T, Device D>
-class MatrixRef<const T, D> : public MatrixBase {
+class MatrixRef<const T, D> : public internal::MatrixBase {
 public:
   static constexpr Device device = D;
 
@@ -277,5 +270,4 @@ DLAF_MATRIX_REF_ETI(extern, double, Device::GPU)
 DLAF_MATRIX_REF_ETI(extern, std::complex<float>, Device::GPU)
 DLAF_MATRIX_REF_ETI(extern, std::complex<double>, Device::GPU)
 #endif
-}  // namespace internal
-}  // namespace dlaf::matrix
+}  // namespace dlaf::matrix::internal

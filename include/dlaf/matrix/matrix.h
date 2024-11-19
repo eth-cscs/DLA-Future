@@ -37,9 +37,6 @@ namespace internal {
 template <class T, Device D>
 class MatrixRef;
 
-// template <class T, Device D>
-// class MatrixRef;
-
 /// Helper function returning a vector with the results of calling a function over a IterableRange2D
 ///
 /// @param f non-void function accepting LocalTileIndex as parameter

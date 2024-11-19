@@ -266,10 +266,6 @@ public:
     return offset_;
   }
 
-  const GlobalElementIndex origin() const noexcept {
-    return origin_;
-  }
-
   /// Returns the global 2D index of the element.
   /// which has index @p tile_element in the tile with global index @p global_tile.
   ///
@@ -727,7 +723,6 @@ private:
   // Note: safe to use in constructors.
   void set_default_sizes() noexcept;
 
-  GlobalElementIndex origin_ = {0, 0};
   GlobalElementIndex offset_;
   GlobalElementSize size_;
   LocalElementSize local_size_;

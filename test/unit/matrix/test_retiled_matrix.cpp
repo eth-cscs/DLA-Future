@@ -208,7 +208,7 @@ TYPED_TEST(RetiledMatrixTest, GlobalConstructor) {
   }
 }
 
-TYPED_TEST(RetiledMatrixTest, Dependencies) {
+TYPED_TEST(RetiledMatrixLocalTest, Dependencies) {
   using Type = TypeParam;
 
   for (const auto& [size, tile_size, tiles_per_block] : deps_sizes_tests) {

@@ -55,7 +55,6 @@ const std::vector<
     local_sizes_tests({
         // size, tile_size (target), tiles_per_block (target), distribution origin (ref), distribution size (ref)
         {{8, 8}, {2, 2}, {2, 2}, {0, 0}, {4, 4}},
-        // {{8, 8}, {2, 2}, {2, 2}, {2, 2}, {4, 4}},
         {{8, 8}, {2, 2}, {2, 2}, {0, 0}, {8, 4}},
         {{8, 8}, {2, 2}, {2, 2}, {0, 0}, {4, 8}},
         {{0, 0}, {2, 3}, {2, 2}, {0, 0}, {0, 0}},
@@ -95,10 +94,6 @@ void check(F1 el1, F2 el2, dlaf::matrix::Matrix<T, D>& mat, SubMatrixSpec& spec)
     auto shifted_idx = GlobalElementIndex{index.row(), index.col() + spec.size.cols()};
     return el1(shifted_idx);
   };
-
-  // TODO: Remove
-  // DLAF_ASSERT(spec.origin.row() == 0, spec.origin.row());
-  // DLAF_ASSERT(spec.origin.col() == 0, spec.origin.col());
 
   // Check modified part (el2)
   MatrixRef<T, D> mat_ref(mat, spec);

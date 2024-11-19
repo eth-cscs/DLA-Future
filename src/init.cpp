@@ -29,6 +29,7 @@
 #include <dlaf/tune.h>
 
 namespace dlaf {
+
 std::ostream& operator<<(std::ostream& os, const configuration& cfg) {
   // clang-format off
   os << "  num_np_gpu_streams_per_thread = " << cfg.num_np_gpu_streams_per_thread << std::endl;
@@ -56,6 +57,11 @@ bool& initialized() {
   return i;
 }
 
+int& mpi_initialized() {
+    static int i = 0;
+    return i;
+}
+
 template <Backend D>
 struct Init {
   // Initialization and finalization does nothing by default. Behaviour can be
@@ -71,20 +77,9 @@ struct Init<Backend::MC> {
         cfg.umpire_host_memory_pool_initial_block_bytes, cfg.umpire_host_memory_pool_next_block_bytes,
         cfg.umpire_host_memory_pool_alignment_bytes, cfg.umpire_host_memory_pool_coalescing_free_ratio,
         cfg.umpire_host_memory_pool_coalescing_reallocation_ratio);
-    // install mpi polling loop
-    int mpi_initialized;
-    DLAF_MPI_CHECK_ERROR(MPI_Initialized(&mpi_initialized));
-    if (mpi_initialized) {
-      pika::mpi::experimental::start_polling(pika::mpi::experimental::exception_mode::no_handler);
-    }
   }
 
   static void finalize() {
-    int mpi_initialized;
-    DLAF_MPI_CHECK_ERROR(MPI_Initialized(&mpi_initialized));
-    if (mpi_initialized) {
-      pika::mpi::experimental::stop_polling();
-    }
     memory::internal::finalizeUmpireHostAllocator();
   }
 };
@@ -365,15 +360,15 @@ void initialize(const pika::program_options::variables_map& vm, const configurat
     std::exit(0);
   }
 
-  int mpi_initialized;
-  DLAF_MPI_CHECK_ERROR(MPI_Initialized(&mpi_initialized));
-  if (mpi_initialized) {
+  DLAF_MPI_CHECK_ERROR(MPI_Initialized(&dlaf::internal::mpi_initialized()));
+  if (dlaf::internal::mpi_initialized()) {
     int provided;
     DLAF_MPI_CHECK_ERROR(MPI_Query_thread(&provided));
     if (provided < MPI_THREAD_MULTIPLE) {
       std::cerr << "MPI must be initialized to `MPI_THREAD_MULTIPLE` for DLA-Future!\n";
       MPI_Abort(MPI_COMM_WORLD, 1);
     }
+    pika::mpi::experimental::start_polling(pika::mpi::experimental::exception_mode::no_handler);
   }
 
   DLAF_ASSERT(!internal::initialized(), "");
@@ -400,6 +395,9 @@ void finalize() {
 #ifdef DLAF_WITH_GPU
   internal::Init<Backend::GPU>::finalize();
 #endif
+  if (dlaf::internal::mpi_initialized()) {
+      pika::mpi::experimental::stop_polling();
+  }
   internal::getConfiguration() = {};
   internal::initialized() = false;
 }

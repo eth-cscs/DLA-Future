@@ -251,16 +251,21 @@ struct GenEigensolverMiniapp {
         if (opts.csv_output) {
           // CSV formatted output with column names that can be read by pandas to simplify
           // post-processing CSVData{-version}, value_0, title_0, value_1, title_1
-          std::cout << "CSVData-2, " << "run, " << run_index << ", " << "time, " << elapsed_time << ", "
-                    << "type, " << dlaf::internal::FormatShort{opts.type}.value << ", " << "uplo, "
-                    << dlaf::internal::FormatShort{opts.uplo}.value << ", " << "matrixsize, "
-                    << matrix_a_host.size().rows() << ", " << "eigenvalue index begin, " << 0l << ", "
-                    << "eigenvalue index end, " << ", " << opts.eval_idx_end << ", " << "blocksize, "
-                    << matrix_a_host.blockSize().rows() << ", " << "bandsize, "
+          std::cout << "CSVData-2, "
+                    << "run, " << run_index << ", "
+                    << "time, " << elapsed_time << ", "
+                    << "type, " << dlaf::internal::FormatShort{opts.type}.value << ", "
+                    << "uplo, " << dlaf::internal::FormatShort{opts.uplo}.value << ", "
+                    << "matrixsize, " << matrix_a_host.size().rows() << ", "
+                    << "blocksize, " << matrix_a_host.blockSize().rows() << ", "
+                    << "bandsize, "
                     << dlaf::eigensolver::internal::getBandSize(matrix_a_host.blockSize().rows()) << ", "
-                    << "comm_rows, " << comm_grid.size().rows() << ", " << "comm_cols, "
-                    << comm_grid.size().cols() << ", " << "threads, " << pika::get_os_thread_count()
-                    << ", " << "backend, " << backend << ", " << opts.info << std::endl;
+                    << "comm_rows, " << comm_grid.size().rows() << ", "
+                    << "comm_cols, " << comm_grid.size().cols() << ", "
+                    << "threads, " << pika::get_os_thread_count() << ", "
+                    << "backend, " << backend << ", "
+                    << "eigenvalue index begin, " << 0l << ", "
+                    << "eigenvalue index end, " << opts.eval_idx_end << ", " << opts.info << std::endl;
         }
       }
       // (optional) run test

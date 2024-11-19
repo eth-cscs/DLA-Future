@@ -28,7 +28,7 @@ namespace dlaf {
 /// @param[in] eigenvalues_index_begin is the index of the first eigenvalue to compute
 /// @pre @p eigenvalues_index_begin == 0
 /// @param[in] eigenvalues_index_end is the index of the last eigenvalue to compute (exclusive)
-/// @pre @p eigenvalues_index_begin <= eigenvalues_index_end < N
+/// @pre @p eigenvalues_index_begin <= @p eigenvalues_index_end < N
 template <Backend B, Device D, class T>
 void hermitian_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat, Matrix<BaseType<T>, D>& eigenvalues,
                            Matrix<T, D>& eigenvectors, const SizeType eigenvalues_index_begin,
@@ -97,7 +97,7 @@ void hermitian_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat, Matrix<BaseType<T
 /// @param[in] eigenvalues_index_begin is the index of the first eigenvalue to compute
 /// @pre @p eigenvalues_index_begin == 0
 /// @param[in] eigenvalues_index_end is the index of the last eigenvalue to compute (exclusive)
-/// @pre @p eigenvalues_index_end < N
+/// @pre @p eigenvalues_index_begin <= @p eigenvalues_index_end < N
 template <Backend B, Device D, class T>
 EigensolverResult<T, D> hermitian_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat,
                                               const SizeType eigenvalues_index_begin,
@@ -141,7 +141,7 @@ EigensolverResult<T, D> hermitian_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat
 /// @param[in] eigenvalues_index_begin is the index of the first eigenvalue to compute
 /// @pre @p eigenvalues_index_begin == 0
 /// @param[in] eigenvalues_index_end is the index of the last eigenvalue to compute (exclusive)
-/// @pre @p eigenvalues_index_end < N
+/// @pre @p eigenvalues_index_begin <= @p eigenvalues_index_end < N
 template <Backend B, Device D, class T>
 void hermitian_eigensolver(comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix<T, D>& mat,
                            Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors,
@@ -213,7 +213,7 @@ void hermitian_eigensolver(comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix
 /// @param[in] eigenvalues_index_begin is the index of the first eigenvalue to compute
 /// @pre @p eigenvalues_index_begin == 0
 /// @param[in] eigenvalues_index_end is the index of the last eigenvalue to compute (exclusive)
-/// @pre @p eigenvalues_index_end < N
+/// @pre @p eigenvalues_index_begin <= @p eigenvalues_index_end < N
 template <Backend B, Device D, class T>
 EigensolverResult<T, D> hermitian_eigensolver(comm::CommunicatorGrid& grid, blas::Uplo uplo,
                                               Matrix<T, D>& mat, const SizeType eigenvalues_index_begin,

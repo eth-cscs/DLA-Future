@@ -14,8 +14,6 @@
 #include <utility>
 #include <vector>
 
-#include <unistd.h>
-
 #include <pika/init.hpp>
 
 #include <dlaf/communication/communicator_grid.h>

@@ -332,12 +332,6 @@ def _parse_line_based(fout, bench_name, nodes):
                 run_index += 1
 
             data.append(dict(rd))
-        else:
-            print(fout, bench_name, nodes, pstr_res)
-
-    print(len(data))
-    # if(len(data) == 0):
-    #    raise RuntimeError("No data could be parsed!")
 
     return data
 

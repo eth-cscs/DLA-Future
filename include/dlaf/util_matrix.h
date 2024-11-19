@@ -439,6 +439,16 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const Size
   }
 }
 
+/// Compute @class SubMatrixSpec covering all rows and columns from @p first_col_index to @p
+/// last_col_index (excluded).
+///
+/// @param matrix the matrix from which the submatrix is extracted
+/// @param first_col_index the index of the first column of the submatrix
+/// @pre @p first_col_index >= 0
+/// @param last_col_index the index of the column after the last column of the submatrix
+/// @pre @p first_col_index <= @p last_col_index
+/// @pre @p last_col_index <= matrix.size().cols()
+/// @return a @class SubMatrixSpec covering the requested columns
 template <class T, Device D>
 dlaf::matrix::internal::SubMatrixSpec sub_matrix_spec_slice_cols(const Matrix<T, D>& matrix,
                                                                  SizeType first_col_index,

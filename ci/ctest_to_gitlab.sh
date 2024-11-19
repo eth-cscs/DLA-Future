@@ -54,7 +54,7 @@ JOB_TEMPLATE="
   variables:
     SLURM_CPUS_PER_TASK: {{CPUS_PER_TASK}}
     SLURM_NTASKS: {{NTASKS}}
-    SLURM_TIMELIMIT: '35:00'
+    SLURM_TIMELIMIT: '40:00'
     SLURM_UNBUFFEREDIO: 1
     SLURM_WAIT: 0
     PULL_IMAGE: 'YES'
@@ -63,8 +63,10 @@ JOB_TEMPLATE="
     DLAF_HDF5_TEST_OUTPUT_PATH: \$CI_PROJECT_DIR
   script: mpi-ctest -L {{LABEL}}
   artifacts:
+    when: always
     paths:
-      - codecov-reports/"
+      - codecov-reports/
+      - output/"
 else
 # CRAY_CUDA_MPS set to 0 to avoid test hanging on daint (See PR #1197)
 BASE_TEMPLATE="
@@ -100,7 +102,11 @@ JOB_TEMPLATE="
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
     DLAF_HDF5_TEST_OUTPUT_PATH: \$CI_PROJECT_DIR
-  script: mpi-ctest -L {{LABEL}}"
+  script: mpi-ctest -L {{LABEL}}
+  artifacts:
+    when: always
+    paths:
+      - output/"
 fi
 
 JOBS=""

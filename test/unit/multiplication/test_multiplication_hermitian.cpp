@@ -96,9 +96,6 @@ void testHermitianMultiplication(const blas::Side side, const blas::Uplo uplo, c
     hermitian_multiplication<B>(side, uplo, alpha, mat_a.get(), mat_b.get(), beta, mat_c.get());
   }
 
-  // SCOPED_TRACE cannot yield.
-  mat_ch.waitLocalTiles();
-  SCOPED_TRACE(::testing::Message() << "m " << m << "n " << n << ", mb " << mb << ", nb " << nb);
   CHECK_MATRIX_NEAR(res_c, mat_ch, 10 * (m + 1) * TypeUtilities<T>::error,
                     10 * (m + 1) * TypeUtilities<T>::error);
 }

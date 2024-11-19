@@ -19,35 +19,17 @@
 #include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 
+#include "dlaf/matrix/matrix_base.h"
+
 namespace dlaf {
 
-/// Triangular Solve implementation on local memory, solving op(A) X = alpha B (when side == Left)
-/// or X op(A) = alpha B (when side == Right).
-///
-/// @param side specifies whether op(A) appears on the \a Left or on the \a Right of matrix X,
-/// @param uplo specifies whether the matrix A is a \a Lower or \a Upper triangular matrix,
-/// @param op specifies the form of op(A) to be used in the matrix multiplication: \a NoTrans, \a Trans,
-/// \a ConjTrans,
-/// @param diag specifies if the matrix A is assumed to be unit triangular (\a Unit) or not (\a NonUnit),
-///
-/// @param mat_a contains the triangular matrix A. Only the tiles of the matrix which contain the upper or
-/// the lower triangular part (depending on the value of uplo) are accessed in read-only mode (the
-/// elements are not modified),
-/// @pre @p mat_a is not distributed
-/// @pre @p mat_a has size (M x M) when Side == Left or (N x N) when Side == Right
-/// @pre @p mat_a has blocksize (MB x MB) when Side == Left or (NB x NB) when Side == Right
-/// @pre @p mat_a has tilesize (MB x MB) when Side == Left or (NB x NB) when Side == Right
-///
-/// @param mat_b on entry it contains the matrix B, on exit the matrix elements are overwritten with the
-/// elements of the matrix X,
-/// @pre @p mat_b is not distributed
-/// @pre @p mat_b has size (M x N)
-/// @pre @p mat_b has blocksize (MB x NB)
-/// @pre @p mat_b has tilesize (MB x NB)
+namespace solver::internal {
+
+using matrix::internal::MatrixRef;
+
 template <Backend backend, Device device, class T>
 void triangular_solver(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha,
-                       Matrix<const T, device>& mat_a,
-                       dlaf::matrix::internal::MatrixRef<T, device>& mat_b) {
+                       Matrix<const T, device>& mat_a, MatrixRef<T, device>& mat_b) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
@@ -97,35 +79,10 @@ void triangular_solver(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag
   }
 }
 
-/// Triangular Solve implementation on distributed memory, solving op(A) X = alpha B (when side ==
-/// Left) or X op(A) = alpha B (when side == Right).
-///  Algorithm 1: matrix A is communicated.
-///
-/// @param side specifies whether op(A) appears on the \a Left or on the \a Right of matrix X,
-/// @param uplo specifies whether the matrix A is a \a Lower or \a Upper triangular matrix,
-/// @param op specifies the form of op(A) to be used in the matrix multiplication: \a NoTrans, \a
-/// Trans, \a ConjTrans,
-/// @param diag specifies if the matrix A is assumed to be unit triangular (\a Unit) or not (\a
-/// NonUnit),
-///
-/// @param mat_a contains the triangular matrix A. Only the tiles of the matrix which contain the upper
-/// or the lower triangular part (depending on the value of uplo) are accessed in read-only mode (the
-/// elements are not modified),
-/// @pre @p mat_b is distributed according to @p grid
-/// @pre @p mat_a has size (M x M) when Side == Left or (N x N) when Side == Right
-/// @pre @p mat_a has blocksize (MB x MB) when Side == Left or (NB x NB) when Side == Right
-/// @pre @p mat_a has tilesize (MB x MB) when Side == Left or (NB x NB) when Side == Right
-///
-/// @param mat_b on entry it contains the matrix B, on exit the matrix elements are overwritten with
-/// the elements of the matrix X,
-/// @pre @p mat_b is distributed according to @p grid
-/// @pre @p mat_b has size (M x N)
-/// @pre @p mat_b has blocksize (MB x NB)
-/// @pre @p mat_b has tilesize (MB x NB)
 template <Backend backend, Device device, class T>
 void triangular_solver(comm::CommunicatorGrid& grid, blas::Side side, blas::Uplo uplo, blas::Op op,
                        blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
-                       dlaf::matrix::internal::MatrixRef<T, device>& mat_b) {
+                       MatrixRef<T, device>& mat_b) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
@@ -173,6 +130,71 @@ void triangular_solver(comm::CommunicatorGrid& grid, blas::Side side, blas::Uplo
       }
     }
   }
+}
+}  // namespace solver::internal
+
+/// Triangular Solve implementation on local memory, solving op(A) X = alpha B (when side == Left)
+/// or X op(A) = alpha B (when side == Right).
+///
+/// @param side specifies whether op(A) appears on the \a Left or on the \a Right of matrix X,
+/// @param uplo specifies whether the matrix A is a \a Lower or \a Upper triangular matrix,
+/// @param op specifies the form of op(A) to be used in the matrix multiplication: \a NoTrans, \a Trans,
+/// \a ConjTrans,
+/// @param diag specifies if the matrix A is assumed to be unit triangular (\a Unit) or not (\a NonUnit),
+///
+/// @param mat_a contains the triangular matrix A. Only the tiles of the matrix which contain the upper or
+/// the lower triangular part (depending on the value of uplo) are accessed in read-only mode (the
+/// elements are not modified),
+/// @pre @p mat_a is not distributed
+/// @pre @p mat_a has size (M x M) when Side == Left or (N x N) when Side == Right
+/// @pre @p mat_a has blocksize (MB x MB) when Side == Left or (NB x NB) when Side == Right
+/// @pre @p mat_a has tilesize (MB x MB) when Side == Left or (NB x NB) when Side == Right
+///
+/// @param mat_b on entry it contains the matrix B, on exit the matrix elements are overwritten with the
+/// elements of the matrix X,
+/// @pre @p mat_b is not distributed
+/// @pre @p mat_b has size (M x N)
+/// @pre @p mat_b has blocksize (MB x NB)
+/// @pre @p mat_b has tilesize (MB x NB)
+template <Backend backend, Device device, class T>
+void triangular_solver(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha,
+                       Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
+  matrix::internal::MatrixRef<T, device> mat_b_ref(mat_b);
+  solver::internal::triangular_solver<backend, device, T>(side, uplo, op, diag, alpha, mat_a, mat_b_ref);
+}
+
+/// Triangular Solve implementation on distributed memory, solving op(A) X = alpha B (when side ==
+/// Left) or X op(A) = alpha B (when side == Right).
+///  Algorithm 1: matrix A is communicated.
+///
+/// @param side specifies whether op(A) appears on the \a Left or on the \a Right of matrix X,
+/// @param uplo specifies whether the matrix A is a \a Lower or \a Upper triangular matrix,
+/// @param op specifies the form of op(A) to be used in the matrix multiplication: \a NoTrans, \a
+/// Trans, \a ConjTrans,
+/// @param diag specifies if the matrix A is assumed to be unit triangular (\a Unit) or not (\a
+/// NonUnit),
+///
+/// @param mat_a contains the triangular matrix A. Only the tiles of the matrix which contain the upper
+/// or the lower triangular part (depending on the value of uplo) are accessed in read-only mode (the
+/// elements are not modified),
+/// @pre @p mat_b is distributed according to @p grid
+/// @pre @p mat_a has size (M x M) when Side == Left or (N x N) when Side == Right
+/// @pre @p mat_a has blocksize (MB x MB) when Side == Left or (NB x NB) when Side == Right
+/// @pre @p mat_a has tilesize (MB x MB) when Side == Left or (NB x NB) when Side == Right
+///
+/// @param mat_b on entry it contains the matrix B, on exit the matrix elements are overwritten with
+/// the elements of the matrix X,
+/// @pre @p mat_b is distributed according to @p grid
+/// @pre @p mat_b has size (M x N)
+/// @pre @p mat_b has blocksize (MB x NB)
+/// @pre @p mat_b has tilesize (MB x NB)
+template <Backend backend, Device device, class T>
+void triangular_solver(comm::CommunicatorGrid& grid, blas::Side side, blas::Uplo uplo, blas::Op op,
+                       blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
+                       Matrix<T, device>& mat_b) {
+  matrix::internal::MatrixRef<T, device> mat_b_ref(mat_b);
+  solver::internal::triangular_solver<backend, device, T>(grid, side, uplo, op, diag, alpha, mat_a,
+                                                          mat_b_ref);
 }
 
 }

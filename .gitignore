@@ -48,8 +48,6 @@
 # ------------------- CMake
 
 CMakeLists.txt.user
-CMakeCache.txt
-CMakeFiles
 CMakeScripts
 Testing
 Makefile
@@ -88,5 +86,9 @@ ENV/
 env.bak/
 venv.bak/
 
+# ------------------- misc
+
 # Spack
 /spack-*
+
+*.png

@@ -14,13 +14,16 @@
 #include <dlaf/types.h>
 
 namespace dlaf::multiplication::internal {
+
+using matrix::internal::MatrixRef;
+
 template <Backend B, Device D, class T>
 struct Hermitian {
   static void call_LL(const T alpha, Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta,
                       Matrix<T, D>& mat_c);
 
   static void call_LL(comm::CommunicatorGrid& grid, const T alpha, Matrix<const T, D>& mat_a,
-                      matrix::internal::MatrixRef<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c);
+                      MatrixRef<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c);
 };
 
 // ETI

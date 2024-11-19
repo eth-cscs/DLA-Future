@@ -23,35 +23,7 @@
 
 namespace dlaf {
 
-/// Standard Eigensolver.
-///
-/// It solves the standard eigenvalue problem A * x = lambda * x.
-///
-/// On exit, the lower triangle or the upper triangle (depending on @p uplo) of @p mat_a,
-/// including the diagonal, is destroyed. @p eigenvalues will contain all the eigenvalues
-/// lambda, while @p eigenvectors will contain all the corresponding eigenvectors x.
-///
-/// Implementation on local memory.
-///
-/// @param uplo specifies if upper or lower triangular part of @p mat will be referenced
-///
-/// @param[in,out] mat contains the Hermitian matrix A
-/// @pre @p mat is not distributed
-/// @pre @p mat has size (N x N)
-/// @pre @p mat has blocksize (NB x NB)
-/// @pre @p mat has tilesize (NB x NB)
-///
-/// @param[out] eigenvalues contains the eigenvalues
-/// @pre @p eigenvalues is not distributed
-/// @pre @p eigenvalues has size (N x 1)
-/// @pre @p eigenvalues has blocksize (NB x 1)
-/// @pre @p eigenvalues has tilesize (NB x 1)
-///
-/// @param[out] eigenvectors contains the eigenvectors
-/// @pre @p eigenvectors is not distributed
-/// @pre @p eigenvectors has size (N x N)
-/// @pre @p eigenvectors has blocksize (NB x NB)
-/// @pre @p eigenvectors has tilesize (NB x NB)
+/// @copydoc hermitian_eigensolver(blas::Uplo, Matrix<T, D>&, Matrix<BaseType<T>, D>&, Matrix<T, D>&)
 ///
 /// @param[in] eigenvalues_index_begin is the index of the first eigenvalue to compute
 /// @pre @p eigenvalues_index_begin == 0
@@ -120,24 +92,7 @@ void hermitian_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat, Matrix<BaseType<T
   hermitian_eigensolver<B, D, T>(uplo, mat, eigenvalues, eigenvectors, 0l, mat.size().rows());
 }
 
-/// Standard Eigensolver.
-///
-/// It solves the standard eigenvalue problem A * x = lambda * x.
-///
-/// On exit, the lower triangle or the upper triangle (depending on @p uplo) of @p mat_a,
-/// including the diagonal, is destroyed.
-///
-/// Implementation on local memory.
-///
-/// @return ReturnEigensolverType with eigenvalues and eigenvectors as a Matrix
-///
-/// @param uplo specifies if upper or lower triangular part of @p mat will be referenced
-///
-/// @param[in,out] mat contains the Hermitian matrix A
-/// @pre @p mat is not distributed
-/// @pre @p mat has size (N x N)
-/// @pre @p mat has blocksize (NB x NB)
-/// @pre @p mat has tilesize (NB x NB)
+/// @copydoc hermitian_eigensolver(blas::Uplo, Matrix<T, D>&)
 ///
 /// @param[in] eigenvalues_index_begin is the index of the first eigenvalue to compute
 /// @pre @p eigenvalues_index_begin == 0
@@ -180,37 +135,8 @@ EigensolverResult<T, D> hermitian_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat
   return hermitian_eigensolver<B, D, T>(uplo, mat, 0l, mat.size().rows());
 }
 
-/// Standard Eigensolver.
-///
-/// It solves the standard eigenvalue problem A * x = lambda * x.
-///
-/// On exit, the lower triangle or the upper triangle (depending on @p uplo) of @p mat_a,
-/// including the diagonal, is destroyed. @p eigenvalues will contain all the eigenvalues
-/// lambda, while @p eigenvectors will contain all the corresponding eigenvectors x.
-///
-/// Implementation on distributed memory.
-///
-/// @param grid is the communicator grid on which the matrix @p mat has been distributed
-///
-/// @param uplo specifies if upper or lower triangular part of @p mat will be referenced
-///
-/// @param[in,out] mat contains the Hermitian matrix A
-/// @pre @p mat is distributed according to @p grid
-/// @pre @p mat has size (N x N)
-/// @pre @p mat has blocksize (NB x NB)
-/// @pre @p mat has tilesize (NB x NB)
-///
-/// @param[out] eigenvalues contains the eigenvalues
-/// @pre @p eigenvalues is stored on all ranks
-/// @pre @p eigenvalues has size (N x 1)
-/// @pre @p eigenvalues has blocksize (NB x 1)
-/// @pre @p eigenvalues has tilesize (NB x 1)
-///
-/// @param[out] eigenvectors contains the eigenvectors
-/// @pre @p eigenvectors is distributed according to @p grid
-/// @pre @p eigenvectors has size (N x N)
-/// @pre @p eigenvectors has blocksize (NB x NB)
-/// @pre @p eigenvectors has tilesize (NB x NB)
+/// @copydoc hermitian_eigensolver(comm::CommunicatorGrid&, blas::Uplo, Matrix<T, D>&,
+/// Matrix<BaseType<T>, D>&, Matrix<T, D>&)
 ///
 /// @param[in] eigenvalues_index_begin is the index of the first eigenvalue to compute
 /// @pre @p eigenvalues_index_begin == 0
@@ -282,26 +208,7 @@ void hermitian_eigensolver(comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix
   hermitian_eigensolver<B, D, T>(grid, uplo, mat, eigenvalues, eigenvectors, 0l, mat.size().rows());
 }
 
-/// Standard Eigensolver.
-///
-/// It solves the standard eigenvalue problem A * x = lambda * x.
-///
-/// On exit, the lower triangle or the upper triangle (depending on @p uplo) of @p mat_a,
-/// including the diagonal, is destroyed.
-///
-/// Implementation on distributed memory.
-///
-/// @return struct ReturnEigensolverType with eigenvalues and eigenvectors as a Matrix
-///
-/// @param grid is the communicator grid on which the matrix @p mat has been distributed
-///
-/// @param uplo specifies if upper or lower triangular part of @p mat will be referenced
-///
-/// @param[in,out] mat contains the Hermitian matrix A
-/// @pre @p mat is distributed according to @p grid
-/// @pre @p mat has size (N x N)
-/// @pre @p mat has blocksize (NB x NB)
-/// @pre @p mat has tilesize (NB x NB)
+/// @copydoc hermitian_eigensolver(comm::CommunicatorGrid&, blas::Uplo, Matrix<T, D>&)
 ///
 /// @param[in] eigenvalues_index_begin is the index of the first eigenvalue to compute
 /// @pre @p eigenvalues_index_begin == 0

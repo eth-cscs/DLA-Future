@@ -17,7 +17,7 @@
 
 namespace dlaf::solver::internal {
 
-using namespace dlaf::matrix::internal;
+using matrix::internal::MatrixRef;
 
 template <Backend backend, Device device, class T>
 struct Triangular {

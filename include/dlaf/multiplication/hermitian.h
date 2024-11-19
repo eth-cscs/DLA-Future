@@ -23,11 +23,12 @@ namespace dlaf {
 
 namespace internal {
 
+using matrix::internal::MatrixRef;
+
 template <Backend B, Device D, class T>
 void hermitian_multiplication(comm::CommunicatorGrid& grid, blas::Side side, blas::Uplo uplo,
-                              const T alpha, Matrix<const T, D>& mat_a,
-                              matrix::internal::MatrixRef<const T, D>& mat_b, const T beta,
-                              Matrix<T, D>& mat_c) {
+                              const T alpha, Matrix<const T, D>& mat_a, MatrixRef<const T, D>& mat_b,
+                              const T beta, Matrix<T, D>& mat_c) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);

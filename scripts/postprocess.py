@@ -9,16 +9,15 @@
 #
 
 import argparse
+import math
 import os
 import re
-import math
-
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-
-from parse import parse, with_pattern
 from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from parse import parse, with_pattern
 
 default_logx = False
 default_logy = False
@@ -240,14 +239,20 @@ def _parse_line_based(fout, bench_name, nodes):
         # fail.
         alg_name = bench_name[0 : bench_name.find("_dlaf")]
 
-        if alg_name in ["chol", "hegst", "trsm", "trmm"]:
+        print(alg_name)
+
+        if alg_name in ["chol", "hegst", "trmm"]:
             pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
-        if alg_name in ["red2band", "band2trid", "bt_band2trid", "bt_red2band"]:
+        if alg_name in ["trsm"]:
+            pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({first_eval_idx:d}, {last_eval_idx:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
+        if alg_name in ["red2band", "band2trid"]:
             pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
+        if alg_name in ["bt_band2trid", "bt_red2band"]:
+            pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({first_eval_idx:d}, {last_eval_idx:d}) ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
         if alg_name in ["trid_evp"]:
             pstr_res = "[{run_index:d}] {time:g}s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
         if alg_name in ["evp", "gevp"]:
-            pstr_res = "[{run_index:d}] {time:g}s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
+            pstr_res = "[{run_index:d}] {time:g}s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({first_eval_idx:d}, {last_eval_idx:d}) ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
     elif bench_name.startswith("chol_slate"):
         pstr_arr = ["input:{}potrf"]
         pstr_res = "d {} {} column lower {matrix_rows:d} {:d} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:g} {perf:g} NA NA no check"
@@ -327,6 +332,12 @@ def _parse_line_based(fout, bench_name, nodes):
                 run_index += 1
 
             data.append(dict(rd))
+        else:
+            print(fout, bench_name, nodes, pstr_res)
+
+    print(len(data))
+    # if(len(data) == 0):
+    #    raise RuntimeError("No data could be parsed!")
 
     return data
 

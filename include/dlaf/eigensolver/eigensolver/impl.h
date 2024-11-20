@@ -49,7 +49,7 @@ void Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<Bas
 
   tridiagonal_eigensolver<B>(ret.tridiagonal, evals, mat_e);
 
-  auto spec = matrix::util::internal::sub_matrix_spec_slice_cols(mat_a, eigenvalues_index_begin,
+  auto spec = matrix::util::internal::sub_matrix_spec_slice_cols(mat_e, eigenvalues_index_begin,
                                                                  eigenvalues_index_end);
 
   matrix::internal::MatrixRef mat_e_ref(mat_e, spec);

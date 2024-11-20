@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <set>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -131,7 +132,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
     }
   }();
 
-  if (mat_a_h.size().isEmpty())
+  if (mat_a_h.size().isEmpty() || eigenvalue_index_end == 0)
     return;
 
   testEigensolverCorrectness(uplo, reference, ret.eigenvalues, ret.eigenvectors, 0l,
@@ -143,12 +144,13 @@ TYPED_TEST(EigensolverTestMC, CorrectnessLocal) {
     for (auto [m, mb, b_min] : sizes) {
       getTuneParameters().eigensolver_min_band = b_min;
 
-      // Test with all evals and half of them
-      for (SizeType den = 1; den <= 2; den++) {
+      std::set<SizeType> numevals = {0, m / 2, m};
+
+      for (auto nevals : numevals) {
         testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(
-            uplo, m, mb, MatrixType::random, m / den);
+            uplo, m, mb, MatrixType::random, nevals);
         testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::use_preallocated>(
-            uplo, m, mb, MatrixType::random, m / den);
+            uplo, m, mb, MatrixType::random, nevals);
       }
     }
 
@@ -167,12 +169,13 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributed) {
       for (auto [m, mb, b_min] : sizes) {
         getTuneParameters().eigensolver_min_band = b_min;
 
-        // Test with all evals and half of them
-        for (SizeType den = 1; den <= 2; den++) {
+        std::set<SizeType> numevals = {0, m / 2, m};
+
+        for (auto nevals : numevals) {
           testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(
-              uplo, m, mb, MatrixType::random, m / den, grid);
+              uplo, m, mb, MatrixType::random, nevals, grid);
           testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::use_preallocated>(
-              uplo, m, mb, MatrixType::random, m / den, grid);
+              uplo, m, mb, MatrixType::random, nevals, grid);
         }
       }
 
@@ -191,12 +194,14 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessLocal) {
   for (auto uplo : blas_uplos) {
     for (auto [m, mb, b_min] : sizes) {
       getTuneParameters().eigensolver_min_band = b_min;
-      // Test with all evals and half of them
-      for (SizeType den = 1; den <= 2; den++) {
+
+      std::set<SizeType> numevals = {0, m / 2, m};
+
+      for (auto nevals : numevals) {
         testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(
-            uplo, m, mb, MatrixType::random, m / den);
+            uplo, m, mb, MatrixType::random, nevals);
         testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::use_preallocated>(
-            uplo, m, mb, MatrixType::random, m / den);
+            uplo, m, mb, MatrixType::random, nevals);
       }
     }
 
@@ -213,12 +218,14 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessDistributed) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
         getTuneParameters().eigensolver_min_band = b_min;
-        // Test with all evals and half of them
-        for (SizeType den = 1; den <= 2; den++) {
+
+        std::set<SizeType> numevals = {0, m / 2, m};
+
+        for (auto nevals : numevals) {
           testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(
-              uplo, m, mb, MatrixType::random, m / den, grid);
+              uplo, m, mb, MatrixType::random, nevals, grid);
           testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::use_preallocated>(
-              uplo, m, mb, MatrixType::random, m / den, grid);
+              uplo, m, mb, MatrixType::random, nevals, grid);
         }
       }
 

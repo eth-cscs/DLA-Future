@@ -27,10 +27,11 @@ namespace dlaf {
 namespace eigensolver::internal {
 
 template <Backend B, Device D, class T>
-void hermitian_generalized_eigensolver(
-    blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b, Matrix<BaseType<T>, D>& eigenvalues,
-    Matrix<T, D>& eigenvectors, const Factorization factorization,
-    const SizeType eigenvalues_index_begin, const SizeType eigenvalues_index_end) {
+void hermitian_generalized_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
+                                       Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors,
+                                       const Factorization factorization,
+                                       const SizeType eigenvalues_index_begin,
+                                       const SizeType eigenvalues_index_end) {
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
   DLAF_ASSERT(matrix::local_matrix(mat_b), mat_b);
   DLAF_ASSERT(matrix::local_matrix(eigenvalues), eigenvalues);
@@ -86,8 +87,8 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver(
   matrix::Matrix<T, D> eigenvectors(LocalElementSize(size, size), mat_a.blockSize());
 
   hermitian_generalized_eigensolver<B, D, T>(uplo, mat_a, mat_b, eigenvalues, eigenvectors,
-                                                    factorization, eigenvalues_index_begin,
-                                                    eigenvalues_index_end);
+                                             factorization, eigenvalues_index_begin,
+                                             eigenvalues_index_end);
 
   return {std::move(eigenvalues), std::move(eigenvectors)};
 }
@@ -129,10 +130,11 @@ void hermitian_generalized_eigensolver(
 }
 
 template <Backend B, Device D, class T>
-EigensolverResult<T, D> hermitian_generalized_eigensolver(
-    comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
-    const Factorization factorization, const SizeType eigenvalues_index_begin,
-    const SizeType eigenvalues_index_end) {
+EigensolverResult<T, D> hermitian_generalized_eigensolver(comm::CommunicatorGrid& grid, blas::Uplo uplo,
+                                                          Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
+                                                          const Factorization factorization,
+                                                          const SizeType eigenvalues_index_begin,
+                                                          const SizeType eigenvalues_index_end) {
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_b, grid), mat_b, grid);
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
@@ -153,8 +155,8 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver(
   matrix::Matrix<T, D> eigenvectors(GlobalElementSize(size, size), mat_a.blockSize(), grid);
 
   hermitian_generalized_eigensolver<B, D, T>(grid, uplo, mat_a, mat_b, eigenvalues, eigenvectors,
-                                                    factorization, eigenvalues_index_begin,
-                                                    eigenvalues_index_end);
+                                             factorization, eigenvalues_index_begin,
+                                             eigenvalues_index_end);
 
   return {std::move(eigenvalues), std::move(eigenvectors)};
 }

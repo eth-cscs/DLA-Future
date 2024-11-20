@@ -303,12 +303,12 @@ public:
     done(distribution().local_tile_index(index));
   }
 
+protected:
   Matrix(Distribution distribution) : internal::MatrixBase{std::move(distribution)} {
     DLAF_ASSERT((distribution.offset() == GlobalElementIndex{0, 0}), "not supported",
                 distribution.offset());
   }
 
-protected:
   struct SubPipelineTag {};
   Matrix(Matrix& mat, const SubPipelineTag) noexcept : MatrixBase(mat.distribution()) {
     setUpSubPipelines(mat);

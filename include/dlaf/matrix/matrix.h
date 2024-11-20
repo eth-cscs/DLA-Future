@@ -68,6 +68,7 @@ public:
   using TileDataType = internal::TileData<const ElementType, D>;
   using ReadWriteSenderType = ReadWriteTileSender<ElementType, D>;
   friend Matrix<const ElementType, D>;
+  friend internal::MatrixRef<ElementType, D>;
 
   /// Create a non distributed matrix of size @p size and block size @p block_size.
   ///
@@ -161,7 +162,6 @@ public:
     return readwrite(this->distribution().local_tile_index(index));
   }
 
-public:
   /// Create a sub-pipelined matrix which can be accessed thread-safely with respect to the original
   /// matrix
   ///
@@ -185,16 +185,16 @@ public:
     return Matrix(*this, tiles_per_block);
   }
 
-  template <template <class, Device> class MatrixLike>
-  Matrix(MatrixLike<const T, D>& mat, const LocalTileSize& tiles_per_block) noexcept
-      : Matrix<const T, D>(mat, tiles_per_block) {}
-
 protected:
   using Matrix<const T, D>::tileLinearIndex;
 
 private:
   using typename Matrix<const T, D>::SubPipelineTag;
   Matrix(Matrix& mat, const SubPipelineTag tag) noexcept : Matrix<const T, D>(mat, tag) {}
+
+  template <template <class, Device> class MatrixLike>
+  Matrix(MatrixLike<const T, D>& mat, const LocalTileSize& tiles_per_block) noexcept
+      : Matrix<const T, D>(mat, tiles_per_block) {}
 
   using Matrix<const T, D>::setUpTiles;
   using Matrix<const T, D>::tile_managers_;
@@ -211,7 +211,7 @@ public:
   using TileDataType = internal::TileData<ElementType, D>;
   using ReadOnlySenderType = ReadOnlyTileSender<ElementType, D>;
   using ReadWriteSenderType = ReadWriteTileSender<ElementType, D>;
-  friend class internal::MatrixRef<const ElementType, D>;
+  friend internal::MatrixRef<const ElementType, D>;
 
   Matrix(const LayoutInfo& layout, ElementType* ptr) noexcept
       : MatrixBase({layout.size(), layout.blockSize()}) {
@@ -308,24 +308,16 @@ public:
                 distribution.offset());
   }
 
+protected:
+  struct SubPipelineTag {};
+  Matrix(Matrix& mat, const SubPipelineTag) noexcept : MatrixBase(mat.distribution()) {
+    setUpSubPipelines(mat);
+  }
+
   template <template <class, Device> class MatrixLike>
   Matrix(MatrixLike<const T, D>& mat, const LocalTileSize& tiles_per_block) noexcept
       : MatrixBase(mat.distribution(), tiles_per_block) {
     setUpRetiledSubPipelines(mat, tiles_per_block);
-  }
-
-protected:
-  ReadWriteSenderType readwrite(const LocalTileIndex& index) noexcept {
-    return tile_managers_[tileLinearIndex(index)].readwrite();
-  }
-
-  ReadWriteSenderType readwrite(const GlobalTileIndex& index) noexcept {
-    return readwrite(this->distribution().local_tile_index(index));
-  }
-
-  struct SubPipelineTag {};
-  Matrix(Matrix& mat, const SubPipelineTag) noexcept : MatrixBase(mat.distribution()) {
-    setUpSubPipelines(mat);
   }
 
   void setUpTiles(const memory::MemoryView<ElementType, D>& mem, const LayoutInfo& layout) noexcept;
@@ -336,6 +328,15 @@ protected:
                                 const LocalTileSize& tiles_per_block) noexcept;
 
   std::vector<internal::TilePipeline<T, D>> tile_managers_;
+
+private:
+  ReadWriteSenderType readwrite(const LocalTileIndex& index) noexcept {
+    return tile_managers_[tileLinearIndex(index)].readwrite();
+  }
+
+  ReadWriteSenderType readwrite(const GlobalTileIndex& index) noexcept {
+    return readwrite(this->distribution().local_tile_index(index));
+  }
 };
 
 template <class T, Device D>

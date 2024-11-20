@@ -77,10 +77,12 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes_id = {
 
 template <class T, Backend B, Device D, Allocation allocation, class... GridIfDistributed>
 void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb, const MatrixType type,
-                     const SizeType eigenvalue_index_end, GridIfDistributed&... grid) {
+                     const std::optional<SizeType> eigenvalues_index_end, GridIfDistributed&... grid) {
   constexpr bool isDistributed = (sizeof...(grid) == 1);
   const LocalElementSize size(m, m);
   const TileElementSize block_size(mb, mb);
+
+  const SizeType eval_idx_end = eigenvalues_index_end.value_or(m);
 
   Matrix<const T, Device::CPU> reference = [&]() {
     auto reference = [&]() -> auto {
@@ -108,10 +110,20 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
 
     if constexpr (allocation == Allocation::do_allocation) {
       if constexpr (isDistributed) {
-        return hermitian_eigensolver<B>(grid..., uplo, mat_a.get(), 0l, eigenvalue_index_end);
+        if (eigenvalues_index_end.has_value()) {
+          return hermitian_eigensolver<B>(grid..., uplo, mat_a.get(), 0l, eval_idx_end);
+        }
+        else {
+          return hermitian_eigensolver<B>(grid..., uplo, mat_a.get());
+        }
       }
       else {
-        return hermitian_eigensolver<B>(uplo, mat_a.get(), 0l, eigenvalue_index_end);
+        if (eigenvalues_index_end.has_value()) {
+          return hermitian_eigensolver<B>(uplo, mat_a.get(), 0l, eval_idx_end);
+        }
+        else {
+          return hermitian_eigensolver<B>(uplo, mat_a.get());
+        }
       }
     }
     else if constexpr (allocation == Allocation::use_preallocated) {
@@ -120,23 +132,34 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
                                          TileElementSize(mat_a_h.blockSize().rows(), 1));
       if constexpr (isDistributed) {
         Matrix<T, D> eigenvectors(GlobalElementSize(size, size), mat_a_h.blockSize(), grid...);
-        hermitian_eigensolver<B>(grid..., uplo, mat_a.get(), eigenvalues, eigenvectors, 0l,
-                                 eigenvalue_index_end);
+
+        if (eigenvalues_index_end.has_value()) {
+          hermitian_eigensolver<B>(grid..., uplo, mat_a.get(), eigenvalues, eigenvectors, 0l,
+                                   eval_idx_end);
+        }
+        else {
+          hermitian_eigensolver<B>(grid..., uplo, mat_a.get(), eigenvalues, eigenvectors);
+        }
         return EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
       }
       else {
         Matrix<T, D> eigenvectors(LocalElementSize(size, size), mat_a_h.blockSize());
-        hermitian_eigensolver<B>(uplo, mat_a.get(), eigenvalues, eigenvectors, 0l, eigenvalue_index_end);
+        if (eigenvalues_index_end.has_value()) {
+          hermitian_eigensolver<B>(uplo, mat_a.get(), eigenvalues, eigenvectors, 0l, eval_idx_end);
+        }
+        else {
+          hermitian_eigensolver<B>(uplo, mat_a.get(), eigenvalues, eigenvectors);
+        }
         return EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
       }
     }
   }();
 
-  if (mat_a_h.size().isEmpty() || eigenvalue_index_end == 0)
+  if (mat_a_h.size().isEmpty() || eval_idx_end == 0)
     return;
 
-  testEigensolverCorrectness(uplo, reference, ret.eigenvalues, ret.eigenvectors, 0l,
-                             eigenvalue_index_end, grid...);
+  testEigensolverCorrectness(uplo, reference, ret.eigenvalues, ret.eigenvectors, 0l, eval_idx_end,
+                             grid...);
 }
 
 TYPED_TEST(EigensolverTestMC, CorrectnessLocal) {
@@ -144,8 +167,13 @@ TYPED_TEST(EigensolverTestMC, CorrectnessLocal) {
     for (auto [m, mb, b_min] : sizes) {
       getTuneParameters().eigensolver_min_band = b_min;
 
-      std::set<SizeType> numevals = {0, m / 2, m};
+      testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(uplo, m, mb,
+                                                                                      MatrixType::random,
+                                                                                      std::nullopt);
+      testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::use_preallocated>(
+          uplo, m, mb, MatrixType::random, std::nullopt);
 
+      std::set<SizeType> numevals = {0, m / 2, m};
       for (auto nevals : numevals) {
         testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(
             uplo, m, mb, MatrixType::random, nevals);
@@ -158,7 +186,7 @@ TYPED_TEST(EigensolverTestMC, CorrectnessLocal) {
       getTuneParameters().eigensolver_min_band = b_min;
 
       testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(
-          uplo, m, mb, MatrixType::identity, m);
+          uplo, m, mb, MatrixType::identity, std::nullopt);
     }
   }
 }
@@ -169,8 +197,12 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributed) {
       for (auto [m, mb, b_min] : sizes) {
         getTuneParameters().eigensolver_min_band = b_min;
 
-        std::set<SizeType> numevals = {0, m / 2, m};
+        testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(
+            uplo, m, mb, MatrixType::random, std::nullopt, grid);
+        testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::use_preallocated>(
+            uplo, m, mb, MatrixType::random, std::nullopt, grid);
 
+        std::set<SizeType> numevals = {0, m / 2, m};
         for (auto nevals : numevals) {
           testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(
               uplo, m, mb, MatrixType::random, nevals, grid);
@@ -183,7 +215,7 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributed) {
         getTuneParameters().eigensolver_min_band = b_min;
 
         testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(
-            uplo, m, mb, MatrixType::identity, m, grid);
+            uplo, m, mb, MatrixType::identity, std::nullopt, grid);
       }
     }
   }
@@ -195,8 +227,12 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessLocal) {
     for (auto [m, mb, b_min] : sizes) {
       getTuneParameters().eigensolver_min_band = b_min;
 
-      std::set<SizeType> numevals = {0, m / 2, m};
+      testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(
+          uplo, m, mb, MatrixType::random, std::nullopt);
+      testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::use_preallocated>(
+          uplo, m, mb, MatrixType::random, std::nullopt);
 
+      std::set<SizeType> numevals = {0, m / 2, m};
       for (auto nevals : numevals) {
         testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(
             uplo, m, mb, MatrixType::random, nevals);
@@ -208,7 +244,7 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessLocal) {
     for (auto [m, mb, b_min] : sizes_id) {
       getTuneParameters().eigensolver_min_band = b_min;
       testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(
-          uplo, m, mb, MatrixType::identity, m);
+          uplo, m, mb, MatrixType::identity, std::nullopt);
     }
   }
 }
@@ -218,6 +254,11 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessDistributed) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
         getTuneParameters().eigensolver_min_band = b_min;
+
+        testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(
+            uplo, m, mb, MatrixType::random, std::nullopt, grid);
+        testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::use_preallocated>(
+            uplo, m, mb, MatrixType::random, std::nullopt, grid);
 
         std::set<SizeType> numevals = {0, m / 2, m};
 
@@ -232,7 +273,7 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessDistributed) {
       for (auto [m, mb, b_min] : sizes_id) {
         getTuneParameters().eigensolver_min_band = b_min;
         testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(
-            uplo, m, mb, MatrixType::identity, m, grid);
+            uplo, m, mb, MatrixType::identity, std::nullopt, grid);
       }
     }
   }

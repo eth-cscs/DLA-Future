@@ -25,6 +25,7 @@
 namespace dlaf::miniapp {
 using common::Ordering;
 using matrix::Tile;
+using matrix::internal::MatrixRef;
 
 template <typename T>
 void scaleTile(const Tile<const BaseType<T>, Device::CPU>& lambda, const Tile<T, Device::CPU>& tile) {
@@ -35,9 +36,8 @@ void scaleTile(const Tile<const BaseType<T>, Device::CPU>& lambda, const Tile<T,
 }
 
 template <typename T>
-void scaleEigenvectors(matrix::internal::MatrixRef<const BaseType<T>, Device::CPU>& evalues,
-                       matrix::internal::MatrixRef<const T, Device::CPU>& evectors,
-                       Matrix<T, Device::CPU>& result) {
+void scaleEigenvectors(MatrixRef<const BaseType<T>, Device::CPU>& evalues,
+                       MatrixRef<const T, Device::CPU>& evectors, Matrix<T, Device::CPU>& result) {
   using pika::execution::thread_priority;
   matrix::internal::copy(evectors, result);
 
@@ -55,8 +55,8 @@ void scaleEigenvectors(matrix::internal::MatrixRef<const BaseType<T>, Device::CP
 template <typename T>
 void scaleEigenvectors(Matrix<const BaseType<T>, Device::CPU>& evalues,
                        Matrix<const T, Device::CPU>& evectors, Matrix<T, Device::CPU>& result) {
-  matrix::internal::MatrixRef<const BaseType<T>, Device::CPU> evalues_ref(evalues);
-  matrix::internal::MatrixRef<const T, Device::CPU> evectors_ref(evectors);
+  MatrixRef<const BaseType<T>, Device::CPU> evalues_ref(evalues);
+  MatrixRef<const T, Device::CPU> evectors_ref(evectors);
 
   scaleEigenvectors<T>(evalues_ref, evectors_ref, result);
 }

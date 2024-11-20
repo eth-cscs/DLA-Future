@@ -26,6 +26,7 @@
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_base.h>
 #include <dlaf/matrix/matrix_mirror.h>
+#include <dlaf/matrix/matrix_ref.h>
 #include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 

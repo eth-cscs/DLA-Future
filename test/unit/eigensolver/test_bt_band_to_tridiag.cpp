@@ -19,6 +19,7 @@
 #include <dlaf/matrix/index.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_mirror.h>
+#include <dlaf/matrix/matrix_ref.h>
 #include <dlaf/matrix/tile.h>
 #include <dlaf/tune.h>
 #include <dlaf/util_matrix.h>

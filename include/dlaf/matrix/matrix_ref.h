@@ -44,7 +44,7 @@ public:
   using ConstTileType = Tile<const ElementType, D>;
   using TileDataType = internal::TileData<ElementType, D>;
   using ReadOnlySenderType = ReadOnlyTileSender<T, D>;
-  using ReadWriteSenderType = ReadWriteTileSender<T, D>;
+  using ReadWriteSenderType = ReadWriteTileSender<ElementType, D>;
   friend class Matrix<const ElementType, D>;
 
   /// Create a sub-matrix of @p mat specified by @p spec.
@@ -274,4 +274,4 @@ DLAF_MATRIX_REF_ETI(extern, double, Device::GPU)
 DLAF_MATRIX_REF_ETI(extern, std::complex<float>, Device::GPU)
 DLAF_MATRIX_REF_ETI(extern, std::complex<double>, Device::GPU)
 #endif
-}  // namespace dlaf::matrix::internal
+}

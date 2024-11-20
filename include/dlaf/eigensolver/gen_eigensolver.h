@@ -161,7 +161,7 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver(comm::CommunicatorGrid
   return {std::move(eigenvalues), std::move(eigenvectors)};
 }
 
-}  // internal
+}
 
 /// @copydoc hermitian_generalized_eigensolver(blas::Uplo, Matrix<T, D>&, Matrix<T, D>&,
 /// Matrix<BaseType<T>, D>&, Matrix<T, D>&)

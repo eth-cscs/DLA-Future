@@ -163,13 +163,13 @@ template&lt;Backend B, Device D, class T &gt; </div>
   </table>
   </dd>
 </dl>
-<dl class="section pre"><dt>Precondition</dt><dd><code>mat_b</code> is not distributed </dd>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_a</code> is not distributed </dd>
 <dd>
-<code>mat_b</code> has size (N x M) </dd>
+<code>mat_a</code> has size (N x M) </dd>
 <dd>
-<code>mat_b</code> has blocksize (NB x NB) </dd>
+<code>mat_a</code> has blocksize (NB x NB) </dd>
 <dd>
-<code>mat_b</code> has tilesize (NB x NB)</dd></dl>
+<code>mat_a</code> has tilesize (NB x NB)</dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">mat_b</td><td>contains the matrix B accessed in read-only mode (the elements are not modified), </td></tr>
@@ -189,13 +189,13 @@ template&lt;Backend B, Device D, class T &gt; </div>
   </table>
   </dd>
 </dl>
-<dl class="section pre"><dt>Precondition</dt><dd><code>mat_b</code> is not distributed </dd>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_c</code> is not distributed </dd>
 <dd>
-<code>mat_b</code> has size (N x K) </dd>
+<code>mat_c</code> has size (N x K) </dd>
 <dd>
-<code>mat_b</code> has blocksize (NB x NB) </dd>
+<code>mat_c</code> has blocksize (NB x NB) </dd>
 <dd>
-<code>mat_b</code> has tilesize (NB x NB) </dd></dl>
+<code>mat_c</code> has tilesize (NB x NB) </dd></dl>
 
 </div>
 </div>
@@ -271,13 +271,13 @@ template&lt;Backend B, Device D, class T &gt; </div>
   </table>
   </dd>
 </dl>
-<dl class="section pre"><dt>Precondition</dt><dd><code>mat_b</code> is distributed according to <code>grid</code> </dd>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_a</code> is distributed according to <code>grid</code> </dd>
 <dd>
-<code>mat_b</code> has size (N x M) </dd>
+<code>mat_a</code> has size (N x M) </dd>
 <dd>
-<code>mat_b</code> has blocksize (NB x NB) </dd>
+<code>mat_a</code> has blocksize (NB x NB) </dd>
 <dd>
-<code>mat_b</code> has tilesize (NB x NB)</dd></dl>
+<code>mat_a</code> has tilesize (NB x NB)</dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">mat_b</td><td>contains the matrix B accessed in read-only mode (the elements are not modified), </td></tr>
@@ -297,13 +297,13 @@ template&lt;Backend B, Device D, class T &gt; </div>
   </table>
   </dd>
 </dl>
-<dl class="section pre"><dt>Precondition</dt><dd><code>mat_b</code> is distributed according to <code>grid</code> </dd>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_c</code> is distributed according to <code>grid</code> </dd>
 <dd>
-<code>mat_b</code> has size (N x K) </dd>
+<code>mat_c</code> has size (N x K) </dd>
 <dd>
-<code>mat_b</code> has blocksize (NB x NB) </dd>
+<code>mat_c</code> has blocksize (NB x NB) </dd>
 <dd>
-<code>mat_b</code> has tilesize (NB x NB) </dd></dl>
+<code>mat_c</code> has tilesize (NB x NB) </dd></dl>
 
 </div>
 </div>

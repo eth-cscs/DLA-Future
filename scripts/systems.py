@@ -231,45 +231,6 @@ printenv > env_{bs_name}.txt
 """,
 }
 
-cscs["todi"] = {
-    "Cores": 288,
-    "Threads per core": 1,
-    "Allowed rpns": [4],
-    "Multiple rpn in same job": True,
-    "GPU": True,
-    "Run command": "srun -u {srun_args} -n {total_ranks} --gpus-per-task=1 --cpu-bind=core -c {threads_per_rank}",
-    "Launch command": "sbatch --chdir={job_path} {job_file}",
-    "Batch preamble": """
-#!/bin/bash -l
-#SBATCH --job-name={run_name}_{nodes}
-#SBATCH --time={time_min}
-#SBATCH --nodes={nodes}
-#SBATCH --hint=multithread
-#SBATCH --output=output.txt
-#SBATCH --error=error.txt
-#SBATCH --verbose
-
-# Env
-export DLAF_BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE=128
-export DLAF_UMPIRE_DEVICE_MEMORY_POOL_ALIGNMENT_BYTES=$((1 << 21))
-export FI_CXI_RDZV_THRESHOLD=262144
-export FI_MR_CACHE_MONITOR=disabled
-export MIMALLOC_EAGER_COMMIT_DELAY=0
-export MIMALLOC_ALLOW_LARGE_OS_PAGES=1
-export MPICH_GPU_SUPPORT_ENABLED=1
-export MPICH_SMP_SINGLE_COPY_MODE=CMA
-#export PIKA_MPI_COMPLETION_MODE=63
-
-export PIKA_SMALL_STACK_SIZE=0x40000
-
-# Debug
-module list &> modules_{bs_name}.txt
-printenv > env_{bs_name}.txt
-
-# Commands
-""",
-}
-
 csc = {}
 
 csc["lumi-cpu"] = {

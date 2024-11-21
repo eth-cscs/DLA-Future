@@ -231,7 +231,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
   // Resume pika runtime suspended by C API for correctness checks
   pika::resume();
 
-  if (!mat_a_h.size().isEmpty() || eval_idx_end != 0) {
+  if (!mat_a_h.size().isEmpty() && eval_idx_end != 0) {
     testEigensolverCorrectness(uplo, reference, ret.eigenvalues, ret.eigenvectors, 0l, eval_idx_end,
                                grid);
   }

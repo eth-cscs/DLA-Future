@@ -404,7 +404,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
   // Resume pika runtime suspended by C API for correctness checks
   pika::resume();
 
-  if (!mat_a_h.size().isEmpty() || eval_idx_end != 0) {
+  if (!mat_a_h.size().isEmpty() && eval_idx_end != 0) {
     testGenEigensolverCorrectness(uplo, reference_a, reference_b, ret, 0l, eval_idx_end, grid);
   }
 

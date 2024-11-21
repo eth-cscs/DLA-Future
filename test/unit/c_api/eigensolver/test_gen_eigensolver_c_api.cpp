@@ -9,6 +9,7 @@
 //
 
 #include <optional>
+#include <set>
 #include <tuple>
 #include <typeinfo>
 #include <utility>
@@ -71,6 +72,10 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
 template <class T, Backend B, Device D, API api, Factorization factorization>
 void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
                         CommunicatorGrid& grid, std::optional<SizeType> eigenvalues_index_end = {}) {
+  // std::nullopt calls the API without specifying the number of eigenvalues to compute
+  // The final check needs to happen on all m eigenvalues/eigenvectors
+  const SizeType eval_idx_end = eigenvalues_index_end.value_or(m);
+
   auto dlaf_context = c_api_test_inititialize<api>(pika_argc, pika_argv, dlaf_argc, dlaf_argv, grid);
 
   // In normal use the runtime is resumed by the C API call
@@ -138,8 +143,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
           if (eigenvalues_index_end.has_value()) {
             err = C_dlaf_symmetric_generalized_eigensolver_partial_spectrum_d(
                 dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, local_b_ptr, dlaf_desc_b,
-                eigenvalues_ptr, local_eigenvectors_ptr, dlaf_desc_eigenvectors, 0,
-                *eigenvalues_index_end);
+                eigenvalues_ptr, local_eigenvectors_ptr, dlaf_desc_eigenvectors, 0, eval_idx_end);
           }
           else {
             err = C_dlaf_symmetric_generalized_eigensolver_d(dlaf_context, dlaf_uplo, local_a_ptr,
@@ -155,8 +159,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
           if (eigenvalues_index_end.has_value()) {
             err = C_dlaf_symmetric_generalized_eigensolver_partial_spectrum_factorized_d(
                 dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, local_b_ptr, dlaf_desc_b,
-                eigenvalues_ptr, local_eigenvectors_ptr, dlaf_desc_eigenvectors, 0,
-                *eigenvalues_index_end);
+                eigenvalues_ptr, local_eigenvectors_ptr, dlaf_desc_eigenvectors, 0, eval_idx_end);
           }
           else {
             err = C_dlaf_symmetric_generalized_eigensolver_factorized_d(
@@ -170,8 +173,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
           if (eigenvalues_index_end.has_value()) {
             err = C_dlaf_symmetric_generalized_eigensolver_partial_spectrum_s(
                 dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, local_b_ptr, dlaf_desc_b,
-                eigenvalues_ptr, local_eigenvectors_ptr, dlaf_desc_eigenvectors, 0,
-                *eigenvalues_index_end);
+                eigenvalues_ptr, local_eigenvectors_ptr, dlaf_desc_eigenvectors, 0, eval_idx_end);
           }
           else {
             err = C_dlaf_symmetric_generalized_eigensolver_s(dlaf_context, dlaf_uplo, local_a_ptr,
@@ -187,8 +189,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
           if (eigenvalues_index_end.has_value()) {
             err = C_dlaf_symmetric_generalized_eigensolver_partial_spectrum_factorized_s(
                 dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, local_b_ptr, dlaf_desc_b,
-                eigenvalues_ptr, local_eigenvectors_ptr, dlaf_desc_eigenvectors, 0,
-                *eigenvalues_index_end);
+                eigenvalues_ptr, local_eigenvectors_ptr, dlaf_desc_eigenvectors, 0, eval_idx_end);
           }
           else {
             err = C_dlaf_symmetric_generalized_eigensolver_factorized_s(
@@ -202,8 +203,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
           if (eigenvalues_index_end.has_value()) {
             err = C_dlaf_hermitian_generalized_eigensolver_partial_spectrum_z(
                 dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, local_b_ptr, dlaf_desc_b,
-                eigenvalues_ptr, local_eigenvectors_ptr, dlaf_desc_eigenvectors, 0,
-                *eigenvalues_index_end);
+                eigenvalues_ptr, local_eigenvectors_ptr, dlaf_desc_eigenvectors, 0, eval_idx_end);
           }
           else {
             err = C_dlaf_hermitian_generalized_eigensolver_z(dlaf_context, dlaf_uplo, local_a_ptr,
@@ -219,8 +219,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
           if (eigenvalues_index_end.has_value()) {
             err = C_dlaf_hermitian_generalized_eigensolver_partial_spectrum_factorized_z(
                 dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, local_b_ptr, dlaf_desc_b,
-                eigenvalues_ptr, local_eigenvectors_ptr, dlaf_desc_eigenvectors, 0,
-                *eigenvalues_index_end);
+                eigenvalues_ptr, local_eigenvectors_ptr, dlaf_desc_eigenvectors, 0, eval_idx_end);
           }
           else {
             err = C_dlaf_hermitian_generalized_eigensolver_factorized_z(
@@ -234,8 +233,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
           if (eigenvalues_index_end.has_value()) {
             err = C_dlaf_hermitian_generalized_eigensolver_partial_spectrum_c(
                 dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, local_b_ptr, dlaf_desc_b,
-                eigenvalues_ptr, local_eigenvectors_ptr, dlaf_desc_eigenvectors, 0,
-                *eigenvalues_index_end);
+                eigenvalues_ptr, local_eigenvectors_ptr, dlaf_desc_eigenvectors, 0, eval_idx_end);
           }
           else {
             err = C_dlaf_hermitian_generalized_eigensolver_c(dlaf_context, dlaf_uplo, local_a_ptr,
@@ -251,8 +249,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
           if (eigenvalues_index_end.has_value()) {
             err = C_dlaf_hermitian_generalized_eigensolver_partial_spectrum_factorized_c(
                 dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, local_b_ptr, dlaf_desc_b,
-                eigenvalues_ptr, local_eigenvectors_ptr, dlaf_desc_eigenvectors, 0,
-                *eigenvalues_index_end);
+                eigenvalues_ptr, local_eigenvectors_ptr, dlaf_desc_eigenvectors, 0, eval_idx_end);
           }
           else {
             err = C_dlaf_hermitian_generalized_eigensolver_factorized_c(
@@ -277,7 +274,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
           if (eigenvalues_index_end.has_value()) {
             C_dlaf_pdsygvd_partial_spectrum(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr,
                                             1, 1, desc_b, eigenvalues_ptr, local_eigenvectors_ptr, 1, 1,
-                                            desc_z, 0, *eigenvalues_index_end, &info);
+                                            desc_z, 0, eval_idx_end, &info);
           }
           else {
             C_dlaf_pdsygvd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
@@ -293,7 +290,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
             C_dlaf_pdsygvd_partial_spectrum_factorized(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a,
                                                        local_b_ptr, 1, 1, desc_b, eigenvalues_ptr,
                                                        local_eigenvectors_ptr, 1, 1, desc_z, 0,
-                                                       *eigenvalues_index_end, &info);
+                                                       eval_idx_end, &info);
           }
           else {
             C_dlaf_pdsygvd_factorized(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1,
@@ -307,7 +304,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
           if (eigenvalues_index_end.has_value()) {
             C_dlaf_pssygvd_partial_spectrum(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr,
                                             1, 1, desc_b, eigenvalues_ptr, local_eigenvectors_ptr, 1, 1,
-                                            desc_z, 0, *eigenvalues_index_end, &info);
+                                            desc_z, 0, eval_idx_end, &info);
           }
           else {
             C_dlaf_pssygvd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
@@ -323,7 +320,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
             C_dlaf_pssygvd_partial_spectrum_factorized(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a,
                                                        local_b_ptr, 1, 1, desc_b, eigenvalues_ptr,
                                                        local_eigenvectors_ptr, 1, 1, desc_z, 0,
-                                                       *eigenvalues_index_end, &info);
+                                                       eval_idx_end, &info);
           }
           else {
             C_dlaf_pssygvd_factorized(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1,
@@ -337,7 +334,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
           if (eigenvalues_index_end.has_value()) {
             C_dlaf_pzhegvd_partial_spectrum(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr,
                                             1, 1, desc_b, eigenvalues_ptr, local_eigenvectors_ptr, 1, 1,
-                                            desc_z, 0, *eigenvalues_index_end, &info);
+                                            desc_z, 0, eval_idx_end, &info);
           }
           else {
             C_dlaf_pzhegvd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
@@ -353,7 +350,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
             C_dlaf_pzhegvd_partial_spectrum_factorized(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a,
                                                        local_b_ptr, 1, 1, desc_b, eigenvalues_ptr,
                                                        local_eigenvectors_ptr, 1, 1, desc_z, 0,
-                                                       *eigenvalues_index_end, &info);
+                                                       eval_idx_end, &info);
           }
           else {
             C_dlaf_pzhegvd_factorized(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1,
@@ -367,7 +364,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
           if (eigenvalues_index_end.has_value()) {
             C_dlaf_pchegvd_partial_spectrum(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr,
                                             1, 1, desc_b, eigenvalues_ptr, local_eigenvectors_ptr, 1, 1,
-                                            desc_z, 0, *eigenvalues_index_end, &info);
+                                            desc_z, 0, eval_idx_end, &info);
           }
           else {
             C_dlaf_pchegvd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
@@ -383,7 +380,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
             C_dlaf_pchegvd_partial_spectrum_factorized(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a,
                                                        local_b_ptr, 1, 1, desc_b, eigenvalues_ptr,
                                                        local_eigenvectors_ptr, 1, 1, desc_z, 0,
-                                                       *eigenvalues_index_end, &info);
+                                                       eval_idx_end, &info);
           }
           else {
             C_dlaf_pchegvd_factorized(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1,
@@ -407,8 +404,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
   // Resume pika runtime suspended by C API for correctness checks
   pika::resume();
 
-  if (!mat_a_h.size().isEmpty()) {
-    auto eval_idx_end = eigenvalues_index_end.has_value() ? *eigenvalues_index_end : m;
+  if (!mat_a_h.size().isEmpty() || eval_idx_end != 0) {
     testGenEigensolverCorrectness(uplo, reference_a, reference_b, ret, 0l, eval_idx_end, grid);
   }
 
@@ -422,15 +418,13 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributedDLAF) {
   for (comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
-        testGenEigensolver<TypeParam, Backend::MC, Device::CPU, API::dlaf,
-                           Factorization::do_factorization>(uplo, m, mb, grid);
-        testGenEigensolver<TypeParam, Backend::MC, Device::CPU, API::dlaf,
-                           Factorization::already_factorized>(uplo, m, mb, grid);
-        for (auto den = 1; den <= 2; den++) {
+        std::set<std::optional<SizeType>> numevals = {std::nullopt, 0, m / 2, m};
+
+        for (auto nevals : numevals) {
           testGenEigensolver<TypeParam, Backend::MC, Device::CPU, API::dlaf,
-                             Factorization::do_factorization>(uplo, m, mb, grid, m / den);
+                             Factorization::do_factorization>(uplo, m, mb, grid, nevals);
           testGenEigensolver<TypeParam, Backend::MC, Device::CPU, API::dlaf,
-                             Factorization::already_factorized>(uplo, m, mb, grid, m / den);
+                             Factorization::already_factorized>(uplo, m, mb, grid, nevals);
         }
       }
     }
@@ -442,15 +436,13 @@ TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributedDLAF) {
   for (comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
-        testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, API::dlaf,
-                           Factorization::do_factorization>(uplo, m, mb, grid);
-        testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, API::dlaf,
-                           Factorization::already_factorized>(uplo, m, mb, grid);
-        for (int den = 1; den <= 2; den++) {
+        std::set<std::optional<SizeType>> numevals = {std::nullopt, 0, m / 2, m};
+
+        for (auto nevals : numevals) {
           testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, API::dlaf,
-                             Factorization::do_factorization>(uplo, m, mb, grid, m / den);
+                             Factorization::do_factorization>(uplo, m, mb, grid, nevals);
           testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, API::dlaf,
-                             Factorization::already_factorized>(uplo, m, mb, grid, m / den);
+                             Factorization::already_factorized>(uplo, m, mb, grid, nevals);
         }
       }
     }
@@ -464,15 +456,13 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributedScaLAPACK) {
   for (comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
-        testGenEigensolver<TypeParam, Backend::MC, Device::CPU, API::scalapack,
-                           Factorization::do_factorization>(uplo, m, mb, grid);
-        testGenEigensolver<TypeParam, Backend::MC, Device::CPU, API::scalapack,
-                           Factorization::already_factorized>(uplo, m, mb, grid);
-        for (int den = 1; den <= 2; den++) {
+        std::set<std::optional<SizeType>> numevals = {std::nullopt, 0, m / 2, m};
+
+        for (auto nevals : numevals) {
           testGenEigensolver<TypeParam, Backend::MC, Device::CPU, API::scalapack,
-                             Factorization::do_factorization>(uplo, m, mb, grid, m / den);
+                             Factorization::do_factorization>(uplo, m, mb, grid, nevals);
           testGenEigensolver<TypeParam, Backend::MC, Device::CPU, API::scalapack,
-                             Factorization::already_factorized>(uplo, m, mb, grid, m / den);
+                             Factorization::already_factorized>(uplo, m, mb, grid, nevals);
         }
       }
     }
@@ -484,15 +474,13 @@ TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributedScaLAPACK) {
   for (comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
-        testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, API::scalapack,
-                           Factorization::do_factorization>(uplo, m, mb, grid);
-        testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, API::scalapack,
-                           Factorization::already_factorized>(uplo, m, mb, grid);
-        for (int den = 1; den <= 2; den++) {
+        std::set<std::optional<SizeType>> numevals = {std::nullopt, 0, m / 2, m};
+
+        for (auto nevals : numevals) {
           testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, API::scalapack,
-                             Factorization::do_factorization>(uplo, m, mb, grid, m / den);
+                             Factorization::do_factorization>(uplo, m, mb, grid, nevals);
           testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, API::scalapack,
-                             Factorization::already_factorized>(uplo, m, mb, grid, m / den);
+                             Factorization::already_factorized>(uplo, m, mb, grid, nevals);
         }
       }
     }

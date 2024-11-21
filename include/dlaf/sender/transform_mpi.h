@@ -43,6 +43,9 @@ void consumeCommunicatorWrapper(T&) {}
 /// The mpi operations can complete asynchronously later, but the commmunicator is
 /// released/made available once the mpi task has been safely initiated
 ///
+/// This could in theory be a lambda inside transformMPI.  However, clang at
+/// least until version 12 fails with an internal compiler error with a trailing
+/// decltype for SFINAE. GCC has no problems with a lambda.
 template <typename F>
 struct MPICallHelper {
   std::decay_t<F> f;

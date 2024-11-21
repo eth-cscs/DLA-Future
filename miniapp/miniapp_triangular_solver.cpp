@@ -112,6 +112,7 @@ struct triangularSolverMiniapp {
     using ConstMatrixMirrorType = MatrixMirror<const T, DefaultDevice_v<backend>, Device::CPU>;
     using HostMatrixType = Matrix<T, Device::CPU>;
     using ConstHostMatrixType = Matrix<const T, Device::CPU>;
+    using MatrixRefType = dlaf::matrix::internal::MatrixRef<T, DefaultDevice_v<backend>>;
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
 
@@ -176,7 +177,7 @@ struct triangularSolverMiniapp {
 
       // MatrixRef, not to be confused with the reference matrix b_ref
       auto spec = dlaf::matrix::util::internal::sub_matrix_spec_slice_cols(bh, 0, opts.eval_idx_end);
-      dlaf::matrix::internal::MatrixRef mat_b_ref(b.get(), spec);
+      MatrixRefType mat_b_ref(b.get(), spec);
 
       dlaf::common::Timer<> timeit;
       if (opts.local)

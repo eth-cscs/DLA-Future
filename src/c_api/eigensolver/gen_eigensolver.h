@@ -28,7 +28,7 @@
 #include "../utils.h"
 
 template <typename T>
-int hermitian_generalized_eigensolver_helper(
+int hermitian_generalized_eigensolver(
     const int dlaf_context, const char uplo, T* a, const DLAF_descriptor dlaf_desca, T* b,
     const DLAF_descriptor dlaf_descb, dlaf::BaseType<T>* w, T* z, const DLAF_descriptor dlaf_descz,
     const SizeType eigenvalues_index_begin, const SizeType eigenvalues_index_end, bool factorized) {
@@ -91,9 +91,9 @@ int hermitian_generalized_eigensolver(
     const int dlaf_context, const char uplo, T* a, const DLAF_descriptor dlaf_desca, T* b,
     const DLAF_descriptor dlaf_descb, dlaf::BaseType<T>* w, T* z, const DLAF_descriptor dlaf_descz,
     const SizeType eigenvalues_index_begin, const SizeType eigenvalues_index_end) {
-  return hermitian_generalized_eigensolver_helper<T>(dlaf_context, uplo, a, dlaf_desca, b, dlaf_descb, w,
-                                                     z, dlaf_descz, eigenvalues_index_begin,
-                                                     eigenvalues_index_end, false);
+  return hermitian_generalized_eigensolver<T>(dlaf_context, uplo, a, dlaf_desca, b, dlaf_descb, w, z,
+                                              dlaf_descz, eigenvalues_index_begin, eigenvalues_index_end,
+                                              false);
 }
 
 template <typename T>
@@ -101,18 +101,18 @@ int hermitian_generalized_eigensolver_factorized(
     const int dlaf_context, const char uplo, T* a, const DLAF_descriptor dlaf_desca, T* b,
     const DLAF_descriptor dlaf_descb, dlaf::BaseType<T>* w, T* z, const DLAF_descriptor dlaf_descz,
     const SizeType eigenvalues_index_begin, const SizeType eigenvalues_index_end) {
-  return hermitian_generalized_eigensolver_helper<T>(dlaf_context, uplo, a, dlaf_desca, b, dlaf_descb, w,
-                                                     z, dlaf_descz, eigenvalues_index_begin,
-                                                     eigenvalues_index_end, true);
+  return hermitian_generalized_eigensolver<T>(dlaf_context, uplo, a, dlaf_desca, b, dlaf_descb, w, z,
+                                              dlaf_descz, eigenvalues_index_begin, eigenvalues_index_end,
+                                              true);
 }
 
 #ifdef DLAF_WITH_SCALAPACK
 
 template <typename T>
-void pxhegvd_helper(const char uplo, const int m, T* a, const int ia, const int ja, const int desca[9],
-                    T* b, const int ib, const int jb, const int descb[9], dlaf::BaseType<T>* w, T* z,
-                    const int iz, int jz, const int descz[9], const SizeType eigenvalues_index_begin,
-                    const SizeType eigenvalues_index_end, bool factorized, int& info) {
+void pxhegvd(const char uplo, const int m, T* a, const int ia, const int ja, const int desca[9], T* b,
+             const int ib, const int jb, const int descb[9], dlaf::BaseType<T>* w, T* z, const int iz,
+             int jz, const int descz[9], const SizeType eigenvalues_index_begin,
+             const SizeType eigenvalues_index_end, bool factorized, int& info) {
   DLAF_ASSERT(desca[0] == 1, desca[0]);
   DLAF_ASSERT(descb[0] == 1, descb[0]);
   DLAF_ASSERT(descz[0] == 1, descz[0]);
@@ -146,8 +146,8 @@ void pxhegvd(const char uplo, const int m, T* a, const int ia, const int ja, con
              const int ib, const int jb, const int descb[9], dlaf::BaseType<T>* w, T* z, const int iz,
              int jz, const int descz[9], const SizeType eigenvalues_index_begin,
              const SizeType eigenvalues_index_end, int& info) {
-  pxhegvd_helper<T>(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz,
-                    eigenvalues_index_begin, eigenvalues_index_end, false, info);
+  pxhegvd<T>(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, eigenvalues_index_begin,
+             eigenvalues_index_end, false, info);
 }
 
 template <typename T>
@@ -156,8 +156,8 @@ void pxhegvd_factorized(const char uplo, const int m, T* a, const int ia, const 
                         dlaf::BaseType<T>* w, T* z, const int iz, int jz, const int descz[9],
                         const SizeType eigenvalues_index_begin, const SizeType eigenvalues_index_end,
                         int& info) {
-  pxhegvd_helper<T>(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz,
-                    eigenvalues_index_begin, eigenvalues_index_end, true, info);
+  pxhegvd<T>(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, eigenvalues_index_begin,
+             eigenvalues_index_end, true, info);
 }
 
 #endif

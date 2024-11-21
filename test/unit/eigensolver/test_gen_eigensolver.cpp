@@ -77,6 +77,10 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
     {34, 8, 3},  {32, 6, 3}                                   // m > mb, sub-band
 };
 
+std::set<std::optional<SizeType>> num_evals(const SizeType m) {
+  return {std::nullopt, 0, m / 2, m};
+}
+
 template <class T, Backend B, Device D, Allocation allocation, Factorization factorization,
           class... GridIfDistributed>
 void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
@@ -230,7 +234,7 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessLocal) {
     for (auto [m, mb, b_min] : sizes) {
       getTuneParameters().eigensolver_min_band = b_min;
 
-      std::set<std::optional<SizeType>> numevals = {std::nullopt, 0, m / 2, m};
+      auto numevals = num_evals(m);
 
       for (auto nevals : numevals) {
         testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation,
@@ -252,7 +256,7 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributed) {
       for (auto [m, mb, b_min] : sizes) {
         getTuneParameters().eigensolver_min_band = b_min;
 
-        std::set<std::optional<SizeType>> numevals = {std::nullopt, 0, m / 2, m};
+        auto numevals = num_evals(m);
 
         for (auto nevals : numevals) {
           testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation,
@@ -275,7 +279,7 @@ TYPED_TEST(GenEigensolverTestGPU, CorrectnessLocal) {
     for (auto [m, mb, b_min] : sizes) {
       getTuneParameters().eigensolver_min_band = b_min;
 
-      std::set<std::optional<SizeType>> numevals = {std::nullopt, 0, m / 2, m};
+      auto numevals = num_evals(m);
 
       for (auto nevals : numevals) {
         testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation,
@@ -297,7 +301,7 @@ TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributed) {
       for (auto [m, mb, b_min] : sizes) {
         getTuneParameters().eigensolver_min_band = b_min;
 
-        std::set<std::optional<SizeType>> numevals = {std::nullopt, 0, m / 2, m};
+        auto numevals = num_evals(m);
 
         for (auto nevals : numevals) {
           testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation,

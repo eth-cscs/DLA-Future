@@ -69,9 +69,13 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
     {34, 8, 3},  {32, 6, 3}                                   // m > mb, sub-band
 };
 
+std::set<std::optional<SizeType>> num_evals(const SizeType m) {
+  return {std::nullopt, 0, m / 2, m};
+}
+
 template <class T, Backend B, Device D, API api, Factorization factorization>
 void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
-                        CommunicatorGrid& grid, std::optional<SizeType> eigenvalues_index_end = {}) {
+                        CommunicatorGrid& grid, std::optional<SizeType> eigenvalues_index_end) {
   // std::nullopt calls the API without specifying the number of eigenvalues to compute
   // The final check needs to happen on all m eigenvalues/eigenvectors
   const SizeType eval_idx_end = eigenvalues_index_end.value_or(m);
@@ -418,8 +422,7 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributedDLAF) {
   for (comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
-        std::set<std::optional<SizeType>> numevals = {std::nullopt, 0, m / 2, m};
-
+        auto numevals = num_evals(m);
         for (auto nevals : numevals) {
           testGenEigensolver<TypeParam, Backend::MC, Device::CPU, API::dlaf,
                              Factorization::do_factorization>(uplo, m, mb, grid, nevals);
@@ -436,8 +439,7 @@ TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributedDLAF) {
   for (comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
-        std::set<std::optional<SizeType>> numevals = {std::nullopt, 0, m / 2, m};
-
+        auto numevals = num_evals(m);
         for (auto nevals : numevals) {
           testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, API::dlaf,
                              Factorization::do_factorization>(uplo, m, mb, grid, nevals);
@@ -456,8 +458,7 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributedScaLAPACK) {
   for (comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
-        std::set<std::optional<SizeType>> numevals = {std::nullopt, 0, m / 2, m};
-
+        auto numevals = num_evals(m);
         for (auto nevals : numevals) {
           testGenEigensolver<TypeParam, Backend::MC, Device::CPU, API::scalapack,
                              Factorization::do_factorization>(uplo, m, mb, grid, nevals);
@@ -474,8 +475,7 @@ TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributedScaLAPACK) {
   for (comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
-        std::set<std::optional<SizeType>> numevals = {std::nullopt, 0, m / 2, m};
-
+        auto numevals = num_evals(m);
         for (auto nevals : numevals) {
           testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, API::scalapack,
                              Factorization::do_factorization>(uplo, m, mb, grid, nevals);

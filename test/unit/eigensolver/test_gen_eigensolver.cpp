@@ -8,6 +8,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <fstream>
+#include <numbers>
+#include <optional>
 #include <set>
 #include <tuple>
 #include <utility>
@@ -23,6 +26,9 @@
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_mirror.h>
 #include <dlaf/tune.h>
+
+#include "dlaf/init.h"
+#include "dlaf/types.h"
 
 #include <gtest/gtest.h>
 
@@ -74,8 +80,13 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
 template <class T, Backend B, Device D, Allocation allocation, Factorization factorization,
           class... GridIfDistributed>
 void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
-                        const SizeType eigenvalues_index_end, GridIfDistributed&... grid) {
+                        const std::optional<SizeType> eigenvalues_index_end,
+                        GridIfDistributed&... grid) {
   constexpr bool isDistributed = (sizeof...(grid) == 1);
+
+  // std::nullopt calls the API without specifying the number of eigenvalues to compute
+  // The final check needs to happen on all m eigenvalues/eigenvectors
+  const SizeType eval_idx_end = eigenvalues_index_end.value_or(m);
 
   const TileElementSize block_size(mb, mb);
 
@@ -109,24 +120,45 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
     if constexpr (allocation == Allocation::do_allocation) {
       if constexpr (isDistributed) {
         if constexpr (factorization == Factorization::do_factorization) {
-          return hermitian_generalized_eigensolver<B>(grid..., uplo, mat_a.get(), mat_b.get(), 0l,
-                                                      eigenvalues_index_end);
+          if (eigenvalues_index_end.has_value()) {
+            return hermitian_generalized_eigensolver<B>(grid..., uplo, mat_a.get(), mat_b.get(), 0l,
+                                                        eval_idx_end);
+          }
+          else {
+            return hermitian_generalized_eigensolver<B>(grid..., uplo, mat_a.get(), mat_b.get());
+          }
         }
         else {
           cholesky_factorization<B, D, T>(grid..., uplo, mat_b.get());
-          return hermitian_generalized_eigensolver_factorized<B>(grid..., uplo, mat_a.get(), mat_b.get(),
-                                                                 0l, eigenvalues_index_end);
+          if (eigenvalues_index_end.has_value()) {
+            return hermitian_generalized_eigensolver_factorized<B>(grid..., uplo, mat_a.get(),
+                                                                   mat_b.get(), 0l, eval_idx_end);
+          }
+          else {
+            return hermitian_generalized_eigensolver_factorized<B>(grid..., uplo, mat_a.get(),
+                                                                   mat_b.get());
+          }
         }
       }
       else {
         if constexpr (factorization == Factorization::do_factorization) {
-          return hermitian_generalized_eigensolver<B>(uplo, mat_a.get(), mat_b.get(), 0l,
-                                                      eigenvalues_index_end);
+          if (eigenvalues_index_end.has_value()) {
+            return hermitian_generalized_eigensolver<B>(uplo, mat_a.get(), mat_b.get(), 0l,
+                                                        eval_idx_end);
+          }
+          else {
+            return hermitian_generalized_eigensolver<B>(uplo, mat_a.get(), mat_b.get());
+          }
         }
         else {
           cholesky_factorization<B, D, T>(uplo, mat_b.get());
-          return hermitian_generalized_eigensolver_factorized<B>(uplo, mat_a.get(), mat_b.get(), 0l,
-                                                                 eigenvalues_index_end);
+          if (eigenvalues_index_end.has_value()) {
+            return hermitian_generalized_eigensolver_factorized<B>(uplo, mat_a.get(), mat_b.get(), 0l,
+                                                                   eval_idx_end);
+          }
+          else {
+            return hermitian_generalized_eigensolver_factorized<B>(uplo, mat_a.get(), mat_b.get());
+          }
         }
       }
     }
@@ -137,37 +169,60 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
       if constexpr (isDistributed) {
         Matrix<T, D> eigenvectors(GlobalElementSize(size, size), mat_a_h.blockSize(), grid...);
         if constexpr (factorization == Factorization::do_factorization) {
-          hermitian_generalized_eigensolver<B>(grid..., uplo, mat_a.get(), mat_b.get(), eigenvalues,
-                                               eigenvectors, 0l, eigenvalues_index_end);
+          if (eigenvalues_index_end.has_value()) {
+            hermitian_generalized_eigensolver<B>(grid..., uplo, mat_a.get(), mat_b.get(), eigenvalues,
+                                                 eigenvectors, 0l, eval_idx_end);
+          }
+          else {
+            hermitian_generalized_eigensolver<B>(grid..., uplo, mat_a.get(), mat_b.get(), eigenvalues,
+                                                 eigenvectors);
+          }
         }
         else {
           cholesky_factorization<B, D, T>(grid..., uplo, mat_b.get());
-          hermitian_generalized_eigensolver_factorized<B>(grid..., uplo, mat_a.get(), mat_b.get(),
-                                                          eigenvalues, eigenvectors, 0l,
-                                                          eigenvalues_index_end);
+          if (eigenvalues_index_end.has_value()) {
+            hermitian_generalized_eigensolver_factorized<B>(grid..., uplo, mat_a.get(), mat_b.get(),
+                                                            eigenvalues, eigenvectors, 0l, eval_idx_end);
+          }
+          else {
+            hermitian_generalized_eigensolver_factorized<B>(grid..., uplo, mat_a.get(), mat_b.get(),
+                                                            eigenvalues, eigenvectors);
+          }
         }
         return EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
       }
       else {
         Matrix<T, D> eigenvectors(LocalElementSize(size, size), mat_a_h.blockSize());
         if constexpr (factorization == Factorization::do_factorization) {
-          hermitian_generalized_eigensolver<B>(uplo, mat_a.get(), mat_b.get(), eigenvalues, eigenvectors,
-                                               0l, eigenvalues_index_end);
+          if (eigenvalues_index_end.has_value()) {
+            hermitian_generalized_eigensolver<B>(uplo, mat_a.get(), mat_b.get(), eigenvalues,
+                                                 eigenvectors, 0l, eval_idx_end);
+          }
+          else {
+            hermitian_generalized_eigensolver<B>(uplo, mat_a.get(), mat_b.get(), eigenvalues,
+                                                 eigenvectors);
+          }
         }
         else {
           cholesky_factorization<B, D, T>(uplo, mat_b.get());
-          hermitian_generalized_eigensolver_factorized<B>(uplo, mat_a.get(), mat_b.get(), eigenvalues,
-                                                          eigenvectors, 0l, eigenvalues_index_end);
+          if (eigenvalues_index_end.has_value()) {
+            hermitian_generalized_eigensolver_factorized<B>(uplo, mat_a.get(), mat_b.get(), eigenvalues,
+                                                            eigenvectors, 0l, eval_idx_end);
+          }
+          else {
+            hermitian_generalized_eigensolver_factorized<B>(uplo, mat_a.get(), mat_b.get(), eigenvalues,
+                                                            eigenvectors);
+          }
         }
         return EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
       }
     }
   }();
 
-  if (mat_a_h.size().isEmpty() || eigenvalues_index_end == 0)
+  if (mat_a_h.size().isEmpty() || eval_idx_end == 0)
     return;
 
-  testGenEigensolverCorrectness(uplo, reference_a, reference_b, ret, 0l, eigenvalues_index_end, grid...);
+  testGenEigensolverCorrectness(uplo, reference_a, reference_b, ret, 0l, eval_idx_end, grid...);
 }
 
 TYPED_TEST(GenEigensolverTestMC, CorrectnessLocal) {
@@ -175,7 +230,7 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessLocal) {
     for (auto [m, mb, b_min] : sizes) {
       getTuneParameters().eigensolver_min_band = b_min;
 
-      std::set<SizeType> numevals = {0, m / 2, m};
+      std::set<std::optional<SizeType>> numevals = {std::nullopt, 0, m / 2, m};
 
       for (auto nevals : numevals) {
         testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation,
@@ -197,7 +252,7 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributed) {
       for (auto [m, mb, b_min] : sizes) {
         getTuneParameters().eigensolver_min_band = b_min;
 
-        std::set<SizeType> numevals = {0, m / 2, m};
+        std::set<std::optional<SizeType>> numevals = {std::nullopt, 0, m / 2, m};
 
         for (auto nevals : numevals) {
           testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation,
@@ -220,7 +275,7 @@ TYPED_TEST(GenEigensolverTestGPU, CorrectnessLocal) {
     for (auto [m, mb, b_min] : sizes) {
       getTuneParameters().eigensolver_min_band = b_min;
 
-      std::set<SizeType> numevals = {0, m / 2, m};
+      std::set<std::optional<SizeType>> numevals = {std::nullopt, 0, m / 2, m};
 
       for (auto nevals : numevals) {
         testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation,
@@ -242,7 +297,7 @@ TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributed) {
       for (auto [m, mb, b_min] : sizes) {
         getTuneParameters().eigensolver_min_band = b_min;
 
-        std::set<SizeType> numevals = {0, m / 2, m};
+        std::set<std::optional<SizeType>> numevals = {std::nullopt, 0, m / 2, m};
 
         for (auto nevals : numevals) {
           testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation,

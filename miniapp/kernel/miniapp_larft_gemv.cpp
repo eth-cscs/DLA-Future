@@ -156,10 +156,8 @@ struct Test {
             elapsed_time_post = runner.runStream(post_kernel_GPU1);
             break;
           default:
-            std::cout << "Error: Non existing kernel id" << opts.kernel_id << std::endl;
-            elapsed_time_pre = -1;
-            elapsed_time_kernel = -1;
-            elapsed_time_post = -1;
+            std::cout << "Error: Nonexistent kernel id" << opts.kernel_id << std::endl;
+            DLAF_UNREACHABLE_PLAIN;
         }
       }
 #endif

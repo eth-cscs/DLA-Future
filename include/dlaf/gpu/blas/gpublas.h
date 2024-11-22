@@ -12,6 +12,7 @@
 /// @file
 /// Provides gpublas wrappers for BLAS operations.
 
+#ifdef DLAF_WITH_GPU
 #include <cstddef>
 #include <utility>
 
@@ -139,3 +140,4 @@ DLAF_MAKE_GPUBLAS_OP(Trmm, trmm_outofplace);
 
 DLAF_MAKE_GPUBLAS_OP(Trsm, trsm);
 }
+#endif

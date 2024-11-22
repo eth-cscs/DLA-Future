@@ -8,11 +8,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <cublas_v2.h>
 #include <whip.hpp>
 
 #include <dlaf/common/assert.h>
 #include <dlaf/gpu/assert.cu.h>
+#include <dlaf/gpu/blas/api.h>
 #include <dlaf/gpu/blas/gpublas.h>
 #include <dlaf/lapack/gpu/larft.h>
 #include <dlaf/types.h>

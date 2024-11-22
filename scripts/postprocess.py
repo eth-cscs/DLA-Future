@@ -213,8 +213,23 @@ def _parse_optional_text(text):
     else:
         return None
 
+@with_pattern(r"(|\s+\S+)")
+def _parse_optional_int(text):
+    text = text.strip()
 
-additional_parsers = dict(optional_text=_parse_optional_text)
+    for c in ["(", ",", ")"]:
+        text = text.replace(c, "")
+
+    if text:
+        return int(text)
+    else:
+        return None
+
+
+additional_parsers = {
+    "optional_text": _parse_optional_text,
+    "optional_int": _parse_optional_int,
+}
 # {
 #     "run_index":
 #     "matrix_rows":
@@ -239,20 +254,18 @@ def _parse_line_based(fout, bench_name, nodes):
         # fail.
         alg_name = bench_name[0 : bench_name.find("_dlaf")]
 
-        print(alg_name)
-
         if alg_name in ["chol", "hegst", "trmm"]:
             pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
         if alg_name in ["trsm"]:
-            pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({first_eval_idx:d}, {last_eval_idx:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
+            pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}){first_eval_idx:optional_int}{last_eval_idx:optional_int} ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
         if alg_name in ["red2band", "band2trid"]:
             pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
         if alg_name in ["bt_band2trid", "bt_red2band"]:
-            pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({first_eval_idx:d}, {last_eval_idx:d}) ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
+            pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}){first_eval_idx:optional_int}{last_eval:optional_int} ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
         if alg_name in ["trid_evp"]:
             pstr_res = "[{run_index:d}] {time:g}s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
         if alg_name in ["evp", "gevp"]:
-            pstr_res = "[{run_index:d}] {time:g}s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({first_eval_idx:d}, {last_eval_idx:d}) ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
+            pstr_res = "[{run_index:d}] {time:g}s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}){first_eval_idx:optional_int}{last_eval_idx:optional_int} ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
     elif bench_name.startswith("chol_slate"):
         pstr_arr = ["input:{}potrf"]
         pstr_res = "d {} {} column lower {matrix_rows:d} {:d} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:g} {perf:g} NA NA no check"

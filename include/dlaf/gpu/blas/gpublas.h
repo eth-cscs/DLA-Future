@@ -24,7 +24,7 @@
 
 #ifdef DLAF_WITH_HIP
 
-#include<pika/async_cuda/detail/cuda_event_callback.hpp>
+#include <pika/async_cuda/detail/cuda_event_callback.hpp>
 
 #define DLAF_GET_ROCBLAS_WORKSPACE(f)                                                                   \
   [&]() {                                                                                               \

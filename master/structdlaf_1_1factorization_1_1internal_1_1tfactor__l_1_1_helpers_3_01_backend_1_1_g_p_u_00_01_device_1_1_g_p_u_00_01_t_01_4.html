@@ -82,18 +82,21 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
-<tr class="memitem:a502e838679c41632b86b81b14479c11d" id="r_a502e838679c41632b86b81b14479c11d"><td class="memTemplParams" colspan="2"><a id="a502e838679c41632b86b81b14479c11d" name="a502e838679c41632b86b81b14479c11d"></a>
-template&lt;class TSender &gt; </td></tr>
-<tr class="memitem:a502e838679c41632b86b81b14479c11d"><td class="memTemplItemLeft" align="right" valign="top">static auto&#160;</td><td class="memTemplItemRight" valign="bottom"><b>set0</b> (TSender &amp;&amp;t)</td></tr>
-<tr class="separator:a502e838679c41632b86b81b14479c11d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a09dfd0732a8864ed4fc5a60c59e0dbac" id="r_a09dfd0732a8864ed4fc5a60c59e0dbac"><td class="memTemplParams" colspan="2"><a id="a09dfd0732a8864ed4fc5a60c59e0dbac" name="a09dfd0732a8864ed4fc5a60c59e0dbac"></a>
-template&lt;class VISender , class TSender &gt; </td></tr>
-<tr class="memitem:a09dfd0732a8864ed4fc5a60c59e0dbac"><td class="memTemplItemLeft" align="right" valign="top">static auto&#160;</td><td class="memTemplItemRight" valign="bottom"><b>gemvColumnT</b> (SizeType first_row_tile, VISender &amp;&amp;tile_vi, matrix::ReadOnlyTileSender&lt; T, Device::CPU &gt; taus, TSender &amp;&amp;tile_t) noexcept</td></tr>
-<tr class="separator:a09dfd0732a8864ed4fc5a60c59e0dbac"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a00c5691bdf7a009bfe7e16fb801a35e3" id="r_a00c5691bdf7a009bfe7e16fb801a35e3"><td class="memTemplParams" colspan="2"><a id="a00c5691bdf7a009bfe7e16fb801a35e3" name="a00c5691bdf7a009bfe7e16fb801a35e3"></a>
-template&lt;class TSender &gt; </td></tr>
-<tr class="memitem:a00c5691bdf7a009bfe7e16fb801a35e3"><td class="memTemplItemLeft" align="right" valign="top">static auto&#160;</td><td class="memTemplItemRight" valign="bottom"><b>trmvUpdateColumn</b> (TSender &amp;&amp;tile_t) noexcept</td></tr>
-<tr class="separator:a00c5691bdf7a009bfe7e16fb801a35e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9c8ca33291393b3f5dab9f8d2cce0e89" id="r_a9c8ca33291393b3f5dab9f8d2cce0e89"><td class="memItemLeft" align="right" valign="top"><a id="a9c8ca33291393b3f5dab9f8d2cce0e89" name="a9c8ca33291393b3f5dab9f8d2cce0e89"></a>
+static auto&#160;</td><td class="memItemRight" valign="bottom"><b>prepareT</b> (matrix::ReadOnlyTileSender&lt; T, Device::CPU &gt; taus, matrix::ReadWriteTileSender&lt; T, Device::GPU &gt; tile_t)</td></tr>
+<tr class="separator:a9c8ca33291393b3f5dab9f8d2cce0e89"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac2cce10dfe30de0c041c1238d468501e" id="r_ac2cce10dfe30de0c041c1238d468501e"><td class="memItemLeft" align="right" valign="top"><a id="ac2cce10dfe30de0c041c1238d468501e" name="ac2cce10dfe30de0c041c1238d468501e"></a>
+static auto&#160;</td><td class="memItemRight" valign="bottom"><b>stepGEMV</b> (matrix::ReadOnlyTileSender&lt; T, Device::GPU &gt; tile_vi, matrix::ReadOnlyTileSender&lt; T, Device::CPU &gt; taus, matrix::ReadWriteTileSender&lt; T, Device::GPU &gt; tile_t) noexcept</td></tr>
+<tr class="separator:ac2cce10dfe30de0c041c1238d468501e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aada6ff197a7a875b209ab0235c4c7ed5" id="r_aada6ff197a7a875b209ab0235c4c7ed5"><td class="memItemLeft" align="right" valign="top"><a id="aada6ff197a7a875b209ab0235c4c7ed5" name="aada6ff197a7a875b209ab0235c4c7ed5"></a>
+static void&#160;</td><td class="memItemRight" valign="bottom"><b>trmvLoop</b> (cublasHandle_t handle, const <a class="el" href="classdlaf_1_1matrix_1_1_tile.html">matrix::Tile</a>&lt; T, Device::GPU &gt; &amp;tile_t)</td></tr>
+<tr class="separator:aada6ff197a7a875b209ab0235c4c7ed5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adf669eaf500410d5aa6b3ad70d0ddabf" id="r_adf669eaf500410d5aa6b3ad70d0ddabf"><td class="memItemLeft" align="right" valign="top"><a id="adf669eaf500410d5aa6b3ad70d0ddabf" name="adf669eaf500410d5aa6b3ad70d0ddabf"></a>
+static auto&#160;</td><td class="memItemRight" valign="bottom"><b>stepTRMV</b> (matrix::ReadWriteTileSender&lt; T, Device::GPU &gt; tile_t) noexcept</td></tr>
+<tr class="separator:adf669eaf500410d5aa6b3ad70d0ddabf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3f1850ee51ae3937af33145c10bef7e5" id="r_a3f1850ee51ae3937af33145c10bef7e5"><td class="memItemLeft" align="right" valign="top"><a id="a3f1850ee51ae3937af33145c10bef7e5" name="a3f1850ee51ae3937af33145c10bef7e5"></a>
+static auto&#160;</td><td class="memItemRight" valign="bottom"><b>stepCopyDiagAndTRMV</b> (matrix::ReadOnlyTileSender&lt; T, Device::CPU &gt; taus, matrix::ReadWriteTileSender&lt; T, Device::GPU &gt; tile_t) noexcept</td></tr>
+<tr class="separator:a3f1850ee51ae3937af33145c10bef7e5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <hr/>The documentation for this struct was generated from the following file:<ul>
 <li>/home/runner/work/DLA-Future/DLA-Future/include/dlaf/factorization/qr/<a class="el" href="t__factor__impl_8h_source.html">t_factor_impl.h</a></li>

@@ -11,13 +11,10 @@
 #include <cublas_v2.h>
 #include <whip.hpp>
 
-#include <dlaf/blas/tile.h>
 #include <dlaf/common/assert.h>
 #include <dlaf/gpu/assert.cu.h>
-#include <dlaf/lapack/gpu/add.h>
-#include <dlaf/lapack/gpu/lacpy.h>
+#include <dlaf/gpu/blas/gpublas.h>
 #include <dlaf/lapack/gpu/larft.h>
-#include <dlaf/lapack/gpu/laset.h>
 #include <dlaf/types.h>
 #include <dlaf/util_cublas.h>
 #include <dlaf/util_math.h>

@@ -9,6 +9,7 @@
 //
 
 #include <future>
+#include <iostream>
 
 #include <dlaf/blas/enum_output.h>
 #include <dlaf/common/format_short.h>

@@ -24,11 +24,6 @@
 
 #include <dlaf_test/matrix/util_tile.h>
 
-// TODO remove
-#include <dlaf/blas/tile_extensions.h>
-#include <dlaf/matrix/print_csv.h>
-#include <dlaf/matrix/print_gpu.h>
-
 using namespace dlaf;
 using namespace dlaf::miniapp;
 using dlaf::matrix::test::createTile;
@@ -119,59 +114,21 @@ struct Test {
       gpulapack::larft_gemv0(handle, m, k, vs(i).ptr(), vs(i).ld(), tau.ptr(), ts(i).ptr(), ts(i).ld());
     };
 
-    [[maybe_unused]] auto copy_tau = [k, &tau, &taus](SizeType i, whip::stream_t stream) {
-      gpulapack::lacpy(blas::Uplo::General, k, 1, tau.ptr(), tau.ld(), taus(i).ptr(), taus(i).ld(), stream);
-    };
-    [[maybe_unused]] auto kernel_GPU1 = [m, k, &vs, &ts](SizeType i, cublasHandle_t handle) {
-      gpulapack::larft_gemv1_notau(handle, m, k, vs(i).ptr(), vs(i).ld(), ts(i).ptr(), ts(i).ld());
-    };
-    [[maybe_unused]] auto post_kernel_GPU1 = [m, k, &taus, &ts](SizeType i, whip::stream_t stream) {
-      gpulapack::larft_gemv1_fixtau(k, taus(i).ptr(), 1, ts(i).ptr(), ts(i).ld(), stream);
-    };
-
     [[maybe_unused]] auto copy_tau_in_t = [k, &tau, &ts](SizeType i, whip::stream_t stream) {
       gpulapack::lacpy(blas::Uplo::General, 1, k, tau.ptr(), 1, ts(i).ptr(), ts(i).ld() + 1, stream);
     };
-#define KERNEL_GPU(id)                                                                         \
-  [[maybe_unused]] auto kernel_GPU##id = [m, k, &vs, &ts](SizeType i, whip::stream_t stream) {   \
-    gpulapack::larft_gemv##id(m, k, vs(i).ptr(), vs(i).ld(), ts(i).ptr(), ts(i).ld(), stream); \
-  }
 
-#define EXPAND(macro) \
-  macro(1000); \
-  macro(1001); \
-  macro(1002); \
-  macro(1003); \
-  macro(1100); \
-  macro(1101); \
-  macro(1200); \
-  macro(1201); \
-  macro(1202); \
-  macro(1203); \
-  macro(1204); \
-  macro(2000); \
-  macro(2001); \
-  macro(2002); \
-  macro(2003); \
-  macro(2100); \
-  macro(2101); \
-  macro(2102); \
-  macro(2103); \
-  macro(2104); \
-  macro(2200); \
-  macro(2201); \
-  macro(2202); \
-  macro(2203); \
-  macro(2204); \
-  macro(2205); \
-  macro(2206); \
-  macro(2207); \
-  macro(2208); \
-  macro(2209); \
-  macro(2210)
+    [[maybe_unused]] auto copy_tau = [k, &tau, &taus](SizeType i, whip::stream_t stream) {
+      gpulapack::lacpy(blas::Uplo::General, k, 1, tau.ptr(), tau.ld(), taus(i).ptr(), taus(i).ld(), stream);
+    };
 
-    EXPAND(KERNEL_GPU);
+    [[maybe_unused]] auto kernel_GPU1 = [m, k, &vs, &ts](SizeType i, cublasHandle_t handle) {
+      gpulapack::larft_gemv1_notau(handle, m, k, vs(i).ptr(), vs(i).ld(), ts(i).ptr(), ts(i).ld());
+    };
 
+    [[maybe_unused]] auto post_kernel_GPU1 = [m, k, &taus, &ts](SizeType i, whip::stream_t stream) {
+      gpulapack::larft_gemv1_fixtau(k, taus(i).ptr(), 1, ts(i).ptr(), ts(i).ld(), stream);
+    };
 #endif
     const double flop = ops<T>(n, k);
 
@@ -187,16 +144,8 @@ struct Test {
         elapsed_time_kernel = runner.run(kernel_MC);
       }
 #ifdef DLAF_WITH_CUDA
-
-#define KERNEL_CASE(id)                              \
-  case id:                                           \
-    elapsed_time_pre = runner.runStream(copy_tau_in_t); \
-    elapsed_time_kernel = runner.runStream(kernel_GPU##id); \
-    break;
-
       if constexpr (backend == Backend::GPU) {
         switch (opts.kernel_id) {
-          EXPAND(KERNEL_CASE);
           case 0:
             elapsed_time_kernel = runner.runHandle(kernel_GPU0);
             elapsed_time_post = runner.runStream(copy_tau_in_t); \
@@ -214,6 +163,7 @@ struct Test {
         }
       }
 #endif
+
       double elapsed_time = elapsed_time_pre + elapsed_time_kernel + elapsed_time_post;
       const double gflops = flop / elapsed_time / 1e9;
       const double gflops_kernel = flop / elapsed_time_kernel / 1e9;
@@ -236,19 +186,6 @@ struct Test {
         auto t = createTile<T, Device::CPU>(el_t, {k, k}, k);
         MC_reference(m, k, v.ptr(), v.ld(), tau.ptr(), t.ptr(), t.ld());
 
-       /*
-        print(format::csv{}, ts(0));
-        auto tt = createTile<T, Device::CPU>(el_t, {k, k}, k);
-        if constexpr (backend == Backend::GPU) {
-          whip::stream_t stream = NULL;
-          matrix::internal::copy_o(ts(0), tt, stream);
-        }
-        else
-          matrix::internal::copy_o(ts(0), tt);
-
-        tile::internal::add_o(T{-1}, t, tt);
-        print(format::csv{}, tt);
-        */
         auto error = ts.check(t);
         if (error > k)
           std::cout << "CHECK FAILED!!!: ";

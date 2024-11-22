@@ -311,27 +311,25 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
     const auto hp_scheduler = di::getBackendScheduler<Backend::GPU>(thread_priority::high);
     t = di::whenAllLift(ex::when_all_vector(std::move(hh_tiles)), taus, std::move(t),
                         ex::when_all_vector(std::move(ws_t))) |
-        di::transform<dlaf::internal::TransformDispatchType::Plain>(
+        di::transform<dlaf::internal::TransformDispatchType::Blas>(
             di::Policy<Backend::GPU>(thread_priority::high),
-            [](auto&& hh_tiles, auto&& taus, matrix::Tile<T, Device::GPU>& tile_t, auto&& /*ws_t*/,
-               whip::stream_t stream) {
+            [](cublasHandle_t handle, auto&& hh_tiles, auto&& taus, matrix::Tile<T, Device::GPU>& tile_t, auto&& /*ws_t*/) {
               const SizeType k = tile_t.size().cols();
+              whip::stream_t stream;
+              cublasGetStream(handle, &stream);
 
               // Note:
               // prepare the diagonal of taus in t
               whip::memset_2d_async(tile_t.ptr(), sizeof(T) * to_sizet(tile_t.ld()), 0,
                                     sizeof(T) * to_sizet(k), to_sizet(k), stream);
-              whip::memcpy_2d_async(tile_t.ptr(), to_sizet(tile_t.ld() + 1) * sizeof(T), taus.ptr(),
-                                    sizeof(T), sizeof(T), to_sizet(k), whip::memcpy_host_to_device,
-                                    stream);
 
               // Note:
               // - call one gemv per tile
               // - being on the same stream, they are already serialised on GPU
               for (std::size_t index = 0; index < hh_tiles.size(); ++index) {
                 const matrix::Tile<const T, Device::GPU>& tile_v = hh_tiles[index].get();
-                gpulapack::larft_gemv1202(tile_v.size().rows(), k, tile_v.ptr(), tile_v.ld(),
-                                          tile_t.ptr(), tile_t.ld(), stream);
+                gpulapack::larft_gemv0(handle, tile_v.size().rows(), k, tile_v.ptr(), tile_v.ld(), taus.ptr(),
+                                       tile_t.ptr(), tile_t.ld());
               }
 
               return std::move(tile_t);

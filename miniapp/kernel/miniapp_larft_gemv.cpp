@@ -78,6 +78,9 @@ void MC_reference(const SizeType m, const SizeType k, const T* v, const SizeType
     blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, m, j, -tau[j], v_(0, 0), ldv, v_(0, j), 1,
                T{1}, t_(0, j), 1);
   }
+  for (int j = 0; j < k; ++j) {
+    t[j * (ldt + 1)] = tau[j];
+  }
 }
 
 struct Test {
@@ -91,21 +94,19 @@ struct Test {
     const SizeType ldv = opts.ldv;
     const SizeType ldt = opts.ldt;
 
-    // Note: GPU implementation requires the first reflector element to be set to 1.
     getter_random<T> random_value(25698);
     auto rnd = [&random_value](const TileElementIndex&) { return random_value(); };
     auto tau = createTile<T, Device::CPU>(rnd, {k, 1}, k);
     auto v = createTile<T, Device::CPU>(rnd, {m, k}, ldv);
 
-    // As the kernel adds lower part of t is untouched set it to 0 to allow comparison with GPU implementation.
-    auto el_t = [&tau](const TileElementIndex& index) {
-      if (index.row() == index.col())
-        return tau({index.row(), 0});
-      return T{1.};
+    // As the kernels need T to be zeroed we start from there.
+    auto el_t = [](const TileElementIndex&) {
+      return T{0.};
     };
 
     WorkTiles<T, device> vs(opts.count, m, k, ldv);
     WorkTiles<T, device> ts(opts.count, k, k, ldt);
+    WorkTiles<T, device> taus(opts.count, k, 1, k);
 
     vs.setElementsFromTile(v);
     ts.setElements(el_t);
@@ -117,35 +118,59 @@ struct Test {
     [[maybe_unused]] auto kernel_GPU0 = [m, k, &vs, &tau, &ts](SizeType i, cublasHandle_t handle) {
       gpulapack::larft_gemv0(handle, m, k, vs(i).ptr(), vs(i).ld(), tau.ptr(), ts(i).ptr(), ts(i).ld());
     };
+
+    [[maybe_unused]] auto copy_tau = [k, &tau, &taus](SizeType i, whip::stream_t stream) {
+      gpulapack::lacpy(blas::Uplo::General, k, 1, tau.ptr(), tau.ld(), taus(i).ptr(), taus(i).ld(), stream);
+    };
+    [[maybe_unused]] auto kernel_GPU1 = [m, k, &vs, &ts](SizeType i, cublasHandle_t handle) {
+      gpulapack::larft_gemv1_notau(handle, m, k, vs(i).ptr(), vs(i).ld(), ts(i).ptr(), ts(i).ld());
+    };
+    [[maybe_unused]] auto post_kernel_GPU1 = [m, k, &taus, &ts](SizeType i, whip::stream_t stream) {
+      gpulapack::larft_gemv1_fixtau(k, taus(i).ptr(), 1, ts(i).ptr(), ts(i).ld(), stream);
+    };
+
+    [[maybe_unused]] auto copy_tau_in_t = [k, &tau, &ts](SizeType i, whip::stream_t stream) {
+      gpulapack::lacpy(blas::Uplo::General, 1, k, tau.ptr(), 1, ts(i).ptr(), ts(i).ld() + 1, stream);
+    };
 #define KERNEL_GPU(id)                                                                         \
-  [[maybe_unused]] auto kernel_GPU##id = [m, k, &vs, &ts](SizeType i, cudaStream_t stream) {   \
+  [[maybe_unused]] auto kernel_GPU##id = [m, k, &vs, &ts](SizeType i, whip::stream_t stream) {   \
     gpulapack::larft_gemv##id(m, k, vs(i).ptr(), vs(i).ld(), ts(i).ptr(), ts(i).ld(), stream); \
   }
 
-    KERNEL_GPU(100);
-    KERNEL_GPU(101);
-    KERNEL_GPU(102);
-    KERNEL_GPU(103);
-    KERNEL_GPU(110);
-    KERNEL_GPU(111);
-    KERNEL_GPU(120);
-    KERNEL_GPU(121);
-    KERNEL_GPU(122);
-    KERNEL_GPU(200);
-    KERNEL_GPU(201);
-    KERNEL_GPU(202);
-    KERNEL_GPU(203);
-    KERNEL_GPU(210);
-    KERNEL_GPU(211);
-    KERNEL_GPU(212);
-    KERNEL_GPU(213);
-    KERNEL_GPU(214);
-    KERNEL_GPU(220);
-    KERNEL_GPU(221);
-    KERNEL_GPU(222);
-    KERNEL_GPU(223);
-    KERNEL_GPU(224);
-    KERNEL_GPU(225);
+#define EXPAND(macro) \
+  macro(1000); \
+  macro(1001); \
+  macro(1002); \
+  macro(1003); \
+  macro(1100); \
+  macro(1101); \
+  macro(1200); \
+  macro(1201); \
+  macro(1202); \
+  macro(1203); \
+  macro(1204); \
+  macro(2000); \
+  macro(2001); \
+  macro(2002); \
+  macro(2003); \
+  macro(2100); \
+  macro(2101); \
+  macro(2102); \
+  macro(2103); \
+  macro(2104); \
+  macro(2200); \
+  macro(2201); \
+  macro(2202); \
+  macro(2203); \
+  macro(2204); \
+  macro(2205); \
+  macro(2206); \
+  macro(2207); \
+  macro(2208); \
+  macro(2209); \
+  macro(2210)
+
+    EXPAND(KERNEL_GPU);
 
 #endif
     const double flop = ops<T>(n, k);
@@ -153,52 +178,45 @@ struct Test {
     KernelRunner<backend> runner(opts.count, opts.nparallel);
 
     for (SizeType run_index = 0; run_index < opts.nruns; ++run_index) {
-      double elapsed_time = -1;
+      double elapsed_time_pre = 0;
+      double elapsed_time_kernel = 0;
+      double elapsed_time_post = 0;
       ts.setElements(el_t);
 
       if constexpr (backend == Backend::MC) {
-        elapsed_time = runner.run(kernel_MC);
+        elapsed_time_kernel = runner.run(kernel_MC);
       }
 #ifdef DLAF_WITH_CUDA
 
 #define KERNEL_CASE(id)                              \
   case id:                                           \
-    elapsed_time = runner.runStream(kernel_GPU##id); \
+    elapsed_time_pre = runner.runStream(copy_tau_in_t); \
+    elapsed_time_kernel = runner.runStream(kernel_GPU##id); \
     break;
 
       if constexpr (backend == Backend::GPU) {
         switch (opts.kernel_id) {
-          KERNEL_CASE(100);
-          KERNEL_CASE(101);
-          KERNEL_CASE(102);
-          KERNEL_CASE(103);
-          KERNEL_CASE(110);
-          KERNEL_CASE(111);
-          KERNEL_CASE(120);
-          KERNEL_CASE(121);
-          KERNEL_CASE(122);
-          KERNEL_CASE(200);
-          KERNEL_CASE(201);
-          KERNEL_CASE(202);
-          KERNEL_CASE(203);
-          KERNEL_CASE(210);
-          KERNEL_CASE(211);
-          KERNEL_CASE(212);
-          KERNEL_CASE(213);
-          KERNEL_CASE(214);
-          KERNEL_CASE(220);
-          KERNEL_CASE(221);
-          KERNEL_CASE(222);
-          KERNEL_CASE(223);
-          KERNEL_CASE(224);
-          KERNEL_CASE(225);
+          EXPAND(KERNEL_CASE);
           case 0:
-            elapsed_time = runner.runHandle(kernel_GPU0);
+            elapsed_time_kernel = runner.runHandle(kernel_GPU0);
+            elapsed_time_post = runner.runStream(copy_tau_in_t); \
             break;
+          case 1:
+            elapsed_time_pre = runner.runStream(copy_tau);
+            elapsed_time_kernel = runner.runHandle(kernel_GPU1);
+            elapsed_time_post = runner.runStream(post_kernel_GPU1);
+            break;
+          default:
+            std::cout << "Error: Non existing kernel id" << opts.kernel_id << std::endl;
+            elapsed_time_pre = -1;
+            elapsed_time_kernel = -1;
+            elapsed_time_post = -1;
         }
       }
 #endif
+      double elapsed_time = elapsed_time_pre + elapsed_time_kernel + elapsed_time_post;
       const double gflops = flop / elapsed_time / 1e9;
+      const double gflops_kernel = flop / elapsed_time_kernel / 1e9;
 
       std::cout << "[" << run_index << "]"
                 << " " << elapsed_time << "s"
@@ -207,14 +225,18 @@ struct Test {
       std::cout << m << " " << k << " " << ldv << " " << ldt << " " << opts.nparallel << " " << backend;
       if (backend == Backend::GPU)
         std::cout << " " << opts.kernel_id;
-      std::cout << std::endl;
+
+      std::cout << " |"
+                << " PRE: " << elapsed_time_pre << "s"
+                << " KERNEL: " << elapsed_time_kernel << "s " << gflops_kernel << "GFlop/s"
+                << " POST: " << elapsed_time_post << "s" << std::endl;
 
       if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
           opts.do_check == dlaf::miniapp::CheckIterFreq::All) {
         auto t = createTile<T, Device::CPU>(el_t, {k, k}, k);
         MC_reference(m, k, v.ptr(), v.ld(), tau.ptr(), t.ptr(), t.ld());
 
-        /*
+       /*
         print(format::csv{}, ts(0));
         auto tt = createTile<T, Device::CPU>(el_t, {k, k}, k);
         if constexpr (backend == Backend::GPU) {

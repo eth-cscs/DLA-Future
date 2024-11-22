@@ -213,6 +213,7 @@ def _parse_optional_text(text):
     else:
         return None
 
+
 @with_pattern(r"(|\s+\S+)")
 def _parse_optional_int(text):
     text = text.strip()

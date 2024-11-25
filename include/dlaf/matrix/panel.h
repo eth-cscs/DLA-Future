@@ -361,6 +361,8 @@ protected:
         return {mat_size - i_tile * mb, nb};
       case Coord::Row:
         return {mb, mat_size - i_tile * nb};
+      default:
+        return DLAF_UNREACHABLE(LocalElementSize);
     }
   }
 

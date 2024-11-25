@@ -49,11 +49,12 @@ cscs["daint-mc"] = {
 #SBATCH --constraint=mc
 #SBATCH --output=output.txt
 #SBATCH --error=error.txt
+#SBATCH --no-requeue
 
 # Env
 export MPICH_MAX_THREAD_SAFETY=multiple
 export MIMALLOC_EAGER_COMMIT_DELAY=0
-export MIMALLOC_LARGE_OS_PAGES=1
+export MIMALLOC_ALLOW_LARGE_OS_PAGES=1
 
 # Debug
 module list &> modules_{bs_name}.txt
@@ -81,11 +82,12 @@ cscs["daint-gpu"] = {
 #SBATCH --constraint=gpu
 #SBATCH --output=output.txt
 #SBATCH --error=error.txt
+#SBATCH --no-requeue
 
 # Env
 export MPICH_MAX_THREAD_SAFETY=multiple
 export MIMALLOC_EAGER_COMMIT_DELAY=0
-export MIMALLOC_LARGE_OS_PAGES=1
+export MIMALLOC_ALLOW_LARGE_OS_PAGES=1
 
 # Debug
 module list &> modules_{bs_name}.txt
@@ -112,11 +114,11 @@ cscs["eiger"] = {
 #SBATCH --constraint=mc
 #SBATCH --output=output.txt
 #SBATCH --error=error.txt
+#SBATCH --no-requeue
 
 # Env
-export MPICH_MAX_THREAD_SAFETY=multiple
 export MIMALLOC_EAGER_COMMIT_DELAY=0
-export MIMALLOC_LARGE_OS_PAGES=1
+export MIMALLOC_ALLOW_LARGE_OS_PAGES=1
 
 # Debug
 module list &> modules_{bs_name}.txt
@@ -146,11 +148,12 @@ cscs["clariden-nvgpu"] = {
 #SBATCH --hint=multithread
 #SBATCH --output=output.txt
 #SBATCH --error=error.txt
+#SBATCH --no-requeue
 
 # Env
-export MPICH_MAX_THREAD_SAFETY=multiple
+export MPICH_GPU_SUPPORT_ENABLED=1
 export MIMALLOC_EAGER_COMMIT_DELAY=0
-export MIMALLOC_LARGE_OS_PAGES=1
+export MIMALLOC_ALLOW_LARGE_OS_PAGES=1
 
 # Debug
 module list &> modules_{bs_name}.txt
@@ -179,11 +182,12 @@ cscs["clariden-amdgpu"] = {
 #SBATCH --hint=multithread
 #SBATCH --output=output.txt
 #SBATCH --error=error.txt
+#SBATCH --no-requeue
 
 # Env
-export MPICH_MAX_THREAD_SAFETY=multiple
+export MPICH_GPU_SUPPORT_ENABLED=1
 export MIMALLOC_EAGER_COMMIT_DELAY=0
-export MIMALLOC_LARGE_OS_PAGES=1
+export MIMALLOC_ALLOW_LARGE_OS_PAGES=1
 
 # Debug
 module list &> modules_{bs_name}.txt
@@ -193,15 +197,13 @@ printenv > env_{bs_name}.txt
 """,
 }
 
-# NOTE: Here is assumed that `gpu2ranks_slurm_cuda` is in PATH!
-#       modify "Run command" if it is not the case.
 cscs["santis"] = {
     "Cores": 288,
     "Threads per core": 1,
     "Allowed rpns": [4],
     "Multiple rpn in same job": True,
     "GPU": True,
-    "Run command": "srun -u {srun_args} -n {total_ranks} --cpu-bind=core -c {threads_per_rank} gpu2ranks_slurm_cuda",
+    "Run command": "srun -u {srun_args} -n {total_ranks} --gpus-per-task=1 --cpu-bind=core -c {threads_per_rank}",
     "Launch command": "sbatch --chdir={job_path} {job_file}",
     "Batch preamble": """
 #!/bin/bash -l
@@ -211,11 +213,15 @@ cscs["santis"] = {
 #SBATCH --hint=multithread
 #SBATCH --output=output.txt
 #SBATCH --error=error.txt
+#SBATCH --no-requeue
 
 # Env
-export MPICH_OPT_THREAD_SYNC=0 # Required to work around MPICH bug
+export FI_MR_CACHE_MONITOR=disabled
+export MPICH_GPU_SUPPORT_ENABLED=1
 export MIMALLOC_EAGER_COMMIT_DELAY=0
-export MIMALLOC_LARGE_OS_PAGES=1
+export MIMALLOC_ALLOW_LARGE_OS_PAGES=1
+export DLAF_BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE=128
+export DLAF_UMPIRE_DEVICE_MEMORY_POOL_ALIGNMENT_BYTES=$((1 << 21)) # 2 MiB, large page size
 
 # Debug
 module list &> modules_{bs_name}.txt
@@ -245,11 +251,11 @@ csc["lumi-cpu"] = {
 #SBATCH --hint=multithread
 #SBATCH --output=output.txt
 #SBATCH --error=error.txt
+#SBATCH --no-requeue
 
 # Env
-export MPICH_MAX_THREAD_SAFETY=multiple
 export MIMALLOC_EAGER_COMMIT_DELAY=0
-export MIMALLOC_LARGE_OS_PAGES=1
+export MIMALLOC_ALLOW_LARGE_OS_PAGES=1
 
 # Debug
 module list &> modules_{bs_name}.txt
@@ -283,11 +289,15 @@ csc["lumi-gpu"] = {
 #SBATCH --gpus-per-node=8
 #SBATCH --output=output.txt
 #SBATCH --error=error.txt
+#SBATCH --no-requeue
 
 # Env
-export MPICH_MAX_THREAD_SAFETY=multiple
+export FI_MR_CACHE_MONITOR=disabled
+export MPICH_GPU_SUPPORT_ENABLED=1
 export MIMALLOC_EAGER_COMMIT_DELAY=0
-export MIMALLOC_LARGE_OS_PAGES=1
+export MIMALLOC_ALLOW_LARGE_OS_PAGES=1
+export DLAF_BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE=128
+export DLAF_BAND_TO_TRIDIAG_1D_BLOCK_SIZE_BASE=2048
 
 # Debug
 module list &> modules_{bs_name}.txt

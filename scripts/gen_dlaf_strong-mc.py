@@ -35,7 +35,7 @@ mb_szs_d = 512
 m_szs_z = [10240, 20480]
 mb_szs_z = 512
 
-extra_flags = "--dlaf:bt-band-to-tridiag-hh-apply-group-size=64"
+extra_flags = ""
 
 parser = argparse.ArgumentParser(description="Run strong scaling benchmarks.")
 parser.add_argument(

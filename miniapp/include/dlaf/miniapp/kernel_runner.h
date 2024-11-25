@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <future>
 #include <utility>
 
 #ifdef DLAF_WITH_GPU

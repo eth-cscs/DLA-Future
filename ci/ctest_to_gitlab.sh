@@ -102,7 +102,7 @@ JOB_TEMPLATE="
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
     DLAF_HDF5_TEST_OUTPUT_PATH: \$CI_PROJECT_DIR
-  script: mpi-ctest -L {{CATEGORY_LABEL}} -L {{RANK_LABEL}}"
+  script: mpi-ctest -L {{CATEGORY_LABEL}} -L {{RANK_LABEL}}
   artifacts:
     when: always
     paths:

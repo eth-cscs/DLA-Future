@@ -74,7 +74,6 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="summary">
-<a href="#define-members">Macros</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">tile.h File Reference</div></div>
 </div><!--header-->
@@ -91,44 +90,14 @@ $(function() {
 <code>#include &lt;dlaf/sender/transform.h&gt;</code><br />
 <code>#include &lt;<a class="el" href="types_8h_source.html">dlaf/types.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="util__blas_8h_source.html">dlaf/util_blas.h</a>&gt;</code><br />
-<code>#include &lt;whip.hpp&gt;</code><br />
 <code>#include &lt;dlaf/gpu/blas/api.h&gt;</code><br />
-<code>#include &lt;dlaf/gpu/blas/error.h&gt;</code><br />
+<code>#include &lt;<a class="el" href="gpublas_8h_source.html">dlaf/gpu/blas/gpublas.h</a>&gt;</code><br />
 <code>#include &lt;dlaf/util_cublas.h&gt;</code><br />
 </div>
 <p><a href="blas_2tile_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
-Macros</h2></td></tr>
-<tr class="memitem:a421c02526a0c450667c3d900c0f51236" id="r_a421c02526a0c450667c3d900c0f51236"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="blas_2tile_8h.html#a421c02526a0c450667c3d900c0f51236">DLAF_DECLARE_GPUBLAS_OP</a>(Name)</td></tr>
-<tr class="separator:a421c02526a0c450667c3d900c0f51236"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a4bdde3ad954b0cea3483801cd748ccea" id="r_a4bdde3ad954b0cea3483801cd748ccea"><td class="memItemLeft" align="right" valign="top"><a id="a4bdde3ad954b0cea3483801cd748ccea" name="a4bdde3ad954b0cea3483801cd748ccea"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::gpublas::internal::DLAF_MAKE_GPUBLAS_OP</b> (Axpy, axpy)</td></tr>
-<tr class="separator:a4bdde3ad954b0cea3483801cd748ccea"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9d13f5170a1c55906c27fb5058aab40c" id="r_a9d13f5170a1c55906c27fb5058aab40c"><td class="memItemLeft" align="right" valign="top"><a id="a9d13f5170a1c55906c27fb5058aab40c" name="a9d13f5170a1c55906c27fb5058aab40c"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::gpublas::internal::DLAF_MAKE_GPUBLAS_OP</b> (Gemv, gemv)</td></tr>
-<tr class="separator:a9d13f5170a1c55906c27fb5058aab40c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2dedead2625cdf4630073b252014cd19" id="r_a2dedead2625cdf4630073b252014cd19"><td class="memItemLeft" align="right" valign="top"><a id="a2dedead2625cdf4630073b252014cd19" name="a2dedead2625cdf4630073b252014cd19"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::gpublas::internal::DLAF_MAKE_GPUBLAS_OP</b> (Trmv, trmv)</td></tr>
-<tr class="separator:a2dedead2625cdf4630073b252014cd19"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abed14efff15999504344a646aeb86261" id="r_abed14efff15999504344a646aeb86261"><td class="memItemLeft" align="right" valign="top"><a id="abed14efff15999504344a646aeb86261" name="abed14efff15999504344a646aeb86261"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::gpublas::internal::DLAF_MAKE_GPUBLAS_OP</b> (Gemm, gemm)</td></tr>
-<tr class="separator:abed14efff15999504344a646aeb86261"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a40103d6d85bd688aa2e562518bd1bf0d" id="r_a40103d6d85bd688aa2e562518bd1bf0d"><td class="memItemLeft" align="right" valign="top"><a id="a40103d6d85bd688aa2e562518bd1bf0d" name="a40103d6d85bd688aa2e562518bd1bf0d"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::gpublas::internal::DLAF_MAKE_GPUBLAS_SYHE_OP</b> (Hemm, mm)</td></tr>
-<tr class="separator:a40103d6d85bd688aa2e562518bd1bf0d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa61131a8a6338367f07991e626065ee2" id="r_aa61131a8a6338367f07991e626065ee2"><td class="memItemLeft" align="right" valign="top"><a id="aa61131a8a6338367f07991e626065ee2" name="aa61131a8a6338367f07991e626065ee2"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::gpublas::internal::DLAF_MAKE_GPUBLAS_SYHE_OP</b> (Her2k, r2k)</td></tr>
-<tr class="separator:aa61131a8a6338367f07991e626065ee2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8b0b23c5828d1a56847963fcf0b72841" id="r_a8b0b23c5828d1a56847963fcf0b72841"><td class="memItemLeft" align="right" valign="top"><a id="a8b0b23c5828d1a56847963fcf0b72841" name="a8b0b23c5828d1a56847963fcf0b72841"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::gpublas::internal::DLAF_MAKE_GPUBLAS_SYHE_OP</b> (Herk, rk)</td></tr>
-<tr class="separator:a8b0b23c5828d1a56847963fcf0b72841"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7682cf6441588d6e8ad4aebd2b9b3242" id="r_a7682cf6441588d6e8ad4aebd2b9b3242"><td class="memItemLeft" align="right" valign="top"><a id="a7682cf6441588d6e8ad4aebd2b9b3242" name="a7682cf6441588d6e8ad4aebd2b9b3242"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::gpublas::internal::DLAF_MAKE_GPUBLAS_OP</b> (Trsm, trsm)</td></tr>
-<tr class="separator:a7682cf6441588d6e8ad4aebd2b9b3242"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1de961c6e1c01ee6a5f0039ecf51b162" id="r_a1de961c6e1c01ee6a5f0039ecf51b162"><td class="memTemplParams" colspan="2">template&lt;Backend B, class T , Device D&gt; </td></tr>
 <tr class="memitem:a1de961c6e1c01ee6a5f0039ecf51b162"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="blas_2tile_8h.html#a1de961c6e1c01ee6a5f0039ecf51b162">dlaf::tile::gemm</a> (const blas::Op op_a, const blas::Op op_b, const T alpha, const <a class="el" href="classdlaf_1_1matrix_1_1_tile.html">Tile</a>&lt; const T, D &gt; &amp;a, const <a class="el" href="classdlaf_1_1matrix_1_1_tile.html">Tile</a>&lt; const T, D &gt; &amp;b, const T beta, const <a class="el" href="classdlaf_1_1matrix_1_1_tile.html">Tile</a>&lt; T, D &gt; &amp;c)</td></tr>
 <tr class="separator:a1de961c6e1c01ee6a5f0039ecf51b162"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -195,28 +164,7 @@ Functions</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Provides <code>Tile</code> wrappers for BLAS operations. </p>
-</div><h2 class="groupheader">Macro Definition Documentation</h2>
-<a id="a421c02526a0c450667c3d900c0f51236" name="a421c02526a0c450667c3d900c0f51236"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a421c02526a0c450667c3d900c0f51236">&#9670;&#160;</a></span>DLAF_DECLARE_GPUBLAS_OP</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define DLAF_DECLARE_GPUBLAS_OP</td>
-          <td>(</td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname">Name</td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line">  <span class="keyword">template</span> &lt;<span class="keyword">typename</span> T&gt;               \</div>
-<div class="line">  <span class="keyword">struct </span>Name</div>
-</div><!-- fragment -->
-</div>
-</div>
-<h2 class="groupheader">Function Documentation</h2>
+</div><h2 class="groupheader">Function Documentation</h2>
 <a id="a1de961c6e1c01ee6a5f0039ecf51b162" name="a1de961c6e1c01ee6a5f0039ecf51b162"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a1de961c6e1c01ee6a5f0039ecf51b162">&#9670;&#160;</a></span>gemm() <span class="overload">[1/3]</span></h2>
 

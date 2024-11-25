@@ -43,7 +43,7 @@ __global__ void fix_tau(const unsigned k, const T* tau, unsigned inctau, T* t, u
   T& t_ij = t[i + j * ldt];
   T tau_j = tau[j * inctau];
   if (i > j)
-    t_ij = {0.};
+    t_ij = {};
   else if (i == j)
     t_ij = tau_j;
   else
@@ -70,8 +70,8 @@ void larft_gemv0(cublasHandle_t handle, const SizeType m, const SizeType k, cons
   for (int j = 1; j < k_; ++j) {
     const auto mtau = util::blasToCublasCast(-tau[j]);
     const auto one = util::blasToCublasCast(T{1});
-    gpublas::internal::Gemv<T>::call(handle, CUBLAS_OP_C, m, j, &mtau, v_(0, 0), ldv_, v_(0, j), 1, &one,
-                                     t_(0, j), 1);
+    gpublas::internal::Gemv<T>::call(handle, CUBLAS_OP_C, m_, j, &mtau, v_(0, 0), ldv_, v_(0, j), 1,
+                                     &one, t_(0, j), 1);
   }
 }
 
@@ -92,8 +92,8 @@ void larft_gemv1_notau(cublasHandle_t handle, const SizeType m, const SizeType k
   auto t_ = util::blasToCublasCast(t);
 
   const auto one = util::blasToCublasCast(T{1});
-  gpublas::internal::Gemm<T>::call(handle, CUBLAS_OP_C, CUBLAS_OP_N, k, k, m, &one, v_, ldv_, v_, ldv_,
-                                   &one, t_, ldt_);
+  gpublas::internal::Gemm<T>::call(handle, CUBLAS_OP_C, CUBLAS_OP_N, k_, k_, m_, &one, v_, ldv_, v_,
+                                   ldv_, &one, t_, ldt_);
 }
 
 template <class T>

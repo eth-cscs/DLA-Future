@@ -26,6 +26,8 @@
 
 #include <pika/async_cuda/detail/cuda_event_callback.hpp>
 
+#include <dlaf/memory/memory_view.h>
+
 #define DLAF_GET_ROCBLAS_WORKSPACE(f)                                                                   \
   [&]() {                                                                                               \
     std::size_t workspace_size;                                                                         \

@@ -58,12 +58,11 @@ pika::execution::experimental::unique_any_sender<T> reduce_in_place(
 // - sy/he lower
 // - tr lower non-unit
 template <class T>
-dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGrid& comm_grid,
-                                                           comm::Index2D rank,
-                                                           Matrix<const T, Device::CPU>& matrix) {
+pika::execution::experimental::unique_any_sender<dlaf::BaseType<T>> Norm<
+    Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGrid& comm_grid, comm::Index2D rank,
+                                        Matrix<const T, Device::CPU>& matrix) {
   using namespace dlaf::matrix;
   namespace ex = pika::execution::experimental;
-  using pika::this_thread::experimental::sync_wait;
 
   using dlaf::common::make_data;
   using dlaf::common::internal::vector;
@@ -115,18 +114,16 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
         ex::when_all_vector(std::move(tiles_max)) |
         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), std::move(max_element));
 
-  return sync_wait(reduce_in_place(comm_grid.full_communicator_pipeline().exclusive(),
-                                   comm_grid.rankFullCommunicator(rank), MPI_MAX,
-                                   std::move(local_max_value)));
+  return reduce_in_place(comm_grid.full_communicator_pipeline().exclusive(),
+                         comm_grid.rankFullCommunicator(rank), MPI_MAX, std::move(local_max_value));
 }
 
 template <class T>
-dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_G(comm::CommunicatorGrid& comm_grid,
-                                                           comm::Index2D rank,
-                                                           Matrix<const T, Device::CPU>& matrix) {
+pika::execution::experimental::unique_any_sender<dlaf::BaseType<T>> Norm<
+    Backend::MC, Device::CPU, T>::max_G(comm::CommunicatorGrid& comm_grid, comm::Index2D rank,
+                                        Matrix<const T, Device::CPU>& matrix) {
   using namespace dlaf::matrix;
   namespace ex = pika::execution::experimental;
-  using pika::this_thread::experimental::sync_wait;
 
   using dlaf::common::make_data;
   using dlaf::common::internal::vector;
@@ -160,8 +157,7 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_G(comm::CommunicatorGri
         ex::when_all_vector(std::move(tiles_max)) |
         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), std::move(max_element));
 
-  return sync_wait(reduce_in_place(comm_grid.full_communicator_pipeline().exclusive(),
-                                   comm_grid.rankFullCommunicator(rank), MPI_MAX,
-                                   std::move(local_max_value)));
+  return reduce_in_place(comm_grid.full_communicator_pipeline().exclusive(),
+                         comm_grid.rankFullCommunicator(rank), MPI_MAX, std::move(local_max_value));
 }
 }

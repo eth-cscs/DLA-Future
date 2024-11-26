@@ -344,8 +344,10 @@ void checkGenEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<co
                          Matrix<const T, Device::CPU>& E, const SizeType eval_idx_end) {
   const Index2D rank_result{0, 0};
 
-  const auto norm_A = dlaf::auxiliary::max_norm<dlaf::Backend::MC>(comm_grid, rank_result, uplo, A);
-  const auto norm_B = dlaf::auxiliary::max_norm<dlaf::Backend::MC>(comm_grid, rank_result, uplo, B);
+  const auto norm_A =
+      sync_wait(dlaf::auxiliary::max_norm<dlaf::Backend::MC>(comm_grid, rank_result, uplo, A));
+  const auto norm_B =
+      sync_wait(dlaf::auxiliary::max_norm<dlaf::Backend::MC>(comm_grid, rank_result, uplo, B));
 
   // 2.
   // Compute C = E D - A E
@@ -362,8 +364,8 @@ void checkGenEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<co
                                                         E_ref, T{1}, C);
 
   // 3. Compute the max norm of the difference
-  const auto norm_diff =
-      dlaf::auxiliary::max_norm<dlaf::Backend::MC>(comm_grid, rank_result, blas::Uplo::General, C);
+  const auto norm_diff = sync_wait(dlaf::auxiliary::max_norm<dlaf::Backend::MC>(comm_grid, rank_result,
+                                                                                blas::Uplo::General, C));
 
   // 4.
   // Evaluation of correctness is done just by the master rank

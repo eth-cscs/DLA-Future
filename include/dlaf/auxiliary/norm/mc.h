@@ -15,13 +15,39 @@
 #include <dlaf/auxiliary/norm/api.h>
 #include <dlaf/common/range2d.h>
 #include <dlaf/common/vector.h>
+#include <dlaf/communication/kernels/reduce.h>
 #include <dlaf/communication/sync/reduce.h>
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/distribution.h>
+#include <dlaf/sender/transform_mpi.h>
 #include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 
 namespace dlaf::auxiliary::internal {
+
+template <class T>
+pika::execution::experimental::unique_any_sender<T> reduce_in_place(
+    pika::execution::experimental::unique_any_sender<dlaf::comm::CommunicatorPipelineExclusiveWrapper>
+        pcomm,
+    comm::IndexT_MPI rank, MPI_Op reduce_op, pika::execution::experimental::unique_any_sender<T> value) {
+  namespace ex = pika::execution::experimental;
+
+  return ex::when_all(std::move(pcomm), std::move(value)) |
+         ex::let_value([rank, reduce_op](auto&& pcomm, T& local) {
+           using dlaf::comm::internal::transformMPI;
+
+           const bool is_root_rank = pcomm.get().rank() == rank;
+           void* in = is_root_rank ? MPI_IN_PLACE : &local;
+           void* out = is_root_rank ? &local : nullptr;
+
+           return ex::just() |
+                  transformMPI([comm = pcomm.get(), rank, reduce_op, in, out](MPI_Request* req) mutable {
+                    DLAF_MPI_CHECK_ERROR(MPI_Ireduce(in, out, 1, dlaf::comm::mpi_datatype<T>::type,
+                                                     reduce_op, rank, comm, req));
+                  }) |
+                  ex::then([&local]() -> T { return local; });
+         });
+}
 
 // Compute max norm of the lower triangular part of the distributed matrix
 // https://en.wikipedia.org/wiki/Matrix_norm#Max_norm
@@ -82,16 +108,16 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
     DLAF_ASSERT(!values.empty(), "");
     return *std::max_element(values.begin(), values.end());
   };
-  NormT local_max_value =
-      tiles_max.empty() ? NormT{0}
-                        : sync_wait(ex::when_all_vector(std::move(tiles_max)) |
-                                    dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(),
-                                                              std::move(max_element)));
-  NormT max_value;
-  dlaf::comm::sync::reduce(comm_grid.rankFullCommunicator(rank), comm_grid.fullCommunicator(), MPI_MAX,
-                           make_data(&local_max_value, 1), make_data(&max_value, 1));
 
-  return max_value;
+  ex::unique_any_sender<NormT> local_max_value = ex::just(NormT{0});
+  if (!tiles_max.empty())
+    local_max_value =
+        ex::when_all_vector(std::move(tiles_max)) |
+        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), std::move(max_element));
+
+  return sync_wait(reduce_in_place(comm_grid.full_communicator_pipeline().exclusive(),
+                                   comm_grid.rankFullCommunicator(rank), MPI_MAX,
+                                   std::move(local_max_value)));
 }
 
 template <class T>
@@ -132,15 +158,14 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_G(comm::CommunicatorGri
     DLAF_ASSERT(!values.empty(), "");
     return *std::max_element(values.begin(), values.end());
   };
-  NormT local_max_value =
-      tiles_max.empty() ? NormT{0}
-                        : sync_wait(ex::when_all_vector(std::move(tiles_max)) |
-                                    dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(),
-                                                              std::move(max_element)));
-  NormT max_value;
-  dlaf::comm::sync::reduce(comm_grid.rankFullCommunicator(rank), comm_grid.fullCommunicator(), MPI_MAX,
-                           make_data(&local_max_value, 1), make_data(&max_value, 1));
+  ex::unique_any_sender<NormT> local_max_value = ex::just(NormT{0});
+  if (!tiles_max.empty())
+    local_max_value =
+        ex::when_all_vector(std::move(tiles_max)) |
+        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), std::move(max_element));
 
-  return max_value;
+  return sync_wait(reduce_in_place(comm_grid.full_communicator_pipeline().exclusive(),
+                                   comm_grid.rankFullCommunicator(rank), MPI_MAX,
+                                   std::move(local_max_value)));
 }
 }

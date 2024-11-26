@@ -32,16 +32,15 @@ pika::execution::experimental::unique_any_sender<T> reduce_in_place(
     comm::IndexT_MPI rank, MPI_Op reduce_op, pika::execution::experimental::unique_any_sender<T> value) {
   namespace ex = pika::execution::experimental;
 
-  return ex::when_all(std::move(pcomm), std::move(value)) |
-         ex::let_value([rank, reduce_op](auto&& pcomm, T& local) {
+  return ex::when_all(std::move(value)) |
+         ex::let_value([pcomm = std::move(pcomm), rank, reduce_op](T& local) mutable {
            using dlaf::comm::internal::transformMPI;
-
-           const bool is_root_rank = pcomm.get().rank() == rank;
-           void* in = is_root_rank ? MPI_IN_PLACE : &local;
-           void* out = is_root_rank ? &local : nullptr;
-
-           return ex::just() |
-                  transformMPI([comm = pcomm.get(), rank, reduce_op, in, out](MPI_Request* req) mutable {
+           return dlaf::internal::whenAllLift(std::move(pcomm)) |
+                  transformMPI([rank, reduce_op, &local](const dlaf::comm::Communicator& comm,
+                                                         MPI_Request* req) mutable {
+                    const bool is_root_rank = comm.rank() == rank;
+                    void* in = is_root_rank ? MPI_IN_PLACE : &local;
+                    void* out = is_root_rank ? &local : nullptr;
                     DLAF_MPI_CHECK_ERROR(MPI_Ireduce(in, out, 1, dlaf::comm::mpi_datatype<T>::type,
                                                      reduce_op, rank, comm, req));
                   }) |

@@ -142,12 +142,8 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_G(comm::CommunicatorGri
   tiles_max.reserve(distribution.localNrTiles().rows() * distribution.localNrTiles().cols());
 
   for (auto tile_wrt_local : iterate_range2d(distribution.localNrTiles())) {
-    auto norm_max_f = [](const matrix::Tile<const T, Device::CPU>& tile) noexcept -> NormT {
-      return lange(lapack::Norm::Max, tile);
-    };
-    auto current_tile_max =
-        matrix.read(tile_wrt_local) |
-        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), std::move(norm_max_f));
+    auto current_tile_max = dlaf::internal::whenAllLift(lapack::Norm::Max, matrix.read(tile_wrt_local)) |
+                            dlaf::tile::lange(dlaf::internal::Policy<Backend::MC>());
 
     tiles_max.push_back(std::move(current_tile_max));
   }

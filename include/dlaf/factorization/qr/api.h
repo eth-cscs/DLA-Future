@@ -10,8 +10,6 @@
 
 #pragma once
 
-#include <vector>
-
 #include <pika/execution.hpp>
 
 #include <dlaf/communication/communicator_pipeline.h>
@@ -53,8 +51,7 @@ struct QR_Tfactor {
   /// @pre v_start.isIn(v.nrTiles())
   static void call(matrix::Panel<Coord::Col, T, device>& panel_view,
                    matrix::ReadOnlyTileSender<T, Device::CPU> taus,
-                   matrix::ReadWriteTileSender<T, device> t,
-                   std::vector<matrix::ReadWriteTileSender<T, device>> workspaces);
+                   matrix::ReadWriteTileSender<T, device> t);
 
   /// Forms the triangular factor T of a block of reflectors H, which is defined as a product of k
   /// elementary reflectors.
@@ -84,8 +81,7 @@ struct QR_Tfactor {
   static void call(matrix::Panel<Coord::Col, T, device>& hh_panel,
                    matrix::ReadOnlyTileSender<T, Device::CPU> taus,
                    matrix::ReadWriteTileSender<T, device> t,
-                   comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_task_chain,
-                   std::vector<matrix::ReadWriteTileSender<T, device>> workspaces);
+                   comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_task_chain);
 };
 
 // ETI

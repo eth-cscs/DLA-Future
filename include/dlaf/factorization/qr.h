@@ -9,7 +9,6 @@
 //
 #pragma once
 
-#include <cstddef>
 #include <utility>
 
 /// @file
@@ -18,8 +17,6 @@
 #include <dlaf/factorization/qr/api.h>
 #include <dlaf/matrix/index.h>
 #include <dlaf/matrix/tile.h>
-#include <dlaf/qr/internal/get_tfactor_nworkers.h>
-#include <dlaf/types.h>
 
 namespace dlaf::factorization::internal {
 
@@ -47,15 +44,7 @@ template <Backend backend, Device device, class T>
 void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
                     matrix::ReadOnlyTileSender<T, Device::CPU> taus,
                     matrix::ReadWriteTileSender<T, device> t) {
-  const std::size_t nthreads = getTFactorNWorkers();
-  const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, nthreads - 1));
-  const SizeType nrefls_step = hh_panel.getWidth();
-
-  matrix::Matrix<T, device> ws_T({nworkspaces * nrefls_step, nrefls_step}, {nrefls_step, nrefls_step});
-
-  QR_Tfactor<backend, device, T>::call(
-      hh_panel, std::move(taus), std::move(t),
-      select(ws_T, common::iterate_range2d(ws_T.distribution().local_nr_tiles())));
+  QR_Tfactor<backend, device, T>::call(hh_panel, std::move(taus), std::move(t));
 }
 
 template <Backend backend, Device device, class T>
@@ -63,15 +52,7 @@ void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
                     matrix::ReadOnlyTileSender<T, Device::CPU> taus,
                     matrix::ReadWriteTileSender<T, device> t,
                     comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_task_chain) {
-  const std::size_t nthreads = getTFactorNWorkers();
-  const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, nthreads - 1));
-  const SizeType nrefls_step = hh_panel.getWidth();
-
-  matrix::Matrix<T, device> ws_T({nworkspaces * nrefls_step, nrefls_step}, {nrefls_step, nrefls_step});
-
-  QR_Tfactor<backend, device, T>::call(
-      hh_panel, std::move(taus), std::move(t), mpi_col_task_chain,
-      select(ws_T, common::iterate_range2d(ws_T.distribution().local_nr_tiles())));
+  QR_Tfactor<backend, device, T>::call(hh_panel, std::move(taus), std::move(t), mpi_col_task_chain);
 }
 
 }

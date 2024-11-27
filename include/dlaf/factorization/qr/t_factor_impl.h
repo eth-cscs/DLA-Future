@@ -350,10 +350,9 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 }
 
 template <Backend backend, Device device, class T>
-void QR_Tfactor<backend, device, T>::call(
-    matrix::Panel<Coord::Col, T, device>& hh_panel, matrix::ReadOnlyTileSender<T, Device::CPU> taus,
-    matrix::ReadWriteTileSender<T, device> tile_t,
-    std::vector<matrix::ReadWriteTileSender<T, device>> workspaces) {
+void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& hh_panel,
+                                          matrix::ReadOnlyTileSender<T, Device::CPU> taus,
+                                          matrix::ReadWriteTileSender<T, device> tile_t) {
   namespace ex = pika::execution::experimental;
 
   using Helpers = tfactor_l::Helpers<backend, device, T>;
@@ -361,6 +360,12 @@ void QR_Tfactor<backend, device, T>::call(
   // Fast return in case of no reflectors
   if (hh_panel.getWidth() == 0)
     return;
+
+  const std::size_t nthreads = getTFactorNWorkers();
+  const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, nthreads - 1));
+  const SizeType nrefls_step = hh_panel.getWidth();
+  matrix::Matrix<T, device> ws_T({nworkspaces * nrefls_step, nrefls_step}, {nrefls_step, nrefls_step});
+  auto workspaces = select(ws_T, common::iterate_range2d(ws_T.distribution().local_nr_tiles()));
 
   // Note:
   // T factor is an upper triangular square matrix, built column by column
@@ -393,8 +398,7 @@ template <Backend backend, Device device, class T>
 void QR_Tfactor<backend, device, T>::call(
     matrix::Panel<Coord::Col, T, device>& hh_panel, matrix::ReadOnlyTileSender<T, Device::CPU> taus,
     matrix::ReadWriteTileSender<T, device> tile_t,
-    comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_task_chain,
-    std::vector<matrix::ReadWriteTileSender<T, device>> workspaces) {
+    comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_task_chain) {
   namespace ex = pika::execution::experimental;
 
   using Helpers = tfactor_l::Helpers<backend, device, T>;
@@ -402,6 +406,13 @@ void QR_Tfactor<backend, device, T>::call(
   // Fast return in case of no reflectors
   if (hh_panel.getWidth() == 0)
     return;
+
+  const std::size_t nthreads = getTFactorNWorkers();
+  const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, nthreads - 1));
+  const SizeType nrefls_step = hh_panel.getWidth();
+
+  matrix::Matrix<T, device> ws_T({nworkspaces * nrefls_step, nrefls_step}, {nrefls_step, nrefls_step});
+  auto workspaces = select(ws_T, common::iterate_range2d(ws_T.distribution().local_nr_tiles()));
 
   // Note:
   // T factor is an upper triangular square matrix, built column by column
@@ -419,8 +430,8 @@ void QR_Tfactor<backend, device, T>::call(
   // 2) T(0:j, j) = T(0:j, 0:j) . t
 
   // Note:
-  // reset is needed because not all ranks might have computations to do, but they will participate to
-  // mpi reduction anyway.
+  // reset is needed because not all ranks might have computations to do, but they will participate
+  // to mpi reduction anyway.
   tile_t = Helpers::set0AndReturn(std::move(tile_t));
 
   // 1st step: compute the column partial result `t`

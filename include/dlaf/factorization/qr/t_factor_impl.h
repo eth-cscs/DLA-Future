@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <utility>
@@ -48,6 +49,14 @@
 namespace dlaf::factorization::internal {
 
 namespace tfactor_l {
+
+inline std::size_t num_worksers_gemv(const std::size_t nrtiles) {
+  const std::size_t min_workers = 1;
+  const std::size_t available_workers = getTFactorNWorkers();
+  const std::size_t ideal_workers = util::ceilDiv(to_sizet(nrtiles), to_sizet(2));
+  return std::clamp(ideal_workers, min_workers, available_workers);
+}
+
 template <Backend backend, Device device, class T>
 struct Helpers {};
 
@@ -96,17 +105,20 @@ struct Helpers<Backend::MC, Device::CPU, T> {
 
     using pika::execution::thread_priority;
 
-    const std::size_t nworkers = getTFactorNWorkers();
-    const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, nworkers - 1));
-    const SizeType nrefls_step = hh_panel.getWidth();
+    std::vector<matrix::ReadOnlyTileSender<T, Device::CPU>> hh_tiles =
+        selectRead(hh_panel, hh_panel.iteratorLocal());
 
+    const std::size_t nworkers = num_worksers_gemv(hh_tiles.size());
+    const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, nworkers - 1));
+
+    const SizeType nrefls_step = hh_panel.getWidth();
     matrix::Matrix<T, Device::CPU> ws_T({nworkspaces * nrefls_step, nrefls_step},
                                         {nrefls_step, nrefls_step});
     auto workspaces = select(ws_T, common::iterate_range2d(ws_T.distribution().local_nr_tiles()));
 
     const auto hp_scheduler = di::getBackendScheduler<Backend::MC>(thread_priority::high);
-    return ex::when_all(ex::when_all_vector(selectRead(hh_panel, hh_panel.iteratorLocal())),
-                        std::move(taus), std::move(tile_t), ex::when_all_vector(std::move(workspaces))) |
+    return ex::when_all(ex::when_all_vector(std::move(hh_tiles)), std::move(taus), std::move(tile_t),
+                        ex::when_all_vector(std::move(workspaces))) |
            di::continues_on(hp_scheduler) |
            ex::let_value([hp_scheduler, nworkers](auto&& hh_tiles, auto&& taus, auto&& tile_t,
                                                   auto&& workspaces) {
@@ -246,15 +258,16 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 
     using pika::execution::thread_priority;
 
-    const std::size_t nworkers = getTFactorNWorkers();
+    std::vector<matrix::ReadOnlyTileSender<T, Device::GPU>> hh_tiles =
+        selectRead(hh_panel, hh_panel.iteratorLocal());
+
+    const std::size_t nworkers = num_worksers_gemv(hh_tiles.size());
     const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, nworkers - 1));
+
     const SizeType nrefls_step = hh_panel.getWidth();
     matrix::Matrix<T, Device::GPU> ws_T({nworkspaces * nrefls_step, nrefls_step},
                                         {nrefls_step, nrefls_step});
     auto workspaces = select(ws_T, common::iterate_range2d(ws_T.distribution().local_nr_tiles()));
-
-    std::vector<matrix::ReadOnlyTileSender<T, Device::GPU>> hh_tiles =
-        selectRead(hh_panel, hh_panel.iteratorLocal());
 
     const std::size_t batch_size = util::ceilDiv(hh_tiles.size(), nworkers);
     for (std::size_t id_worker = 0; id_worker < nworkers; ++id_worker) {

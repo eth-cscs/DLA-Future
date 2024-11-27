@@ -389,8 +389,7 @@ protected:
           LocalElementSize(CT, panel_size.get<CT>() + dist.offset().get<CT>(), panel_size.get<axis>());
 
     Distribution dist_internal{panel_size, dist.blockSize()};
-    auto layout = tileLayout(dist_internal);
-    return {std::move(dist_internal), layout};
+    return {std::move(dist_internal), MatrixAllocation::Tiles};
   }
 
   /// Create a Panel related to Matrix represented by given Distribution.

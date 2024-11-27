@@ -22,16 +22,15 @@
 #include <dlaf/common/range2d.h>
 #include <dlaf/common/vector.h>
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/matrix/allocation.h>
 #include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/internal/tile_pipeline.h>
-#include <dlaf/matrix/layout_info.h>
 #include <dlaf/matrix/matrix_base.h>
 #include <dlaf/matrix/tile.h>
 #include <dlaf/types.h>
 
 namespace dlaf {
 namespace matrix {
-
 namespace internal {
 
 /// Helper function returning a vector with the results of calling a function over a IterableRange2D
@@ -62,16 +61,19 @@ public:
   using ElementType = T;
   using TileType = Tile<ElementType, D>;
   using ConstTileType = Tile<const ElementType, D>;
-  using TileDataType = internal::TileData<const ElementType, D>;
+  using TileDataType = internal::TileData<ElementType, D>;
   using ReadWriteSenderType = ReadWriteTileSender<T, D>;
   friend Matrix<const ElementType, D>;
 
-  /// Create a non distributed matrix of size @p size and block size @p block_size.
+  /// Create a non distributed matrix of size @p size and block size @p block_size and
+  /// tile_size @p block_size.
   ///
   /// @pre size.isValid(),
   /// @pre !blockSize.isEmpty().
-  Matrix(const LocalElementSize& size, const TileElementSize& tile_size)
-      : Matrix<T, D>(Distribution(size, tile_size)) {}
+  Matrix(const LocalElementSize& size, const TileElementSize& tile_size, MatrixAllocation alloc = MatrixAllocation::ColMajor)
+      : Matrix<T, D>(GlobalElementSize{size.rows(), size.cols()}, tile_size, alloc) {}
+  Matrix(const GlobalElementSize& size, const TileElementSize& tile_size, MatrixAllocation alloc = MatrixAllocation::ColMajor)
+      : Matrix<T, D>(Distribution(size, tile_size, {1, 1}, {0, 0}, {0, 0}), alloc) {}
 
   /// Create a distributed matrix of size @p size block size @p tile_size and tile size @p tile_size
   /// on the given 2D communicator grid @p comm.
@@ -79,41 +81,12 @@ public:
   /// @pre size.isValid(),
   /// @pre !blockSize.isEmpty().
   Matrix(const GlobalElementSize& size, const TileElementSize& tile_size,
-         const comm::CommunicatorGrid& comm)
-      : Matrix<T, D>(Distribution(size, tile_size, comm.size(), comm.rank(), {0, 0})) {}
+         const comm::CommunicatorGrid& comm, MatrixAllocation alloc = MatrixAllocation::ColMajor)
+      : Matrix<T, D>(Distribution(size, tile_size, comm.size(), comm.rank(), {0, 0}), alloc) {}
 
   /// Create a matrix distributed according to the distribution @p distribution.
-  Matrix(Distribution distribution) : Matrix<const T, D>(std::move(distribution)) {
-    const SizeType alignment = 64;
-    const SizeType ld = std::max<SizeType>(
-        1, util::ceilDiv(this->distribution().local_size().rows(), alignment) * alignment);
-
-    auto layout = colMajorLayout(this->distribution().local_size(), this->tile_size(), ld);
-
-    SizeType memory_size = layout.minMemSize();
-    memory::MemoryView<ElementType, D> mem(memory_size);
-
-    setUpTiles(mem, layout);
-  }
-
-  /// Create a matrix distributed according to the distribution @p distribution,
-  /// specifying the layout.
-  ///
-  /// @param[in] layout is the layout which describes how the elements
-  ///            of the local part of the matrix will be stored in memory,
-  /// @pre distribution.localSize() == layout.size(),
-  /// @pre distribution.blockSize() == layout.blockSize().
-  Matrix(Distribution distribution, const LayoutInfo& layout)
-      : Matrix<const T, D>(std::move(distribution)) {
-    DLAF_ASSERT(this->distribution().local_size() == layout.size(),
-                "Size of distribution does not match layout size!", distribution.local_size(),
-                layout.size());
-    DLAF_ASSERT(this->distribution().tile_size() == layout.blockSize(), distribution.tile_size(),
-                layout.blockSize());
-
-    memory::MemoryView<ElementType, D> mem(layout.minMemSize());
-
-    setUpTiles(mem, layout);
+  Matrix(Distribution distribution, MatrixAllocation alloc = MatrixAllocation::ColMajor) : Matrix<const T, D>(std::move(distribution)) {
+    set_up_non_preallocated_tiles(alloc);
   }
 
   /// Create a non distributed matrix,
@@ -123,7 +96,8 @@ public:
   ///            of the local part of the matrix are stored in memory,
   /// @param[in] ptr is the pointer to the first element of the local part of the matrix,
   /// @pre @p ptr refers to an allocated memory region of at least @c layout.minMemSize() elements.
-  Matrix(const LayoutInfo& layout, ElementType* ptr) noexcept : Matrix<const T, D>(layout, ptr) {}
+  template <class Layout>
+  Matrix(const Layout& layout, ElementType* ptr) noexcept : Matrix<const T, D>(layout, ptr) {}
 
   /// Create a matrix distributed according to the distribution @p distribution,
   /// which references elements that are already allocated in the memory.
@@ -134,7 +108,8 @@ public:
   /// @pre @p distribution.localSize() == @p layout.size(),
   /// @pre @p distribution.blockSize() == @p layout.blockSize(),
   /// @pre @p ptr refers to an allocated memory region of at least @c layout.minMemSize() elements.
-  Matrix(Distribution distribution, const LayoutInfo& layout, ElementType* ptr) noexcept
+  template <class Layout>
+  Matrix(Distribution distribution, const Layout& layout, ElementType* ptr) noexcept
       : Matrix<const T, D>(std::move(distribution), layout, ptr) {}
 
   Matrix(const Matrix& rhs) = delete;
@@ -147,7 +122,7 @@ public:
   ///
   /// @pre index.isIn(distribution().local_nr_tiles()).
   ReadWriteSenderType readwrite(const LocalTileIndex& index) noexcept {
-    return tile_managers_[tileLinearIndex(index)].readwrite();
+    return tile_managers_[tile_linear_index(index)].readwrite();
   }
 
   /// Returns a sender of the Tile with global index @p index.
@@ -158,15 +133,19 @@ public:
     return readwrite(this->distribution().local_tile_index(index));
   }
 
-public:
   /// Create a sub-pipelined matrix which can be accessed thread-safely with respect to the original
   /// matrix
   ///
   /// All accesses to the sub-pipelined matrix are sequenced after previous accesses and before later
   /// accesses to the original matrix, independently of when tiles are accessed in the sub-pipelined
   /// matrix.
-  Matrix subPipeline() noexcept {
+  Matrix sub_pipeline() noexcept {
     return Matrix(*this, SubPipelineTag{});
+  }
+
+  DLAF_MATRIX_DEPRECATED("method has been renamed in snake case")
+  Matrix subPipeline() noexcept {
+    return sub_pipeline();
   }
 
   /// Create a sub-pipelined, retiled matrix which can be accessed thread-safely with respect to the
@@ -178,12 +157,17 @@ public:
   ///
   /// @pre blockSize() is divisible by @p tiles_per_block
   /// @pre blockSize() == tile_size()
-  Matrix retiledSubPipeline(const LocalTileSize& tiles_per_block) noexcept {
+  Matrix retiled_sub_pipeline(const LocalTileSize& tiles_per_block) noexcept {
     return Matrix(*this, tiles_per_block);
   }
 
+  DLAF_MATRIX_DEPRECATED("method has been renamed in snake case")
+  Matrix retiledSubPipeline(const LocalTileSize& tiles_per_block) noexcept {
+    return retiled_sub_pipeline(tiles_per_block);
+  }
+
 protected:
-  using Matrix<const T, D>::tileLinearIndex;
+  using Matrix<const T, D>::tile_linear_index;
 
 private:
   using typename Matrix<const T, D>::SubPipelineTag;
@@ -191,9 +175,92 @@ private:
   Matrix(Matrix& mat, const LocalTileSize& tiles_per_block) noexcept
       : Matrix<const T, D>(mat, tiles_per_block) {}
 
-  using Matrix<const T, D>::setUpTiles;
+  // Note: safe to use in constructors if:
+  // - MatrixBase is initialized correctly.
+  void set_up_non_preallocated_tiles(MatrixAllocation alloc) noexcept;
+  //using Matrix<const T, D>::set_up_tiles;
   using Matrix<const T, D>::tile_managers_;
 };
+
+template <class T, Device D>
+void Matrix<T, D>::set_up_non_preallocated_tiles(MatrixAllocation alloc) noexcept {
+  using MemView = memory::MemoryView<T, D>;
+  const Distribution& dist = this->distribution();
+
+  const auto& local_nr_tiles = dist.local_nr_tiles();
+  const auto& local_size = dist.local_size();
+
+  if(local_size.isEmpty())
+    return;
+
+  DLAF_ASSERT(tile_managers_.empty(), "");
+  tile_managers_.reserve(to_sizet(local_nr_tiles.linear_size()));
+
+  SizeType rows = local_size.rows();
+  if (alloc == MatrixAllocation::ColMajor) {
+    SizeType alignment;
+
+    if constexpr (D == Device::CPU)
+      alignment = std::max<SizeType>(1, 64 / sizeof(T));
+    else 
+      alignment = 64;
+
+    SizeType ld = (rows < alignment ? rows : util::ceilDiv(rows, alignment) * alignment);
+
+    //if constexpr (D == Device::CPU)
+    //  if (ld * sizeof(T) % 1024 == 0)
+    //    ld += alignment;
+
+    SizeType nr_elements = ld * local_size.cols();
+    MemView mem(nr_elements);
+
+    for (SizeType j = 0; j < local_nr_tiles.cols(); ++j) {
+      SizeType j_el = dist.local_element_from_local_tile_and_tile_element<Coord::Col>(j, 0);
+      for (SizeType i = 0; i < local_nr_tiles.rows(); ++i) {
+        SizeType i_el = dist.local_element_from_local_tile_and_tile_element<Coord::Row>(i, 0);
+        SizeType offset = i_el + ld * j_el;
+        LocalTileIndex ij(i, j);
+        TileElementSize tile_size = dist.tile_size_of(ij);
+        DLAF_ASSERT_HEAVY(!tile_size.isEmpty(), tile_size);
+        SizeType view_size = tile_size.rows() + ld * (tile_size.cols() - 1);
+        tile_managers_.emplace_back(
+            TileDataType(tile_size, MemView(mem, offset,view_size),
+                         ld));
+      }
+    }
+  }
+  else if (alloc == MatrixAllocation::Blocks) {
+    DLAF_UNIMPLEMENTED("Block allocation");
+    // TODO
+    /*for (SizeType j_bl = 0; j_bl < nr_blocks.cols(); ++j_bl) {
+
+    for (SizeType j = 0; j < nr_blocks.cols(); ++j) {
+      for (SizeType i = 0; i < nr_blocks.rows(); ++i) {
+        LocalTileIndex ij(i, j);
+        TileElementSize tile_size = tile_size_of(ind);
+        DLAF_ASSERT_HEAVY(!tile_size.isEmpty(), tile_size);
+        tile_managers_.emplace_back(
+            TileDataType(tile_size, MemView(tile_size.linearSize()),
+                         tile_size.rows()));
+      }
+    }}*/
+  }
+  else if (alloc == MatrixAllocation::Tiles) {
+    for (SizeType j = 0; j < local_nr_tiles.cols(); ++j) {
+      for (SizeType i = 0; i < local_nr_tiles.rows(); ++i) {
+        LocalTileIndex ij(i, j);
+        TileElementSize tile_size = dist.tile_size_of(ij);
+        DLAF_ASSERT_HEAVY(!tile_size.isEmpty(), tile_size);
+        tile_managers_.emplace_back(
+            TileDataType(tile_size, MemView(tile_size.linear_size()),
+                         tile_size.rows()));
+      }
+    }
+  }
+  else {
+    DLAF_UNREACHABLE_PLAIN;
+  }
+}
 
 template <class T, Device D>
 class Matrix<const T, D> : public internal::MatrixBase {
@@ -207,10 +274,11 @@ public:
   using ReadOnlySenderType = ReadOnlyTileSender<T, D>;
   friend Matrix<ElementType, D>;
 
+  /*
   Matrix(const LayoutInfo& layout, ElementType* ptr) noexcept
       : MatrixBase({layout.size(), layout.blockSize()}) {
     memory::MemoryView<ElementType, D> mem(ptr, layout.minMemSize());
-    setUpTiles(mem, layout);
+    set_up_preallocated_tiles(mem, layout);
   }
 
   Matrix(const LayoutInfo& layout, const ElementType* ptr) noexcept
@@ -224,12 +292,12 @@ public:
                 layout.blockSize());
 
     memory::MemoryView<ElementType, D> mem(ptr, layout.minMemSize());
-    setUpTiles(mem, layout);
+    set_up_preallocated_tiles(mem, layout);
   }
 
   Matrix(Distribution distribution, const LayoutInfo& layout, const ElementType* ptr) noexcept
       : Matrix(std::move(distribution), layout, const_cast<ElementType*>(ptr)) {}
-
+*/
   Matrix(const Matrix& rhs) = delete;
   Matrix(Matrix&& rhs) = default;
 
@@ -240,7 +308,7 @@ public:
   ///
   /// @pre index.isIn(distribution().local_nr_tiles()).
   ReadOnlySenderType read(const LocalTileIndex& index) noexcept {
-    return tile_managers_[tileLinearIndex(index)].read();
+    return tile_managers_[tile_linear_index(index)].read();
   }
 
   /// Returns a read-only sender of the Tile with global index @p index.
@@ -255,7 +323,12 @@ public:
   ///
   /// This blocking call does not return until all operations, i.e. both RO and RW,
   /// involving any of the locally available tiles are completed.
-  void waitLocalTiles() noexcept;
+  void wait_local_tiles() noexcept;
+
+  DLAF_MATRIX_DEPRECATED("method has been renamed in snake case")
+  void waitLocalTiles() noexcept {
+    wait_local_tiles();
+  }
 
   /// Create a sub-pipelined matrix which can be accessed thread-safely with respect to the original
   /// matrix
@@ -263,6 +336,7 @@ public:
   /// All accesses to the sub-pipelined matrix are sequenced after previous accesses and before later
   /// accesses to the original matrix, independently of when tiles are accessed in the sub-pipelined
   /// matrix.
+  DLAF_MATRIX_DEPRECATED("method has been renamed in snake case")
   Matrix subPipelineConst() {
     return Matrix(*this, SubPipelineTag{});
   }
@@ -276,6 +350,7 @@ public:
   ///
   /// @pre blockSize() is divisible by @p tiles_per_block
   /// @pre blockSize() == tile_size()
+  DLAF_MATRIX_DEPRECATED("method has been renamed in snake case")
   Matrix retiledSubPipelineConst(const LocalTileSize& tiles_per_block) {
     return Matrix(*this, tiles_per_block);
   }
@@ -285,7 +360,7 @@ public:
   /// Marking a tile as done means it can no longer be accessed. Marking a tile as done also disallows
   /// creation of sub pipelines from the full matrix.
   void done(const LocalTileIndex& index) noexcept {
-    const auto i = tileLinearIndex(index);
+    const auto i = tile_linear_index(index);
     tile_managers_[i].reset();
   }
 
@@ -304,22 +379,23 @@ protected:
   }
   struct SubPipelineTag {};
   Matrix(Matrix& mat, const SubPipelineTag) noexcept : MatrixBase(mat.distribution()) {
-    setUpSubPipelines(mat);
+    set_up_sub_pipelines(mat);
   }
   Matrix(Matrix& mat, const LocalTileSize& tiles_per_block) noexcept
       : MatrixBase(mat.distribution(), tiles_per_block) {
-    setUpRetiledSubPipelines(mat, tiles_per_block);
+    set_up_retiled_sub_pipelines(mat, tiles_per_block);
   }
 
-  void setUpTiles(const memory::MemoryView<ElementType, D>& mem, const LayoutInfo& layout) noexcept;
-  void setUpSubPipelines(Matrix<const T, D>&) noexcept;
-  void setUpRetiledSubPipelines(Matrix<const T, D>&, const LocalTileSize& tiles_per_block) noexcept;
+  template <class Layout>
+  void set_up_preallocated_tiles(const memory::MemoryView<ElementType, D>& mem, const Layout& layout) noexcept;
+  void set_up_sub_pipelines(Matrix<const T, D>&) noexcept;
+  void set_up_retiled_sub_pipelines(Matrix<const T, D>&, const LocalTileSize& tiles_per_block) noexcept;
 
   std::vector<internal::TilePipeline<T, D>> tile_managers_;
 };
 
 template <class T, Device D>
-void Matrix<const T, D>::waitLocalTiles() noexcept {
+void Matrix<const T, D>::wait_local_tiles() noexcept {
   // Note:
   // Using a readwrite access to the tile ensures that the access is exclusive and not shared
   // among multiple tasks.
@@ -328,16 +404,18 @@ void Matrix<const T, D>::waitLocalTiles() noexcept {
 
   auto s = pika::execution::experimental::when_all_vector(internal::selectGeneric(
                [this](const LocalTileIndex& index) {
-                 return this->tile_managers_[tileLinearIndex(index)].readwrite();
+                 return this->tile_managers_[tile_linear_index(index)].readwrite();
                },
                range_local)) |
            pika::execution::experimental::drop_value();
   pika::this_thread::experimental::sync_wait(std::move(s));
 }
 
+
 template <class T, Device D>
-void Matrix<const T, D>::setUpTiles(const memory::MemoryView<ElementType, D>& mem,
-                                    const LayoutInfo& layout) noexcept {
+template <class Layout>
+void Matrix<const T, D>::set_up_preallocated_tiles(const memory::MemoryView<ElementType, D>& mem,
+                                    const Layout& layout) noexcept {
   const auto& nr_tiles = layout.nrTiles();
 
   DLAF_ASSERT(tile_managers_.empty(), "");
@@ -357,7 +435,7 @@ void Matrix<const T, D>::setUpTiles(const memory::MemoryView<ElementType, D>& me
 }
 
 template <class T, Device D>
-void Matrix<const T, D>::setUpSubPipelines(Matrix<const T, D>& mat) noexcept {
+void Matrix<const T, D>::set_up_sub_pipelines(Matrix<const T, D>& mat) noexcept {
   namespace ex = pika::execution::experimental;
 
   // TODO: Optimize read-after-read. This is currently forced to access the base
@@ -375,7 +453,7 @@ void Matrix<const T, D>::setUpSubPipelines(Matrix<const T, D>& mat) noexcept {
 }
 
 template <class T, Device D>
-void Matrix<const T, D>::setUpRetiledSubPipelines(Matrix<const T, D>& mat,
+void Matrix<const T, D>::set_up_retiled_sub_pipelines(Matrix<const T, D>& mat,
                                                   const LocalTileSize& tiles_per_block) noexcept {
   DLAF_ASSERT(mat.blockSize() == mat.tile_size(), mat.blockSize(), mat.tile_size());
 
@@ -410,11 +488,11 @@ void Matrix<const T, D>::setUpRetiledSubPipelines(Matrix<const T, D>& mat,
       }
 
     auto sub_tiles =
-        splitTileDisjoint(mat.tile_managers_[mat.tileLinearIndex(orig_tile_index)].readwrite(), specs);
+        splitTileDisjoint(mat.tile_managers_[mat.tile_linear_index(orig_tile_index)].readwrite(), specs);
 
     DLAF_ASSERT_HEAVY(specs.size() == indices.size(), specs.size(), indices.size());
     for (SizeType j = 0; j < specs.size(); ++j) {
-      const auto i = tileLinearIndex(indices[j]);
+      const auto i = tile_linear_index(indices[j]);
 
       // Move subtile to be managed by the tile manager of RetiledMatrix. We
       // use readwrite_with_wrapper to get access to the original tile managed

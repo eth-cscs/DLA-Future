@@ -1445,8 +1445,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                          dist_sub.tile_element_from_global_element<Coord::Col>(j_el);
 
                      for (SizeType i_lc = 0; i_lc < m_lc; ++i_lc) {
-                       const SizeType i = dist_sub.global_tile_from_local_tile<Coord::Row>(i_lc);
-                       const SizeType m_el_tl = dist_sub.tile_size_of<Coord::Row>(i);
+                       const SizeType m_el_tl = dist_sub.local_tile_size_of<Coord::Row>(i_lc);
                        const SizeType linear_lc =
                            dist_extra::local_tile_linear_index(dist_sub, {i_lc, j_lc});
                        const auto& evec = evec_tiles[to_sizet(linear_lc)];
@@ -1531,7 +1530,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
 
                      for (SizeType i_lc = 0; i_lc < m_lc; ++i_lc) {
                        const SizeType i = dist_sub.global_tile_from_local_tile<Coord::Row>(i_lc);
-                       const SizeType m_el_tl = dist_sub.tile_size_of<Coord::Row>(i);
+                       const SizeType m_el_tl = dist_sub.local_tile_size_of<Coord::Row>(i_lc);
                        const SizeType linear_lc =
                            dist_extra::local_tile_linear_index(dist_sub, {i_lc, j_lc});
                        const auto& q_tile = q[to_sizet(linear_lc)];
@@ -1619,7 +1618,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
 
                      for (SizeType i_lc = 0; i_lc < m_lc; ++i_lc) {
                        const SizeType i = dist_sub.global_tile_from_local_tile<Coord::Row>(i_lc);
-                       const SizeType m_el_tl = dist_sub.tile_size_of<Coord::Row>(i);
+                       const SizeType m_el_tl = dist_sub.local_tile_size_of<Coord::Row>(i_lc);
                        const SizeType linear_lc =
                            dist_extra::local_tile_linear_index(dist_sub, {i_lc, j_lc});
                        const auto& q_tile = q[to_sizet(linear_lc)];
@@ -1679,8 +1678,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
 
                        T* partial_evec = q[to_sizet(ij_linear)].ptr({0, j_el_tl});
 
-                       const SizeType i = dist_sub.global_tile_from_local_tile<Coord::Row>(i_lc);
-                       const SizeType m_el_tl = dist_sub.tile_size_of<Coord::Row>(i);
+                       const SizeType m_el_tl = dist_sub.local_tile_size_of<Coord::Row>(i_lc);
                        blas::scal(m_el_tl, 1 / vec_norm, partial_evec, 1);
                      }
                    }

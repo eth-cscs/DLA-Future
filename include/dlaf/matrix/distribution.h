@@ -118,6 +118,7 @@ public:
   /// @param[in] element_offset is the element-wise offset of the top left tile of the matrix ,
   /// @pre size.isValid(),
   /// @pre !block_size.isEmpty().
+  DLAF_DISTRIBUTION_DEPRECATED("Use another constructor")
   Distribution(const LocalElementSize& size, const TileElementSize& block_size,
                const GlobalElementIndex& element_offset = {0, 0});
 
@@ -344,7 +345,15 @@ public:
   /// @pre global_element.isIn(size()).
   TileElementSize tile_size_of(const GlobalTileIndex& index) const noexcept {
     DLAF_ASSERT_HEAVY(index.isIn(nr_tiles()), index, nr_tiles());
-    return {tile_size_of<Coord::Row>(index.row()), tile_size_of<Coord::Col>(index.col())};
+    return {global_tile_size_of<Coord::Row>(index.row()), global_tile_size_of<Coord::Col>(index.col())};
+  }
+
+  /// Returns the size of the Tile with global index @p index.
+  ///
+  /// @pre global_element.isIn(size()).
+  TileElementSize tile_size_of(const LocalTileIndex& index) const noexcept {
+    DLAF_ASSERT_HEAVY(index.isIn(local_nr_tiles()), index, local_nr_tiles());
+    return {local_tile_size_of<Coord::Row>(index.row()), local_tile_size_of<Coord::Col>(index.col())};
   }
 
   ///////////////////////////////////
@@ -583,7 +592,7 @@ public:
   ///
   /// @pre 0 <= global_tile < nr_tiles().get<rc>().
   template <Coord rc>
-  SizeType tile_size_of(SizeType global_tile) const noexcept {
+  SizeType global_tile_size_of(SizeType global_tile) const noexcept {
     DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < nr_tiles_.get<rc>(), global_tile,
                       nr_tiles_.get<rc>());
     SizeType n = size_.get<rc>();
@@ -592,6 +601,21 @@ public:
       return std::min(nb - global_tile_element_offset<rc>(), n);
     }
     return std::min(nb, n + global_tile_element_offset<rc>() - global_tile * nb);
+  }
+
+  /// Returns the size of the tile with global index @p global_tile.
+  ///
+  /// @pre 0 <= global_tile < nr_tiles().get<rc>().
+  template <Coord rc>
+  SizeType local_tile_size_of(SizeType local_tile) const noexcept {
+    DLAF_ASSERT_HEAVY(0 <= local_tile && local_tile < local_nr_tiles_.get<rc>(), local_tile,
+                      local_nr_tiles_.get<rc>());
+    SizeType n = local_size_.get<rc>();
+    SizeType nb = tile_size_.get<rc>();
+    if (local_tile == 0) {
+      return std::min(nb - local_tile_element_offset<rc>(), n);
+    }
+    return std::min(nb, n + local_tile_element_offset<rc>() - local_tile * nb);
   }
 
 private:
@@ -928,9 +952,9 @@ public:
   ///
   /// @pre 0 <= global_tile < nr_tiles().get<rc>().
   template <Coord rc>
-  DLAF_DISTRIBUTION_DEPRECATED("Use tile_size_of method")
+  DLAF_DISTRIBUTION_DEPRECATED("Use global_tile_size_of method")
   SizeType tileSize(SizeType global_tile) const noexcept {
-    return tile_size_of<rc>(global_tile);
+    return global_tile_size_of<rc>(global_tile);
   }
 
   //////////////////////////////////////

@@ -752,7 +752,7 @@ TYPED_TEST(PanelTest, MatrixWithOffset) {
     const LocalTileSize sub_size_lc = mat_sub.distribution().local_nr_tiles();
     for (SizeType j_lc = 0; j_lc < sub_size_lc.cols(); ++j_lc) {
       if (j_lc == 0 || j_lc == sub_size_lc.cols() - 1) {
-        panel.setWidth(mat_sub.distribution().template tile_size_of<Coord::Col>(j_lc));
+        panel.setWidth(mat_sub.distribution().template global_tile_size_of<Coord::Col>(j_lc));
       }
 
       for (SizeType i_lc = 0; i_lc < sub_size_lc.rows(); ++i_lc) {

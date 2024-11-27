@@ -41,9 +41,9 @@ int cholesky_factorization(const int dlaf_context, const char uplo, T* a,
 
   auto& communicator_grid = grid_from_context(dlaf_context);
 
-  auto [distribution, layout] = distribution_and_layout(dlaf_desca, communicator_grid);
+  auto layout = make_layout(dlaf_desca, communicator_grid);
 
-  dlaf::matrix::Matrix<T, dlaf::Device::CPU> matrix_host(std::move(distribution), layout, a);
+  dlaf::matrix::Matrix<T, dlaf::Device::CPU> matrix_host(layout, a);
 
   {
     MatrixMirror matrix(matrix_host);

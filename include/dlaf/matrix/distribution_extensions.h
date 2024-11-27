@@ -218,7 +218,7 @@ template <Coord rc>
 SizeType distance_to_adjacent_tile(const Distribution& dist, SizeType global_element) noexcept {
   const SizeType global_tile = dist.global_tile_from_global_element<rc>(global_element);
   const SizeType tile_element = dist.tile_element_from_global_element<rc>(global_element);
-  return dist.tile_size_of<rc>(global_tile) - tile_element;
+  return dist.global_tile_size_of<rc>(global_tile) - tile_element;
 }
 
 /// Returns a local linear column-major index of the tile @p ij_local
@@ -264,7 +264,8 @@ SizeType local_element_distance_from_local_tile(const Distribution& dist, SizeTy
   SizeType i_el_begin = dist.local_element_from_local_tile_and_tile_element<rc>(i_loc_begin, 0);
   SizeType i_el_end =
       dist.local_element_from_local_tile_and_tile_element<rc>(
-          i_loc_last, dist.tile_size_of<rc>(dist.global_tile_from_local_tile<rc>(i_loc_last)) - 1) +
+          i_loc_last,
+          dist.global_tile_size_of<rc>(dist.global_tile_from_local_tile<rc>(i_loc_last)) - 1) +
       1;
   return i_el_end - i_el_begin;
 }

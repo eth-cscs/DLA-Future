@@ -50,7 +50,7 @@ namespace dlaf::factorization::internal {
 
 namespace tfactor_l {
 
-inline std::size_t num_worksers_gemv(const std::size_t nrtiles) {
+inline std::size_t num_workers_gemv(const std::size_t nrtiles) {
   const std::size_t min_workers = 1;
   const std::size_t available_workers = getTFactorNWorkers();
   const std::size_t ideal_workers = util::ceilDiv(to_sizet(nrtiles), to_sizet(2));
@@ -108,7 +108,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
     std::vector<matrix::ReadOnlyTileSender<T, Device::CPU>> hh_tiles =
         selectRead(hh_panel, hh_panel.iteratorLocal());
 
-    const std::size_t nworkers = num_worksers_gemv(hh_tiles.size());
+    const std::size_t nworkers = num_workers_gemv(hh_tiles.size());
     const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, nworkers - 1));
 
     const SizeType nrefls_step = hh_panel.getWidth();
@@ -261,7 +261,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
     std::vector<matrix::ReadOnlyTileSender<T, Device::GPU>> hh_tiles =
         selectRead(hh_panel, hh_panel.iteratorLocal());
 
-    const std::size_t nworkers = num_worksers_gemv(hh_tiles.size());
+    const std::size_t nworkers = num_workers_gemv(hh_tiles.size());
     const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, nworkers - 1));
 
     const SizeType nrefls_step = hh_panel.getWidth();

@@ -88,6 +88,7 @@ cscs["daint-gpu"] = {
 export MPICH_MAX_THREAD_SAFETY=multiple
 export MIMALLOC_EAGER_COMMIT_DELAY=0
 export MIMALLOC_ALLOW_LARGE_OS_PAGES=1
+export DLAF_BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE=128
 
 # Debug
 module list &> modules_{bs_name}.txt

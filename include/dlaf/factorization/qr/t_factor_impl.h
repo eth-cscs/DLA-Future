@@ -28,13 +28,13 @@
 #include <dlaf/common/single_threaded_blas.h>
 #include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/communication/kernels/all_reduce.h>
-#include <dlaf/eigensolver/internal/get_red2band_panel_nworkers.h>
 #include <dlaf/factorization/qr/api.h>
 #include <dlaf/lapack/gpu/larft.h>
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/tile.h>
 #include <dlaf/matrix/views.h>
+#include <dlaf/qr/internal/get_tfactor_nworkers.h>
 #include <dlaf/types.h>
 #include <dlaf/util_math.h>
 #include <dlaf/util_matrix.h>
@@ -102,7 +102,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
                         std::move(taus), std::move(tile_t), ex::when_all_vector(std::move(workspaces))) |
            di::continues_on(hp_scheduler) |
            ex::let_value([hp_scheduler](auto&& hh_tiles, auto&& taus, auto&& tile_t, auto&& workspaces) {
-             const std::size_t nworkers = eigensolver::internal::getReductionToBandPanelNWorkers();
+             const std::size_t nworkers = getTFactorNWorkers();
              const std::chrono::duration<double> barrier_busy_wait = std::chrono::microseconds(1000);
 
              DLAF_ASSERT_HEAVY(nworkers - 1 == workspaces.size(), nworkers, workspaces.size());
@@ -242,7 +242,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 
     using pika::execution::thread_priority;
 
-    const std::size_t nworkers = eigensolver::internal::getReductionToBandPanelNWorkers();
+    const std::size_t nworkers = getTFactorNWorkers();
     DLAF_ASSERT_HEAVY(nworkers - 1 == workspaces.size(), nworkers, workspaces.size());
 
     std::vector<matrix::ReadOnlyTileSender<T, Device::GPU>> hh_tiles =

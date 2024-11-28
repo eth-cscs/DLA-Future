@@ -19,6 +19,7 @@
 
 #include <pika/barrier.hpp>
 #include <pika/execution.hpp>
+#include <pika/execution/algorithms/sync_wait.hpp>
 #include <pika/init.hpp>
 
 #include <dlaf/blas/tile.h>
@@ -35,7 +36,7 @@
 #include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/communication/functions_sync.h>
 #include <dlaf/communication/index.h>
-#include <dlaf/communication/kernels/all_reduce.h>
+#include <dlaf/communication/kernels/internal/all_reduce.h>
 #include <dlaf/communication/kernels/reduce.h>
 #include <dlaf/communication/rdma.h>
 #include <dlaf/eigensolver/internal/get_red2band_barrier_busy_wait.h>
@@ -57,6 +58,42 @@
 #include <dlaf/types.h>
 #include <dlaf/util_math.h>
 #include <dlaf/util_matrix.h>
+
+namespace dlaf::comm::internal {
+template <class DataInOut>
+void allReduceInPlace(Communicator& comm, MPI_Op reduce_op, const DataInOut inout) {
+  using common::make_contiguous;
+
+  using T = std::remove_const_t<typename common::data_traits<DataInOut>::element_t>;
+
+  // Wayout for single rank communicator, just copy data
+  if (comm.size() == 1)
+    return;
+
+  // Buffers not allocated, just placeholders in case we need to allocate them
+  common::Buffer<T> buffer_inout;
+
+  auto message_inout = comm::make_message(make_contiguous(inout, buffer_inout));
+
+  // if the input buffer has been used, initialize it with input values
+  if (buffer_inout)
+    common::copy(inout, buffer_inout);
+
+  // DLAF_MPI_CHECK_ERROR(MPI_Allreduce(MPI_IN_PLACE, message_inout.data(), message_inout.count(),
+  //                                    message_inout.mpi_type(), reduce_op, comm));
+  using dlaf::internal::whenAllLift;
+  using pika::this_thread::experimental::sync_wait;
+  sync_wait(whenAllLift(std::cref(comm), reduce_op, std::move(message_inout)) |
+            transformMPI([](const Communicator& comm, MPI_Op reduce_op, auto&& msg, MPI_Request* req) {
+              DLAF_MPI_CHECK_ERROR(MPI_Iallreduce(MPI_IN_PLACE, msg.data(), msg.count(), msg.mpi_type(),
+                                                  reduce_op, comm, req));
+            }));
+
+  // if the output buffer has been used, copy-back output values
+  if (buffer_inout)
+    common::copy(buffer_inout, inout);
+}
+}
 
 namespace dlaf::eigensolver::internal {
 
@@ -605,9 +642,9 @@ T computeReflector(const bool has_head, comm::Communicator& communicator,
   // update locally the reflectors (section they have). This is more efficient than computing params
   // (e.g. norm, y, tau) just on the root rank and then having to broadcast them (i.e. additional
   // communication).
-  comm::sync::allReduceInPlace(communicator, MPI_SUM,
-                               common::make_data(x0_and_squares.data(),
-                                                 to_SizeType(x0_and_squares.size())));
+  comm::internal::allReduceInPlace(communicator, MPI_SUM,
+                                   common::make_data(x0_and_squares.data(),
+                                                     to_SizeType(x0_and_squares.size())));
 
   auto tau = computeReflectorAndTau(has_head, panel, j, std::move(x0_and_squares));
 
@@ -677,7 +714,8 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
           // STEP2b: reduce w results (single-threaded)
           if (index == 0) {
             dlaf::eigensolver::internal::reduceColumnVectors(w);
-            comm::sync::allReduceInPlace(pcomm.get(), MPI_SUM, common::make_data(w[0].data(), pt_cols));
+            comm::internal::allReduceInPlace(pcomm.get(), MPI_SUM,
+                                             common::make_data(w[0].data(), pt_cols));
           }
           barrier_ptr->arrive_and_wait(barrier_busy_wait);
 

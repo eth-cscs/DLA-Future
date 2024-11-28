@@ -42,8 +42,8 @@ export DLAF_INSTALL_PREFIX=`spack location -i dla-future`
 Then, you can configure your project with one of the following:
 
 ```bash
-# By appending the value to the CMAKE_INSTALL_PREFIX
-cmake -DCMAKE_INSTALL_PREFIX=${DLAF_INSTALL_PREFIX} ..
+# By appending the value to the CMAKE_PREFIX_PATH
+cmake -DCMAKE_PREFIX_PATH=${DLAF_INSTALL_PREFIX} ..
 
 # ... or by setting DLAF_DIR
 cmake -DDLAF_DIR="$DLAF_INSTALL_PREFIX/lib/cmake" ..

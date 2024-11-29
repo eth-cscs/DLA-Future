@@ -36,7 +36,7 @@ mb_szs_d = 512
 m_szs_z = [10240, 20480]
 mb_szs_z = 512
 
-extra_flags = "--dlaf:bt-band-to-tridiag-hh-apply-group-size=128"
+extra_flags = ""
 
 approx = 512  # the sizes used in weak scaling are chosen to be the nearest multiple of approx.
 

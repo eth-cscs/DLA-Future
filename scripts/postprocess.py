@@ -214,22 +214,19 @@ def _parse_optional_text(text):
         return None
 
 
-@with_pattern(r"(|\s+\S+)")
-def _parse_optional_int(text):
-    text = text.strip()
-
-    for c in ["(", ",", ")"]:
-        text = text.replace(c, "")
-
-    if text:
-        return int(text)
+# Optionally match "(INT, INT)" and extract both integers in a tuple
+@with_pattern(r"(|\s+\(\d+, \d+\))")
+def _parse_optional_int_pair(s):
+    if s:
+        p = parse("({first:d}, {last:d})", s.strip())
+        return (p["first"], p["last"])
     else:
         return None
 
 
 additional_parsers = {
     "optional_text": _parse_optional_text,
-    "optional_int": _parse_optional_int,
+    "optional_int_pair": _parse_optional_int_pair,
 }
 # {
 #     "run_index":
@@ -258,15 +255,15 @@ def _parse_line_based(fout, bench_name, nodes):
         if alg_name in ["chol", "hegst", "trmm"]:
             pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
         if alg_name in ["trsm"]:
-            pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}){first_eval_idx:optional_int}{last_eval_idx:optional_int} ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
+            pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}){evals_idxs:optional_int_pair} ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
         if alg_name in ["red2band", "band2trid"]:
             pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
         if alg_name in ["bt_band2trid", "bt_red2band"]:
-            pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}){first_eval_idx:optional_int}{last_eval:optional_int} ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
+            pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}){evals_idxs:optional_int_pair} ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
         if alg_name in ["trid_evp"]:
             pstr_res = "[{run_index:d}] {time:g}s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
         if alg_name in ["evp", "gevp"]:
-            pstr_res = "[{run_index:d}] {time:g}s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}){first_eval_idx:optional_int}{last_eval_idx:optional_int} ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
+            pstr_res = "[{run_index:d}] {time:g}s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}){evals_idxs:optional_int_pair} ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
     elif bench_name.startswith("chol_slate"):
         pstr_arr = ["input:{}potrf"]
         pstr_res = "d {} {} column lower {matrix_rows:d} {:d} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:g} {perf:g} NA NA no check"
@@ -458,7 +455,9 @@ def parse_jobs_cmdargs(description):
 
     df = parse_jobs(paths, args.distinguish_dir)
     if df.empty:
-        print("Parsed zero results, is the path correct? (paths are " + str(paths) + ")")
+        print(
+            "Parsed zero results, is the path correct? (paths are " + str(paths) + ")"
+        )
         exit(1)
 
     return df
@@ -469,11 +468,15 @@ def calc_chol_metrics(df):
 
 
 def calc_trsm_metrics(df):
-    return _calc_metrics(["matrix_rows", "matrix_cols", "block_rows", "nodes", "bench_name"], df)
+    return _calc_metrics(
+        ["matrix_rows", "matrix_cols", "block_rows", "nodes", "bench_name"], df
+    )
 
 
 def calc_trmm_metrics(df):
-    return _calc_metrics(["matrix_rows", "matrix_cols", "block_rows", "nodes", "bench_name"], df)
+    return _calc_metrics(
+        ["matrix_rows", "matrix_cols", "block_rows", "nodes", "bench_name"], df
+    )
 
 
 def calc_gen2std_metrics(df):
@@ -481,11 +484,15 @@ def calc_gen2std_metrics(df):
 
 
 def calc_red2band_metrics(df):
-    return _calc_metrics(["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df)
+    return _calc_metrics(
+        ["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df
+    )
 
 
 def calc_band2trid_metrics(df):
-    return _calc_metrics(["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df)
+    return _calc_metrics(
+        ["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df
+    )
 
 
 def calc_trid_evp_metrics(df):
@@ -493,19 +500,27 @@ def calc_trid_evp_metrics(df):
 
 
 def calc_bt_band2trid_metrics(df):
-    return _calc_metrics(["matrix_rows", "matrix_cols", "block_rows", "band", "nodes", "bench_name"], df)
+    return _calc_metrics(
+        ["matrix_rows", "matrix_cols", "block_rows", "band", "nodes", "bench_name"], df
+    )
 
 
 def calc_bt_red2band_metrics(df):
-    return _calc_metrics(["matrix_rows", "matrix_cols", "block_rows", "band", "nodes", "bench_name"], df)
+    return _calc_metrics(
+        ["matrix_rows", "matrix_cols", "block_rows", "band", "nodes", "bench_name"], df
+    )
 
 
 def calc_evp_metrics(df):
-    return _calc_metrics(["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df)
+    return _calc_metrics(
+        ["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df
+    )
 
 
 def calc_gevp_metrics(df):
-    return _calc_metrics(["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df)
+    return _calc_metrics(
+        ["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df
+    )
 
 
 # Customization that add a simple legend

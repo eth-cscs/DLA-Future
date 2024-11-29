@@ -246,6 +246,9 @@ struct GenEigensolverMiniapp {
         checkGenEigensolver(comm_grid, opts.uplo, matrix_a_ref, matrix_b_ref, eigenvalues_host.get(),
                             eigenvectors_host.get());
       }
+
+      eigenvalues.waitLocalTiles();
+      eigenvectors.waitLocalTiles();
     }
   }
 };

@@ -218,6 +218,9 @@ struct EigensolverMiniapp {
         checkEigensolver(comm_grid, opts.uplo, matrix_ref, eigenvalues_host.get(),
                          eigenvectors_host.get());
       }
+
+      eigenvalues.waitLocalTiles();
+      eigenvectors.waitLocalTiles();
     }
   }
 };

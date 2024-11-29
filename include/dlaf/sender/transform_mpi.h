@@ -13,6 +13,7 @@
 #include <utility>
 
 #include <pika/execution.hpp>
+#include <pika/mpi.hpp>
 
 #include <dlaf/common/consume_rvalues.h>
 #include <dlaf/common/unwrap.h>
@@ -30,16 +31,17 @@ inline void consumeCommunicatorWrapper(CommunicatorPipelineExclusiveWrapper& com
   [[maybe_unused]] auto comm_wrapper_local = std::move(comm_wrapper);
 }
 
-/// \overload consumeCommunicatorWrapper
+/// \overload consumeCommunicatorWrapper (for non communicator types)
 template <typename T>
 void consumeCommunicatorWrapper(T&) {}
 
 /// Helper type for wrapping MPI calls.
 ///
-/// Wrapper type around calls to MPI functions. Provides a call operator that
-/// creates an MPI request and passes it as the last argument to the provided
-/// callable. The wrapper then waits for the request to complete with
-/// yield_while.
+/// The wrapper explicitly releases any dla communicator objects when the pika::transform_mpi
+/// function returns (e.g. a message has been sent/posted) to prevent blocking access to many
+/// queued mpi operations.
+/// The mpi operations can complete asynchronously later, but the commmunicator is
+/// released/made available once the mpi task has been safely initiated
 ///
 /// This could in theory be a lambda inside transformMPI.  However, clang at
 /// least until version 12 fails with an internal compiler error with a trailing
@@ -47,36 +49,17 @@ void consumeCommunicatorWrapper(T&) {}
 template <typename F>
 struct MPICallHelper {
   std::decay_t<F> f;
-  template <typename... Ts>
-  auto operator()(Ts&&... ts) -> decltype(std::move(f)(dlaf::common::internal::unwrap(ts)...,
-                                                       std::declval<MPI_Request*>())) {
-    MPI_Request req;
-    auto is_request_completed = [&req] {
-      int flag;
-      MPI_Test(&req, &flag, MPI_STATUS_IGNORE);
-      return flag == 0;
-    };
 
-    // Note:
-    // Callables passed to transformMPI have their arguments passed by reference, but doing so
-    // with PromiseGuard would keep the guard alive until the completion of the MPI operation,
-    // whereas we are only looking to guard the submission of the MPI operation. We therefore
-    // explicitly release CommunicatorPipelineExclusiveWrapper after submitting the MPI operation
-    // with consumeCommunicatorWrapper.
-    //
-    // We also use unwrap various types passed to the MPI operation, including PromiseGuards of
-    // any type, to allow the MPI operation not to care whether a Communicator was wrapped in a
-    // PromiseGuard or not.
-    using result_type = decltype(std::move(f)(dlaf::common::internal::unwrap(ts)..., &req));
+  template <typename... Ts>
+  auto operator()(Ts&&... ts) -> decltype(std::move(f)(dlaf::common::internal::unwrap(ts)...)) {
+    using result_type = decltype(std::move(f)(dlaf::common::internal::unwrap(ts)...));
     if constexpr (std::is_void_v<result_type>) {
-      std::move(f)(dlaf::common::internal::unwrap(ts)..., &req);
+      std::move(f)(dlaf::common::internal::unwrap(ts)...);
       (internal::consumeCommunicatorWrapper(ts), ...);
-      pika::util::yield_while(is_request_completed);
     }
     else {
-      auto r = std::move(f)(dlaf::common::internal::unwrap(ts)..., &req);
+      auto r = std::move(f)(dlaf::common::internal::unwrap(ts)...);
       (internal::consumeCommunicatorWrapper(ts), ...);
-      pika::util::yield_while(is_request_completed);
       return r;
     }
   }
@@ -85,16 +68,16 @@ struct MPICallHelper {
 template <typename F>
 MPICallHelper(F&&) -> MPICallHelper<std::decay_t<F>>;
 
-/// Lazy transformMPI. This does not submit the work and returns a sender.
+/// Lazy transformMPI. Returns a sender that will submit the work passed in
 template <typename F, typename Sender,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 [[nodiscard]] decltype(auto) transformMPI(F&& f, Sender&& sender) {
-  using dlaf::internal::continues_on;
-  namespace ex = pika::execution::experimental;
-
-  return continues_on(std::forward<Sender>(sender), dlaf::internal::getMPIScheduler()) |
-         ex::then(dlaf::common::internal::ConsumeRvalues{MPICallHelper{std::forward<F>(f)}}) |
-         ex::drop_operation_state();
+  using dlaf::common::internal::ConsumeRvalues;
+  using pika::execution::experimental::drop_operation_state;
+  using pika::mpi::experimental::transform_mpi;
+  return std::forward<Sender>(sender)                                        //
+         | transform_mpi(ConsumeRvalues{MPICallHelper{std::forward<F>(f)}})  //
+         | drop_operation_state();
 }
 
 template <typename F>

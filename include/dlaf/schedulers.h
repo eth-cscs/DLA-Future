@@ -47,9 +47,4 @@ auto getBackendScheduler(
   }
 #endif
 }
-
-inline auto getMPIScheduler() {
-  return pika::execution::experimental::thread_pool_scheduler{
-      &pika::resource::get_thread_pool(getConfiguration().mpi_pool)};
-}
 }  // namespace dlaf::internal

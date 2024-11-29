@@ -163,7 +163,7 @@ if(DLAF_WITH_SCALAPACK)
 endif()
 
 # ----- pika
-find_package(pika 0.19.1 REQUIRED)
+find_package(pika 0.30.0 REQUIRED)
 
 # ----- BLASPP/LAPACKPP
 find_package(blaspp REQUIRED)

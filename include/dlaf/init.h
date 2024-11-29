@@ -50,7 +50,6 @@ struct configuration {
   double umpire_device_memory_pool_coalescing_reallocation_ratio = 1.0;
   std::size_t num_gpu_blas_handles = 16;
   std::size_t num_gpu_lapack_handles = 16;
-  std::string mpi_pool = "mpi";
 };
 
 std::ostream& operator<<(std::ostream& os, const configuration& cfg);
@@ -107,10 +106,4 @@ struct [[nodiscard]] ScopedInitializer {
   ScopedInitializer& operator=(ScopedInitializer&&) = delete;
   ScopedInitializer& operator=(const ScopedInitializer&) = delete;
 };
-
-/// Initialize the MPI pool.
-///
-///
-void initResourcePartitionerHandler(pika::resource::partitioner& rp,
-                                    const pika::program_options::variables_map& vm);
 }

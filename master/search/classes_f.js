@@ -17,10 +17,11 @@ var searchData=
   ['size2d_3c_20sizetype_2c_20matrix_3a_3atileelement_5ftag_20_3e_14',['Size2D&lt; SizeType, matrix::TileElement_TAG &gt;',['../classdlaf_1_1common_1_1_size2_d.html',1,'dlaf::common']]],
   ['source_5flocation_15',['source_location',['../structdlaf_1_1common_1_1internal_1_1source__location.html',1,'dlaf::common::internal']]],
   ['subdistributionspec_16',['SubDistributionSpec',['../structdlaf_1_1matrix_1_1_sub_distribution_spec.html',1,'dlaf::matrix']]],
-  ['submatrixview_17',['SubMatrixView',['../structdlaf_1_1matrix_1_1_sub_matrix_view.html',1,'dlaf::matrix']]],
-  ['subpanelview_18',['SubPanelView',['../structdlaf_1_1matrix_1_1_sub_panel_view.html',1,'dlaf::matrix']]],
-  ['subpipelinetag_19',['SubPipelineTag',['../structdlaf_1_1matrix_1_1_matrix_3_01const_01_t_00_01_d_01_4_1_1_sub_pipeline_tag.html',1,'dlaf::matrix::Matrix&lt; const T, D &gt;']]],
-  ['subtilespec_20',['SubTileSpec',['../structdlaf_1_1matrix_1_1_sub_tile_spec.html',1,'dlaf::matrix']]],
-  ['sweepworker_21',['SweepWorker',['../classdlaf_1_1eigensolver_1_1internal_1_1_sweep_worker.html',1,'dlaf::eigensolver::internal']]],
-  ['sweepworkerdist_22',['SweepWorkerDist',['../classdlaf_1_1eigensolver_1_1internal_1_1_sweep_worker_dist.html',1,'dlaf::eigensolver::internal']]]
+  ['submatrixspec_17',['SubMatrixSpec',['../class_sub_matrix_spec.html',1,'']]],
+  ['submatrixview_18',['SubMatrixView',['../structdlaf_1_1matrix_1_1_sub_matrix_view.html',1,'dlaf::matrix']]],
+  ['subpanelview_19',['SubPanelView',['../structdlaf_1_1matrix_1_1_sub_panel_view.html',1,'dlaf::matrix']]],
+  ['subpipelinetag_20',['SubPipelineTag',['../structdlaf_1_1matrix_1_1_matrix_3_01const_01_t_00_01_d_01_4_1_1_sub_pipeline_tag.html',1,'dlaf::matrix::Matrix&lt; const T, D &gt;']]],
+  ['subtilespec_21',['SubTileSpec',['../structdlaf_1_1matrix_1_1_sub_tile_spec.html',1,'dlaf::matrix']]],
+  ['sweepworker_22',['SweepWorker',['../classdlaf_1_1eigensolver_1_1internal_1_1_sweep_worker.html',1,'dlaf::eigensolver::internal']]],
+  ['sweepworkerdist_23',['SweepWorkerDist',['../classdlaf_1_1eigensolver_1_1internal_1_1_sweep_worker_dist.html',1,'dlaf::eigensolver::internal']]]
 ];

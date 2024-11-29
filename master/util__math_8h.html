@@ -78,7 +78,8 @@ $(function() {
   <div class="headertitle"><div class="title">util_math.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><code>#include &lt;cstddef&gt;</code><br />
+<div class="textblock"><code>#include &lt;cmath&gt;</code><br />
+<code>#include &lt;cstddef&gt;</code><br />
 <code>#include &lt;functional&gt;</code><br />
 <code>#include &lt;type_traits&gt;</code><br />
 <code>#include &lt;utility&gt;</code><br />
@@ -103,6 +104,9 @@ template&lt;class T &gt; </td></tr>
 <tr class="memitem:a4a1c1045d16c92d7fef9c553ae8e6c90" id="r_a4a1c1045d16c92d7fef9c553ae8e6c90"><td class="memTemplParams" colspan="2">template&lt;class ArithmeticT , class TA , class TB , class BinaryOp &gt; </td></tr>
 <tr class="memitem:a4a1c1045d16c92d7fef9c553ae8e6c90"><td class="memTemplItemLeft" align="right" valign="top">constexpr ArithmeticT&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="util__math_8h.html#a4a1c1045d16c92d7fef9c553ae8e6c90">dlaf::util::internal::generic_integer_op</a> (const TA a, const TB b, BinaryOp op)</td></tr>
 <tr class="separator:a4a1c1045d16c92d7fef9c553ae8e6c90"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aea8a79b2310fa75d597ed24dd63d7cab" id="r_aea8a79b2310fa75d597ed24dd63d7cab"><td class="memTemplParams" colspan="2">template&lt;class ArithmeticT &gt; </td></tr>
+<tr class="memitem:aea8a79b2310fa75d597ed24dd63d7cab"><td class="memTemplItemLeft" align="right" valign="top">SizeType&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="util__math_8h.html#aea8a79b2310fa75d597ed24dd63d7cab">dlaf::util::internal::percent_to_index</a> (SizeType size, ArithmeticT percent)</td></tr>
+<tr class="separator:aea8a79b2310fa75d597ed24dd63d7cab"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afa826e9affbc0fc9e9dbe24d233a9ffb" id="r_afa826e9affbc0fc9e9dbe24d233a9ffb"><td class="memTemplParams" colspan="2">template&lt;typename TA , typename TB &gt; </td></tr>
 <tr class="memitem:afa826e9affbc0fc9e9dbe24d233a9ffb"><td class="memTemplItemLeft" align="right" valign="top">std::size_t&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="util__math_8h.html#afa826e9affbc0fc9e9dbe24d233a9ffb">dlaf::util::size_t::sum</a> (const TA a, const TB b)</td></tr>
 <tr class="separator:afa826e9affbc0fc9e9dbe24d233a9ffb"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -328,6 +332,58 @@ template&lt;typename TA , typename TB &gt; </div>
 <dl class="section pre"><dt>Precondition</dt><dd><code>a</code> and <code>b</code> can be stored in std::ptrdiff_t, </dd>
 <dd>
 it must be possible to store the result in std::ptrdiff_t. </dd></dl>
+
+</div>
+</div>
+<a id="aea8a79b2310fa75d597ed24dd63d7cab" name="aea8a79b2310fa75d597ed24dd63d7cab"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aea8a79b2310fa75d597ed24dd63d7cab">&#9670;&#160;</a></span>percent_to_index()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class ArithmeticT &gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">SizeType dlaf::util::internal::percent_to_index </td>
+          <td>(</td>
+          <td class="paramtype">SizeType&#160;</td>
+          <td class="paramname"><em>size</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">ArithmeticT&#160;</td>
+          <td class="paramname"><em>percent</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Convert a percentage to an index.</p>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">ArithmeticT</td><td>must be a floating point type </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">size</td><td>the size of the array </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>size</code> &gt;= 0, </dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">percent</td><td>index corresponding to the first <code>percent</code> percent of elements </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>percent</code> &gt;= 0 and <code>percent</code> &lt;= 100, </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>the end index corresponding to the first <code>percent</code> percent of elements </dd></dl>
 
 </div>
 </div>

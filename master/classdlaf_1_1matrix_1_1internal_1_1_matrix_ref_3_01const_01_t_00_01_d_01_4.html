@@ -77,7 +77,9 @@ $(function() {
 <a href="#pub-types">Public Types</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-static-attribs">Static Public Attributes</a> &#124;
+<a href="#pro-methods">Protected Member Functions</a> &#124;
 <a href="#pro-attribs">Protected Attributes</a> &#124;
+<a href="#friends">Friends</a> &#124;
 <a href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref_3_01const_01_t_00_01_d_01_4-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">dlaf::matrix::internal::MatrixRef&lt; const T, D &gt; Class Template Reference</div></div>
 </div><!--header-->
@@ -109,11 +111,16 @@ Public Types</h2></td></tr>
 <tr class="memitem:ade261575061b665fcab878e4b6a06a1a" id="r_ade261575061b665fcab878e4b6a06a1a"><td class="memItemLeft" align="right" valign="top"><a id="ade261575061b665fcab878e4b6a06a1a" name="ade261575061b665fcab878e4b6a06a1a"></a>
 <a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">using</a>&#160;</td><td class="memItemRight" valign="bottom"><b>ReadOnlySenderType</b> = ReadOnlyTileSender&lt; T, D &gt;</td></tr>
 <tr class="separator:ade261575061b665fcab878e4b6a06a1a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af59922b417af8999fa81078552f17403" id="r_af59922b417af8999fa81078552f17403"><td class="memItemLeft" align="right" valign="top"><a id="af59922b417af8999fa81078552f17403" name="af59922b417af8999fa81078552f17403"></a>
+<a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">using</a>&#160;</td><td class="memItemRight" valign="bottom"><b>ReadWriteSenderType</b> = ReadWriteTileSender&lt; ElementType, D &gt;</td></tr>
+<tr class="separator:af59922b417af8999fa81078552f17403"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a446ac09c4dff817804b8baa7fa76d31d" id="r_a446ac09c4dff817804b8baa7fa76d31d"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref_3_01const_01_t_00_01_d_01_4.html#a446ac09c4dff817804b8baa7fa76d31d">MatrixRef</a> (<a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix</a>&lt; <a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">const</a> T, D &gt; &amp;<a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">mat</a>, <a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">const</a> <a class="el" href="matrix__ref_8h.html#a4806acd75bd31c5913a7c20b49da1e62">SubMatrixSpec</a> &amp;<a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">spec</a>)</td></tr>
 <tr class="separator:a446ac09c4dff817804b8baa7fa76d31d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab833a9dc61d24079fc39223085bac663" id="r_ab833a9dc61d24079fc39223085bac663"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref_3_01const_01_t_00_01_d_01_4.html#ab833a9dc61d24079fc39223085bac663">MatrixRef</a> (<a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix</a>&lt; <a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">const</a> T, D &gt; &amp;<a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">mat</a>)</td></tr>
+<tr class="separator:ab833a9dc61d24079fc39223085bac663"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7d6404c526f01eb5f7530ca56b6a42a2" id="r_a7d6404c526f01eb5f7530ca56b6a42a2"><td class="memItemLeft" align="right" valign="top"><a id="a7d6404c526f01eb5f7530ca56b6a42a2" name="a7d6404c526f01eb5f7530ca56b6a42a2"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>MatrixRef</b> (<a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref.html">MatrixRef</a> &amp;&amp;)=<a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">delete</a></td></tr>
 <tr class="separator:a7d6404c526f01eb5f7530ca56b6a42a2"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -126,6 +133,8 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a6fc3726937f19922575d696e24ae8cbd" id="r_a6fc3726937f19922575d696e24ae8cbd"><td class="memItemLeft" align="right" valign="top"><a id="a6fc3726937f19922575d696e24ae8cbd" name="a6fc3726937f19922575d696e24ae8cbd"></a>
 <a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref.html">MatrixRef</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">const</a> <a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref.html">MatrixRef</a> &amp;)=<a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">delete</a></td></tr>
 <tr class="separator:a6fc3726937f19922575d696e24ae8cbd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a24750be05133fa741170f59d5dfbf5e4" id="r_a24750be05133fa741170f59d5dfbf5e4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix</a>&lt; <a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">const</a> T, D &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref_3_01const_01_t_00_01_d_01_4.html#a24750be05133fa741170f59d5dfbf5e4">retiledSubPipelineConst</a> (<a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">const</a> <a class="el" href="classdlaf_1_1common_1_1_size2_d.html">LocalTileSize</a> &amp;tiles_per_block)</td></tr>
+<tr class="separator:a24750be05133fa741170f59d5dfbf5e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9267ad8ffed2505e1b4ebd18d57c0ea9" id="r_a9267ad8ffed2505e1b4ebd18d57c0ea9"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">ReadOnlySenderType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref_3_01const_01_t_00_01_d_01_4.html#a9267ad8ffed2505e1b4ebd18d57c0ea9">read</a> (<a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">const</a> <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a> &amp;index) <a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">noexcept</a></td></tr>
 <tr class="separator:a9267ad8ffed2505e1b4ebd18d57c0ea9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab3acdff3d92d906707c1b3faa44c0d7a" id="r_ab3acdff3d92d906707c1b3faa44c0d7a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">ReadOnlySenderType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref_3_01const_01_t_00_01_d_01_4.html#ab3acdff3d92d906707c1b3faa44c0d7a">read</a> (<a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">const</a> <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a> &amp;index)</td></tr>
@@ -212,14 +221,12 @@ Static Public Attributes</h2></td></tr>
 <a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">static</a> <a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">constexpr</a> Device&#160;</td><td class="memItemRight" valign="bottom"><b>device</b> = D</td></tr>
 <tr class="separator:adb52c6eaa0e0b81590b39e94cba7fb0a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-attribs" name="pro-attribs"></a>
-Protected Attributes</h2></td></tr>
-<tr class="memitem:abfb2c3e2191c9a1578f072ee015115ae" id="r_abfb2c3e2191c9a1578f072ee015115ae"><td class="memItemLeft" align="right" valign="top"><a id="abfb2c3e2191c9a1578f072ee015115ae" name="abfb2c3e2191c9a1578f072ee015115ae"></a>
-<a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalElementIndex</a>&#160;</td><td class="memItemRight" valign="bottom"><b>origin_</b></td></tr>
-<tr class="separator:abfb2c3e2191c9a1578f072ee015115ae"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="inherited" name="inherited"></a>
-Additional Inherited Members</h2></td></tr>
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-methods" name="pro-methods"></a>
+Protected Member Functions</h2></td></tr>
+<tr class="memitem:a98f6a0af6db445fb1902ee0a0621cb0f" id="r_a98f6a0af6db445fb1902ee0a0621cb0f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">ReadWriteSenderType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref_3_01const_01_t_00_01_d_01_4.html#a98f6a0af6db445fb1902ee0a0621cb0f">readwrite</a> (<a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">const</a> <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a> &amp;index) <a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">noexcept</a></td></tr>
+<tr class="separator:a98f6a0af6db445fb1902ee0a0621cb0f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afafad8c49105efae535d860342f43b98" id="r_afafad8c49105efae535d860342f43b98"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">ReadWriteSenderType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref_3_01const_01_t_00_01_d_01_4.html#afafad8c49105efae535d860342f43b98">readwrite</a> (<a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">const</a> <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a> &amp;index)</td></tr>
+<tr class="separator:afafad8c49105efae535d860342f43b98"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pro_methods_classdlaf_1_1matrix_1_1internal_1_1_matrix_base"><td colspan="2" onclick="javascript:toggleInherit('pro_methods_classdlaf_1_1matrix_1_1internal_1_1_matrix_base')"><img src="closed.png" alt="-"/>&#160;Protected Member Functions inherited from <a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html">dlaf::matrix::internal::MatrixBase</a></td></tr>
 <tr class="memitem:acaf5e5361f3fac47106c19a139774a13 inherit pro_methods_classdlaf_1_1matrix_1_1internal_1_1_matrix_base" id="r_acaf5e5361f3fac47106c19a139774a13"><td class="memItemLeft" align="right" valign="top">
 &#160;</td><td class="memItemRight" valign="bottom"><b>MatrixBase</b> (<a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html">MatrixBase</a> &amp;&amp;<a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">rhs</a>)=<a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">default</a></td></tr>
@@ -232,10 +239,22 @@ Additional Inherited Members</h2></td></tr>
 <tr class="memitem:a5cdaa0376724e6f624591a6a6bcf46d9 inherit pro_methods_classdlaf_1_1matrix_1_1internal_1_1_matrix_base" id="r_a5cdaa0376724e6f624591a6a6bcf46d9"><td class="memItemLeft" align="right" valign="top">
 std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>tileLinearIndex</b> (<a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">const</a> <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a> &amp;index) <a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">const</a> <a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">noexcept</a></td></tr>
 <tr class="separator:a5cdaa0376724e6f624591a6a6bcf46d9 inherit pro_methods_classdlaf_1_1matrix_1_1internal_1_1_matrix_base"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-attribs" name="pro-attribs"></a>
+Protected Attributes</h2></td></tr>
+<tr class="memitem:abfb2c3e2191c9a1578f072ee015115ae" id="r_abfb2c3e2191c9a1578f072ee015115ae"><td class="memItemLeft" align="right" valign="top"><a id="abfb2c3e2191c9a1578f072ee015115ae" name="abfb2c3e2191c9a1578f072ee015115ae"></a>
+<a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalElementIndex</a>&#160;</td><td class="memItemRight" valign="bottom"><b>origin_</b></td></tr>
+<tr class="separator:abfb2c3e2191c9a1578f072ee015115ae"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="friends" name="friends"></a>
+Friends</h2></td></tr>
+<tr class="memitem:ad46b4a9db570cf8a8f989d0ab66a5ddd" id="r_ad46b4a9db570cf8a8f989d0ab66a5ddd"><td class="memItemLeft" align="right" valign="top"><a id="ad46b4a9db570cf8a8f989d0ab66a5ddd" name="ad46b4a9db570cf8a8f989d0ab66a5ddd"></a>
+<a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">class</a>&#160;</td><td class="memItemRight" valign="bottom"><b>Matrix&lt; const ElementType, D &gt;</b></td></tr>
+<tr class="separator:ad46b4a9db570cf8a8f989d0ab66a5ddd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a446ac09c4dff817804b8baa7fa76d31d" name="a446ac09c4dff817804b8baa7fa76d31d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a446ac09c4dff817804b8baa7fa76d31d">&#9670;&#160;</a></span>MatrixRef()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a446ac09c4dff817804b8baa7fa76d31d">&#9670;&#160;</a></span>MatrixRef() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -282,6 +301,41 @@ template&lt;<a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">class</a> T
 spec.size.isValid(), </dd>
 <dd>
 spec.origin + spec.size &lt;= mat.size(). </dd></dl>
+
+</div>
+</div>
+<a id="ab833a9dc61d24079fc39223085bac663" name="ab833a9dc61d24079fc39223085bac663"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab833a9dc61d24079fc39223085bac663">&#9670;&#160;</a></span>MatrixRef() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;<a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">class</a> T , Device D&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref.html">dlaf::matrix::internal::MatrixRef</a>&lt; <a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">const</a> T, D &gt;::MatrixRef </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix</a>&lt; <a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">const</a> T, D &gt; &amp;&#160;</td>
+          <td class="paramname"><em>mat</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Create a matrix reference of <code>mat</code>.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">mat</td><td>is the input matrix. </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>
@@ -345,6 +399,103 @@ template&lt;<a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">class</a> T
 </div><div class="memdoc">
 <p>Returns a read-only sender of the <a class="el" href="classdlaf_1_1matrix_1_1_tile.html">Tile</a> with local index <code>index</code>.</p>
 <dl class="section pre"><dt>Precondition</dt><dd>index.isIn(distribution().localNrTiles()). </dd></dl>
+
+</div>
+</div>
+<a id="afafad8c49105efae535d860342f43b98" name="afafad8c49105efae535d860342f43b98"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afafad8c49105efae535d860342f43b98">&#9670;&#160;</a></span>readwrite() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;<a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">class</a> T , Device D&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">ReadWriteSenderType</a> <a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref.html">dlaf::matrix::internal::MatrixRef</a>&lt; <a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">const</a> T, D &gt;::readwrite </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">const</a> <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a> &amp;&#160;</td>
+          <td class="paramname"><em>index</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Returns a sender of the <a class="el" href="classdlaf_1_1matrix_1_1_tile.html">Tile</a> with global index <code>index</code>.</p>
+<dl class="section pre"><dt>Precondition</dt><dd>the global tile is stored in the current process, </dd>
+<dd>
+index.isIn(globalNrTiles()). </dd></dl>
+
+</div>
+</div>
+<a id="a98f6a0af6db445fb1902ee0a0621cb0f" name="a98f6a0af6db445fb1902ee0a0621cb0f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a98f6a0af6db445fb1902ee0a0621cb0f">&#9670;&#160;</a></span>readwrite() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;<a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">class</a> T , Device D&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">ReadWriteSenderType</a> <a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref.html">dlaf::matrix::internal::MatrixRef</a>&lt; <a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">const</a> T, D &gt;::readwrite </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">const</a> <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a> &amp;&#160;</td>
+          <td class="paramname"><em>index</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">protected</span><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Returns a sender of the <a class="el" href="classdlaf_1_1matrix_1_1_tile.html">Tile</a> with local index <code>index</code>.</p>
+<dl class="section pre"><dt>Precondition</dt><dd>index.isIn(distribution().localNrTiles()). </dd></dl>
+
+</div>
+</div>
+<a id="a24750be05133fa741170f59d5dfbf5e4" name="a24750be05133fa741170f59d5dfbf5e4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a24750be05133fa741170f59d5dfbf5e4">&#9670;&#160;</a></span>retiledSubPipelineConst()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;<a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">class</a> T , Device D&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix</a>&lt; <a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">const</a> T, D &gt; <a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref.html">dlaf::matrix::internal::MatrixRef</a>&lt; <a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">const</a> T, D &gt;::retiledSubPipelineConst </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">const</a> <a class="el" href="classdlaf_1_1common_1_1_size2_d.html">LocalTileSize</a> &amp;&#160;</td>
+          <td class="paramname"><em>tiles_per_block</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Create a sub-pipelined, retiled matrix which can be accessed thread-safely with respect to the original matrix</p>
+<p>All accesses to the sub-pipelined matrix are sequenced after previous accesses and before later accesses to the original matrix, independently of when tiles are accessed in the sub-pipelined matrix.</p>
+<dl class="section pre"><dt>Precondition</dt><dd>blockSize() is divisible by <code>tiles_per_block</code> </dd>
+<dd>
+blockSize() == <a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#aa347785e5c50226c48d9fb0ce107bdbb" title="Returns the complete tile size of the matrix.">tile_size()</a> </dd>
+<dd>
+the origin of the reference matrix is at the top-left corner of the original matrix </dd></dl>
 
 </div>
 </div>

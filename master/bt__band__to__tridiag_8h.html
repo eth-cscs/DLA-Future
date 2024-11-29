@@ -80,6 +80,7 @@ $(function() {
 <div class="contents">
 <div class="textblock"><code>#include &lt;dlaf/eigensolver/bt_band_to_tridiag/api.h&gt;</code><br />
 <code>#include &lt;<a class="el" href="matrix_8h_source.html">dlaf/matrix/matrix.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="matrix__ref_8h_source.html">dlaf/matrix/matrix_ref.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="types_8h_source.html">dlaf/types.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="util__matrix_8h_source.html">dlaf/util_matrix.h</a>&gt;</code><br />
 </div>
@@ -87,16 +88,16 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ac93781339b28227cf04add9d24d77340" id="r_ac93781339b28227cf04add9d24d77340"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
-<tr class="memitem:ac93781339b28227cf04add9d24d77340"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="bt__band__to__tridiag_8h.html#ac93781339b28227cf04add9d24d77340">dlaf::eigensolver::internal::bt_band_to_tridiagonal</a> (const SizeType band_size, <a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Matrix</a>&lt; T, D &gt; &amp;mat_e, <a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Matrix</a>&lt; const T, Device::CPU &gt; &amp;mat_hh)</td></tr>
-<tr class="separator:ac93781339b28227cf04add9d24d77340"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6dbaf5aae0cc8d53f9c35ec62dc6c3b4" id="r_a6dbaf5aae0cc8d53f9c35ec62dc6c3b4"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
-<tr class="memitem:a6dbaf5aae0cc8d53f9c35ec62dc6c3b4"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="bt__band__to__tridiag_8h.html#a6dbaf5aae0cc8d53f9c35ec62dc6c3b4">dlaf::eigensolver::internal::bt_band_to_tridiagonal</a> (<a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> &amp;grid, const SizeType band_size, <a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Matrix</a>&lt; T, D &gt; &amp;mat_e, <a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Matrix</a>&lt; const T, Device::CPU &gt; &amp;mat_hh)</td></tr>
-<tr class="separator:a6dbaf5aae0cc8d53f9c35ec62dc6c3b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a699de126218212cf5cb25818c44cbd2f" id="r_a699de126218212cf5cb25818c44cbd2f"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
+<tr class="memitem:a699de126218212cf5cb25818c44cbd2f"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="bt__band__to__tridiag_8h.html#a699de126218212cf5cb25818c44cbd2f">dlaf::eigensolver::internal::bt_band_to_tridiagonal</a> (const SizeType band_size, <a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref.html">MatrixRef</a>&lt; T, D &gt; &amp;mat_e, <a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Matrix</a>&lt; const T, Device::CPU &gt; &amp;mat_hh)</td></tr>
+<tr class="separator:a699de126218212cf5cb25818c44cbd2f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a550393ced79dea8fdfcbdaa72fd0ab7e" id="r_a550393ced79dea8fdfcbdaa72fd0ab7e"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
+<tr class="memitem:a550393ced79dea8fdfcbdaa72fd0ab7e"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="bt__band__to__tridiag_8h.html#a550393ced79dea8fdfcbdaa72fd0ab7e">dlaf::eigensolver::internal::bt_band_to_tridiagonal</a> (<a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> &amp;grid, const SizeType band_size, <a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref.html">MatrixRef</a>&lt; T, D &gt; &amp;mat_e, Matrix&lt; const T, Device::CPU &gt; &amp;mat_hh)</td></tr>
+<tr class="separator:a550393ced79dea8fdfcbdaa72fd0ab7e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="a6dbaf5aae0cc8d53f9c35ec62dc6c3b4" name="a6dbaf5aae0cc8d53f9c35ec62dc6c3b4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6dbaf5aae0cc8d53f9c35ec62dc6c3b4">&#9670;&#160;</a></span>bt_band_to_tridiagonal() <span class="overload">[1/2]</span></h2>
+<a id="a550393ced79dea8fdfcbdaa72fd0ab7e" name="a550393ced79dea8fdfcbdaa72fd0ab7e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a550393ced79dea8fdfcbdaa72fd0ab7e">&#9670;&#160;</a></span>bt_band_to_tridiagonal() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -118,13 +119,13 @@ template&lt;Backend B, Device D, class T &gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Matrix</a>&lt; T, D &gt; &amp;&#160;</td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref.html">MatrixRef</a>&lt; T, D &gt; &amp;&#160;</td>
           <td class="paramname"><em>mat_e</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Matrix</a>&lt; const T, Device::CPU &gt; &amp;&#160;</td>
+          <td class="paramtype">Matrix&lt; const T, Device::CPU &gt; &amp;&#160;</td>
           <td class="paramname"><em>mat_hh</em>&#160;</td>
         </tr>
         <tr>
@@ -175,8 +176,8 @@ template&lt;Backend B, Device D, class T &gt; </div>
 
 </div>
 </div>
-<a id="ac93781339b28227cf04add9d24d77340" name="ac93781339b28227cf04add9d24d77340"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac93781339b28227cf04add9d24d77340">&#9670;&#160;</a></span>bt_band_to_tridiagonal() <span class="overload">[2/2]</span></h2>
+<a id="a699de126218212cf5cb25818c44cbd2f" name="a699de126218212cf5cb25818c44cbd2f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a699de126218212cf5cb25818c44cbd2f">&#9670;&#160;</a></span>bt_band_to_tridiagonal() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -192,7 +193,7 @@ template&lt;Backend B, Device D, class T &gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Matrix</a>&lt; T, D &gt; &amp;&#160;</td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref.html">MatrixRef</a>&lt; T, D &gt; &amp;&#160;</td>
           <td class="paramname"><em>mat_e</em>, </td>
         </tr>
         <tr>

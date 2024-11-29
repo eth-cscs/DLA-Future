@@ -84,11 +84,20 @@ $(function() {
 <code>#include &lt;dlaf/solver/triangular/api.h&gt;</code><br />
 <code>#include &lt;<a class="el" href="types_8h_source.html">dlaf/types.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="util__matrix_8h_source.html">dlaf/util_matrix.h</a>&gt;</code><br />
+<code>#include &quot;<a class="el" href="matrix__base_8h_source.html">dlaf/matrix/matrix_base.h</a>&quot;</code><br />
 </div>
 <p><a href="solver_2triangular_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:ab73b99fef9cabdb4d1a5cd9946298cba" id="r_ab73b99fef9cabdb4d1a5cd9946298cba"><td class="memTemplParams" colspan="2"><a id="ab73b99fef9cabdb4d1a5cd9946298cba" name="ab73b99fef9cabdb4d1a5cd9946298cba"></a>
+template&lt;Backend backend, Device device, class T &gt; </td></tr>
+<tr class="memitem:ab73b99fef9cabdb4d1a5cd9946298cba"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::solver::internal::triangular_solver</b> (blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, Matrix&lt; const T, device &gt; &amp;mat_a, <a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref.html">MatrixRef</a>&lt; T, device &gt; &amp;mat_b)</td></tr>
+<tr class="separator:ab73b99fef9cabdb4d1a5cd9946298cba"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa8f6cda12f05e284cd33af66b37c4c3f" id="r_aa8f6cda12f05e284cd33af66b37c4c3f"><td class="memTemplParams" colspan="2"><a id="aa8f6cda12f05e284cd33af66b37c4c3f" name="aa8f6cda12f05e284cd33af66b37c4c3f"></a>
+template&lt;Backend backend, Device device, class T &gt; </td></tr>
+<tr class="memitem:aa8f6cda12f05e284cd33af66b37c4c3f"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::solver::internal::triangular_solver</b> (<a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> &amp;grid, blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, Matrix&lt; const T, device &gt; &amp;mat_a, <a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref.html">MatrixRef</a>&lt; T, device &gt; &amp;mat_b)</td></tr>
+<tr class="separator:aa8f6cda12f05e284cd33af66b37c4c3f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad0178e1f84caaeb244febc305705060d" id="r_ad0178e1f84caaeb244febc305705060d"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
 <tr class="memitem:ad0178e1f84caaeb244febc305705060d"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="solver_2triangular_8h.html#ad0178e1f84caaeb244febc305705060d">dlaf::triangular_solver</a> (blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, Matrix&lt; const T, device &gt; &amp;mat_a, Matrix&lt; T, device &gt; &amp;mat_b)</td></tr>
 <tr class="separator:ad0178e1f84caaeb244febc305705060d"><td class="memSeparator" colspan="2">&#160;</td></tr>

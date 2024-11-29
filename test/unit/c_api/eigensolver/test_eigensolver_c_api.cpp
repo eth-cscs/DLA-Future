@@ -9,6 +9,8 @@
 //
 
 #include <complex>
+#include <optional>
+#include <set>
 #include <tuple>
 #include <typeinfo>
 #include <utility>
@@ -67,9 +69,17 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
     {34, 8, 3},  {32, 6, 3}                                   // m > mb, sub-band
 };
 
+std::set<std::optional<SizeType>> num_evals(const SizeType m) {
+  return {std::nullopt, 0, m / 2, m};
+}
+
 template <class T, Backend B, Device D, API api>
-void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
-                     CommunicatorGrid& grid) {
+void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb, CommunicatorGrid& grid,
+                     std::optional<SizeType> eigenvalues_index_end) {
+  // std::nullopt calls the API without specifying the number of eigenvalues to compute
+  // The final check needs to happen on all m eigenvalues/eigenvectors
+  const SizeType eval_idx_end = eigenvalues_index_end.value_or(m);
+
   auto dlaf_context = c_api_test_inititialize<api>(pika_argc, pika_argv, dlaf_argc, dlaf_argv, grid);
 
   // In normal use the runtime is resumed by the C API call
@@ -117,24 +127,56 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
 
       int err = -1;
       if constexpr (std::is_same_v<T, double>) {
-        err = C_dlaf_symmetric_eigensolver_d(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a,
-                                             eigenvalues_ptr, local_eigenvectors_ptr,
-                                             dlaf_desc_eigenvectors);
+        if (eigenvalues_index_end.has_value()) {
+          err = C_dlaf_symmetric_eigensolver_partial_spectrum_d(dlaf_context, dlaf_uplo, local_a_ptr,
+                                                                dlaf_desc_a, eigenvalues_ptr,
+                                                                local_eigenvectors_ptr,
+                                                                dlaf_desc_eigenvectors, 0, eval_idx_end);
+        }
+        else {
+          err = C_dlaf_symmetric_eigensolver_d(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a,
+                                               eigenvalues_ptr, local_eigenvectors_ptr,
+                                               dlaf_desc_eigenvectors);
+        }
       }
       else if constexpr (std::is_same_v<T, float>) {
-        err = C_dlaf_symmetric_eigensolver_s(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a,
-                                             eigenvalues_ptr, local_eigenvectors_ptr,
-                                             dlaf_desc_eigenvectors);
+        if (eigenvalues_index_end.has_value()) {
+          err = C_dlaf_symmetric_eigensolver_partial_spectrum_s(dlaf_context, dlaf_uplo, local_a_ptr,
+                                                                dlaf_desc_a, eigenvalues_ptr,
+                                                                local_eigenvectors_ptr,
+                                                                dlaf_desc_eigenvectors, 0, eval_idx_end);
+        }
+        else {
+          err = C_dlaf_symmetric_eigensolver_s(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a,
+                                               eigenvalues_ptr, local_eigenvectors_ptr,
+                                               dlaf_desc_eigenvectors);
+        }
       }
       else if constexpr (std::is_same_v<T, std::complex<double>>) {
-        err = C_dlaf_hermitian_eigensolver_z(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a,
-                                             eigenvalues_ptr, local_eigenvectors_ptr,
-                                             dlaf_desc_eigenvectors);
+        if (eigenvalues_index_end.has_value()) {
+          err = C_dlaf_hermitian_eigensolver_partial_spectrum_z(dlaf_context, dlaf_uplo, local_a_ptr,
+                                                                dlaf_desc_a, eigenvalues_ptr,
+                                                                local_eigenvectors_ptr,
+                                                                dlaf_desc_eigenvectors, 0, eval_idx_end);
+        }
+        else {
+          err = C_dlaf_hermitian_eigensolver_z(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a,
+                                               eigenvalues_ptr, local_eigenvectors_ptr,
+                                               dlaf_desc_eigenvectors);
+        }
       }
       else if constexpr (std::is_same_v<T, std::complex<float>>) {
-        err = C_dlaf_hermitian_eigensolver_c(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a,
-                                             eigenvalues_ptr, local_eigenvectors_ptr,
-                                             dlaf_desc_eigenvectors);
+        if (eigenvalues_index_end.has_value()) {
+          err = C_dlaf_hermitian_eigensolver_partial_spectrum_c(dlaf_context, dlaf_uplo, local_a_ptr,
+                                                                dlaf_desc_a, eigenvalues_ptr,
+                                                                local_eigenvectors_ptr,
+                                                                dlaf_desc_eigenvectors, 0, eval_idx_end);
+        }
+        else {
+          err = C_dlaf_hermitian_eigensolver_c(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a,
+                                               eigenvalues_ptr, local_eigenvectors_ptr,
+                                               dlaf_desc_eigenvectors);
+        }
       }
       else {
         DLAF_ASSERT(false, typeid(T).name());
@@ -147,20 +189,36 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
       int desc_z[] = {1, dlaf_context, (int) m, (int) m, (int) mb, (int) mb, 0, 0, lld_eigenvectors};
       int info = -1;
       if constexpr (std::is_same_v<T, double>) {
-        C_dlaf_pdsyevd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, eigenvalues_ptr,
-                       local_eigenvectors_ptr, 1, 1, desc_z, &info);
+        if (eigenvalues_index_end.has_value())
+          C_dlaf_pdsyevd_partial_spectrum(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, eigenvalues_ptr,
+                                          local_eigenvectors_ptr, 1, 1, desc_z, 0, eval_idx_end, &info);
+        else
+          C_dlaf_pdsyevd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, eigenvalues_ptr,
+                         local_eigenvectors_ptr, 1, 1, desc_z, &info);
       }
       else if constexpr (std::is_same_v<T, float>) {
-        C_dlaf_pssyevd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, eigenvalues_ptr,
-                       local_eigenvectors_ptr, 1, 1, desc_z, &info);
+        if (eigenvalues_index_end.has_value())
+          C_dlaf_pssyevd_partial_spectrum(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, eigenvalues_ptr,
+                                          local_eigenvectors_ptr, 1, 1, desc_z, 0, eval_idx_end, &info);
+        else
+          C_dlaf_pssyevd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, eigenvalues_ptr,
+                         local_eigenvectors_ptr, 1, 1, desc_z, &info);
       }
       else if constexpr (std::is_same_v<T, std::complex<double>>) {
-        C_dlaf_pzheevd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, eigenvalues_ptr,
-                       local_eigenvectors_ptr, 1, 1, desc_z, &info);
+        if (eigenvalues_index_end.has_value())
+          C_dlaf_pzheevd_partial_spectrum(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, eigenvalues_ptr,
+                                          local_eigenvectors_ptr, 1, 1, desc_z, 0, eval_idx_end, &info);
+        else
+          C_dlaf_pzheevd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, eigenvalues_ptr,
+                         local_eigenvectors_ptr, 1, 1, desc_z, &info);
       }
       else if constexpr (std::is_same_v<T, std::complex<float>>) {
-        C_dlaf_pcheevd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, eigenvalues_ptr,
-                       local_eigenvectors_ptr, 1, 1, desc_z, &info);
+        if (eigenvalues_index_end.has_value())
+          C_dlaf_pcheevd_partial_spectrum(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, eigenvalues_ptr,
+                                          local_eigenvectors_ptr, 1, 1, desc_z, 0, eval_idx_end, &info);
+        else
+          C_dlaf_pcheevd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, eigenvalues_ptr,
+                         local_eigenvectors_ptr, 1, 1, desc_z, &info);
       }
       else {
         DLAF_ASSERT(false, typeid(T).name());
@@ -177,8 +235,10 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
   // Resume pika runtime suspended by C API for correctness checks
   pika::resume();
 
-  if (!mat_a_h.size().isEmpty())
-    testEigensolverCorrectness(uplo, reference, ret.eigenvalues, ret.eigenvectors, grid);
+  if (!mat_a_h.size().isEmpty() && eval_idx_end != 0) {
+    testEigensolverCorrectness(uplo, reference, ret.eigenvalues, ret.eigenvectors, 0l, eval_idx_end,
+                               grid);
+  }
 
   // Suspend pika to make sure dlaf_finalize resumes it
   pika::suspend();
@@ -190,7 +250,10 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributedDLAF) {
   for (comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
-        testEigensolver<TypeParam, Backend::MC, Device::CPU, API::dlaf>(uplo, m, mb, grid);
+        auto numevals = num_evals(m);
+        for (auto nevals : numevals) {
+          testEigensolver<TypeParam, Backend::MC, Device::CPU, API::dlaf>(uplo, m, mb, grid, nevals);
+        }
       }
     }
   }
@@ -201,7 +264,11 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributedScalapack) {
   for (comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
-        testEigensolver<TypeParam, Backend::MC, Device::CPU, API::scalapack>(uplo, m, mb, grid);
+        auto numevals = num_evals(m);
+        for (auto nevals : numevals) {
+          testEigensolver<TypeParam, Backend::MC, Device::CPU, API::scalapack>(uplo, m, mb, grid,
+                                                                               nevals);
+        }
       }
     }
   }
@@ -213,7 +280,10 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessDistributedDLAF) {
   for (comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
-        testEigensolver<TypeParam, Backend::GPU, Device::GPU, API::dlaf>(uplo, m, mb, grid);
+        auto numevals = num_evals(m);
+        for (auto nevals : numevals) {
+          testEigensolver<TypeParam, Backend::GPU, Device::GPU, API::dlaf>(uplo, m, mb, grid, nevals);
+        }
       }
     }
   }
@@ -224,7 +294,11 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessDistributedScalapack) {
   for (comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
-        testEigensolver<TypeParam, Backend::GPU, Device::GPU, API::scalapack>(uplo, m, mb, grid);
+        auto numevals = num_evals(m);
+        for (auto nevals : numevals) {
+          testEigensolver<TypeParam, Backend::GPU, Device::GPU, API::scalapack>(uplo, m, mb, grid,
+                                                                                nevals);
+        }
       }
     }
   }

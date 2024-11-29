@@ -37,6 +37,7 @@
 #include <dlaf/miniapp/scale_eigenvectors.h>
 #include <dlaf/multiplication/hermitian.h>
 #include <dlaf/types.h>
+#include <dlaf/util_math.h>
 
 namespace {
 using dlaf::Backend;
@@ -60,12 +61,14 @@ using dlaf::matrix::internal::FileHDF5;
 /// Check results of the eigensolver
 template <typename T>
 void checkEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
-                      Matrix<const BaseType<T>, Device::CPU>& evalues, Matrix<const T, Device::CPU>& E);
+                      Matrix<const BaseType<T>, Device::CPU>& evalues, Matrix<const T, Device::CPU>& E,
+                      const SizeType eval_idx_end);
 
 struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
   SizeType m;
   SizeType mb;
+  SizeType eval_idx_end;
   blas::Uplo uplo;
 #ifdef DLAF_WITH_HDF5
   std::filesystem::path input_file;
@@ -78,6 +81,26 @@ struct Options
         uplo(dlaf::miniapp::parseUplo(vm["uplo"].as<std::string>())) {
     DLAF_ASSERT(m > 0, m);
     DLAF_ASSERT(mb > 0, mb);
+
+    if (vm.count("percent-evals") == 1 && vm.count("eval-index-end") == 1) {
+      std::cerr << "ERROR! "
+                   "You can't specify both --percent-evals and --eval-index-end at the same time."
+                << std::endl;
+      std::exit(EXIT_FAILURE);
+    }
+
+    if (vm.count("percent-evals") == 1) {
+      double percent = vm["percent-evals"].as<double>();
+      eval_idx_end = dlaf::util::internal::percent_to_index(m, percent);
+    }
+    else if (vm.count("eval-index-end") == 1) {
+      eval_idx_end = vm["eval-index-end"].as<SizeType>();
+    }
+    else {
+      eval_idx_end = m;
+    }
+
+    DLAF_ASSERT(eval_idx_end >= 0 && eval_idx_end <= m, eval_idx_end, m);
 
 #ifdef DLAF_WITH_HDF5
     if (vm.count("input-file") == 1) {
@@ -153,9 +176,10 @@ struct EigensolverMiniapp {
       dlaf::common::Timer<> timeit;
       auto bench = [&]() {
         if (opts.local)
-          return dlaf::hermitian_eigensolver<backend>(opts.uplo, matrix->get());
+          return dlaf::hermitian_eigensolver<backend>(opts.uplo, matrix->get(), 0l, opts.eval_idx_end);
         else
-          return dlaf::hermitian_eigensolver<backend>(comm_grid, opts.uplo, matrix->get());
+          return dlaf::hermitian_eigensolver<backend>(comm_grid, opts.uplo, matrix->get(), 0l,
+                                                      opts.eval_idx_end);
       };
       auto [eigenvalues, eigenvectors] = bench();
 
@@ -184,10 +208,9 @@ struct EigensolverMiniapp {
 
       // print benchmark results
       if (0 == world.rank() && run_index >= 0) {
-        std::cout << "[" << run_index << "]"
-                  << " " << elapsed_time << "s"
-                  << " " << dlaf::internal::FormatShort{opts.type}
-                  << dlaf::internal::FormatShort{opts.uplo} << " " << matrix_host.size() << " "
+        std::cout << "[" << run_index << "]" << " " << elapsed_time << "s" << " "
+                  << dlaf::internal::FormatShort{opts.type} << dlaf::internal::FormatShort{opts.uplo}
+                  << " " << matrix_host.size() << " (" << 0l << ", " << opts.eval_idx_end << ") "
                   << matrix_host.blockSize() << " "
                   << dlaf::eigensolver::internal::getBandSize(matrix_host.blockSize().rows()) << " "
                   << comm_grid.size() << " " << pika::get_os_thread_count() << " " << backend
@@ -207,7 +230,10 @@ struct EigensolverMiniapp {
                     << "comm_rows, " << comm_grid.size().rows() << ", "
                     << "comm_cols, " << comm_grid.size().cols() << ", "
                     << "threads, " << pika::get_os_thread_count() << ", "
-                    << "backend, " << backend << ", " << opts.info << std::endl;
+                    << "backend, " << backend << ", "
+                    << "first eigenvalue index, " << 0l << ", "
+                    << "last eigenvalue index, " << ", " << opts.eval_idx_end << ", " << opts.info
+                    << std::endl;
         }
       }
       // (optional) run test
@@ -216,7 +242,7 @@ struct EigensolverMiniapp {
         MatrixMirrorEvalsType eigenvalues_host(eigenvalues);
         MatrixMirrorEvectsType eigenvectors_host(eigenvectors);
         checkEigensolver(comm_grid, opts.uplo, matrix_ref, eigenvalues_host.get(),
-                         eigenvectors_host.get());
+                         eigenvectors_host.get(), opts.eval_idx_end);
       }
     }
   }
@@ -244,8 +270,10 @@ int main(int argc, char** argv) {
 
   // clang-format off
   desc_commandline.add_options()
-    ("matrix-size",   value<SizeType>()   ->default_value(4096), "Matrix size")
-    ("block-size",    value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
+    ("matrix-size",    value<SizeType>() ->default_value(4096), "Matrix size")
+    ("block-size",     value<SizeType>() ->default_value( 256), "Block cyclic distribution size")
+    ("eval-index-end", value<SizeType>()                      , "Index of last eigenvalue of interest/eigenvector to transform (exclusive)")
+    ("percent-evals",  value<double>()                        , "Percentage of eigenvalues of interest/eigenvectors to transform")
 #ifdef DLAF_WITH_HDF5
     ("input-file",    value<std::filesystem::path>()                            , "Load matrix from given HDF5 file")
     ("input-dataset", value<std::string>()           -> default_value("/input") , "Name of HDF5 dataset to load as matrix")
@@ -278,21 +306,24 @@ using dlaf::matrix::Tile;
 /// "WARNING": error is slightly high, there can be an error in the result
 template <typename T>
 void checkEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
-                      Matrix<const BaseType<T>, Device::CPU>& evalues, Matrix<const T, Device::CPU>& E) {
+                      Matrix<const BaseType<T>, Device::CPU>& evalues, Matrix<const T, Device::CPU>& E,
+                      const SizeType eval_idx_end) {
   const Index2D rank_result{0, 0};
 
-  // 1. Compute the norm of the original matrix in A (largest eigenvalue)
-  const GlobalElementIndex last_ev(evalues.size().rows() - 1, 0);
-  const GlobalTileIndex last_ev_tile = evalues.distribution().globalTileIndex(last_ev);
-  const TileElementIndex last_ev_el_tile = evalues.distribution().tileElementIndex(last_ev);
-  const auto norm_A = std::max(std::norm(sync_wait(evalues.read(GlobalTileIndex{0, 0})).get()({0, 0})),
-                               std::norm(sync_wait(evalues.read(last_ev_tile)).get()(last_ev_el_tile)));
+  // 1. Compute the max norm of A
+  const auto norm_A = dlaf::auxiliary::max_norm<dlaf::Backend::MC>(comm_grid, rank_result, uplo, A);
 
   // 2.
   // Compute C = E D - A E
-  Matrix<T, Device::CPU> C(E.distribution());
-  dlaf::miniapp::scaleEigenvectors(evalues, E, C);
-  dlaf::hermitian_multiplication<Backend::MC>(comm_grid, blas::Side::Left, uplo, T{-1}, A, E, T{1}, C);
+  auto spec = dlaf::matrix::util::internal::sub_matrix_spec_slice_cols(E, 0l, eval_idx_end);
+  dlaf::matrix::internal::MatrixRef<const T, Device::CPU> E_ref(E, spec);
+  dlaf::matrix::internal::MatrixRef<const BaseType<T>, Device::CPU> evalues_ref(
+      evalues, {{0, 0}, {eval_idx_end, 1}});
+
+  Matrix<T, Device::CPU> C(E_ref.distribution());
+  dlaf::miniapp::scaleEigenvectors(evalues_ref, E_ref, C);
+  dlaf::internal::hermitian_multiplication<Backend::MC>(comm_grid, blas::Side::Left, uplo, T{-1}, A,
+                                                        E_ref, T{1}, C);
 
   // 3. Compute the max norm of the difference
   const auto norm_diff =
@@ -304,7 +335,7 @@ void checkEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<const
     return;
 
   constexpr auto eps = std::numeric_limits<dlaf::BaseType<T>>::epsilon();
-  const auto n = A.size().rows();
+  const auto n = eval_idx_end;  // Number of valid eigenvectors
 
   const auto diff_ratio = norm_diff / norm_A;
 

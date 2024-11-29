@@ -11,10 +11,8 @@
 
 #include <cmath>
 #include <cstddef>
-#include <exception>
 #include <optional>
 #include <random>
-#include <string>
 #include <utility>
 
 #ifndef M_PI
@@ -439,6 +437,25 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const Size
     dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(thread_stacksize::nostack),
                                     std::move(set_hp_f), matrix.readwrite(ij_lc));
   }
+}
+
+/// Compute @class SubMatrixSpec covering all rows and columns from @p col_begin to @p col_end (excluded).
+///
+/// @param matrix the matrix from which the submatrix is extracted
+/// @param col_begin the index of the first column of the submatrix
+/// @pre @p col_begin >= 0
+/// @param col_end the index of the column after the last column of the submatrix
+/// @pre @p col_begin <= @p col_end
+/// @pre @p col_begin <= matrix.size().cols()
+/// @return a @class SubMatrixSpec covering the requested columns
+template <class T, Device D>
+dlaf::matrix::internal::SubMatrixSpec sub_matrix_spec_slice_cols(const Matrix<T, D>& matrix,
+                                                                 SizeType col_begin, SizeType col_end) {
+  DLAF_ASSERT(col_begin >= 0, col_begin);
+  DLAF_ASSERT(col_begin <= col_end, col_begin, col_end);
+  DLAF_ASSERT(col_end <= matrix.size().cols(), col_end, matrix.size().cols());
+  return dlaf::matrix::internal::SubMatrixSpec({{0, col_begin},
+                                                {matrix.size().rows(), col_end - col_begin}});
 }
 
 }

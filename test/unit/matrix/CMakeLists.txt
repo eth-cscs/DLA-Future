@@ -108,6 +108,14 @@ DLAF_addTest(
 )
 
 DLAF_addTest(
+  test_retiled_matrix_ref
+  SOURCES test_retiled_matrix_ref.cpp
+  LIBRARIES dlaf.core
+  USE_MAIN MPIPIKA
+  MPIRANKS 6
+)
+
+DLAF_addTest(
   test_views
   SOURCES test_views.cpp
   LIBRARIES dlaf.core

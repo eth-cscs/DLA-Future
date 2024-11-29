@@ -25,14 +25,13 @@
 #include <dlaf_c/desc.h>
 #include <dlaf_c/grid.h>
 
-#include "../blacs.h"
 #include "../utils.h"
 
 template <typename T>
-int hermitian_generalized_eigensolver_helper(const int dlaf_context, const char uplo, T* a,
-                                             const DLAF_descriptor dlaf_desca, T* b,
-                                             const DLAF_descriptor dlaf_descb, dlaf::BaseType<T>* w,
-                                             T* z, const DLAF_descriptor dlaf_descz, bool factorized) {
+int hermitian_generalized_eigensolver(
+    const int dlaf_context, const char uplo, T* a, const DLAF_descriptor dlaf_desca, T* b,
+    const DLAF_descriptor dlaf_descb, dlaf::BaseType<T>* w, T* z, const DLAF_descriptor dlaf_descz,
+    const SizeType eigenvalues_index_begin, const SizeType eigenvalues_index_end, bool factorized) {
   using MatrixHost = dlaf::matrix::Matrix<T, dlaf::Device::CPU>;
   using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
   using MatrixBaseMirror =
@@ -69,14 +68,13 @@ int hermitian_generalized_eigensolver_helper(const int dlaf_context, const char 
     if (!factorized) {
       dlaf::hermitian_generalized_eigensolver<dlaf::Backend::Default, dlaf::Device::Default, T>(
           communicator_grid, dlaf::internal::char2uplo(uplo), matrix_a.get(), matrix_b.get(),
-          eigenvalues.get(), eigenvectors.get());
+          eigenvalues.get(), eigenvectors.get(), eigenvalues_index_begin, eigenvalues_index_end);
     }
     else {
       dlaf::hermitian_generalized_eigensolver_factorized<dlaf::Backend::Default, dlaf::Device::Default,
-                                                         T>(communicator_grid,
-                                                            dlaf::internal::char2uplo(uplo),
-                                                            matrix_a.get(), matrix_b.get(),
-                                                            eigenvalues.get(), eigenvectors.get());
+                                                         T>(
+          communicator_grid, dlaf::internal::char2uplo(uplo), matrix_a.get(), matrix_b.get(),
+          eigenvalues.get(), eigenvectors.get(), eigenvalues_index_begin, eigenvalues_index_end);
     }
   }  // Destroy mirror
 
@@ -89,29 +87,32 @@ int hermitian_generalized_eigensolver_helper(const int dlaf_context, const char 
 }
 
 template <typename T>
-int hermitian_generalized_eigensolver(const int dlaf_context, const char uplo, T* a,
-                                      const DLAF_descriptor dlaf_desca, T* b,
-                                      const DLAF_descriptor dlaf_descb, dlaf::BaseType<T>* w, T* z,
-                                      const DLAF_descriptor dlaf_descz) {
-  return hermitian_generalized_eigensolver_helper<T>(dlaf_context, uplo, a, dlaf_desca, b, dlaf_descb, w,
-                                                     z, dlaf_descz, false);
+int hermitian_generalized_eigensolver(
+    const int dlaf_context, const char uplo, T* a, const DLAF_descriptor dlaf_desca, T* b,
+    const DLAF_descriptor dlaf_descb, dlaf::BaseType<T>* w, T* z, const DLAF_descriptor dlaf_descz,
+    const SizeType eigenvalues_index_begin, const SizeType eigenvalues_index_end) {
+  return hermitian_generalized_eigensolver<T>(dlaf_context, uplo, a, dlaf_desca, b, dlaf_descb, w, z,
+                                              dlaf_descz, eigenvalues_index_begin, eigenvalues_index_end,
+                                              false);
 }
 
 template <typename T>
-int hermitian_generalized_eigensolver_factorized(const int dlaf_context, const char uplo, T* a,
-                                                 const DLAF_descriptor dlaf_desca, T* b,
-                                                 const DLAF_descriptor dlaf_descb, dlaf::BaseType<T>* w,
-                                                 T* z, const DLAF_descriptor dlaf_descz) {
-  return hermitian_generalized_eigensolver_helper<T>(dlaf_context, uplo, a, dlaf_desca, b, dlaf_descb, w,
-                                                     z, dlaf_descz, true);
+int hermitian_generalized_eigensolver_factorized(
+    const int dlaf_context, const char uplo, T* a, const DLAF_descriptor dlaf_desca, T* b,
+    const DLAF_descriptor dlaf_descb, dlaf::BaseType<T>* w, T* z, const DLAF_descriptor dlaf_descz,
+    const SizeType eigenvalues_index_begin, const SizeType eigenvalues_index_end) {
+  return hermitian_generalized_eigensolver<T>(dlaf_context, uplo, a, dlaf_desca, b, dlaf_descb, w, z,
+                                              dlaf_descz, eigenvalues_index_begin, eigenvalues_index_end,
+                                              true);
 }
 
 #ifdef DLAF_WITH_SCALAPACK
 
 template <typename T>
-void pxhegvd_helper(const char uplo, const int m, T* a, const int ia, const int ja, const int desca[9],
-                    T* b, const int ib, const int jb, const int descb[9], dlaf::BaseType<T>* w, T* z,
-                    const int iz, int jz, const int descz[9], int& info, bool factorized) {
+void pxhegvd(const char uplo, const int m, T* a, const int ia, const int ja, const int desca[9], T* b,
+             const int ib, const int jb, const int descb[9], dlaf::BaseType<T>* w, T* z, const int iz,
+             int jz, const int descz[9], const SizeType eigenvalues_index_begin,
+             const SizeType eigenvalues_index_end, bool factorized, int& info) {
   DLAF_ASSERT(desca[0] == 1, desca[0]);
   DLAF_ASSERT(descb[0] == 1, descb[0]);
   DLAF_ASSERT(descz[0] == 1, descz[0]);
@@ -129,28 +130,34 @@ void pxhegvd_helper(const char uplo, const int m, T* a, const int ia, const int 
   auto dlaf_descz = make_dlaf_descriptor(m, m, iz, jz, descz);
 
   if (!factorized) {
-    info = hermitian_generalized_eigensolver<T>(desca[1], uplo, a, dlaf_desca, b, dlaf_descb, w, z,
-                                                dlaf_descz);
+    info =
+        hermitian_generalized_eigensolver<T>(desca[1], uplo, a, dlaf_desca, b, dlaf_descb, w, z,
+                                             dlaf_descz, eigenvalues_index_begin, eigenvalues_index_end);
   }
   else {
     info = hermitian_generalized_eigensolver_factorized<T>(desca[1], uplo, a, dlaf_desca, b, dlaf_descb,
-                                                           w, z, dlaf_descz);
+                                                           w, z, dlaf_descz, eigenvalues_index_begin,
+                                                           eigenvalues_index_end);
   }
 }
 
 template <typename T>
 void pxhegvd(const char uplo, const int m, T* a, const int ia, const int ja, const int desca[9], T* b,
              const int ib, const int jb, const int descb[9], dlaf::BaseType<T>* w, T* z, const int iz,
-             int jz, const int descz[9], int& info) {
-  pxhegvd_helper<T>(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, info, false);
+             int jz, const int descz[9], const SizeType eigenvalues_index_begin,
+             const SizeType eigenvalues_index_end, int& info) {
+  pxhegvd<T>(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, eigenvalues_index_begin,
+             eigenvalues_index_end, false, info);
 }
 
 template <typename T>
 void pxhegvd_factorized(const char uplo, const int m, T* a, const int ia, const int ja,
                         const int desca[9], T* b, const int ib, const int jb, const int descb[9],
                         dlaf::BaseType<T>* w, T* z, const int iz, int jz, const int descz[9],
+                        const SizeType eigenvalues_index_begin, const SizeType eigenvalues_index_end,
                         int& info) {
-  pxhegvd_helper<T>(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, info, true);
+  pxhegvd<T>(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, eigenvalues_index_begin,
+             eigenvalues_index_end, true, info);
 }
 
 #endif

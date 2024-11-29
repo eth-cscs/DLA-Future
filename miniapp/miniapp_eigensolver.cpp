@@ -222,6 +222,8 @@ struct EigensolverMiniapp {
       eigenvalues.waitLocalTiles();
       eigenvectors.waitLocalTiles();
     }
+
+    comm_grid.wait_all_communicators();
   }
 };
 

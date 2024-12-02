@@ -32,10 +32,9 @@ pika::execution::experimental::unique_any_sender<T> reduce_in_place(
     comm::IndexT_MPI rank, MPI_Op reduce_op, pika::execution::experimental::unique_any_sender<T> value) {
   namespace ex = pika::execution::experimental;
 
-  return ex::when_all(std::move(value)) |
-         ex::let_value([pcomm = std::move(pcomm), rank, reduce_op](T& local) mutable {
+  return std::move(value) | ex::let_value([pcomm = std::move(pcomm), rank, reduce_op](T& local) mutable {
            using dlaf::comm::internal::transformMPI;
-           return dlaf::internal::whenAllLift(std::move(pcomm)) |
+           return std::move(pcomm) |
                   transformMPI([rank, reduce_op, &local](const dlaf::comm::Communicator& comm,
                                                          MPI_Request* req) mutable {
                     const bool is_root_rank = comm.rank() == rank;

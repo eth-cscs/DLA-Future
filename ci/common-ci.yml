@@ -109,3 +109,5 @@ stages:
     strategy: depend
     forward:
       pipeline_variables: true
+  variables:
+    PIKA_MPI_ENABLE_POOL: 1

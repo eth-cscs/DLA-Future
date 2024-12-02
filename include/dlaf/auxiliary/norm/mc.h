@@ -64,6 +64,7 @@ pika::execution::experimental::unique_any_sender<dlaf::BaseType<T>> Norm<
 
   using dlaf::common::make_data;
   using dlaf::common::internal::vector;
+  using pika::execution::thread_stacksize;
 
   using dlaf::tile::internal::lange;
   using dlaf::tile::internal::lantr;
@@ -110,7 +111,8 @@ pika::execution::experimental::unique_any_sender<dlaf::BaseType<T>> Norm<
   if (!tiles_max.empty())
     local_max_value =
         ex::when_all_vector(std::move(tiles_max)) |
-        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), std::move(max_element));
+        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(thread_stacksize::nostack),
+                                  std::move(max_element));
 
   return reduce_in_place(comm_grid.full_communicator_pipeline().exclusive(),
                          comm_grid.rankFullCommunicator(rank), MPI_MAX, std::move(local_max_value));
@@ -125,6 +127,7 @@ pika::execution::experimental::unique_any_sender<dlaf::BaseType<T>> Norm<
 
   using dlaf::common::make_data;
   using dlaf::common::internal::vector;
+  using pika::execution::thread_stacksize;
 
   using dlaf::tile::internal::lange;
   using dlaf::tile::internal::lantr;
@@ -137,8 +140,9 @@ pika::execution::experimental::unique_any_sender<dlaf::BaseType<T>> Norm<
   tiles_max.reserve(distribution.localNrTiles().rows() * distribution.localNrTiles().cols());
 
   for (auto tile_wrt_local : iterate_range2d(distribution.localNrTiles())) {
-    auto current_tile_max = dlaf::internal::whenAllLift(lapack::Norm::Max, matrix.read(tile_wrt_local)) |
-                            dlaf::tile::lange(dlaf::internal::Policy<Backend::MC>());
+    auto current_tile_max =
+        dlaf::internal::whenAllLift(lapack::Norm::Max, matrix.read(tile_wrt_local)) |
+        dlaf::tile::lange(dlaf::internal::Policy<Backend::MC>(thread_stacksize::nostack));
 
     tiles_max.push_back(std::move(current_tile_max));
   }
@@ -153,7 +157,8 @@ pika::execution::experimental::unique_any_sender<dlaf::BaseType<T>> Norm<
   if (!tiles_max.empty())
     local_max_value =
         ex::when_all_vector(std::move(tiles_max)) |
-        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), std::move(max_element));
+        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(thread_stacksize::nostack),
+                                  std::move(max_element));
 
   return reduce_in_place(comm_grid.full_communicator_pipeline().exclusive(),
                          comm_grid.rankFullCommunicator(rank), MPI_MAX, std::move(local_max_value));

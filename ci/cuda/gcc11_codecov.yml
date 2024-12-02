@@ -22,8 +22,6 @@ cuda gcc11 codecov build:
 
 cuda gcc11 codecov test:
   extends: .run_common
-  variables:
-    PIKA_MPI_ENABLE_POOL: 1
   needs:
     - cuda gcc11 codecov build
   trigger:

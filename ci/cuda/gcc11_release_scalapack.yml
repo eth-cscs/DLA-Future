@@ -21,8 +21,6 @@ cuda gcc11 release scalapack build:
 
 cuda gcc11 release scalapack test:
   extends: .run_common
-  variables:
-    PIKA_MPI_ENABLE_POOL: 1
   needs:
     - cuda gcc11 release scalapack build
   trigger:

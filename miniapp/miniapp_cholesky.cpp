@@ -409,7 +409,8 @@ void check_cholesky(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Commun
   const Index2D rank_result{0, 0};
 
   // 1. Compute the max norm of the original matrix in A
-  const auto norm_A = dlaf::auxiliary::max_norm<dlaf::Backend::MC>(comm_grid, rank_result, uplo, A);
+  const auto norm_A =
+      sync_wait(dlaf::auxiliary::max_norm<dlaf::Backend::MC>(comm_grid, rank_result, uplo, A));
 
   // 2.
   // L is a lower triangular, reset values in the upper part (diagonal excluded)
@@ -421,7 +422,8 @@ void check_cholesky(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Commun
   cholesky_diff(A, L, comm_grid);
 
   // 3. Compute the max norm of the difference (it has been compute in-place in A)
-  const auto norm_diff = dlaf::auxiliary::max_norm<dlaf::Backend::MC>(comm_grid, rank_result, uplo, A);
+  const auto norm_diff =
+      sync_wait(dlaf::auxiliary::max_norm<dlaf::Backend::MC>(comm_grid, rank_result, uplo, A));
 
   // 4.
   // Evaluation of correctness is done just by the master rank

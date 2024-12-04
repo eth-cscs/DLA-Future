@@ -30,6 +30,7 @@ using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 using namespace testing;
+using pika::this_thread::experimental::sync_wait;
 
 template <class T>
 using NormT = dlaf::BaseType<T>;
@@ -60,7 +61,7 @@ TYPED_TEST(NormDistributedTest, MaxNorm_EmptyMatrix) {
 
         for (const auto& uplo : blas_uplos) {
           const NormT<TypeParam> norm =
-              auxiliary::max_norm<Backend::MC>(comm_grid, {0, 0}, uplo, matrix);
+              sync_wait(auxiliary::max_norm<Backend::MC>(comm_grid, {0, 0}, uplo, matrix));
 
           if (Index2D{0, 0} == comm_grid.rank()) {
             EXPECT_NEAR(0, norm, std::numeric_limits<NormT<TypeParam>>::epsilon());
@@ -99,7 +100,7 @@ void set_and_test(CommunicatorGrid& comm_grid, comm::Index2D rank, Matrix<T, Dev
     modify_element(matrix, index, new_value);
 
   ASSERT_EQ(lapack::Norm::Max, norm_type);
-  const NormT<T> norm = auxiliary::max_norm<Backend::MC>(comm_grid, rank, uplo, matrix);
+  const NormT<T> norm = sync_wait(auxiliary::max_norm<Backend::MC>(comm_grid, rank, uplo, matrix));
 
   SCOPED_TRACE(::testing::Message() << "norm=" << norm_type << " uplo=" << uplo << " changed element="
                                     << index << " in matrix size=" << matrix.size()
@@ -132,7 +133,7 @@ TYPED_TEST(NormDistributedTest, MaxNorm_Correctness) {
 
           const Index2D rank_result{comm_grid.size().rows() - 1, comm_grid.size().cols() - 1};
           const NormT<TypeParam> norm =
-              auxiliary::max_norm<Backend::MC>(comm_grid, rank_result, uplo, matrix);
+              sync_wait(auxiliary::max_norm<Backend::MC>(comm_grid, rank_result, uplo, matrix));
 
           if (rank_result == comm_grid.rank()) {
             EXPECT_GE(norm, 0);

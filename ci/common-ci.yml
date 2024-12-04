@@ -70,7 +70,6 @@ variables:
     - .build_deps_common_base
   variables:
     COMMON_SPACK_ENVIRONMENT: ci/docker/common-gh200.yaml
-    SLURM_RESERVATION: "daint"
 
 ## BUILD DLAF
 
@@ -111,7 +110,6 @@ variables:
     - .build_common_base
   variables:
     LD_PRELOAD: "/lib/aarch64-linux-gnu/libSegFault.so"
-    SLURM_RESERVATION: "daint"
 
 .build_for_daint-mc:
   variables:
@@ -154,7 +152,6 @@ variables:
 .run_todi:
   extends: .run_common
   variables:
-    SLURM_RESERVATION: "daint"
     SLURM_MPI: "pmi2"
     # Workaround after update until hooks are fixed
     ENROOT_LIBRARY_PATH: /capstor/scratch/cscs/fmohamed/enrootlibn

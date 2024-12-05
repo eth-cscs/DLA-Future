@@ -53,6 +53,8 @@ namespace dlaf::factorization::internal {
 /// @param taus array of taus, associated with the related elementary reflector
 /// @param t tile where the resulting T factor will be stored in its top-left sub-matrix of size
 /// TileElementSize(k, k)
+/// @param workspaces array of tiles used as workspace, with at least one tile per worker (see
+/// getTFactorNWorkers)
 ///
 /// @pre reflectors in hh_panel are well formed (1s on the diagonal and 0s in the upper part)
 /// @pre hh_panel.getWidth() <= t.get().size().rows && hh_panel.size().getWidth() <= t.get().size().cols()
@@ -96,6 +98,8 @@ void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
 /// @param taus array of taus, associated with the related elementary reflector
 /// @param t tile where the resulting T factor will be stored in its top-left sub-matrix of size
 /// TileElementSize(k, k)
+/// @param workspaces array of tiles used as workspace, with at least one tile per worker (see
+/// getTFactorNWorkers)
 /// @param mpi_col_task_chain where internal communications are issued
 ///
 /// @pre reflectors in hh_panel are well formed (1s on the diagonal and 0s in the upper part)

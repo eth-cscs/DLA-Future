@@ -109,6 +109,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
         selectRead(hh_panel, hh_panel.iteratorLocal());
 
     const std::size_t nworkers = num_workers_gemv(hh_tiles.size());
+    DLAF_ASSERT(workspaces.size() >= nworkers - 1, workspaces.size(), nworkers - 1);
 
     const auto hp_scheduler = di::getBackendScheduler<Backend::MC>(thread_priority::high);
     return ex::when_all(ex::when_all_vector(std::move(hh_tiles)), std::move(taus), std::move(tile_t),
@@ -257,6 +258,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
         selectRead(hh_panel, hh_panel.iteratorLocal());
 
     const std::size_t nworkers = num_workers_gemv(hh_tiles.size());
+    DLAF_ASSERT(workspaces.size() >= nworkers - 1, workspaces.size(), nworkers - 1);
 
     const std::size_t batch_size = util::ceilDiv(hh_tiles.size(), nworkers);
     for (std::size_t id_worker = 0; id_worker < nworkers; ++id_worker) {

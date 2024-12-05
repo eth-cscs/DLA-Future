@@ -35,7 +35,6 @@
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/tile.h>
 #include <dlaf/matrix/views.h>
-#include <dlaf/qr/internal/get_tfactor_nworkers.h>
 #include <dlaf/types.h>
 #include <dlaf/util_math.h>
 #include <dlaf/util_matrix.h>

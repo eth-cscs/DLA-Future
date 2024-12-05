@@ -13,6 +13,7 @@
 #include <pika/execution.hpp>
 
 #include <dlaf/communication/communicator_pipeline.h>
+#include <dlaf/factorization/qr/internal/get_tfactor_nworkers.h>
 #include <dlaf/matrix/panel.h>
 #include <dlaf/matrix/tile.h>
 #include <dlaf/matrix/views.h>

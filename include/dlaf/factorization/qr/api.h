@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include <pika/execution.hpp>
 
 #include <dlaf/communication/communicator_pipeline.h>
@@ -28,10 +30,12 @@ template <Backend backend, Device device, class T>
 struct QR_Tfactor {
   static void call(matrix::Panel<Coord::Col, T, device>& hh_panel,
                    matrix::ReadOnlyTileSender<T, Device::CPU> taus,
-                   matrix::ReadWriteTileSender<T, device> t);
+                   matrix::ReadWriteTileSender<T, device> t,
+                   std::vector<matrix::ReadWriteTileSender<T, device>> workspaces);
   static void call(matrix::Panel<Coord::Col, T, device>& hh_panel,
                    matrix::ReadOnlyTileSender<T, Device::CPU> taus,
                    matrix::ReadWriteTileSender<T, device> t,
+                   std::vector<matrix::ReadWriteTileSender<T, device>> workspaces,
                    comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_task_chain);
 };
 

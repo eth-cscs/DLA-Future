@@ -98,7 +98,8 @@ struct Helpers<Backend::MC, Device::CPU, T> {
   static matrix::ReadWriteTileSender<T, Device::CPU> step_GEMV(
       matrix::Panel<Coord::Col, T, Device::CPU>& hh_panel,
       matrix::ReadOnlyTileSender<T, Device::CPU> taus,
-      matrix::ReadWriteTileSender<T, Device::CPU> tile_t) {
+      matrix::ReadWriteTileSender<T, Device::CPU> tile_t,
+      std::vector<matrix::ReadWriteTileSender<T, Device::CPU>> workspaces) {
     namespace ex = pika::execution::experimental;
     namespace di = dlaf::internal;
 
@@ -108,12 +109,6 @@ struct Helpers<Backend::MC, Device::CPU, T> {
         selectRead(hh_panel, hh_panel.iteratorLocal());
 
     const std::size_t nworkers = num_workers_gemv(hh_tiles.size());
-    const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, nworkers - 1));
-
-    const SizeType nrefls_step = hh_panel.getWidth();
-    matrix::Matrix<T, Device::CPU> ws_T({nworkspaces * nrefls_step, nrefls_step},
-                                        {nrefls_step, nrefls_step});
-    auto workspaces = select(ws_T, common::iterate_range2d(ws_T.distribution().local_nr_tiles()));
 
     const auto hp_scheduler = di::getBackendScheduler<Backend::MC>(thread_priority::high);
     return ex::when_all(ex::when_all_vector(std::move(hh_tiles)), std::move(taus), std::move(tile_t),
@@ -251,7 +246,8 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
   static matrix::ReadWriteTileSender<T, Device::GPU> step_GEMV(
       matrix::Panel<Coord::Col, T, Device::GPU>& hh_panel,
       matrix::ReadOnlyTileSender<T, Device::CPU> taus,
-      matrix::ReadWriteTileSender<T, Device::GPU> tile_t) {
+      matrix::ReadWriteTileSender<T, Device::GPU> tile_t,
+      std::vector<matrix::ReadWriteTileSender<T, Device::GPU>> workspaces) {
     namespace ex = pika::execution::experimental;
     namespace di = dlaf::internal;
 
@@ -261,12 +257,6 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
         selectRead(hh_panel, hh_panel.iteratorLocal());
 
     const std::size_t nworkers = num_workers_gemv(hh_tiles.size());
-    const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, nworkers - 1));
-
-    const SizeType nrefls_step = hh_panel.getWidth();
-    matrix::Matrix<T, Device::GPU> ws_T({nworkspaces * nrefls_step, nrefls_step},
-                                        {nrefls_step, nrefls_step});
-    auto workspaces = select(ws_T, common::iterate_range2d(ws_T.distribution().local_nr_tiles()));
 
     const std::size_t batch_size = util::ceilDiv(hh_tiles.size(), nworkers);
     for (std::size_t id_worker = 0; id_worker < nworkers; ++id_worker) {
@@ -370,9 +360,10 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 }
 
 template <Backend backend, Device device, class T>
-void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& hh_panel,
-                                          matrix::ReadOnlyTileSender<T, Device::CPU> taus,
-                                          matrix::ReadWriteTileSender<T, device> tile_t) {
+void QR_Tfactor<backend, device, T>::call(
+    matrix::Panel<Coord::Col, T, device>& hh_panel, matrix::ReadOnlyTileSender<T, Device::CPU> taus,
+    matrix::ReadWriteTileSender<T, device> tile_t,
+    std::vector<matrix::ReadWriteTileSender<T, device>> workspaces) {
   namespace ex = pika::execution::experimental;
 
   using Helpers = tfactor_l::Helpers<backend, device, T>;
@@ -400,7 +391,7 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
   // First we compute the matrix vector multiplication for each column
   // -tau(j) . V(j:, 0:j)* . V(j:, j)
 
-  tile_t = Helpers::step_GEMV(hh_panel, taus, std::move(tile_t));
+  tile_t = Helpers::step_GEMV(hh_panel, taus, std::move(tile_t), std::move(workspaces));
 
   // 2nd step: compute the T factor, by performing the last step on each column
   // each column depends on the previous part (all reflectors that comes before)
@@ -412,6 +403,7 @@ template <Backend backend, Device device, class T>
 void QR_Tfactor<backend, device, T>::call(
     matrix::Panel<Coord::Col, T, device>& hh_panel, matrix::ReadOnlyTileSender<T, Device::CPU> taus,
     matrix::ReadWriteTileSender<T, device> tile_t,
+    std::vector<matrix::ReadWriteTileSender<T, device>> workspaces,
     comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_task_chain) {
   namespace ex = pika::execution::experimental;
 
@@ -444,7 +436,7 @@ void QR_Tfactor<backend, device, T>::call(
   // 1st step: compute the column partial result `t`
   // First we compute the matrix vector multiplication for each column
   // -tau(j) . V(j:, 0:j)* . V(j:, j)
-  tile_t = Helpers::step_GEMV(hh_panel, taus, std::move(tile_t));
+  tile_t = Helpers::step_GEMV(hh_panel, taus, std::move(tile_t), std::move(workspaces));
 
   // at this point each rank has its partial result for each column
   // so, let's reduce the results (on all ranks, so that everyone can independently compute T factor)

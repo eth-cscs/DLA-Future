@@ -1018,6 +1018,14 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
   common::RoundRobin<Panel<Coord::Col, T, D>> panels_w(n_workspaces, dist);
   common::RoundRobin<Panel<Coord::Col, T, D>> panels_x(n_workspaces, dist);
 
+  const auto dist_ws = [&]() {
+    using dlaf::factorization::internal::getTFactorNWorkers;
+    const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, getTFactorNWorkers() - 1));
+    const SizeType nrefls_step = dist.size().cols();
+    return matrix::Distribution{{nworkspaces * nrefls_step, nrefls_step}, {nrefls_step, nrefls_step}};
+  }();
+  common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panels_ws(n_workspaces, dist_ws);
+
   // Note:
   // Here dist_a is given with full panel size instead of dist with just the part actually needeed,
   // because the GPU Helper internally exploits Panel data-structure. Indeed, the full size panel is
@@ -1043,10 +1051,13 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
     //        reflectors (i.e. at the end when last reflector size is 1)
     const matrix::SubPanelView panel_view(dist_a, ij_offset, band_size);
 
+    Panel<Coord::Col, T, D>& ws = panels_ws.nextResource();
     Panel<Coord::Col, T, D>& v = panels_v.nextResource();
     v.setRangeStart(ij_offset);
-    if (isPanelIncomplete)
+    if (isPanelIncomplete) {
+      ws.setWidth(nrefls_tile);
       v.setWidth(nrefls_tile);
+    }
 
     // PANEL
     compute_panel_helper.call(mat_a, mat_taus_retiled, j_sub, panel_view);
@@ -1063,7 +1074,9 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
     // TODO probably the first one in any panel is ok?
     Matrix<T, D> t({nrefls_tile, nrefls_tile}, dist.blockSize());
 
-    computeTFactor<B>(v, mat_taus_retiled.read(GlobalTileIndex(j_sub, 0)), t.readwrite(t_idx));
+    computeTFactor<B>(v, mat_taus_retiled.read(GlobalTileIndex(j_sub, 0)), t.readwrite(t_idx),
+                      select(ws, ws.iteratorLocal()));
+    ws.reset();
 
     // PREPARATION FOR TRAILING MATRIX UPDATE
     const GlobalElementIndex at_offset(ij_offset + GlobalElementSize(0, band_size));
@@ -1205,6 +1218,14 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
   common::RoundRobin<matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>> panels_xt(
       n_workspaces, dist);
 
+  const auto dist_ws = [&]() {
+    using dlaf::factorization::internal::getTFactorNWorkers;
+    const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, getTFactorNWorkers() - 1));
+    const SizeType nrefls_step = dist.size().cols();
+    return matrix::Distribution{{nworkspaces * nrefls_step, nrefls_step}, {nrefls_step, nrefls_step}};
+  }();
+  common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panels_ws(n_workspaces, dist_ws);
+
   red2band::ComputePanelHelper<B, D, T> compute_panel_helper(n_workspaces, dist);
 
   ex::unique_any_sender<> trigger_panel{ex::just()};
@@ -1228,10 +1249,12 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
 
     auto& v = panels_v.nextResource();
     auto& vt = panels_vt.nextResource();
+    auto& ws = panels_ws.nextResource();
 
     v.setRangeStart(at_offset);
     vt.setRangeStart(at_offset);
 
+    ws.setWidth(nrefls_tile);
     v.setWidth(nrefls_tile);
     vt.setHeight(nrefls_tile);
 
@@ -1253,8 +1276,10 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
       // deadlock due to tile shared between panel and trailing matrix
       red2band::local::setupReflectorPanelV<B, D, T>(rank.row() == rank_v0.row(), panel_view,
                                                      nrefls_tile, v, mat_a, !is_full_band);
+
       computeTFactor<B>(v, mat_taus_retiled.read(GlobalTileIndex(j_sub, 0)), t.readwrite(t_idx),
-                        mpi_col_chain);
+                        select(ws, ws.iteratorLocal()), mpi_col_chain);
+      ws.reset();
     }
 
     // PREPARATION FOR TRAILING MATRIX UPDATE

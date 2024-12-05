@@ -158,15 +158,11 @@ class JobText:
             stderr=PIPE,
         )
 
-        try:
-            raw_stdout, raw_stderr = process.communicate(timeout=10)
-            retcode = process.returncode
-            if retcode != 0:
-                print(f"Job submission failed with return code {retcode}")
-                print(raw_stderr.strip())
-        except TimeoutExpired:
-            process.kill()
-            print("Job submission timed out")
+        raw_stdout, raw_stderr = process.communicate()
+        print(raw_stdout, end="")
+        print(raw_stderr, end="")
+        if process.returncode != 0:
+            print(f"Job submission FAILED.")
 
         # sleep to not overload the scheduler
         sleep(1)

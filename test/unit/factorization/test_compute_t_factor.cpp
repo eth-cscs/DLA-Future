@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <cstddef>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -26,6 +27,7 @@
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_mirror.h>
 #include <dlaf/matrix/views.h>
+#include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 
 #include <gtest/gtest.h>

@@ -20,7 +20,7 @@ stages:
     - TAG_APTGET=`echo ${EXTRA_APTGET} | sha256sum - | head -c 6`
     - TAG_COMPILER=`echo ${COMPILER}_CXX${CXXSTD} | sed 's/[@]//g'`
     - TAG_DOCKERFILE=`sha256sum $DOCKERFILE | head -c 16`
-    - TAG_SPACK=`echo $SPACK_SHA | head -c 8`
+    - TAG_SPACK=`echo $SPACK_SHA`
     - TAG_REPO=`find $SPACK_DLAF_REPO -type f -exec sha256sum {} \; | sha256sum - | head -c 16`
     - TAG_ENVIRONMENT=`cat $SPACK_ENVIRONMENT $COMMON_SPACK_ENVIRONMENT | sha256sum | head -c 16`
     - TAG=${TAG_IMAGE}-${TAG_APTGET}-${TAG_COMPILER}-MKL${USE_MKL}-${TAG_DOCKERFILE}-${TAG_SPACK}-${TAG_REPO}-${TAG_ENVIRONMENT}

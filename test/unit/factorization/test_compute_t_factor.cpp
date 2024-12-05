@@ -260,6 +260,8 @@ std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, GlobalElementInde
 template <class T, Backend B, Device D>
 void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, const SizeType nb,
                         const GlobalElementIndex v_start) {
+  using dlaf::factorization::internal::computeTFactor;
+
   ASSERT_LE(v_start.row() + k, m);
   ASSERT_LE(v_start.col() + k, nb);
 
@@ -301,8 +303,16 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
       panel_v.setTile(i, splitTile(v.get().read(i), panel_view(i)));
     }
 
-    using dlaf::factorization::internal::computeTFactor;
-    computeTFactor<B>(panel_v, mat_taus.read(GlobalTileIndex(0, 0)), t_output.get().readwrite(t_idx));
+    matrix::Matrix<T, D> ws_T = [k]() {
+      const SizeType nworkspaces =
+          to_SizeType(std::max<std::size_t>(0, factorization::internal::getTFactorNWorkers() - 1));
+      const SizeType nrefls_step = k;
+      return matrix::Matrix<T, D>({nworkspaces * nrefls_step, nrefls_step}, {nrefls_step, nrefls_step});
+    }();
+
+    auto workspaces = select(ws_T, common::iterate_range2d(ws_T.distribution().local_nr_tiles()));
+    computeTFactor<B>(panel_v, mat_taus.read(GlobalTileIndex(0, 0)), t_output.get().readwrite(t_idx),
+                      std::move(workspaces));
   }
 
   // Note:
@@ -329,6 +339,8 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
 template <class T, Backend B, Device D>
 void testComputeTFactor(comm::CommunicatorGrid& grid, const SizeType m, const SizeType k,
                         const SizeType mb, const SizeType nb, const GlobalElementIndex v_start) {
+  using dlaf::factorization::internal::computeTFactor;
+
   ASSERT_LE(v_start.row() + k, m);
   ASSERT_LE(v_start.col() + k, nb);
 
@@ -382,9 +394,16 @@ void testComputeTFactor(comm::CommunicatorGrid& grid, const SizeType m, const Si
       panel_v.setTile(i, splitTile(v.get().read(i), panel_view(i)));
     }
 
-    using dlaf::factorization::internal::computeTFactor;
+    matrix::Matrix<T, D> ws_T = [k]() {
+      const SizeType nworkspaces =
+          to_SizeType(std::max<std::size_t>(0, factorization::internal::getTFactorNWorkers() - 1));
+      const SizeType nrefls_step = k;
+      return matrix::Matrix<T, D>({nworkspaces * nrefls_step, nrefls_step}, {nrefls_step, nrefls_step});
+    }();
+
+    auto workspaces = select(ws_T, common::iterate_range2d(ws_T.distribution().local_nr_tiles()));
     computeTFactor<B>(panel_v, mat_taus.read(GlobalTileIndex(0, 0)), t_output.get().readwrite(t_idx),
-                      serial_comm);
+                      std::move(workspaces), serial_comm);
   }
 
   // Note:

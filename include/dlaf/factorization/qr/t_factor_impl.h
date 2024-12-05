@@ -71,7 +71,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
                          });
   }
 
-  static matrix::Tile<T, Device::CPU> loop_GEMV(const matrix::Tile<const T, Device::CPU>& tile_v,
+  static matrix::Tile<T, Device::CPU> loop_gemv(const matrix::Tile<const T, Device::CPU>& tile_v,
                                                 const matrix::Tile<const T, Device::CPU>& taus,
                                                 matrix::Tile<T, Device::CPU> tile_t) noexcept {
     const SizeType k = tile_t.size().cols();
@@ -95,7 +95,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
     return tile_t;
   }
 
-  static matrix::ReadWriteTileSender<T, Device::CPU> step_GEMV(
+  static matrix::ReadWriteTileSender<T, Device::CPU> step_gemv(
       matrix::Panel<Coord::Col, T, Device::CPU>& hh_panel,
       matrix::ReadOnlyTileSender<T, Device::CPU> taus,
       matrix::ReadWriteTileSender<T, Device::CPU> tile_t,
@@ -139,7 +139,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
                                // make it work on worker_id section of tiles
                                for (std::size_t index = begin; index < end; ++index) {
                                  auto&& tile_snd = hh_tiles[index];
-                                 ws_worker = loop_GEMV(tile_snd.get(), taus.get(), std::move(ws_worker));
+                                 ws_worker = loop_gemv(tile_snd.get(), taus.get(), std::move(ws_worker));
                                }
                                barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
@@ -156,7 +156,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
            });
   }
 
-  static void loop_TRMV(const matrix::Tile<T, Device::CPU>& tile_t) {
+  static void loop_trmv(const matrix::Tile<T, Device::CPU>& tile_t) {
     common::internal::SingleThreadedBlasScope single;
 
     const SizeType k = tile_t.size().cols();
@@ -172,14 +172,14 @@ struct Helpers<Backend::MC, Device::CPU, T> {
     }
   }
 
-  static auto step_TRMV(matrix::ReadWriteTileSender<T, Device::CPU> tile_t) noexcept {
+  static auto step_trmv(matrix::ReadWriteTileSender<T, Device::CPU> tile_t) noexcept {
     namespace di = dlaf::internal;
 
     return std::move(tile_t) |
-           di::transform(di::Policy<Backend::MC>(pika::execution::thread_priority::high), loop_TRMV);
+           di::transform(di::Policy<Backend::MC>(pika::execution::thread_priority::high), loop_trmv);
   }
 
-  static auto step_copy_diag_and_TRMV(matrix::ReadOnlyTileSender<T, Device::CPU> taus,
+  static auto step_copy_diag_and_trmv(matrix::ReadOnlyTileSender<T, Device::CPU> taus,
                                       matrix::ReadWriteTileSender<T, Device::CPU> tile_t) noexcept {
     auto tausdiag_trmvloop = [](const matrix::Tile<const T, Device::CPU>& taus,
                                 matrix::Tile<T, Device::CPU> tile_t) {
@@ -188,7 +188,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
       const SizeType k = tile_t.size().cols();
       lapack::lacpy(blas::Uplo::General, 1, k, taus.ptr(), 1, tile_t.ptr(), tile_t.ld() + 1);
 
-      loop_TRMV(tile_t);
+      loop_trmv(tile_t);
     };
 
     namespace di = dlaf::internal;
@@ -213,7 +213,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
                            return std::move(tile_t);
                          });
   }
-  static matrix::Tile<T, Device::GPU> loop_GEMV(cublasHandle_t handle,
+  static matrix::Tile<T, Device::GPU> loop_gemv(cublasHandle_t handle,
                                                 const matrix::Tile<const T, Device::GPU>& tile_v,
                                                 const matrix::Tile<const T, Device::CPU>& taus,
                                                 matrix::Tile<T, Device::GPU>& tile_t) noexcept {
@@ -228,7 +228,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
     return std::move(tile_t);
   }
 
-  static void loop_TRMV(cublasHandle_t handle, const matrix::Tile<T, Device::GPU>& tile_t) {
+  static void loop_trmv(cublasHandle_t handle, const matrix::Tile<T, Device::GPU>& tile_t) {
     const SizeType k = tile_t.size().cols();
 
     // Update each column (in order) t = T . t
@@ -244,7 +244,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
     }
   }
 
-  static matrix::ReadWriteTileSender<T, Device::GPU> step_GEMV(
+  static matrix::ReadWriteTileSender<T, Device::GPU> step_gemv(
       matrix::Panel<Coord::Col, T, Device::GPU>& hh_panel,
       matrix::ReadOnlyTileSender<T, Device::CPU> taus,
       matrix::ReadWriteTileSender<T, Device::GPU> tile_t,
@@ -298,7 +298,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
                 // - being on the same stream, they are already serialised on GPU
                 for (std::size_t index = 0; index < hh_tiles.size(); ++index) {
                   const matrix::Tile<const T, Device::GPU>& tile_v = hh_tiles[index].get();
-                  tile_t = Helpers::loop_GEMV(handle, tile_v, taus, tile_t);
+                  tile_t = Helpers::loop_gemv(handle, tile_v, taus, tile_t);
                 }
 
                 return std::move(tile_t);
@@ -327,15 +327,15 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
     return tile_t;
   }
 
-  static auto step_TRMV(matrix::ReadWriteTileSender<T, Device::GPU> tile_t) noexcept {
+  static auto step_trmv(matrix::ReadWriteTileSender<T, Device::GPU> tile_t) noexcept {
     namespace di = dlaf::internal;
 
     return std::move(tile_t) |
            di::transform<di::TransformDispatchType::Blas>(
-               di::Policy<Backend::GPU>(pika::execution::thread_priority::high), loop_TRMV);
+               di::Policy<Backend::GPU>(pika::execution::thread_priority::high), loop_trmv);
   }
 
-  static auto step_copy_diag_and_TRMV(matrix::ReadOnlyTileSender<T, Device::CPU> taus,
+  static auto step_copy_diag_and_trmv(matrix::ReadOnlyTileSender<T, Device::CPU> taus,
                                       matrix::ReadWriteTileSender<T, Device::GPU> tile_t) noexcept {
     // Update each column (in order) t = T . t
     // remember that T is upper triangular, so it is possible to use TRMV
@@ -347,7 +347,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
       const SizeType k = tile_t.size().cols();
       gpulapack::lacpy(blas::Uplo::General, 1, k, taus.ptr(), 1, tile_t.ptr(), tile_t.ld() + 1, stream);
 
-      loop_TRMV(handle, tile_t);
+      loop_trmv(handle, tile_t);
     };
 
     namespace ex = pika::execution::experimental;
@@ -393,12 +393,12 @@ void QR_Tfactor<backend, device, T>::call(
   // First we compute the matrix vector multiplication for each column
   // -tau(j) . V(j:, 0:j)* . V(j:, j)
 
-  tile_t = Helpers::step_GEMV(hh_panel, taus, std::move(tile_t), std::move(workspaces));
+  tile_t = Helpers::step_gemv(hh_panel, taus, std::move(tile_t), std::move(workspaces));
 
   // 2nd step: compute the T factor, by performing the last step on each column
   // each column depends on the previous part (all reflectors that comes before)
   // so it is performed sequentially
-  ex::start_detached(Helpers::step_TRMV(std::move(tile_t)));
+  ex::start_detached(Helpers::step_trmv(std::move(tile_t)));
 }
 
 template <Backend backend, Device device, class T>
@@ -438,7 +438,7 @@ void QR_Tfactor<backend, device, T>::call(
   // 1st step: compute the column partial result `t`
   // First we compute the matrix vector multiplication for each column
   // -tau(j) . V(j:, 0:j)* . V(j:, j)
-  tile_t = Helpers::step_GEMV(hh_panel, taus, std::move(tile_t), std::move(workspaces));
+  tile_t = Helpers::step_gemv(hh_panel, taus, std::move(tile_t), std::move(workspaces));
 
   // at this point each rank has its partial result for each column
   // so, let's reduce the results (on all ranks, so that everyone can independently compute T factor)
@@ -448,7 +448,7 @@ void QR_Tfactor<backend, device, T>::call(
   // 2nd step: compute the T factor, by performing the last step on each column
   // each column depends on the previous part (all reflectors that comes before)
   // so it is performed sequentially
-  ex::start_detached(Helpers::step_copy_diag_and_TRMV(taus, std::move(tile_t)));
+  ex::start_detached(Helpers::step_copy_diag_and_trmv(taus, std::move(tile_t)));
 }
 
 }

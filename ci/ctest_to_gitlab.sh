@@ -28,6 +28,9 @@ stages:
   - upload
 
 variables:
+  FF_TIMESTAMPS: true
+
+variables:
   SLURM_EXCLUSIVE: ''
   SLURM_EXACT: ''
   SLURM_CONSTRAINT: $SLURM_CONSTRAINT
@@ -77,6 +80,9 @@ image: $IMAGE
 
 stages:
   - test
+
+variables:
+  FF_TIMESTAMPS: true
 
 variables:
   SLURM_EXCLUSIVE: ''

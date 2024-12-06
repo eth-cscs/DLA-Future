@@ -99,3 +99,5 @@ variables:
   stage: test
   trigger:
     strategy: depend
+  variables:
+    PIKA_MPI_ENABLE_POOL: 1

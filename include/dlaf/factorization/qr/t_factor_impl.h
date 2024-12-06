@@ -51,7 +51,7 @@ namespace tfactor_l {
 
 inline std::size_t num_workers_gemv(const std::size_t nrtiles) {
   const std::size_t min_workers = 1;
-  const std::size_t available_workers = getTFactorNWorkers();
+  const std::size_t available_workers = get_tfactor_nworkers();
   const std::size_t ideal_workers = util::ceilDiv(to_sizet(nrtiles), to_sizet(2));
   return std::clamp(ideal_workers, min_workers, available_workers);
 }

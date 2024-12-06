@@ -19,7 +19,7 @@
 
 namespace dlaf::factorization::internal {
 
-inline size_t getTFactorNWorkers() noexcept {
+inline size_t get_tfactor_nworkers() noexcept {
   // Note: precautionarily we leave at least 1 thread "free" to do other stuff (if possible)
   const std::size_t available_workers = pika::resource::get_thread_pool("default").get_os_thread_count();
   const std::size_t min_workers = 1;

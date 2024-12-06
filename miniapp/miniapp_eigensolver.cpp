@@ -311,7 +311,8 @@ void checkEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<const
   const Index2D rank_result{0, 0};
 
   // 1. Compute the max norm of A
-  const auto norm_A = dlaf::auxiliary::max_norm<dlaf::Backend::MC>(comm_grid, rank_result, uplo, A);
+  const auto norm_A =
+      sync_wait(dlaf::auxiliary::max_norm<dlaf::Backend::MC>(comm_grid, rank_result, uplo, A));
 
   // 2.
   // Compute C = E D - A E
@@ -326,8 +327,8 @@ void checkEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<const
                                                         E_ref, T{1}, C);
 
   // 3. Compute the max norm of the difference
-  const auto norm_diff =
-      dlaf::auxiliary::max_norm<dlaf::Backend::MC>(comm_grid, rank_result, blas::Uplo::General, C);
+  const auto norm_diff = sync_wait(dlaf::auxiliary::max_norm<dlaf::Backend::MC>(comm_grid, rank_result,
+                                                                                blas::Uplo::General, C));
 
   // 4.
   // Evaluation of correctness is done just by the master rank

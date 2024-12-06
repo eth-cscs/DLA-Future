@@ -24,24 +24,29 @@
 
 namespace dlaf::comm::internal {
 
-/// This helper "consumes" a CommunicatorPipelineExclusiveWrapper ensuring that after this call
-/// the one passed as argument gets destroyed. All other types left as they are
-/// by the second overload.
+/// This helper "consumes" a CommunicatorPipeline{Exclusive/Shared}Wrapper ensuring that after this call
+/// the one passed as argument gets destroyed.
+/// All other types left as they are by the generic overload.
 inline void consumeCommunicatorWrapper(CommunicatorPipelineExclusiveWrapper& comm_wrapper) {
   [[maybe_unused]] auto comm_wrapper_local = std::move(comm_wrapper);
 }
 
-/// \overload consumeCommunicatorWrapper (for non communicator types)
+/// \overload consumeCommunicatorWrapper
+inline void consumeCommunicatorWrapper(CommunicatorPipelineSharedWrapper& comm_wrapper) {
+  [[maybe_unused]] auto comm_wrapper_local = std::move(comm_wrapper);
+}
+
+/// \overload consumeCommunicatorWrapper
 template <typename T>
 void consumeCommunicatorWrapper(T&) {}
 
 /// Helper type for wrapping MPI calls.
 ///
-/// The wrapper explicitly releases any dla communicator objects when the pika::transform_mpi
-/// function returns (e.g. a message has been sent/posted) to prevent blocking access to many
-/// queued mpi operations.
-/// The mpi operations can complete asynchronously later, but the commmunicator is
-/// released/made available once the mpi task has been safely initiated
+/// The wrapper explicitly releases any CommunicatorPipeline{Exclusive/Shared}Wrapper objects when the
+/// pika::transform_mpi function returns (e.g. a message has been sent/posted) to prevent blocking access
+/// to many queued mpi operations.
+/// The mpi operations can complete asynchronously later, but the CommunicatorPipeline{Exclusive/Shared}Wrapper
+/// is released/made available once the mpi task has been safely initiated.
 ///
 /// This could in theory be a lambda inside transformMPI.  However, clang at
 /// least until version 12 fails with an internal compiler error with a trailing

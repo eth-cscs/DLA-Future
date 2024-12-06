@@ -157,6 +157,13 @@ class JobText:
             stdout=PIPE,
             stderr=PIPE,
         )
+
+        raw_stdout, raw_stderr = process.communicate()
+        print(raw_stdout, end="")
+        print(raw_stderr, end="")
+        if process.returncode != 0:
+            print(f"Job submission FAILED.")
+
         # sleep to not overload the scheduler
         sleep(1)
 

@@ -313,7 +313,7 @@ void computePanelReflectors(MatrixLikeA& mat_a, MatrixLikeTaus& mat_taus, const 
 
   const std::size_t nworkers = [nrtiles = panel_tiles.size()]() {
     const std::size_t min_workers = 1;
-    const std::size_t available_workers = getReductionToBandPanelNWorkers();
+    const std::size_t available_workers = get_red2band_panel_nworkers();
     const std::size_t ideal_workers = to_sizet(nrtiles);
     return std::clamp(ideal_workers, min_workers, available_workers);
   }();
@@ -638,7 +638,7 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
 
   const std::size_t nworkers = [nrtiles = panel_tiles.size()]() {
     const std::size_t min_workers = 1;
-    const std::size_t available_workers = getReductionToBandPanelNWorkers();
+    const std::size_t available_workers = get_red2band_panel_nworkers();
     const std::size_t ideal_workers = util::ceilDiv(to_sizet(nrtiles), to_sizet(2));
     return std::clamp(ideal_workers, min_workers, available_workers);
   }();

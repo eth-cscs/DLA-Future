@@ -307,7 +307,7 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
 
     matrix::Matrix<T, D> ws_T = [k]() {
       const SizeType nworkspaces =
-          to_SizeType(std::max<std::size_t>(0, factorization::internal::getTFactorNWorkers() - 1));
+          to_SizeType(std::max<std::size_t>(0, factorization::internal::get_tfactor_nworkers() - 1));
       const SizeType nrefls_step = k;
       return matrix::Matrix<T, D>({nworkspaces * nrefls_step, nrefls_step}, {nrefls_step, nrefls_step});
     }();
@@ -398,7 +398,7 @@ void testComputeTFactor(comm::CommunicatorGrid& grid, const SizeType m, const Si
 
     matrix::Matrix<T, D> ws_T = [k]() {
       const SizeType nworkspaces =
-          to_SizeType(std::max<std::size_t>(0, factorization::internal::getTFactorNWorkers() - 1));
+          to_SizeType(std::max<std::size_t>(0, factorization::internal::get_tfactor_nworkers() - 1));
       const SizeType nrefls_step = k;
       return matrix::Matrix<T, D>({nworkspaces * nrefls_step, nrefls_step}, {nrefls_step, nrefls_step});
     }();

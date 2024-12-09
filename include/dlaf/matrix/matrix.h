@@ -34,6 +34,9 @@ namespace matrix {
 
 namespace internal {
 
+template <class T, Device D>
+class MatrixRef;
+
 /// Helper function returning a vector with the results of calling a function over a IterableRange2D
 ///
 /// @param f non-void function accepting LocalTileIndex as parameter
@@ -63,8 +66,9 @@ public:
   using TileType = Tile<ElementType, D>;
   using ConstTileType = Tile<const ElementType, D>;
   using TileDataType = internal::TileData<const ElementType, D>;
-  using ReadWriteSenderType = ReadWriteTileSender<T, D>;
+  using ReadWriteSenderType = ReadWriteTileSender<ElementType, D>;
   friend Matrix<const ElementType, D>;
+  friend internal::MatrixRef<ElementType, D>;
 
   /// Create a non distributed matrix of size @p size and block size @p block_size.
   ///
@@ -158,7 +162,6 @@ public:
     return readwrite(this->distribution().local_tile_index(index));
   }
 
-public:
   /// Create a sub-pipelined matrix which can be accessed thread-safely with respect to the original
   /// matrix
   ///
@@ -188,7 +191,9 @@ protected:
 private:
   using typename Matrix<const T, D>::SubPipelineTag;
   Matrix(Matrix& mat, const SubPipelineTag tag) noexcept : Matrix<const T, D>(mat, tag) {}
-  Matrix(Matrix& mat, const LocalTileSize& tiles_per_block) noexcept
+
+  template <template <class, Device> class MatrixLike>
+  Matrix(MatrixLike<const T, D>& mat, const LocalTileSize& tiles_per_block) noexcept
       : Matrix<const T, D>(mat, tiles_per_block) {}
 
   using Matrix<const T, D>::setUpTiles;
@@ -204,8 +209,9 @@ public:
   using TileType = Tile<ElementType, D>;
   using ConstTileType = Tile<const ElementType, D>;
   using TileDataType = internal::TileData<ElementType, D>;
-  using ReadOnlySenderType = ReadOnlyTileSender<T, D>;
-  friend Matrix<ElementType, D>;
+  using ReadOnlySenderType = ReadOnlyTileSender<ElementType, D>;
+  using ReadWriteSenderType = ReadWriteTileSender<ElementType, D>;
+  friend internal::MatrixRef<const ElementType, D>;
 
   Matrix(const LayoutInfo& layout, ElementType* ptr) noexcept
       : MatrixBase({layout.size(), layout.blockSize()}) {
@@ -302,20 +308,35 @@ protected:
     DLAF_ASSERT((distribution.offset() == GlobalElementIndex{0, 0}), "not supported",
                 distribution.offset());
   }
+
   struct SubPipelineTag {};
   Matrix(Matrix& mat, const SubPipelineTag) noexcept : MatrixBase(mat.distribution()) {
     setUpSubPipelines(mat);
   }
-  Matrix(Matrix& mat, const LocalTileSize& tiles_per_block) noexcept
+
+  template <template <class, Device> class MatrixLike>
+  Matrix(MatrixLike<const T, D>& mat, const LocalTileSize& tiles_per_block) noexcept
       : MatrixBase(mat.distribution(), tiles_per_block) {
     setUpRetiledSubPipelines(mat, tiles_per_block);
   }
 
   void setUpTiles(const memory::MemoryView<ElementType, D>& mem, const LayoutInfo& layout) noexcept;
   void setUpSubPipelines(Matrix<const T, D>&) noexcept;
-  void setUpRetiledSubPipelines(Matrix<const T, D>&, const LocalTileSize& tiles_per_block) noexcept;
+
+  template <template <class, Device> class MatrixLike>
+  void setUpRetiledSubPipelines(MatrixLike<const T, D>& mat,
+                                const LocalTileSize& tiles_per_block) noexcept;
 
   std::vector<internal::TilePipeline<T, D>> tile_managers_;
+
+private:
+  ReadWriteSenderType readwrite(const LocalTileIndex& index) noexcept {
+    return tile_managers_[tileLinearIndex(index)].readwrite();
+  }
+
+  ReadWriteSenderType readwrite(const GlobalTileIndex& index) noexcept {
+    return readwrite(this->distribution().local_tile_index(index));
+  }
 };
 
 template <class T, Device D>
@@ -375,7 +396,8 @@ void Matrix<const T, D>::setUpSubPipelines(Matrix<const T, D>& mat) noexcept {
 }
 
 template <class T, Device D>
-void Matrix<const T, D>::setUpRetiledSubPipelines(Matrix<const T, D>& mat,
+template <template <class, Device> class MatrixLike>
+void Matrix<const T, D>::setUpRetiledSubPipelines(MatrixLike<const T, D>& mat,
                                                   const LocalTileSize& tiles_per_block) noexcept {
   DLAF_ASSERT(mat.blockSize() == mat.tile_size(), mat.blockSize(), mat.tile_size());
 
@@ -409,8 +431,7 @@ void Matrix<const T, D>::setUpRetiledSubPipelines(Matrix<const T, D>& mat,
                                        tileSize(distribution().global_tile_index(indices.back()))});
       }
 
-    auto sub_tiles =
-        splitTileDisjoint(mat.tile_managers_[mat.tileLinearIndex(orig_tile_index)].readwrite(), specs);
+    auto sub_tiles = splitTileDisjoint(mat.readwrite(orig_tile_index), specs);
 
     DLAF_ASSERT_HEAVY(specs.size() == indices.size(), specs.size(), indices.size());
     for (SizeType j = 0; j < specs.size(); ++j) {

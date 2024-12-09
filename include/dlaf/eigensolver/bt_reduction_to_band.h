@@ -16,6 +16,7 @@
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/eigensolver/bt_reduction_to_band/api.h>
 #include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_ref.h>
 #include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 
@@ -41,7 +42,7 @@ namespace dlaf::eigensolver::internal {
 /// @param mat_taus is the tau vector as returned by reductionToBand. The j-th element is the scaling
 /// factor for the j-th HH tranformation.
 template <Backend backend, Device device, class T>
-void bt_reduction_to_band(const SizeType b, Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
+void bt_reduction_to_band(const SizeType b, MatrixRef<T, device>& mat_c, Matrix<const T, device>& mat_v,
                           Matrix<const T, Device::CPU>& mat_taus) {
   DLAF_ASSERT(matrix::local_matrix(mat_c), mat_c);
   DLAF_ASSERT(matrix::local_matrix(mat_v), mat_v);
@@ -49,8 +50,8 @@ void bt_reduction_to_band(const SizeType b, Matrix<T, device>& mat_c, Matrix<con
   DLAF_ASSERT(square_blocksize(mat_v), mat_v);
   DLAF_ASSERT(mat_c.size().rows() == mat_v.size().rows(), mat_c, mat_v);
   DLAF_ASSERT(mat_c.blockSize().rows() == mat_v.blockSize().rows(), mat_c, mat_v);
-  DLAF_ASSERT(single_tile_per_block(mat_c), mat_c);
-  DLAF_ASSERT(single_tile_per_block(mat_v), mat_v);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_c), mat_c);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_v), mat_v);
 
   [[maybe_unused]] auto nr_reflectors_blocks = [&b, &mat_v]() {
     const SizeType m = mat_v.size().rows();
@@ -82,7 +83,7 @@ void bt_reduction_to_band(const SizeType b, Matrix<T, device>& mat_c, Matrix<con
 /// @param mat_taus is the tau vector as returned by reductionToBand. The j-th element is the scaling
 /// factor for the j-th HH tranformation.
 template <Backend backend, Device device, class T>
-void bt_reduction_to_band(comm::CommunicatorGrid& grid, const SizeType b, Matrix<T, device>& mat_c,
+void bt_reduction_to_band(comm::CommunicatorGrid& grid, const SizeType b, MatrixRef<T, device>& mat_c,
                           Matrix<const T, device>& mat_v, Matrix<const T, Device::CPU>& mat_taus) {
   DLAF_ASSERT(matrix::equal_process_grid(mat_c, grid), mat_c, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_v, grid), mat_v, grid);
@@ -90,8 +91,8 @@ void bt_reduction_to_band(comm::CommunicatorGrid& grid, const SizeType b, Matrix
   DLAF_ASSERT(square_blocksize(mat_v), mat_v);
   DLAF_ASSERT(mat_c.size().rows() == mat_v.size().rows(), mat_c, mat_v);
   DLAF_ASSERT(mat_c.blockSize().rows() == mat_v.blockSize().rows(), mat_c, mat_v);
-  DLAF_ASSERT(single_tile_per_block(mat_c), mat_c);
-  DLAF_ASSERT(single_tile_per_block(mat_v), mat_v);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_c), mat_c);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_v), mat_v);
 
   [[maybe_unused]] auto nr_reflectors_blocks = [&b, &mat_v]() {
     const SizeType m = mat_v.size().rows();

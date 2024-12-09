@@ -9,6 +9,8 @@
 //
 #pragma once
 
+#include <pika/execution.hpp>
+
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/types.h>
@@ -20,11 +22,11 @@ struct Norm {};
 
 template <class T>
 struct Norm<Backend::MC, Device::CPU, T> {
-  static dlaf::BaseType<T> max_L(comm::CommunicatorGrid& comm_grid, comm::Index2D rank,
-                                 Matrix<const T, Device::CPU>& matrix);
+  static pika::execution::experimental::unique_any_sender<dlaf::BaseType<T>> max_L(
+      comm::CommunicatorGrid& comm_grid, comm::Index2D rank, Matrix<const T, Device::CPU>& matrix);
 
-  static dlaf::BaseType<T> max_G(comm::CommunicatorGrid& comm_grid, comm::Index2D rank,
-                                 Matrix<const T, Device::CPU>& matrix);
+  static pika::execution::experimental::unique_any_sender<dlaf::BaseType<T>> max_G(
+      comm::CommunicatorGrid& comm_grid, comm::Index2D rank, Matrix<const T, Device::CPU>& matrix);
 };
 
 // ETI

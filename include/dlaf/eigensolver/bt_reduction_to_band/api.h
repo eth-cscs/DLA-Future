@@ -10,16 +10,19 @@
 #pragma once
 
 #include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_ref.h>
 #include <dlaf/types.h>
 
 namespace dlaf::eigensolver::internal {
 
+using matrix::internal::MatrixRef;
+
 template <Backend backend, Device device, class T>
 struct BackTransformationReductionToBand {
-  static void call(SizeType b, Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
+  static void call(SizeType b, MatrixRef<T, device>& mat_c, Matrix<const T, device>& mat_v,
                    Matrix<const T, Device::CPU>& mat_taus);
 
-  static void call(comm::CommunicatorGrid& grid, const SizeType b, Matrix<T, device>& mat_c,
+  static void call(comm::CommunicatorGrid& grid, const SizeType b, MatrixRef<T, device>& mat_c,
                    Matrix<const T, device>& mat_v, Matrix<const T, Device::CPU>& mat_taus);
 };
 

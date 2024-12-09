@@ -344,7 +344,7 @@ void testReductionToBandLocal(const LocalElementSize size, const TileElementSize
 
   checkUpperPartUnchanged(reference, mat_a_h);
 
-  auto mat_v = allGather(blas::Uplo::Lower, mat_a_h);
+  auto mat_v = allGather<T>(blas::Uplo::Lower, mat_a_h);
   auto mat_b = makeLocal(mat_a_h);
   splitReflectorsAndBand(mat_v, mat_b, band_size);
 
@@ -434,7 +434,7 @@ void testReductionToBand(comm::CommunicatorGrid& grid, const LocalElementSize si
   // Wait for all work to finish before doing blocking communication
   pika::wait();
 
-  auto mat_v = allGather(blas::Uplo::Lower, matrix_a_h, grid);
+  auto mat_v = allGather<T>(blas::Uplo::Lower, matrix_a_h, grid);
   auto mat_b = makeLocal(matrix_a_h);
   splitReflectorsAndBand(mat_v, mat_b, band_size);
 

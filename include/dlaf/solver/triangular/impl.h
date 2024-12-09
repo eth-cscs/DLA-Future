@@ -29,6 +29,7 @@
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_ref.h>
 #include <dlaf/matrix/panel.h>
 #include <dlaf/matrix/tile.h>
 #include <dlaf/sender/when_all_lift.h>
@@ -36,6 +37,7 @@
 #include <dlaf/util_matrix.h>
 
 namespace dlaf::solver::internal {
+
 namespace triangular_lln {
 template <Backend backend, class T, typename InSender, typename OutSender>
 void trsmBPanelTile(pika::execution::thread_priority priority, blas::Diag diag, T alpha,
@@ -234,7 +236,7 @@ void gemmTrailingMatrixTile(pika::execution::thread_priority priority, blas::Op 
 
 template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LLN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
-                                              Matrix<T, device>& mat_b) {
+                                              MatrixRef<T, device>& mat_b) {
   using namespace triangular_lln;
   using pika::execution::thread_priority;
 
@@ -264,7 +266,8 @@ void Triangular<backend, device, T>::call_LLN(blas::Diag diag, T alpha, Matrix<c
 
 template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LLT(blas::Op op, blas::Diag diag, T alpha,
-                                              Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
+                                              Matrix<const T, device>& mat_a,
+                                              MatrixRef<T, device>& mat_b) {
   using namespace triangular_llt;
   using pika::execution::thread_priority;
 
@@ -294,7 +297,7 @@ void Triangular<backend, device, T>::call_LLT(blas::Op op, blas::Diag diag, T al
 
 template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LUN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
-                                              Matrix<T, device>& mat_b) {
+                                              MatrixRef<T, device>& mat_b) {
   using namespace triangular_lun;
   using pika::execution::thread_priority;
 
@@ -322,7 +325,8 @@ void Triangular<backend, device, T>::call_LUN(blas::Diag diag, T alpha, Matrix<c
 
 template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LUT(blas::Op op, blas::Diag diag, T alpha,
-                                              Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
+                                              Matrix<const T, device>& mat_a,
+                                              MatrixRef<T, device>& mat_b) {
   using namespace triangular_lut;
   using pika::execution::thread_priority;
 
@@ -352,7 +356,7 @@ void Triangular<backend, device, T>::call_LUT(blas::Op op, blas::Diag diag, T al
 
 template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_RLN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
-                                              Matrix<T, device>& mat_b) {
+                                              MatrixRef<T, device>& mat_b) {
   using namespace triangular_rln;
   using pika::execution::thread_priority;
 
@@ -382,7 +386,8 @@ void Triangular<backend, device, T>::call_RLN(blas::Diag diag, T alpha, Matrix<c
 
 template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_RLT(blas::Op op, blas::Diag diag, T alpha,
-                                              Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
+                                              Matrix<const T, device>& mat_a,
+                                              MatrixRef<T, device>& mat_b) {
   using namespace triangular_rlt;
   using pika::execution::thread_priority;
 
@@ -413,7 +418,7 @@ void Triangular<backend, device, T>::call_RLT(blas::Op op, blas::Diag diag, T al
 
 template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_RUN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
-                                              Matrix<T, device>& mat_b) {
+                                              MatrixRef<T, device>& mat_b) {
   using namespace triangular_run;
   using pika::execution::thread_priority;
 
@@ -443,7 +448,8 @@ void Triangular<backend, device, T>::call_RUN(blas::Diag diag, T alpha, Matrix<c
 
 template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_RUT(blas::Op op, blas::Diag diag, T alpha,
-                                              Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
+                                              Matrix<const T, device>& mat_a,
+                                              MatrixRef<T, device>& mat_b) {
   using namespace triangular_rut;
   using pika::execution::thread_priority;
 
@@ -474,7 +480,8 @@ void Triangular<backend, device, T>::call_RUT(blas::Op op, blas::Diag diag, T al
 
 template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid& grid, blas::Diag diag, T alpha,
-                                              Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
+                                              Matrix<const T, device>& mat_a,
+                                              MatrixRef<T, device>& mat_b) {
   using namespace triangular_lln;
   using pika::execution::thread_priority;
 
@@ -568,7 +575,7 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid& grid, blas
 
 template <Backend backend, Device D, class T>
 void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid& grid, blas::Op op, blas::Diag diag,
-                                         T alpha, Matrix<const T, D>& mat_a, Matrix<T, D>& mat_b) {
+                                         T alpha, Matrix<const T, D>& mat_a, MatrixRef<T, D>& mat_b) {
   using namespace triangular_llt;
   namespace ex = pika::execution::experimental;
   using pika::execution::thread_priority;
@@ -656,7 +663,8 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid& grid, blas::Op 
 
 template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid& grid, blas::Diag diag, T alpha,
-                                              Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
+                                              Matrix<const T, device>& mat_a,
+                                              MatrixRef<T, device>& mat_b) {
   using namespace triangular_lun;
   using pika::execution::thread_priority;
 
@@ -747,7 +755,7 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid& grid, blas
 
 template <Backend backend, Device D, class T>
 void Triangular<backend, D, T>::call_LUT(comm::CommunicatorGrid& grid, blas::Op op, blas::Diag diag,
-                                         T alpha, Matrix<const T, D>& mat_a, Matrix<T, D>& mat_b) {
+                                         T alpha, Matrix<const T, D>& mat_a, MatrixRef<T, D>& mat_b) {
   namespace ex = pika::execution::experimental;
   using namespace triangular_lut;
   using pika::execution::thread_priority;
@@ -836,7 +844,8 @@ void Triangular<backend, D, T>::call_LUT(comm::CommunicatorGrid& grid, blas::Op 
 
 template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid& grid, blas::Diag diag, T alpha,
-                                              Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
+                                              Matrix<const T, device>& mat_a,
+                                              MatrixRef<T, device>& mat_b) {
   using namespace triangular_rln;
   using pika::execution::thread_priority;
 
@@ -927,7 +936,7 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid& grid, blas
 
 template <Backend backend, Device D, class T>
 void Triangular<backend, D, T>::call_RLT(comm::CommunicatorGrid& grid, blas::Op op, blas::Diag diag,
-                                         T alpha, Matrix<const T, D>& mat_a, Matrix<T, D>& mat_b) {
+                                         T alpha, Matrix<const T, D>& mat_a, MatrixRef<T, D>& mat_b) {
   namespace ex = pika::execution::experimental;
   using namespace triangular_rlt;
   using pika::execution::thread_priority;
@@ -1016,7 +1025,8 @@ void Triangular<backend, D, T>::call_RLT(comm::CommunicatorGrid& grid, blas::Op 
 
 template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid& grid, blas::Diag diag, T alpha,
-                                              Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
+                                              Matrix<const T, device>& mat_a,
+                                              MatrixRef<T, device>& mat_b) {
   using namespace triangular_run;
   using pika::execution::thread_priority;
 
@@ -1108,7 +1118,7 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid& grid, blas
 
 template <Backend backend, Device D, class T>
 void Triangular<backend, D, T>::call_RUT(comm::CommunicatorGrid& grid, blas::Op op, blas::Diag diag,
-                                         T alpha, Matrix<const T, D>& mat_a, Matrix<T, D>& mat_b) {
+                                         T alpha, Matrix<const T, D>& mat_a, MatrixRef<T, D>& mat_b) {
   namespace ex = pika::execution::experimental;
   using namespace triangular_rut;
   using pika::execution::thread_priority;

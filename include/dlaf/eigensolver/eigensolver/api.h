@@ -29,9 +29,11 @@ namespace eigensolver::internal {
 template <Backend B, Device D, class T>
 struct Eigensolver {
   static void call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<BaseType<T>, D>& evals,
-                   Matrix<T, D>& mat_e);
+                   Matrix<T, D>& mat_e, const SizeType eigenvalues_index_begin,
+                   const SizeType eigenvalues_index_end);
   static void call(comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix<T, D>& mat_a,
-                   Matrix<BaseType<T>, D>& evals, Matrix<T, D>& mat_e);
+                   Matrix<BaseType<T>, D>& evals, Matrix<T, D>& mat_e,
+                   const SizeType eigenvalues_index_begin, const SizeType eigenvalues_index_end);
 };
 
 // ETI

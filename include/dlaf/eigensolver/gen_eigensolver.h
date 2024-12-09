@@ -27,10 +27,11 @@ namespace dlaf {
 namespace eigensolver::internal {
 
 template <Backend B, Device D, class T>
-void hermitian_generalized_eigensolver_helper(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
-                                              Matrix<BaseType<T>, D>& eigenvalues,
-                                              Matrix<T, D>& eigenvectors,
-                                              const Factorization factorization) {
+void hermitian_generalized_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
+                                       Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors,
+                                       const Factorization factorization,
+                                       const SizeType eigenvalues_index_begin,
+                                       const SizeType eigenvalues_index_end) {
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
   DLAF_ASSERT(matrix::local_matrix(mat_b), mat_b);
   DLAF_ASSERT(matrix::local_matrix(eigenvalues), eigenvalues);
@@ -52,15 +53,20 @@ void hermitian_generalized_eigensolver_helper(blas::Uplo uplo, Matrix<T, D>& mat
   DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);
   DLAF_ASSERT(matrix::single_tile_per_block(eigenvalues), eigenvalues);
   DLAF_ASSERT(matrix::single_tile_per_block(eigenvectors), eigenvectors);
+  DLAF_ASSERT(eigenvalues_index_begin == 0, eigenvalues_index_begin);
+  DLAF_ASSERT(eigenvalues_index_end >= eigenvalues_index_begin, eigenvalues_index_end,
+              eigenvalues_index_begin);
+  DLAF_ASSERT(eigenvalues_index_end <= mat_a.size().rows(), eigenvalues_index_end, mat_a.size().rows());
 
   eigensolver::internal::GenEigensolver<B, D, T>::call(uplo, mat_a, mat_b, eigenvalues, eigenvectors,
-                                                       factorization);
+                                                       factorization, eigenvalues_index_begin,
+                                                       eigenvalues_index_end);
 }
 
 template <Backend B, Device D, class T>
-EigensolverResult<T, D> hermitian_generalized_eigensolver_helper(blas::Uplo uplo, Matrix<T, D>& mat_a,
-                                                                 Matrix<T, D>& mat_b,
-                                                                 const Factorization factorization) {
+EigensolverResult<T, D> hermitian_generalized_eigensolver(
+    blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b, const Factorization factorization,
+    const SizeType eigenvalues_index_begin, const SizeType eigenvalues_index_end) {
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
   DLAF_ASSERT(matrix::local_matrix(mat_b), mat_b);
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
@@ -69,6 +75,10 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver_helper(blas::Uplo uplo
   DLAF_ASSERT(matrix::square_blocksize(mat_b), mat_b);
   DLAF_ASSERT(mat_a.size() == mat_b.size(), mat_a, mat_b);
   DLAF_ASSERT(mat_a.blockSize() == mat_b.blockSize(), mat_a, mat_b);
+  DLAF_ASSERT(eigenvalues_index_begin == 0, eigenvalues_index_begin);
+  DLAF_ASSERT(eigenvalues_index_end >= eigenvalues_index_begin, eigenvalues_index_end,
+              eigenvalues_index_begin);
+  DLAF_ASSERT(eigenvalues_index_end <= mat_a.size().rows(), eigenvalues_index_end, mat_a.size().rows());
 
   const SizeType size = mat_a.size().rows();
 
@@ -76,16 +86,18 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver_helper(blas::Uplo uplo
                                              TileElementSize(mat_a.blockSize().rows(), 1));
   matrix::Matrix<T, D> eigenvectors(LocalElementSize(size, size), mat_a.blockSize());
 
-  hermitian_generalized_eigensolver_helper<B, D, T>(uplo, mat_a, mat_b, eigenvalues, eigenvectors,
-                                                    factorization);
+  hermitian_generalized_eigensolver<B, D, T>(uplo, mat_a, mat_b, eigenvalues, eigenvectors,
+                                             factorization, eigenvalues_index_begin,
+                                             eigenvalues_index_end);
 
   return {std::move(eigenvalues), std::move(eigenvectors)};
 }
 
 template <Backend B, Device D, class T>
-void hermitian_generalized_eigensolver_helper(
+void hermitian_generalized_eigensolver(
     comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
-    Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors, const Factorization factorization) {
+    Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors, const Factorization factorization,
+    const SizeType eigenvalues_index_begin, const SizeType eigenvalues_index_end) {
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_b, grid), mat_b, grid);
   DLAF_ASSERT(matrix::local_matrix(eigenvalues), eigenvalues);
@@ -107,16 +119,22 @@ void hermitian_generalized_eigensolver_helper(
   DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);
   DLAF_ASSERT(matrix::single_tile_per_block(eigenvalues), eigenvalues);
   DLAF_ASSERT(matrix::single_tile_per_block(eigenvectors), eigenvectors);
+  DLAF_ASSERT(eigenvalues_index_begin == 0, eigenvalues_index_begin);
+  DLAF_ASSERT(eigenvalues_index_end >= eigenvalues_index_begin, eigenvalues_index_end,
+              eigenvalues_index_begin);
+  DLAF_ASSERT(eigenvalues_index_end <= mat_a.size().rows(), eigenvalues_index_end, mat_a.size().rows());
 
   eigensolver::internal::GenEigensolver<B, D, T>::call(grid, uplo, mat_a, mat_b, eigenvalues,
-                                                       eigenvectors, factorization);
+                                                       eigenvectors, factorization,
+                                                       eigenvalues_index_begin, eigenvalues_index_end);
 }
 
 template <Backend B, Device D, class T>
-EigensolverResult<T, D> hermitian_generalized_eigensolver_helper(comm::CommunicatorGrid& grid,
-                                                                 blas::Uplo uplo, Matrix<T, D>& mat_a,
-                                                                 Matrix<T, D>& mat_b,
-                                                                 const Factorization factorization) {
+EigensolverResult<T, D> hermitian_generalized_eigensolver(comm::CommunicatorGrid& grid, blas::Uplo uplo,
+                                                          Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
+                                                          const Factorization factorization,
+                                                          const SizeType eigenvalues_index_begin,
+                                                          const SizeType eigenvalues_index_end) {
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_b, grid), mat_b, grid);
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
@@ -125,6 +143,10 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver_helper(comm::Communica
   DLAF_ASSERT(matrix::square_blocksize(mat_b), mat_b);
   DLAF_ASSERT(mat_a.size() == mat_b.size(), mat_a, mat_b);
   DLAF_ASSERT(mat_a.blockSize() == mat_b.blockSize(), mat_a, mat_b);
+  DLAF_ASSERT(eigenvalues_index_begin == 0, eigenvalues_index_begin);
+  DLAF_ASSERT(eigenvalues_index_end >= eigenvalues_index_begin, eigenvalues_index_end,
+              eigenvalues_index_begin);
+  DLAF_ASSERT(eigenvalues_index_end <= mat_a.size().rows(), eigenvalues_index_end, mat_a.size().rows());
 
   const SizeType size = mat_a.size().rows();
 
@@ -132,12 +154,32 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver_helper(comm::Communica
                                              TileElementSize(mat_a.blockSize().rows(), 1));
   matrix::Matrix<T, D> eigenvectors(GlobalElementSize(size, size), mat_a.blockSize(), grid);
 
-  hermitian_generalized_eigensolver_helper<B, D, T>(grid, uplo, mat_a, mat_b, eigenvalues, eigenvectors,
-                                                    factorization);
+  hermitian_generalized_eigensolver<B, D, T>(grid, uplo, mat_a, mat_b, eigenvalues, eigenvectors,
+                                             factorization, eigenvalues_index_begin,
+                                             eigenvalues_index_end);
 
   return {std::move(eigenvalues), std::move(eigenvectors)};
 }
 
+}
+
+/// @copydoc hermitian_generalized_eigensolver(blas::Uplo, Matrix<T, D>&, Matrix<T, D>&,
+/// Matrix<BaseType<T>, D>&, Matrix<T, D>&)
+///
+/// @param eigenvalues_index_begin is the index of the first eigenvalue to compute
+/// @pre @p eigenvalues_index_begin == 0
+/// @param eigenvalues_index_end is the index of the last eigenvalue to compute (exclusive)
+/// @pre @p eigenvalues_index_begin <= @p eigenvalues_index_end < N
+template <Backend B, Device D, class T>
+void hermitian_generalized_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
+                                       Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors,
+                                       const SizeType eigenvalues_index_begin,
+                                       const SizeType eigenvalues_index_end) {
+  using eigensolver::internal::Factorization;
+
+  eigensolver::internal::hermitian_generalized_eigensolver<B, D, T>(
+      uplo, mat_a, mat_b, eigenvalues, eigenvectors, Factorization::do_factorization,
+      eigenvalues_index_begin, eigenvalues_index_end);
 }
 
 /// Generalized Eigensolver.
@@ -181,10 +223,26 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver_helper(comm::Communica
 template <Backend B, Device D, class T>
 void hermitian_generalized_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
                                        Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors) {
+  hermitian_generalized_eigensolver<B, D, T>(uplo, mat_a, mat_b, eigenvalues, eigenvectors, 0,
+                                             mat_a.size().rows());
+}
+
+/// @copydoc hermitian_generalized_eigensolver(blas::Uplo, Matrix<T, D>&, Matrix<T, D>&) {
+///
+/// @param eigenvalues_index_begin is the index of the first eigenvalue to compute
+/// @pre @p eigenvalues_index_begin >= 0
+/// @param eigenvalues_index_end is the index of the last eigenvalue to compute (exclusive)
+/// @pre @p eigenvalues_index_begin <= @p eigenvalues_index_end < N
+template <Backend B, Device D, class T>
+EigensolverResult<T, D> hermitian_generalized_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a,
+                                                          Matrix<T, D>& mat_b,
+                                                          const SizeType eigenvalues_index_begin,
+                                                          const SizeType eigenvalues_index_end) {
   using eigensolver::internal::Factorization;
 
-  eigensolver::internal::hermitian_generalized_eigensolver_helper<B, D, T>(
-      uplo, mat_a, mat_b, eigenvalues, eigenvectors, Factorization::do_factorization);
+  return eigensolver::internal::hermitian_generalized_eigensolver<B, D, T>(
+      uplo, mat_a, mat_b, Factorization::do_factorization, eigenvalues_index_begin,
+      eigenvalues_index_end);
 }
 
 /// Generalized Eigensolver.
@@ -212,13 +270,35 @@ void hermitian_generalized_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Mat
 /// @pre @p mat_b has size (N x N)
 /// @pre @p mat_b has blocksize (NB x NB)
 /// @pre @p mat_b has tilesize (NB x NB)
+///
+/// @param eigenvalues_index_begin is the index of the first eigenvalue to compute
+/// @pre @p eigenvalues_index_begin >= 0
+/// @param eigenvalues_index_end is the index of the last eigenvalue to compute (exclusive)
+/// @pre @p eigenvalues_index_end >= 0
+/// @pre @p eigenvalues_index_end <= N
 template <Backend B, Device D, class T>
 EigensolverResult<T, D> hermitian_generalized_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a,
                                                           Matrix<T, D>& mat_b) {
+  return hermitian_generalized_eigensolver<B, D, T>(uplo, mat_a, mat_b, 0, mat_a.size().rows());
+}
+
+/// @copydoc hermitian_generalized_eigensolver_factorized(blas::Uplo, Matrix<T, D>&, Matrix<T, D>&,
+/// Matrix<BaseType<T>, D>&, Matrix<T, D>&) Generalized Eigensolver.
+///
+/// @param eigenvalues_index_begin is the index of the first eigenvalue to compute
+/// @pre @p eigenvalues_index_begin >= 0
+/// @param eigenvalues_index_end is the index of the last eigenvalue to compute (exclusive)
+/// @pre @p eigenvalues_index_begin <= @p eigenvalues_index_end < N
+template <Backend B, Device D, class T>
+void hermitian_generalized_eigensolver_factorized(
+    blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b, Matrix<BaseType<T>, D>& eigenvalues,
+    Matrix<T, D>& eigenvectors, const SizeType eigenvalues_index_begin,
+    const SizeType eigenvalues_index_end) {
   using eigensolver::internal::Factorization;
 
-  return eigensolver::internal::hermitian_generalized_eigensolver_helper<B, D, T>(
-      uplo, mat_a, mat_b, Factorization::do_factorization);
+  eigensolver::internal::hermitian_generalized_eigensolver<B, D, T>(
+      uplo, mat_a, mat_b, eigenvalues, eigenvectors, Factorization::already_factorized,
+      eigenvalues_index_begin, eigenvalues_index_end);
 }
 
 /// Generalized Eigensolver.
@@ -265,10 +345,25 @@ void hermitian_generalized_eigensolver_factorized(blas::Uplo uplo, Matrix<T, D>&
                                                   Matrix<T, D>& mat_b,
                                                   Matrix<BaseType<T>, D>& eigenvalues,
                                                   Matrix<T, D>& eigenvectors) {
+  hermitian_generalized_eigensolver_factorized<B, D, T>(uplo, mat_a, mat_b, eigenvalues, eigenvectors, 0,
+                                                        mat_a.size().rows());
+}
+
+/// @copydoc hermitian_generalized_eigensolver_factorized(blas::Uplo, Matrix<T, D>&, Matrix<T, D>&)
+///
+/// @param eigenvalues_index_begin is the index of the first eigenvalue to compute
+/// @pre @p eigenvalues_index_begin >= 0
+/// @param eigenvalues_index_end is the index of the last eigenvalue to compute (exclusive)
+/// @pre @p eigenvalues_index_begin <= @p eigenvalues_index_end < N
+template <Backend B, Device D, class T>
+EigensolverResult<T, D> hermitian_generalized_eigensolver_factorized(
+    blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b, const SizeType eigenvalues_index_begin,
+    const SizeType eigenvalues_index_end) {
   using eigensolver::internal::Factorization;
 
-  eigensolver::internal::hermitian_generalized_eigensolver_helper<B, D, T>(
-      uplo, mat_a, mat_b, eigenvalues, eigenvectors, Factorization::already_factorized);
+  return eigensolver::internal::hermitian_generalized_eigensolver<B, D, T>(
+      uplo, mat_a, mat_b, Factorization::already_factorized, eigenvalues_index_begin,
+      eigenvalues_index_end);
 }
 
 /// Generalized Eigensolver.
@@ -301,10 +396,28 @@ template <Backend B, Device D, class T>
 EigensolverResult<T, D> hermitian_generalized_eigensolver_factorized(blas::Uplo uplo,
                                                                      Matrix<T, D>& mat_a,
                                                                      Matrix<T, D>& mat_b) {
+  return hermitian_generalized_eigensolver_factorized<B, D, T>(uplo, mat_a, mat_b, 0,
+                                                               mat_a.size().rows());
+}
+
+/// @copydoc hermitian_generalized_eigensolver(comm::CommunicatorGrid&, blas::Uplo, Matrix<T, D>&,
+/// Matrix<T, D>&, Matrix<BaseType<T>, D>&, Matrix<T, D>&)
+///
+/// @param eigenvalues_index_begin is the index of the first eigenvalue to compute
+/// @pre @p eigenvalues_index_begin == 0
+/// @param eigenvalues_index_end is the index of the last eigenvalue to compute (exclusive)
+/// @pre @p eigenvalues_index_begin <= @p eigenvalues_index_end < N
+template <Backend B, Device D, class T>
+void hermitian_generalized_eigensolver(comm::CommunicatorGrid& grid, blas::Uplo uplo,
+                                       Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
+                                       Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors,
+                                       const SizeType eigenvalues_index_begin,
+                                       const SizeType eigenvalues_index_end) {
   using eigensolver::internal::Factorization;
 
-  return eigensolver::internal::hermitian_generalized_eigensolver_helper<B, D, T>(
-      uplo, mat_a, mat_b, Factorization::already_factorized);
+  eigensolver::internal::hermitian_generalized_eigensolver<B, D, T>(
+      grid, uplo, mat_a, mat_b, eigenvalues, eigenvectors, Factorization::do_factorization,
+      eigenvalues_index_begin, eigenvalues_index_end);
 }
 
 /// Generalized Eigensolver.
@@ -350,10 +463,27 @@ template <Backend B, Device D, class T>
 void hermitian_generalized_eigensolver(comm::CommunicatorGrid& grid, blas::Uplo uplo,
                                        Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
                                        Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors) {
+  hermitian_generalized_eigensolver<B, D, T>(grid, uplo, mat_a, mat_b, eigenvalues, eigenvectors, 0,
+                                             mat_a.size().rows());
+}
+
+/// @copydoc hermitian_generalized_eigensolver(comm::CommunicatorGrid&, blas::Uplo, Matrix<T, D>&,
+/// Matrix<T, D>&)
+///
+/// @param eigenvalues_index_begin is the index of the first eigenvalue to compute
+/// @pre @p eigenvalues_index_begin == 0
+/// @param eigenvalues_index_end is the index of the last eigenvalue to compute (exclusive)
+/// @pre @p eigenvalues_index_begin <= @p eigenvalues_index_end < N
+template <Backend B, Device D, class T>
+EigensolverResult<T, D> hermitian_generalized_eigensolver(comm::CommunicatorGrid& grid, blas::Uplo uplo,
+                                                          Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
+                                                          const SizeType eigenvalues_index_begin,
+                                                          const SizeType eigenvalues_index_end) {
   using eigensolver::internal::Factorization;
 
-  eigensolver::internal::hermitian_generalized_eigensolver_helper<B, D, T>(
-      grid, uplo, mat_a, mat_b, eigenvalues, eigenvectors, Factorization::do_factorization);
+  return eigensolver::internal::hermitian_generalized_eigensolver<B, D, T>(
+      grid, uplo, mat_a, mat_b, Factorization::do_factorization, eigenvalues_index_begin,
+      eigenvalues_index_end);
 }
 
 /// Generalized Eigensolver.
@@ -385,10 +515,25 @@ void hermitian_generalized_eigensolver(comm::CommunicatorGrid& grid, blas::Uplo 
 template <Backend B, Device D, class T>
 EigensolverResult<T, D> hermitian_generalized_eigensolver(comm::CommunicatorGrid& grid, blas::Uplo uplo,
                                                           Matrix<T, D>& mat_a, Matrix<T, D>& mat_b) {
-  using eigensolver::internal::Factorization;
+  return hermitian_generalized_eigensolver<B, D, T>(grid, uplo, mat_a, mat_b, 0, mat_a.size().rows());
+}
 
-  return eigensolver::internal::hermitian_generalized_eigensolver_helper<B, D, T>(
-      grid, uplo, mat_a, mat_b, Factorization::do_factorization);
+/// @copydoc hermitian_generalized_eigensolver_factorized(comm::CommunicatorGrid&, blas::Uplo, Matrix<T,
+/// D>&, Matrix<T, D>&, Matrix<BaseType<T>, D>&, Matrix<T, D>&)
+///
+/// @param eigenvalues_index_begin is the index of the first eigenvalue to compute
+/// @pre @p eigenvalues_index_begin == 0
+/// @param eigenvalues_index_end is the index of the last eigenvalue to compute (exclusive)
+/// @pre @p eigenvalues_index_begin <= @p eigenvalues_index_end < N
+template <Backend B, Device D, class T>
+void hermitian_generalized_eigensolver_factorized(
+    comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
+    Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors,
+    const SizeType eigenvalues_index_begin, const SizeType eigenvalues_index_end) {
+  using eigensolver::internal::Factorization;
+  eigensolver::internal::hermitian_generalized_eigensolver<B, D, T>(
+      grid, uplo, mat_a, mat_b, eigenvalues, eigenvectors, Factorization::already_factorized,
+      eigenvalues_index_begin, eigenvalues_index_end);
 }
 
 /// Generalized Eigensolver.
@@ -436,9 +581,26 @@ void hermitian_generalized_eigensolver_factorized(comm::CommunicatorGrid& grid, 
                                                   Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
                                                   Matrix<BaseType<T>, D>& eigenvalues,
                                                   Matrix<T, D>& eigenvectors) {
+  hermitian_generalized_eigensolver_factorized<B, D, T>(grid, uplo, mat_a, mat_b, eigenvalues,
+                                                        eigenvectors, 0, mat_a.size().rows());
+}
+
+/// @copydoc hermitian_generalized_eigensolver_factorized(comm::CommunicatorGrid&, blas::Uplo, Matrix<T,
+/// D>&, Matrix<T, D>&)
+///
+/// @param eigenvalues_index_begin is the index of the first eigenvalue to compute
+/// @pre @p eigenvalues_index_begin == 0
+/// @param eigenvalues_index_end is the index of the last eigenvalue to compute (exclusive)
+/// @pre @p eigenvalues_index_end <= N
+template <Backend B, Device D, class T>
+EigensolverResult<T, D> hermitian_generalized_eigensolver_factorized(
+    comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
+    const SizeType eigenvalues_index_begin, const SizeType eigenvalues_index_end) {
   using eigensolver::internal::Factorization;
-  eigensolver::internal::hermitian_generalized_eigensolver_helper<B, D, T>(
-      grid, uplo, mat_a, mat_b, eigenvalues, eigenvectors, Factorization::already_factorized);
+
+  return eigensolver::internal::hermitian_generalized_eigensolver<B, D, T>(
+      grid, uplo, mat_a, mat_b, Factorization::already_factorized, eigenvalues_index_begin,
+      eigenvalues_index_end);
 }
 
 /// Generalized Eigensolver.
@@ -471,9 +633,7 @@ void hermitian_generalized_eigensolver_factorized(comm::CommunicatorGrid& grid, 
 template <Backend B, Device D, class T>
 EigensolverResult<T, D> hermitian_generalized_eigensolver_factorized(
     comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b) {
-  using eigensolver::internal::Factorization;
-
-  return eigensolver::internal::hermitian_generalized_eigensolver_helper<B, D, T>(
-      grid, uplo, mat_a, mat_b, Factorization::already_factorized);
+  return hermitian_generalized_eigensolver_factorized<B, D, T>(grid, uplo, mat_a, mat_b, 0,
+                                                               mat_a.size().rows());
 }
 }

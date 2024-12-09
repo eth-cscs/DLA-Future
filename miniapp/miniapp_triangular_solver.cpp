@@ -10,9 +10,7 @@
 
 #include <cstdlib>
 #include <iostream>
-#include <limits>
 #include <string>
-#include <type_traits>
 
 #include <blas/util.hh>
 #include <mpi.h>
@@ -31,6 +29,7 @@
 #include <dlaf/matrix/copy.h>
 #include <dlaf/matrix/index.h>
 #include <dlaf/matrix/matrix_mirror.h>
+#include <dlaf/matrix/matrix_ref.h>
 #include <dlaf/miniapp/dispatch.h>
 #include <dlaf/miniapp/options.h>
 #include <dlaf/solver.h>
@@ -58,6 +57,7 @@ struct Options
   SizeType n;
   SizeType mb;
   SizeType nb;
+  SizeType eval_idx_end;
   blas::Side side;
   blas::Uplo uplo;
   blas::Op op;
@@ -72,6 +72,24 @@ struct Options
         diag(dlaf::miniapp::parseDiag(vm["diag"].as<std::string>())) {
     DLAF_ASSERT(m > 0 && n > 0, m, n);
     DLAF_ASSERT(mb > 0 && nb > 0, mb, nb);
+
+    if (vm.count("percent-evals") == 1 && vm.count("eval-index-end") == 1) {
+      std::cerr << "ERROR! "
+                   "You can't specify both --percent-evals and --eval-index-end at the same time."
+                << std::endl;
+      std::exit(EXIT_FAILURE);
+    }
+
+    if (vm.count("percent-evals") == 1) {
+      double percent = vm["percent-evals"].as<double>();
+      eval_idx_end = dlaf::util::internal::percent_to_index(n, percent);
+    }
+    else if (vm.count("eval-index-end") == 1) {
+      eval_idx_end = vm["eval-index-end"].as<SizeType>();
+    }
+    else {
+      eval_idx_end = n;
+    }
 
     if (do_check != dlaf::miniapp::CheckIterFreq::None) {
       std::cerr << "Warning! At the moment result checking it is not implemented." << std::endl;
@@ -94,6 +112,7 @@ struct triangularSolverMiniapp {
     using ConstMatrixMirrorType = MatrixMirror<const T, DefaultDevice_v<backend>, Device::CPU>;
     using HostMatrixType = Matrix<T, Device::CPU>;
     using ConstHostMatrixType = Matrix<const T, Device::CPU>;
+    using MatrixRefType = dlaf::matrix::internal::MatrixRef<T, DefaultDevice_v<backend>>;
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
 
@@ -138,10 +157,13 @@ struct triangularSolverMiniapp {
 
     const T alpha = 2.0;
 
-    double m = size_b.rows();
-    double n = size_b.cols();
-    auto add_mul = n * m * (side == Side::Left ? m : n) / 2;
-    const double total_ops = dlaf::total_ops<T>(add_mul, add_mul);
+    double total_ops;
+    {
+      double m = size_b.rows();
+      double n = opts.eval_idx_end;
+      auto add_mul = n * m * (side == Side::Left ? m : n) / 2;
+      total_ops = dlaf::total_ops<T>(add_mul, add_mul);
+    }
 
     for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
       if (0 == world.rank() && run_index >= 0)
@@ -153,14 +175,17 @@ struct triangularSolverMiniapp {
 
       sync_barrier();
 
+      // MatrixRef, not to be confused with the reference matrix b_ref
+      auto spec = dlaf::matrix::util::internal::sub_matrix_spec_slice_cols(bh, 0, opts.eval_idx_end);
+      MatrixRefType mat_b_ref(b.get(), spec);
+
       dlaf::common::Timer<> timeit;
       if (opts.local)
-        dlaf::triangular_solver<backend, dlaf::DefaultDevice_v<backend>, T>(side, uplo, op, diag, alpha,
-                                                                            a.get(), b.get());
+        dlaf::solver::internal::triangular_solver<backend, dlaf::DefaultDevice_v<backend>, T>(
+            side, uplo, op, diag, alpha, a.get(), mat_b_ref);
       else
-        dlaf::triangular_solver<backend, dlaf::DefaultDevice_v<backend>, T>(comm_grid, side, uplo, op,
-                                                                            diag, alpha, a.get(),
-                                                                            b.get());
+        dlaf::solver::internal::triangular_solver<backend, dlaf::DefaultDevice_v<backend>, T>(
+            comm_grid, side, uplo, op, diag, alpha, a.get(), mat_b_ref);
 
       sync_barrier();
 
@@ -169,13 +194,12 @@ struct triangularSolverMiniapp {
         auto elapsed_time = timeit.elapsed();
         double gigaflops = total_ops / elapsed_time / 1e9;
 
-        std::cout << "[" << run_index << "]"
-                  << " " << elapsed_time << "s"
-                  << " " << gigaflops << "GFlop/s"
-                  << " " << dlaf::internal::FormatShort{opts.type}
+        std::cout << "[" << run_index << "]" << " " << elapsed_time << "s" << " " << gigaflops
+                  << "GFlop/s" << " " << dlaf::internal::FormatShort{opts.type}
                   << dlaf::internal::FormatShort{opts.side} << dlaf::internal::FormatShort{opts.uplo}
                   << dlaf::internal::FormatShort{opts.op} << dlaf::internal::FormatShort{opts.diag}
-                  << " " << bh.size() << " " << bh.blockSize() << " " << comm_grid.size() << " "
+                  << " " << bh.size() << " (" << 0l << ", " << opts.eval_idx_end << ") "
+                  << " " << bh.blockSize() << " " << comm_grid.size() << " "
                   << pika::get_os_thread_count() << " " << backend << std::endl;
         if (opts.csv_output) {
           // CSV formatted output with column names that can be read by pandas to simplify
@@ -194,7 +218,9 @@ struct triangularSolverMiniapp {
                     << "comm_rows, " << comm_grid.size().rows() << ", "
                     << "comm_cols, " << comm_grid.size().cols() << ", "
                     << "threads, " << pika::get_os_thread_count() << ", "
-                    << "backend, " << backend << ", " << opts.info << std::endl;
+                    << "backend, " << backend << ", "
+                    << "eigenvalue index begin, " << 0l << ", "
+                    << "eigenvalue index end, " << opts.eval_idx_end << ", " << opts.info << std::endl;
         }
       }
 
@@ -231,10 +257,12 @@ int main(int argc, char** argv) {
 
   // clang-format off
   desc_commandline.add_options()
-    ("m",             value<SizeType>()     ->default_value(4096),       "Matrix b rows")
-    ("n",             value<SizeType>()     ->default_value(512),        "Matrix b columns")
-    ("mb",            value<SizeType>()     ->default_value(256),        "Matrix b block rows")
-    ("nb",            value<SizeType>()     ->default_value(512),        "Matrix b block columns")
+    ("m",              value<SizeType>() ->default_value(4096), "Matrix b rows")
+    ("n",              value<SizeType>() ->default_value(512) , "Matrix b columns")
+    ("mb",             value<SizeType>() ->default_value(256) , "Matrix b block rows")
+    ("nb",             value<SizeType>() ->default_value(512) , "Matrix b block columns")
+    ("eval-index-end", value<SizeType>()                      , "Index of last eigenvalue of interest/eigenvector to transform (exclusive)")
+    ("percent-evals",  value<double>()                        , "Percentage of eigenvalues of interest/eigenvectors to transform")
   ;
   // clang-format on
   dlaf::miniapp::addSideOption(desc_commandline);

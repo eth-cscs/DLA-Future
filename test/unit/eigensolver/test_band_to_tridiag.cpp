@@ -8,9 +8,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <exception>
-#include <functional>
-#include <sstream>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -63,7 +60,7 @@ void testBandToTridiagOutputCorrectness(const blas::Uplo uplo, const SizeType ba
                                         Matrix<const T, Device::CPU>& mat_a_h,
                                         Matrix<BaseType<T>, Device::CPU>& mat_trid,
                                         Matrix<T, Device::CPU>& mat_v, GridIfDistributed&... grid) {
-  auto mat_trid_local = matrix::test::allGather(blas::Uplo::General, mat_trid);
+  auto mat_trid_local = matrix::test::allGather<BaseType<T>>(blas::Uplo::General, mat_trid);
   MatrixLocal<T> mat_local(mat_a_h.size(), mat_a_h.blockSize());
   const auto ld = mat_local.ld();
   set(mat_local, [](auto) { return T{0}; });
@@ -75,7 +72,7 @@ void testBandToTridiagOutputCorrectness(const blas::Uplo uplo, const SizeType ba
   }
   mat_local({m - 1, m - 1}) = mat_trid_local({m - 1, 0});
 
-  auto mat_v_local = matrix::test::allGather(blas::Uplo::General, mat_v, grid...);
+  auto mat_v_local = matrix::test::allGather<T>(blas::Uplo::General, mat_v, grid...);
 
   auto apply_left_right = [&mat_local, m, ld](SizeType size_hhr, T* v, SizeType first_index) {
     dlaf::common::internal::SingleThreadedBlasScope single;

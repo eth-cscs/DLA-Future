@@ -9,16 +9,15 @@
 #
 
 import argparse
+import math
 import os
 import re
-import math
-
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-
-from parse import parse, with_pattern
 from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from parse import parse, with_pattern
 
 default_logx = False
 default_logy = False
@@ -215,7 +214,20 @@ def _parse_optional_text(text):
         return None
 
 
-additional_parsers = dict(optional_text=_parse_optional_text)
+# Optionally match "(INT, INT)" and extract both integers in a tuple
+@with_pattern(r"(|\s+\(\d+, \d+\))")
+def _parse_optional_int_pair(s):
+    if s:
+        p = parse("({first:d}, {last:d})", s.strip())
+        return (p["first"], p["last"])
+    else:
+        return None
+
+
+additional_parsers = {
+    "optional_text": _parse_optional_text,
+    "optional_int_pair": _parse_optional_int_pair,
+}
 # {
 #     "run_index":
 #     "matrix_rows":
@@ -240,14 +252,18 @@ def _parse_line_based(fout, bench_name, nodes):
         # fail.
         alg_name = bench_name[0 : bench_name.find("_dlaf")]
 
-        if alg_name in ["chol", "hegst", "trsm", "trmm"]:
+        if alg_name in ["chol", "hegst", "trmm"]:
             pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
-        if alg_name in ["red2band", "band2trid", "bt_band2trid", "bt_red2band"]:
+        if alg_name in ["trsm"]:
+            pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}){evals_idxs:optional_int_pair} ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
+        if alg_name in ["red2band", "band2trid"]:
             pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
+        if alg_name in ["bt_band2trid", "bt_red2band"]:
+            pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}){evals_idxs:optional_int_pair} ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
         if alg_name in ["trid_evp"]:
             pstr_res = "[{run_index:d}] {time:g}s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
         if alg_name in ["evp", "gevp"]:
-            pstr_res = "[{run_index:d}] {time:g}s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
+            pstr_res = "[{run_index:d}] {time:g}s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}){evals_idxs:optional_int_pair} ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
     elif bench_name.startswith("chol_slate"):
         pstr_arr = ["input:{}potrf"]
         pstr_res = "d {} {} column lower {matrix_rows:d} {:d} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:g} {perf:g} NA NA no check"

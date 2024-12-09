@@ -32,7 +32,6 @@ using namespace dlaf::test;
 using namespace testing;
 
 namespace ex = pika::execution::experimental;
-namespace tt = pika::this_thread::experimental;
 
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
@@ -105,6 +104,32 @@ TYPED_TEST(MatrixRefTest, Basic) {
       if (test.sub_origin.isIn(GlobalElementSize(test.block_size.rows(), test.block_size.cols()))) {
         EXPECT_EQ(mat_ref.sourceRankIndex(), mat.sourceRankIndex());
       }
+    }
+  }
+}
+
+TYPED_TEST(MatrixRefTest, Self) {
+  using Type = TypeParam;
+  constexpr Device device = Device::CPU;
+
+  for (auto& comm_grid : this->commGrids()) {
+    for (const auto& test : tests_sub_matrix) {
+      Matrix<Type, device> mat(test.size, test.block_size, comm_grid);
+      Matrix<const Type, device>& mat_const = mat;
+
+      MatrixRef<Type, device> mat_ref(mat);
+      MatrixRef<Type, device> mat_const_ref1(mat);
+      MatrixRef<const Type, device> mat_const_ref2(mat_const);
+
+      EXPECT_EQ(mat_ref.distribution(), mat.distribution());
+      EXPECT_EQ(mat_ref.distribution(), mat_const_ref1.distribution());
+      EXPECT_EQ(mat_ref.distribution(), mat_const_ref2.distribution());
+      EXPECT_EQ(mat_ref.size(), test.size);
+      EXPECT_EQ(mat_ref.blockSize(), mat.blockSize());
+      EXPECT_EQ(mat_ref.baseTileSize(), mat.baseTileSize());
+      EXPECT_EQ(mat_ref.rankIndex(), mat.rankIndex());
+      EXPECT_EQ(mat_ref.commGridSize(), mat.commGridSize());
+      EXPECT_EQ(mat_ref.sourceRankIndex(), mat.sourceRankIndex());
     }
   }
 }

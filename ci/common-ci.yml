@@ -6,6 +6,9 @@ stages:
   - build
   - test
 
+variables:
+  FF_TIMESTAMPS: true
+
 ##
 ## BUILDS
 ##
@@ -20,7 +23,7 @@ stages:
     - TAG_APTGET=`echo ${EXTRA_APTGET} | sha256sum - | head -c 6`
     - TAG_COMPILER=`echo ${COMPILER}_CXX${CXXSTD} | sed 's/[@]//g'`
     - TAG_DOCKERFILE=`sha256sum $DOCKERFILE | head -c 16`
-    - TAG_SPACK=`echo $SPACK_SHA | head -c 8`
+    - TAG_SPACK=`echo $SPACK_SHA`
     - TAG_REPO=`find $SPACK_DLAF_REPO -type f -exec sha256sum {} \; | sha256sum - | head -c 16`
     - TAG_ENVIRONMENT=`cat $SPACK_ENVIRONMENT $COMMON_SPACK_ENVIRONMENT | sha256sum | head -c 16`
     - TAG=${TAG_IMAGE}-${TAG_APTGET}-${TAG_COMPILER}-MKL${USE_MKL}-${TAG_DOCKERFILE}-${TAG_SPACK}-${TAG_REPO}-${TAG_ENVIRONMENT}
@@ -34,7 +37,7 @@ stages:
     reports:
       dotenv: build.env
   variables:
-    SPACK_SHA: develop-2024-11-10
+    SPACK_SHA: develop-2024-11-24
     SPACK_DLAF_REPO: ./spack
     DOCKER_BUILD_ARGS: '[
         "BASE_IMAGE",
@@ -66,7 +69,7 @@ stages:
     - 'echo $DOCKERHUB_TOKEN | podman login docker.io -u $DOCKERHUB_USERNAME --password-stdin'
     - 'echo "INFO: Using NUM_CORES_BUILD_DLAF=$NUM_CORES_BUILD_DLAF"'
   after_script:
-    - podman run -v $PWD/ci/ctest_to_gitlab.sh:/ctest_to_gitlab.sh $DLAF_IMAGE /ctest_to_gitlab.sh "$DLAF_IMAGE" "$USE_CODECOV" "$THREADS_PER_NODE" "$SLURM_CONSTRAINT" > pipeline.yml
+    - podman run -v $PWD/ci/ctest_to_gitlab.sh:/ctest_to_gitlab.sh $DLAF_IMAGE /ctest_to_gitlab.sh "$DLAF_IMAGE" "$USE_CODECOV" "$THREADS_MAX_PER_TASK" "$THREADS_PER_NODE" "$SLURM_CONSTRAINT" "$RUNNER" > pipeline.yml
   variables:
     PERSIST_IMAGE_NAME: $DLAF_IMAGE
     DOCKER_BUILD_ARGS: '[
@@ -84,15 +87,28 @@ stages:
 
 .build_for_daint-mc:
   variables:
+    RUNNER: ".container-runner-daint"
     SLURM_CONSTRAINT: mc
+    THREADS_MAX_PER_TASK: 72
     THREADS_PER_NODE: 72
 
 .build_for_daint-gpu:
   variables:
+    RUNNER: ".container-runner-daint"
     SLURM_CONSTRAINT: gpu
+    THREADS_MAX_PER_TASK: 24
     THREADS_PER_NODE: 24
+
+.build_for_eiger:
+  variables:
+    RUNNER: ".container-runner-eiger"
+    SLURM_CONSTRAINT: mc
+    THREADS_MAX_PER_TASK: 32
+    THREADS_PER_NODE: 256
 
 .run_common:
   stage: test
   trigger:
     strategy: depend
+    forward:
+      pipeline_variables: true

@@ -9,10 +9,18 @@
 //
 
 #include <cstddef>
+#include <utility>
+#include <vector>
+
+#include <mpi.h>
+
+#include <pika/execution.hpp>
 
 #include <dlaf/common/with_result_of.h>
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/error.h>
 #include <dlaf/communication/index.h>
+#include <dlaf/sender/transform_mpi.h>
 
 namespace dlaf {
 namespace comm {
@@ -65,6 +73,26 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexT_MPI nrows, IndexT_M
       npipelines, WithResultOf([&]() {
         return CommunicatorPipeline<CommunicatorType::Col>{col_.clone(), position_, grid_size_};
       }));
+}
+
+void CommunicatorGrid::wait_all_communicators() {
+  using pika::execution::experimental::drop_value;
+  using pika::execution::experimental::unique_any_sender;
+  using pika::execution::experimental::when_all_vector;
+  using pika::this_thread::experimental::sync_wait;
+
+  constexpr auto barrier = [](const Communicator& comm, MPI_Request* req) {
+    DLAF_MPI_CHECK_ERROR(MPI_Ibarrier(comm, req));
+  };
+
+  std::vector<unique_any_sender<>> senders;
+  senders.reserve(3 * num_pipelines());
+  for (std::size_t i = 0; i < num_pipelines(); ++i) {
+    senders.push_back(full_communicator_pipeline().exclusive() | internal::transformMPI(barrier));
+    senders.push_back(row_communicator_pipeline().exclusive() | internal::transformMPI(barrier));
+    senders.push_back(col_communicator_pipeline().exclusive() | internal::transformMPI(barrier));
+  }
+  sync_wait(when_all_vector(std::move(senders)));
 }
 }  // namespace comm
 }  // namespace dlaf

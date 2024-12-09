@@ -56,7 +56,7 @@ namespace dlaf {
 ///     created in the working folder (it should not exist before the execution).
 ///     Set with environment variable DLAF_DEBUG_DUMP_TRIDIAG_SOLVER_DATA.
 /// - tfactor_nworkers:
-///     The maximum number of threads/stream to use for computing tfactor (e.g. which is used for
+///     The maximum number of threads/streams to use for computing tfactor (e.g. which is used for
 ///     instance in red2band and its backtransformation). Set with --dlaf:tfactor-nworkers or env
 ///     variable DLAF_TFACTOR_NWORKERS.
 /// - red2band_panel_nworkers:

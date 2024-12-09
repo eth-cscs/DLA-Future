@@ -30,6 +30,7 @@
 #include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/communication/kernels/all_reduce.h>
 #include <dlaf/factorization/qr/api.h>
+#include <dlaf/factorization/qr/internal/get_tfactor_nworkers.h>
 #include <dlaf/lapack/gpu/larft.h>
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/matrix.h>

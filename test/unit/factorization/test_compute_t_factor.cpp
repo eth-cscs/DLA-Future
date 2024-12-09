@@ -20,6 +20,7 @@
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/factorization/qr.h>
+#include <dlaf/factorization/qr/internal/get_tfactor_nworkers.h>
 #include <dlaf/lapack/tile.h>  // workaround for importing lapack.hh
 #include <dlaf/matrix/copy.h>
 #include <dlaf/matrix/copy_tile.h>

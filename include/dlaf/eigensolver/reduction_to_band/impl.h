@@ -42,6 +42,7 @@
 #include <dlaf/eigensolver/internal/get_red2band_panel_nworkers.h>
 #include <dlaf/eigensolver/reduction_to_band/api.h>
 #include <dlaf/factorization/qr.h>
+#include <dlaf/factorization/qr/internal/get_tfactor_nworkers.h>
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/copy_tile.h>
 #include <dlaf/matrix/distribution.h>

@@ -30,6 +30,7 @@
 #include <dlaf/communication/kernels.h>
 #include <dlaf/eigensolver/bt_reduction_to_band/api.h>
 #include <dlaf/factorization/qr.h>
+#include <dlaf/factorization/qr/internal/get_tfactor_nworkers.h>
 #include <dlaf/matrix/copy.h>
 #include <dlaf/matrix/copy_tile.h>
 #include <dlaf/matrix/distribution.h>

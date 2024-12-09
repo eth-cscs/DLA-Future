@@ -411,6 +411,7 @@ void initialize(int argc, const char* const argv[], const configuration& user_cf
 }
 
 void finalize() {
+  pika::wait();
   DLAF_ASSERT(internal::initialized(), "");
   internal::Init<Backend::MC>::finalize();
 #ifdef DLAF_WITH_GPU

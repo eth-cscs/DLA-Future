@@ -14,4 +14,5 @@ DLAF_addTest(
   LIBRARIES dlaf.c_api
   USE_MAIN MPIPIKA
   MPIRANKS 6
+  CATEGORY CAPI
 )

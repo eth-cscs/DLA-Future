@@ -102,7 +102,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span> </div>
 <div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="keyword">namespace </span>dlaf::eigensolver::internal {</div>
 <div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span> </div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span><span class="keyword">inline</span> <span class="keywordtype">size_t</span> getReductionToBandPanelNWorkers() noexcept {</div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span><span class="keyword">inline</span> <span class="keywordtype">size_t</span> get_red2band_panel_nworkers() noexcept {</div>
 <div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>  <span class="comment">// Note: precautionarily we leave at least 1 thread &quot;free&quot; to do other stuff (if possible)</span></div>
 <div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>  <span class="keyword">const</span> std::size_t available_workers = pika::resource::get_thread_pool(<span class="stringliteral">&quot;default&quot;</span>).get_os_thread_count();</div>
 <div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>  <span class="keyword">const</span> std::size_t min_workers = 1;</div>

@@ -46,7 +46,7 @@ STAGES="
   - test
 "
 EXTRA_JOBS=""
-TIMELIMIT="55:00"
+TIMELIMIT="45:00"
 ARTIFACTS="
   artifacts:
     when: always

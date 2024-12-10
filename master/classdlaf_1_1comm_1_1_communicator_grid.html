@@ -138,6 +138,8 @@ std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>num_pipelines<
 <tr class="memitem:a2e96476e0456683e12a6e1fdffc110ac" id="r_a2e96476e0456683e12a6e1fdffc110ac"><td class="memTemplParams" colspan="2">template&lt;Coord C&gt; </td></tr>
 <tr class="memitem:a2e96476e0456683e12a6e1fdffc110ac"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">CommunicatorPipeline</a>&lt; coord_to_communicator_type(C)&gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html#a2e96476e0456683e12a6e1fdffc110ac">communicator_pipeline</a> ()</td></tr>
 <tr class="separator:a2e96476e0456683e12a6e1fdffc110ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5d81da35f8c4683dcdfbd9091d7d8f7e" id="r_a5d81da35f8c4683dcdfbd9091d7d8f7e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html#a5d81da35f8c4683dcdfbd9091d7d8f7e">wait_all_communicators</a> ()</td></tr>
+<tr class="separator:a5d81da35f8c4683dcdfbd9091d7d8f7e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-types" name="pro-types"></a>
 Protected Types</h2></td></tr>
@@ -455,6 +457,25 @@ template&lt;Coord C&gt; </div>
 </table>
 </div><div class="memdoc">
 <p>Return a <a class="el" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> grouping all ranks in the row (that includes the current process). </p>
+
+</div>
+</div>
+<a id="a5d81da35f8c4683dcdfbd9091d7d8f7e" name="a5d81da35f8c4683dcdfbd9091d7d8f7e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5d81da35f8c4683dcdfbd9091d7d8f7e">&#9670;&#160;</a></span>wait_all_communicators()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void dlaf::comm::CommunicatorGrid::wait_all_communicators </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Synchronization barrier for all communicators in the grid</p>
+<p>This function returns when all communications on the communicators in the grid have completed. </p>
 
 </div>
 </div>

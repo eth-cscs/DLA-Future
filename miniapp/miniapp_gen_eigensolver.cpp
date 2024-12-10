@@ -216,7 +216,7 @@ struct GenEigensolverMiniapp {
 
       // wait and barrier for all ranks
       eigenvectors.waitLocalTiles();
-      DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
+      comm_grid.wait_all_communicators();
       double elapsed_time = timeit.elapsed();
 
 #ifdef DLAF_WITH_HDF5
@@ -276,7 +276,12 @@ struct GenEigensolverMiniapp {
         checkGenEigensolver(comm_grid, opts.uplo, matrix_a_ref, matrix_b_ref, eigenvalues_host.get(),
                             eigenvectors_host.get(), opts.eval_idx_end);
       }
+
+      eigenvalues.waitLocalTiles();
+      eigenvectors.waitLocalTiles();
     }
+
+    comm_grid.wait_all_communicators();
   }
 };
 

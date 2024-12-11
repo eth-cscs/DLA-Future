@@ -74,7 +74,7 @@ spack install dla-future@master <variants>
 
 ### Version constraints
 
-Please refer to the spack package for requirements and conflicts.
+Please refer to the [Spack package](https://packages.spack.io/package.html?name=dla-future) for requirements and conflicts.
 
 ### Get DLA-Future
 

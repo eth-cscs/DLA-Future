@@ -6,19 +6,19 @@
 
 - Added (generalized) eigensolver which compute only a part of the eigenspectrum. (#1194)
 - `Norm` is now fully asynchronous (#1221)
-- `stdexec is now included only in C++ files, allowing builds with CUDA enabled. (#1188)
+- `stdexec` is now included only in C++ files, allowing builds with CUDA enabled. (#1188)
 
 ### Performance improvements
 
-- Refactored communication to use pika's `transform_mpi` and polling support (#1125)
-- Use custom coalescing heuristic for memory pools (#1183)
-- Added configuration option for number of CUDA streams and cuBLAS/SOLVER handles (#1222, #1182)
-- Some algorithmic clean-up and improvement (#1213, #1219, #1232)
+- Refactored communication to use pika's `transform_mpi` and polling support. (#1125)
+- Use custom coalescing heuristic for memory pools. (#1183)
+- Added configuration option for number of CUDA streams and cuBLAS/SOLVER handles. (#1222, #1182)
+- Some algorithmic clean-ups and improvements. (#1213, #1219, #1232)
 
 ### Bug fixes
 
-- Work around buggy HIP complex operator overloads (#1195)
-- Namespace (SCA)LAPACK CMake modules with DLAF to avoid conflicts with other packages (#1178)
+- Work around buggy HIP complex operator overloads. (#1195)
+- Namespace (SCA)LAPACK CMake modules with DLAF to avoid conflicts with other packages. (#1178)
 
 ## DLA-Future 0.6.0
 

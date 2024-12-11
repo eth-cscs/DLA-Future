@@ -346,14 +346,14 @@ pika::program_options::options_description getOptionsDescription() {
   desc.add_options()("dlaf:no-mpi-pool", pika::program_options::bool_switch(), "Disable the MPI pool.");
 
   // Tune parameters command line options
-  desc.add_options()( "dlaf:red2band-panel-nworkers", pika::program_options::value<std::size_t>(), "The maximum number of threads to use for computing the panel in the reduction to band algorithm.");
-  desc.add_options()( "dlaf:red2band-barrier-busy-wait-us", pika::program_options::value<std::size_t>(), "The duration in microseconds to busy-wait in barriers in the reduction to band algorithm.");
-  desc.add_options()( "dlaf:eigensolver-min-band", pika::program_options::value<SizeType>(), "The minimum value to start looking for a divisor of the block size. When larger than the block size, the block size will be used instead.");
-  desc.add_options()( "dlaf:band-to-tridiag-1d-block-size-base", pika::program_options::value<SizeType>(), "The 1D block size for band_to_tridiagonal is computed as 1d_block_size_base / nb * nb. (The input matrix is distributed with a {nb x nb} block size.)");
-  desc.add_options()( "dlaf:tridiag-rank1-nworkers", pika::program_options::value<std::size_t>(), "The maximum number of threads to use for computing rank1 problem solution in tridiagonal solver algorithm.");
-  desc.add_options()( "dlaf:tridiag-rank1-barrier-busy-wait-us", pika::program_options::value<std::size_t>(), "The duration in microseconds to busy-wait in barriers when computing rank1 problem solution in the tridiagonal solver algorithm.");
-  desc.add_options()( "dlaf:bt-band-to-tridiag-hh-apply-group-size", pika::program_options::value<SizeType>(), "The application of the HH reflector is splitted in smaller applications of group size reflectors.");
-  desc.add_options()( "dlaf:communicator-grid-num-pipelines", pika::program_options::value<std::size_t>(), "The default number of row, column, and full communicator pipelines to initialize in CommunicatorGrid.");
+  desc.add_options()("dlaf:red2band-panel-nworkers", pika::program_options::value<std::size_t>(), "The maximum number of threads to use for computing the panel in the reduction to band algorithm.");
+  desc.add_options()("dlaf:red2band-barrier-busy-wait-us", pika::program_options::value<std::size_t>(), "The duration in microseconds to busy-wait in barriers in the reduction to band algorithm.");
+  desc.add_options()("dlaf:eigensolver-min-band", pika::program_options::value<SizeType>(), "The minimum value to start looking for a divisor of the block size. When larger than the block size, the block size will be used instead.");
+  desc.add_options()("dlaf:band-to-tridiag-1d-block-size-base", pika::program_options::value<SizeType>(), "The 1D block size for band_to_tridiagonal is computed as 1d_block_size_base / nb * nb. (The input matrix is distributed with a {nb x nb} block size.)");
+  desc.add_options()("dlaf:tridiag-rank1-nworkers", pika::program_options::value<std::size_t>(), "The maximum number of threads to use for computing rank1 problem solution in tridiagonal solver algorithm.");
+  desc.add_options()("dlaf:tridiag-rank1-barrier-busy-wait-us", pika::program_options::value<std::size_t>(), "The duration in microseconds to busy-wait in barriers when computing rank1 problem solution in the tridiagonal solver algorithm.");
+  desc.add_options()("dlaf:bt-band-to-tridiag-hh-apply-group-size", pika::program_options::value<SizeType>(), "The application of the HH reflector is splitted in smaller applications of group size reflectors.");
+  desc.add_options()("dlaf:communicator-grid-num-pipelines", pika::program_options::value<std::size_t>(), "The default number of row, column, and full communicator pipelines to initialize in CommunicatorGrid.");
   // clang-format on
 
   return desc;

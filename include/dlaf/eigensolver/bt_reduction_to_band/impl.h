@@ -167,7 +167,7 @@ void BackTransformationReductionToBand<backend, device, T>::call(
   const auto dist_ws = [&]() {
     using dlaf::factorization::internal::get_tfactor_nworkers;
     const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, get_tfactor_nworkers() - 1));
-    const SizeType nrefls_step = dist_v.size().cols();
+    const SizeType nrefls_step = dist_v.tile_size().cols();
     return matrix::Distribution{{nworkspaces * nrefls_step, nrefls_step}, {nrefls_step, nrefls_step}};
   }();
   common::RoundRobin<matrix::Panel<Coord::Col, T, device>> panelsWS(n_workspaces, dist_ws);
@@ -295,7 +295,7 @@ void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
   const auto dist_ws = [&]() {
     using dlaf::factorization::internal::get_tfactor_nworkers;
     const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, get_tfactor_nworkers() - 1));
-    const SizeType nrefls_step = dist_v.size().cols();
+    const SizeType nrefls_step = dist_v.tile_size().cols();
     return matrix::Distribution{{nworkspaces * nrefls_step, nrefls_step}, {nrefls_step, nrefls_step}};
   }();
   common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panelsWS(n_workspaces, dist_ws);

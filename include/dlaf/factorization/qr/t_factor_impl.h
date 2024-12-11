@@ -308,7 +308,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
       if (id_worker == 0)
         tile_t = std::move(workspace);
       else
-        workspaces.emplace_back(std::move(workspace));
+        workspaces[id_worker - 1] = std::move(workspace);
     }
 
     if (workspaces.size() > 0)

@@ -6,7 +6,6 @@
 
 - Added (generalized) eigensolver which computes only a part of the eigenspectrum. (#1194)
 - `Norm` is now fully asynchronous. (#1221)
-- `stdexec` is now included only in C++ files, allowing builds with CUDA enabled. (#1188)
 
 ### Performance improvements
 
@@ -17,6 +16,7 @@
 
 ### Bug fixes
 
+- Fixed builds with CUDA and stdexec enabled (#1188)
 - Work around buggy HIP complex operator overloads. (#1195)
 - Namespace (SCA)LAPACK CMake modules with DLAF to avoid conflicts with other packages. (#1178)
 

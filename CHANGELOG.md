@@ -4,8 +4,8 @@
 
 ### Changes
 
-- Added (generalized) eigensolver which compute only a part of the eigenspectrum. (#1194)
-- `Norm` is now fully asynchronous (#1221)
+- Added (generalized) eigensolver which computes only a part of the eigenspectrum. (#1194)
+- `Norm` is now fully asynchronous. (#1221)
 - `stdexec` is now included only in C++ files, allowing builds with CUDA enabled. (#1188)
 
 ### Performance improvements

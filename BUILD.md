@@ -64,7 +64,7 @@ spack install dla-future@master <variants>
 - [umpire](https://github.com/LLNL/Umpire)
 - [blaspp](https://bitbucket.org/icl/blaspp/src/default/)
 - [lapackpp](https://bitbucket.org/icl/lapackpp/src/default/)
-- BLAS/LAPACK implementations (e.g. Intel MKL, OpenBLAS, Nvidia nvpl)
+- BLAS/LAPACK implementations (e.g. Intel MKL, OpenBLAS, NVPL)
 - A ScaLAPACK implementation (optional, ScaLAPACK-like C API only)
 - [whip](https://github.com/eth-cscs/whip) (optional, GPU only)
 - [CUDA](https://developer.nvidia.com/cuda) (optional, NVidia GPUs only)

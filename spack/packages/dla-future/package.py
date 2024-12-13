@@ -159,8 +159,6 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         sha256="f40e4a734650f56c39379717a682d00d6400a7a102d90821542652824a8f64cd",
         when="@:0.3 %gcc@13:",
     )
-    # https://github.com/spack/spack/issues/41511
-    patch("hip_complex_operator_overloads.patch", when="@:0.6 +rocm")
 
     ### Variants available only in the DLAF repo spack package
     cxxstds = ("17", "20")

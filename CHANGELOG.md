@@ -16,7 +16,7 @@
 
 ### Bug fixes
 
-- Fixed builds with CUDA and stdexec enabled (#1188)
+- Fixed builds with CUDA and stdexec enabled. (#1188)
 - Work around buggy HIP complex operator overloads. (#1195)
 - Namespace (SCA)LAPACK CMake modules with DLAF to avoid conflicts with other packages. (#1178)
 

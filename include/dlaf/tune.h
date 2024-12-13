@@ -114,6 +114,7 @@ struct TuneParameters {
 
     const auto default_pool_thread_count =
         pika::resource::get_thread_pool("default").get_os_thread_count();
+    tfactor_nworkers = std::max<std::size_t>(1, default_pool_thread_count / 2);
     red2band_panel_nworkers = std::max<std::size_t>(1, default_pool_thread_count / 2);
     tridiag_rank1_nworkers = default_pool_thread_count;
   }

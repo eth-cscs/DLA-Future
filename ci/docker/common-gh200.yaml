@@ -38,7 +38,7 @@ packages:
   mpich:
     # Fix version to have better control.
     require:
-      - '@3.4.3'
+      - '@3.2.1'
     variants:
       - '~fortran'
       - '~libxml2'

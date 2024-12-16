@@ -8,6 +8,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <complex>
+#include <type_traits>
+
 #include <whip.hpp>
 
 #include <dlaf/common/assert.h>
@@ -46,8 +49,20 @@ __global__ void fix_tau(const unsigned k, const T* tau, unsigned inctau, T* t, u
     t_ij = {};
   else if (i == j)
     t_ij = tau_j;
-  else
-    t_ij = -tau_j * t_ij;
+  else {
+#if defined(DLAF_WITH_HIP)
+    if constexpr (std::is_same_v<T, hipFloatComplex>) {
+      t_ij = hipCmulf(-tau_j, t_ij);
+    }
+    else if constexpr (std::is_same_v<T, hipDoubleComplex>) {
+      t_ij = hipCmul(-tau_j, t_ij);
+    }
+    else
+#endif
+    {
+      t_ij = -tau_j * t_ij;
+    }
+  }
 }
 }
 

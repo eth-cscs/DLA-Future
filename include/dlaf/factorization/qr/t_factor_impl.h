@@ -311,13 +311,13 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
         workspaces[id_worker - 1] = std::move(workspace);
     }
 
-    if (workspaces.size() > 0)
+    if (nworkers > 1)
       tile_t =
           di::whenAllLift(std::move(tile_t), ex::when_all_vector(std::move(workspaces))) |
           di::transform<dlaf::internal::TransformDispatchType::Plain>(
               di::Policy<Backend::GPU>(thread_priority::high),
-              [](auto&& tile_t, auto&& workspaces, whip::stream_t stream) {
-                for (std::size_t index = 0; index < workspaces.size(); ++index) {
+              [nworkers](auto&& tile_t, auto&& workspaces, whip::stream_t stream) {
+                for (std::size_t index = 0; index < nworkers - 1; ++index) {
                   matrix::Tile<T, Device::GPU>& ws = workspaces[index];
                   gpulapack::add(blas::Uplo::Upper, tile_t.size().rows() - 1, tile_t.size().cols() - 1,
                                  T(1), ws.ptr({0, 1}), ws.ld(), tile_t.ptr({0, 1}), tile_t.ld(), stream);

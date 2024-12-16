@@ -125,14 +125,16 @@ struct Helpers<Backend::MC, Device::CPU, T> {
                     ex::bulk(nworkers,
                              [=, &hh_tiles, &taus, &tile_t, &workspaces](const std::size_t worker_id,
                                                                          auto& barrier_ptr) mutable {
-                               const SizeType k = tile_t.size().cols();
+                               const SizeType k = taus.get().size().rows();
 
                                const std::size_t batch_size = util::ceilDiv(hh_tiles.size(), nworkers);
                                const std::size_t begin = worker_id * batch_size;
                                const std::size_t end =
                                    std::min(worker_id * batch_size + batch_size, hh_tiles.size());
 
-                               auto&& ws_worker = worker_id == 0 ? tile_t : workspaces[worker_id - 1];
+                               matrix::Tile<T, Device::CPU>& ws_worker =
+                                   worker_id == 0 ? tile_t : workspaces[worker_id - 1];
+
                                tile::internal::set0<T>(ws_worker);
                                lapack::lacpy(blas::Uplo::General, 1, k, taus.get().ptr(), 1,
                                              ws_worker.ptr(), ws_worker.ld() + 1);
@@ -142,6 +144,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
                                  auto&& tile_snd = hh_tiles[index];
                                  ws_worker = loop_gemv(tile_snd.get(), taus.get(), std::move(ws_worker));
                                }
+
                                barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
                                // reduce ws_T in tile_t

@@ -399,7 +399,7 @@ void QR_Tfactor<backend, device, T>::call(
   // 2nd step: compute the T factor, by performing the last step on each column
   // each column depends on the previous part (all reflectors that comes before)
   // so it is performed sequentially
-  ex::start_detached(Helpers::step_trmv(std::move(tile_t)));
+  ex::start_detached(Helpers::step_copy_diag_and_trmv(taus, std::move(tile_t)));
 }
 
 template <Backend backend, Device device, class T>

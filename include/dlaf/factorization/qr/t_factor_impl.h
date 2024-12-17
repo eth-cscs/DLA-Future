@@ -176,13 +176,6 @@ struct Helpers<Backend::MC, Device::CPU, T> {
     }
   }
 
-  static auto step_trmv(matrix::ReadWriteTileSender<T, Device::CPU> tile_t) noexcept {
-    namespace di = dlaf::internal;
-
-    return std::move(tile_t) |
-           di::transform(di::Policy<Backend::MC>(pika::execution::thread_priority::high), loop_trmv);
-  }
-
   static auto step_copy_diag_and_trmv(matrix::ReadOnlyTileSender<T, Device::CPU> taus,
                                       matrix::ReadWriteTileSender<T, Device::CPU> tile_t) noexcept {
     auto tausdiag_trmvloop = [](const matrix::Tile<const T, Device::CPU>& taus,
@@ -227,22 +220,6 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 
     gpulapack::larft_gemv0(handle, m, k, tile_v.ptr(), tile_v.ld(), taus.ptr(), tile_t.ptr(),
                            tile_t.ld());
-  }
-
-  static void loop_trmv(cublasHandle_t handle, const matrix::Tile<T, Device::GPU>& tile_t) {
-    const SizeType k = tile_t.size().cols();
-
-    // Update each column (in order) t = T . t
-    // remember that T is upper triangular, so it is possible to use TRMV
-    for (SizeType j = 0; j < k; ++j) {
-      const TileElementIndex t_start{0, j};
-      const TileElementSize t_size{j, 1};
-
-      gpublas::internal::Trmv<T>::call(handle, CUBLAS_FILL_MODE_UPPER, CUBLAS_OP_N, CUBLAS_DIAG_NON_UNIT,
-                                       to_int(t_size.rows()), util::blasToCublasCast(tile_t.ptr()),
-                                       to_int(tile_t.ld()), util::blasToCublasCast(tile_t.ptr(t_start)),
-                                       1);
-    }
   }
 
   static matrix::ReadWriteTileSender<T, Device::GPU> step_gemv(
@@ -328,12 +305,20 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
     return tile_t;
   }
 
-  static auto step_trmv(matrix::ReadWriteTileSender<T, Device::GPU> tile_t) noexcept {
-    namespace di = dlaf::internal;
+  static void loop_trmv(cublasHandle_t handle, const matrix::Tile<T, Device::GPU>& tile_t) {
+    const SizeType k = tile_t.size().cols();
 
-    return std::move(tile_t) |
-           di::transform<di::TransformDispatchType::Blas>(
-               di::Policy<Backend::GPU>(pika::execution::thread_priority::high), loop_trmv);
+    // Update each column (in order) t = T . t
+    // remember that T is upper triangular, so it is possible to use TRMV
+    for (SizeType j = 0; j < k; ++j) {
+      const TileElementIndex t_start{0, j};
+      const TileElementSize t_size{j, 1};
+
+      gpublas::internal::Trmv<T>::call(handle, CUBLAS_FILL_MODE_UPPER, CUBLAS_OP_N, CUBLAS_DIAG_NON_UNIT,
+                                       to_int(t_size.rows()), util::blasToCublasCast(tile_t.ptr()),
+                                       to_int(tile_t.ld()), util::blasToCublasCast(tile_t.ptr(t_start)),
+                                       1);
+    }
   }
 
   static auto step_copy_diag_and_trmv(matrix::ReadOnlyTileSender<T, Device::CPU> taus,

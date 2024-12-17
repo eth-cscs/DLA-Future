@@ -20,7 +20,8 @@ packages:
   scalapack:
     require: 'netlib-scalapack'
   mpi:
-    require: 'mpich'
+    ### Workaround until CE provides full MPI substitution.
+    require: 'cray-mpich'
   blaspp:
     variants:
       - '~cuda'
@@ -35,13 +36,6 @@ packages:
   openblas:
     variants:
       - 'threads=openmp'
-  mpich:
-    # Fix version to have better control.
-    require:
-      - '@3.2.1'
-    variants:
-      - '~fortran'
-      - '~libxml2'
   libfabric:
     # Fix version to be compatible with version on todi
     require:
@@ -53,3 +47,10 @@ packages:
     # Force git as non-buildable to allow deprecated versions in environments
     # https://github.com/spack/spack/pull/30040
     buildable: false
+
+  ### Workaround until CE provides full MPI substitution.
+  # Build using package from alps-cluster-config
+  cray-mpich:
+    buildable: true
+  patchelf:
+    require: "@:0.17"

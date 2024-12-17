@@ -243,8 +243,10 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
       const std::size_t begin = id_worker * batch_size;
       const std::size_t end = std::min(hh_tiles.size(), (id_worker + 1) * batch_size);
 
-      if (end - begin <= 0)
-        continue;
+      // Note
+      // Cannot skip if (end - begin <= 0) because otherwise the worker will be considered for reduction
+      // but its workspace would have not been reset. We could in principle skip it, but it would
+      // require a slightly more complex logic to skip also the reduction (quite cheap anyway).
 
       std::vector<matrix::ReadOnlyTileSender<T, Device::GPU>> input_tiles;
       for (std::size_t sub = begin; sub < end; ++sub)

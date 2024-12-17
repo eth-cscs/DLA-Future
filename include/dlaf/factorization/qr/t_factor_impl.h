@@ -140,8 +140,9 @@ struct Helpers<Backend::MC, Device::CPU, T> {
 
                                // make it work on worker_id section of tiles
                                for (std::size_t index = begin; index < end; ++index) {
-                                 auto&& tile_snd = hh_tiles[index];
-                                 loop_gemv(tile_snd.get(), taus.get(), ws_worker);
+                                 const matrix::Tile<const T, Device::CPU>& tile_v =
+                                     hh_tiles[index].get();
+                                 loop_gemv(tile_v, taus.get(), ws_worker);
                                }
 
                                barrier_ptr->arrive_and_wait(barrier_busy_wait);
@@ -208,7 +209,6 @@ template <class T>
 struct Helpers<Backend::GPU, Device::GPU, T> {
   static auto set0_and_return(matrix::ReadWriteTileSender<T, Device::GPU> tile_t) {
     namespace di = dlaf::internal;
-
     return std::move(tile_t) |
            di::transform(di::Policy<Backend::GPU>(pika::execution::thread_priority::high),
                          [](matrix::Tile<T, Device::GPU>& tile_t, whip::stream_t stream) {
@@ -393,7 +393,6 @@ void QR_Tfactor<backend, device, T>::call(
   // 1st step: compute the column partial result `t`
   // First we compute the matrix vector multiplication for each column
   // -tau(j) . V(j:, 0:j)* . V(j:, j)
-
   tile_t = Helpers::step_gemv(hh_panel, taus, std::move(tile_t), std::move(workspaces));
 
   // 2nd step: compute the T factor, by performing the last step on each column

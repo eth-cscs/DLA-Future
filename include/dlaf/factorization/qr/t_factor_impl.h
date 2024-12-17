@@ -72,9 +72,9 @@ struct Helpers<Backend::MC, Device::CPU, T> {
                          });
   }
 
-  static matrix::Tile<T, Device::CPU> loop_gemv(const matrix::Tile<const T, Device::CPU>& tile_v,
-                                                const matrix::Tile<const T, Device::CPU>& taus,
-                                                matrix::Tile<T, Device::CPU> tile_t) noexcept {
+  static void loop_gemv(const matrix::Tile<const T, Device::CPU>& tile_v,
+                        const matrix::Tile<const T, Device::CPU>& taus,
+                        const matrix::Tile<T, Device::CPU>& tile_t) noexcept {
     const SizeType k = tile_t.size().cols();
 
     DLAF_ASSERT(tile_v.size().cols() == k, tile_v.size().cols(), k);
@@ -93,7 +93,6 @@ struct Helpers<Backend::MC, Device::CPU, T> {
       blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, va_size.rows(), va_size.cols(), -tau,
                  tile_v.ptr(va_start), tile_v.ld(), tile_v.ptr(vb_start), 1, 1, tile_t.ptr(t_start), 1);
     }
-    return tile_t;
   }
 
   static matrix::ReadWriteTileSender<T, Device::CPU> step_gemv(
@@ -132,7 +131,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
                                const std::size_t end =
                                    std::min(worker_id * batch_size + batch_size, hh_tiles.size());
 
-                               matrix::Tile<T, Device::CPU>& ws_worker =
+                               const matrix::Tile<T, Device::CPU>& ws_worker =
                                    worker_id == 0 ? tile_t : workspaces[worker_id - 1];
 
                                tile::internal::set0<T>(ws_worker);
@@ -142,7 +141,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
                                // make it work on worker_id section of tiles
                                for (std::size_t index = begin; index < end; ++index) {
                                  auto&& tile_snd = hh_tiles[index];
-                                 ws_worker = loop_gemv(tile_snd.get(), taus.get(), std::move(ws_worker));
+                                 loop_gemv(tile_snd.get(), taus.get(), ws_worker);
                                }
 
                                barrier_ptr->arrive_and_wait(barrier_busy_wait);
@@ -217,10 +216,9 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
                            return std::move(tile_t);
                          });
   }
-  static matrix::Tile<T, Device::GPU> loop_gemv(cublasHandle_t handle,
-                                                const matrix::Tile<const T, Device::GPU>& tile_v,
-                                                const matrix::Tile<const T, Device::CPU>& taus,
-                                                matrix::Tile<T, Device::GPU>& tile_t) noexcept {
+  static void loop_gemv(cublasHandle_t handle, const matrix::Tile<const T, Device::GPU>& tile_v,
+                        const matrix::Tile<const T, Device::CPU>& taus,
+                        const matrix::Tile<T, Device::GPU>& tile_t) noexcept {
     const SizeType m = tile_v.size().rows();
     const SizeType k = tile_t.size().cols();
     DLAF_ASSERT(tile_v.size().cols() == k, tile_v.size().cols(), k);
@@ -229,7 +227,6 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 
     gpulapack::larft_gemv0(handle, m, k, tile_v.ptr(), tile_v.ld(), taus.ptr(), tile_t.ptr(),
                            tile_t.ld());
-    return std::move(tile_t);
   }
 
   static void loop_trmv(cublasHandle_t handle, const matrix::Tile<T, Device::GPU>& tile_t) {
@@ -302,7 +299,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
                 // - being on the same stream, they are already serialised on GPU
                 for (std::size_t index = 0; index < hh_tiles.size(); ++index) {
                   const matrix::Tile<const T, Device::GPU>& tile_v = hh_tiles[index].get();
-                  tile_t = Helpers::loop_gemv(handle, tile_v, taus, tile_t);
+                  Helpers::loop_gemv(handle, tile_v, taus, tile_t);
                 }
 
                 return std::move(tile_t);

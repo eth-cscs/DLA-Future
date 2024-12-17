@@ -55,4 +55,7 @@ packages:
   patchelf:
     require: "@:0.17"
   xpmem:
-    require: "@master"
+    buildable: false
+    externals:
+    - spec: xpmem@2.9.6
+      prefix: /usr

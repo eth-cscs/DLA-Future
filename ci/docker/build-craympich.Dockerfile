@@ -30,7 +30,6 @@ RUN apt-get -yqq update && \
     python3 python3-setuptools \
     glibc-tools jq strace \
     patchelf unzip file gnupg2 libncurses-dev \
-    linux-headers-`uname -r` \
     ${EXTRA_APTGET} && \
     rm -rf /var/lib/apt/lists/*
 
@@ -89,6 +88,8 @@ RUN spack repo add --scope site /user_repo
 ### Workaround until CE provides full MPI substitution.
 # Clone alps-cluster-config to get cray-mpich package
 RUN git clone --depth 1 https://github.com/eth-cscs/alps-cluster-config.git /cluster_config && spack repo add --scope site /cluster_config/site/repo
+
+COPY /usr/lib64/libxpmem.so /usr/lib64/libxpmem.so
 
 # Set this to a spack.yaml file which contains a spec
 # e.g. --build-arg SPACK_ENVIRONMENT=ci/spack/my-env.yaml

@@ -370,19 +370,11 @@ void QR_Tfactor<backend, device, T>::call(
   //
   // T(0:j, j) = T(0:j, 0:j) . -tau(j) . V(j:, 0:j)* . V(j:, j)
   //
-  //
   // The result is achieved in two main steps:
-  // 1) t = -tau(j) . V(j:, 0:j)* . V(j:, j)
-  // 2) T(0:j, j) = T(0:j, 0:j) . t
+  // 1) "GEMV" t = -tau(j) . V(j:, 0:j)* . V(j:, j)
+  // 2) "TRMV" T(0:j, j) = T(0:j, 0:j) . t
 
-  // 1st step: compute the column partial result `t`
-  // First we compute the matrix vector multiplication for each column
-  // -tau(j) . V(j:, 0:j)* . V(j:, j)
   tile_t = Helpers::step_gemv(hh_panel, taus, std::move(tile_t), std::move(workspaces));
-
-  // 2nd step: compute the T factor, by performing the last step on each column
-  // each column depends on the previous part (all reflectors that comes before)
-  // so it is performed sequentially
   ex::start_detached(Helpers::step_copy_diag_and_trmv(taus, std::move(tile_t)));
 }
 
@@ -410,29 +402,21 @@ void QR_Tfactor<backend, device, T>::call(
   //
   // T(0:j, j) = T(0:j, 0:j) . -tau(j) . V(j:, 0:j)* . V(j:, j)
   //
-  //
   // The result is achieved in two main steps:
-  // 1) t = -tau(j) . V(j:, 0:j)* . V(j:, j)
-  // 2) T(0:j, j) = T(0:j, 0:j) . t
+  // 1) "GEMV" t = -tau(j) . V(j:, 0:j)* . V(j:, j)
+  // 2) "TRMV" T(0:j, j) = T(0:j, 0:j) . t
 
   // Note:
   // reset is needed because not all ranks might have computations to do, but they will participate
   // to mpi reduction anyway.
   tile_t = Helpers::set0_and_return(std::move(tile_t));
-
-  // 1st step: compute the column partial result `t`
-  // First we compute the matrix vector multiplication for each column
-  // -tau(j) . V(j:, 0:j)* . V(j:, j)
   tile_t = Helpers::step_gemv(hh_panel, taus, std::move(tile_t), std::move(workspaces));
 
-  // at this point each rank has its partial result for each column
+  // Note: at this point each rank has its partial result for each column
   // so, let's reduce the results (on all ranks, so that everyone can independently compute T factor)
   if (mpi_col_task_chain.size() > 1)
     tile_t = schedule_all_reduce_in_place(mpi_col_task_chain.exclusive(), MPI_SUM, std::move(tile_t));
 
-  // 2nd step: compute the T factor, by performing the last step on each column
-  // each column depends on the previous part (all reflectors that comes before)
-  // so it is performed sequentially
   ex::start_detached(Helpers::step_copy_diag_and_trmv(taus, std::move(tile_t)));
 }
 

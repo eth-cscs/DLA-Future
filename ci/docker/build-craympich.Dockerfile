@@ -30,6 +30,7 @@ RUN apt-get -yqq update && \
     python3 python3-setuptools \
     glibc-tools jq strace \
     patchelf unzip file gnupg2 libncurses-dev \
+    linux-headers-`uname -r` \
     ${EXTRA_APTGET} && \
     rm -rf /var/lib/apt/lists/*
 

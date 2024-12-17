@@ -54,3 +54,5 @@ packages:
     buildable: true
   patchelf:
     require: "@:0.17"
+  xpmem:
+    require: "@master"

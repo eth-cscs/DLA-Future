@@ -69,6 +69,7 @@ variables:
     - .container-builder-cscs-gh200
     - .build_deps_common_base
   variables:
+    DOCKERFILE: ci/docker/build-craympich.Dockerfile
     COMMON_SPACK_ENVIRONMENT: ci/docker/common-gh200.yaml
     SLURM_RESERVATION: NCCL
 

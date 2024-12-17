@@ -87,7 +87,7 @@ RUN spack repo add --scope site /user_repo
 
 ### Workaround until CE provides full MPI substitution.
 # Clone alps-cluster-config to get cray-mpich package
-RUN git clone --depth 1 https://github.com/eth-cscs/alps-cluster-config.git /cluster_config && spack repo add --scope site /cluster_config
+RUN git clone --depth 1 https://github.com/eth-cscs/alps-cluster-config.git /cluster_config && spack repo add --scope site /cluster_config/site/repo
 
 # Set this to a spack.yaml file which contains a spec
 # e.g. --build-arg SPACK_ENVIRONMENT=ci/spack/my-env.yaml

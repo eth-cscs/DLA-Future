@@ -222,7 +222,7 @@ endfunction()
 
 function(DLAF_addTest test_target_name)
   set(options "")
-  set(oneValueArgs MPIRANKS USE_MAIN)
+  set(oneValueArgs CATEGORY MPIRANKS USE_MAIN)
   set(multiValueArgs SOURCES COMPILE_DEFINITIONS INCLUDE_DIRS LIBRARIES ARGUMENTS)
   cmake_parse_arguments(DLAF_AT "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
@@ -249,6 +249,10 @@ function(DLAF_addTest test_target_name)
     set(_gtest_tgt DLAF_gtest_mpi_main)
   else()
     message(FATAL_ERROR "USE_MAIN=${DLAF_AT_USE_MAIN} is not a supported option")
+  endif()
+
+  if(NOT DLAF_AT_CATEGORY)
+    set(DLAF_AT_CATEGORY "UNIT")
   endif()
 
   ### Test executable target
@@ -287,5 +291,6 @@ function(DLAF_addTest test_target_name)
     MPIRANKS ${DLAF_AT_MPIRANKS}
     USE_MAIN ${DLAF_AT_USE_MAIN}
     ARGUMENTS ${DLAF_AT_ARGUMENTS}
+    CATEGORY ${DLAF_AT_CATEGORY}
   )
 endfunction()

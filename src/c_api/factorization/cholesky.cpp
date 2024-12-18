@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <complex>
+
 #include <dlaf_c/factorization/cholesky.h>
 #include <dlaf_c/utils.h>
 

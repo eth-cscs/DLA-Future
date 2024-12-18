@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <complex>
+
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/types.h>
 

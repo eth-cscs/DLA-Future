@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <complex>
 #include <sstream>
 #include <tuple>
 #include <utility>

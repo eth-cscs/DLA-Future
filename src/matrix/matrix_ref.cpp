@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <complex>
+
 #include <dlaf/matrix/matrix_ref.h>
 
 namespace dlaf::matrix::internal {

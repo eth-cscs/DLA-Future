@@ -12,6 +12,8 @@
 
 #ifdef DLAF_WITH_HIP
 
+#include <complex>
+
 #include <blas.hh>
 
 #include <dlaf/gpu/blas/api.h>

@@ -10,6 +10,7 @@
 #pragma once
 
 #include <cmath>
+#include <complex>
 #include <cstddef>
 #include <optional>
 #include <random>

@@ -12,6 +12,7 @@
 
 /// @file
 
+#include <complex>
 #include <cstdlib>
 #include <memory>
 #include <utility>

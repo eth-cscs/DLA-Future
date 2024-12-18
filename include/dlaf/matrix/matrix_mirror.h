@@ -12,6 +12,7 @@
 
 /// @file
 
+#include <complex>
 #include <exception>
 #include <vector>
 

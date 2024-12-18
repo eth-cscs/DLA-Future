@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <complex>
+
 #include <whip.hpp>
 
 #include <dlaf/common/assert.h>

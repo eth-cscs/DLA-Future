@@ -13,6 +13,7 @@
 /// Provides gpublas wrappers for BLAS operations.
 
 #ifdef DLAF_WITH_GPU
+#include <complex>
 #include <cstddef>
 #include <utility>
 

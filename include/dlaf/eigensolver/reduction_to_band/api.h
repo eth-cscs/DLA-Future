@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <complex>
+
 #include <pika/execution.hpp>
 
 #include <dlaf/matrix/matrix.h>

@@ -12,6 +12,7 @@
 
 #ifdef DLAF_WITH_GPU
 
+#include <complex>
 #include <vector>
 
 #include <whip.hpp>

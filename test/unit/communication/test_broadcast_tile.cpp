@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <complex>
+
 #include <dlaf/communication/functions_sync.h>
 #include <dlaf/matrix/tile.h>
 

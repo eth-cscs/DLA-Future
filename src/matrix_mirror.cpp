@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <complex>
+
 #include <dlaf/matrix/matrix_mirror.h>
 
 namespace dlaf {

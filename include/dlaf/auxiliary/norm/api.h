@@ -9,6 +9,8 @@
 //
 #pragma once
 
+#include <complex>
+
 #include <pika/execution.hpp>
 
 #include <dlaf/communication/communicator_grid.h>

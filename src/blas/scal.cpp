@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <complex>
 #include <cstdint>
 
 #include <blas/config.h>

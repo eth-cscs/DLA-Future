@@ -9,6 +9,8 @@
 //
 #pragma once
 
+#include <complex>
+
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/eigensolver/eigensolver/api.h>
 #include <dlaf/matrix/matrix.h>

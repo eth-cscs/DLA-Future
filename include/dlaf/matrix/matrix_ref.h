@@ -12,6 +12,7 @@
 
 /// @file
 
+#include <complex>
 #include <utility>
 
 #include <dlaf/matrix/distribution.h>

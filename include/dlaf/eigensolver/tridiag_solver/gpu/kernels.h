@@ -12,6 +12,8 @@
 
 #ifdef DLAF_WITH_GPU
 
+#include <complex>
+
 #include <whip.hpp>
 
 #include <dlaf/eigensolver/tridiag_solver/coltype.h>

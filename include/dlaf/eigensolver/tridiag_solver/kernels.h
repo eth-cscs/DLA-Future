@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <complex>
+
 #include <dlaf/common/callable_object.h>
 #include <dlaf/eigensolver/tridiag_solver/coltype.h>
 #include <dlaf/lapack/tile.h>

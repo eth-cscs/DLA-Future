@@ -152,6 +152,7 @@ patterns = [
     { pattern = '\bstd::error_(code|condition|category)\b', include = 'system_error' },
     { pattern = '\bstd::system_error\b', include = 'system_error' },
     { pattern = '\bstd::chrono\b', include = 'chrono' },
+    { pattern = '\bstd::complex\b', include = 'complex' },
 ]
 
 [copyright]

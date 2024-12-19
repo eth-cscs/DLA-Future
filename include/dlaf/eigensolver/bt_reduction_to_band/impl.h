@@ -356,7 +356,6 @@ void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
       const LocalTileIndex t_index{Coord::Col, k_local};
       computeTFactor<B>(panelV, mat_taus.read(taus_index), panelT.readwrite(t_index),
                         select(panelWS, panelWS.iteratorLocal()), mpi_col_task_chain);
-      panelWS.reset();
 
       // WH = V T
       for (const auto& idx : panel_view.iteratorLocal()) {
@@ -388,6 +387,7 @@ void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
                             splitTile(mat_c.readwrite(ij), mat_c_view(ij)));
     }
 
+    panelWS.reset();
     panelV.reset();
     panelW.reset();
     panelW2.reset();

@@ -40,8 +40,13 @@ packages:
       - '~fortran'
       - '~libxml2'
   hwloc:
+    require:
+      - '@git.async-rw-mutex-optimizations=0.31.0'
     variants:
       - '~libxml2'
+  pika:
+    variants:
+      - 'malloc=system'
   git:
     # Force git as non-buildable to allow deprecated versions in environments
     # https://github.com/spack/spack/pull/30040

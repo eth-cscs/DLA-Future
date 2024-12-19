@@ -13,7 +13,7 @@ cpu clang16 release deps:
 cpu clang16 release build:
   extends:
     - .build_common
-    - .build_for_eiger
+    - .build_for_daint-mc
   needs:
     - cpu clang16 release deps
   variables:

@@ -12,7 +12,7 @@ cpu gcc13 codecov deps:
 cpu gcc13 codecov build:
   extends:
     - .build_common
-    - .build_for_eiger
+    - .build_for_daint-mc
   needs:
     - cpu gcc13 codecov deps
   variables:

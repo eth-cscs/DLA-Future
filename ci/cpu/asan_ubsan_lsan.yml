@@ -13,7 +13,7 @@ cpu asan ubsan lsan deps:
 cpu asan ubsan lsan build:
   extends:
     - .build_common
-    - .build_for_eiger
+    - .build_for_daint-mc
   needs:
     - cpu asan ubsan lsan deps
   variables:

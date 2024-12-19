@@ -188,10 +188,16 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
       int desc_a[] = {1, dlaf_context, (int) m, (int) m, (int) mb, (int) mb, 0, 0, lld_a};
       int desc_z[] = {1, dlaf_context, (int) m, (int) m, (int) mb, (int) mb, 0, 0, lld_eigenvectors};
       int info = -1;
+
+      // Treat special case when eval_idx_end is 0 for the C API
+      // The ScaLAPACK API uses base 1 indexing
+      const SizeType eval_idx_end_scalapack = m > 0 && eval_idx_end == 0 ? 1 : eval_idx_end;
+
       if constexpr (std::is_same_v<T, double>) {
         if (eigenvalues_index_end.has_value())
           C_dlaf_pdsyevd_partial_spectrum(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, eigenvalues_ptr,
-                                          local_eigenvectors_ptr, 1, 1, desc_z, 0, eval_idx_end, &info);
+                                          local_eigenvectors_ptr, 1, 1, desc_z, 1,
+                                          eval_idx_end_scalapack, &info);
         else
           C_dlaf_pdsyevd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, eigenvalues_ptr,
                          local_eigenvectors_ptr, 1, 1, desc_z, &info);
@@ -199,7 +205,8 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
       else if constexpr (std::is_same_v<T, float>) {
         if (eigenvalues_index_end.has_value())
           C_dlaf_pssyevd_partial_spectrum(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, eigenvalues_ptr,
-                                          local_eigenvectors_ptr, 1, 1, desc_z, 0, eval_idx_end, &info);
+                                          local_eigenvectors_ptr, 1, 1, desc_z, 1,
+                                          eval_idx_end_scalapack, &info);
         else
           C_dlaf_pssyevd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, eigenvalues_ptr,
                          local_eigenvectors_ptr, 1, 1, desc_z, &info);
@@ -207,7 +214,8 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
       else if constexpr (std::is_same_v<T, std::complex<double>>) {
         if (eigenvalues_index_end.has_value())
           C_dlaf_pzheevd_partial_spectrum(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, eigenvalues_ptr,
-                                          local_eigenvectors_ptr, 1, 1, desc_z, 0, eval_idx_end, &info);
+                                          local_eigenvectors_ptr, 1, 1, desc_z, 1,
+                                          eval_idx_end_scalapack, &info);
         else
           C_dlaf_pzheevd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, eigenvalues_ptr,
                          local_eigenvectors_ptr, 1, 1, desc_z, &info);
@@ -215,7 +223,8 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
       else if constexpr (std::is_same_v<T, std::complex<float>>) {
         if (eigenvalues_index_end.has_value())
           C_dlaf_pcheevd_partial_spectrum(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, eigenvalues_ptr,
-                                          local_eigenvectors_ptr, 1, 1, desc_z, 0, eval_idx_end, &info);
+                                          local_eigenvectors_ptr, 1, 1, desc_z, 1,
+                                          eval_idx_end_scalapack, &info);
         else
           C_dlaf_pcheevd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, eigenvalues_ptr,
                          local_eigenvectors_ptr, 1, 1, desc_z, &info);

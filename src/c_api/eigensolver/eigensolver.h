@@ -86,12 +86,17 @@ void pxheevd(const char uplo, const int m, T* a, const int ia, const int ja, con
   DLAF_ASSERT(ja == 1, ja);
   DLAF_ASSERT(iz == 1, iz);
   DLAF_ASSERT(iz == 1, iz);
+  DLAF_ASSERT(m > 0 ? eigenvalues_index_begin >= 1 : eigenvalues_index_begin == 1, m,
+              eigenvalues_index_begin);
+  DLAF_ASSERT(m > 0 ? eigenvalues_index_end <= m : eigenvalues_index_end == 0, m, eigenvalues_index_end);
+  DLAF_ASSERT(m > 0 ? eigenvalues_index_begin <= eigenvalues_index_end : true, m,
+              eigenvalues_index_begin, eigenvalues_index_end);
 
   auto dlaf_desca = make_dlaf_descriptor(m, m, ia, ja, desca);
   auto dlaf_descz = make_dlaf_descriptor(m, m, iz, jz, descz);
 
   auto _info = hermitian_eigensolver(desca[1], uplo, a, dlaf_desca, w, z, dlaf_descz,
-                                     eigenvalues_index_begin, eigenvalues_index_end);
+                                     eigenvalues_index_begin - 1, eigenvalues_index_end);
   info = _info;
 }
 

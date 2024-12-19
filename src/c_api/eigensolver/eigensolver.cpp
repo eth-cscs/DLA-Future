@@ -83,7 +83,7 @@ int dlaf_hermitian_eigensolver_partial_spectrum_z(
 void dlaf_pssyevd(const char uplo, const int m, float* a, const int ia, const int ja, const int desca[9],
                   float* w, float* z, const int iz, const int jz, const int descz[9],
                   int* info) noexcept {
-  pxheevd<float>(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, 0l, m, *info);
+  pxheevd<float>(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, 1l, m, *info);
 }
 
 void dlaf_pssyevd_partial_spectrum(const char uplo, const int m, float* a, const int ia, const int ja,
@@ -97,7 +97,7 @@ void dlaf_pssyevd_partial_spectrum(const char uplo, const int m, float* a, const
 void dlaf_pdsyevd(const char uplo, const int m, double* a, const int ia, const int ja,
                   const int desca[9], double* w, double* z, const int iz, const int jz,
                   const int descz[9], int* info) noexcept {
-  pxheevd<double>(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, 0l, m, *info);
+  pxheevd<double>(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, 1l, m, *info);
 }
 
 void dlaf_pdsyevd_partial_spectrum(const char uplo, const int m, double* a, const int ia, const int ja,
@@ -110,7 +110,7 @@ void dlaf_pdsyevd_partial_spectrum(const char uplo, const int m, double* a, cons
 void dlaf_pcheevd(const char uplo, const int m, dlaf_complex_c* a, const int ia, const int ja,
                   const int desca[9], float* w, dlaf_complex_c* z, const int iz, const int jz,
                   const int descz[9], int* info) noexcept {
-  pxheevd<std::complex<float>>(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, 0l, m, *info);
+  pxheevd<std::complex<float>>(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, 1l, m, *info);
 }
 
 void dlaf_pcheevd_partial_spectrum(const char uplo, const int m, dlaf_complex_c* a, const int ia,
@@ -125,7 +125,7 @@ void dlaf_pcheevd_partial_spectrum(const char uplo, const int m, dlaf_complex_c*
 void dlaf_pzheevd(const char uplo, const int m, dlaf_complex_z* a, const int ia, const int ja,
                   const int desca[9], double* w, dlaf_complex_z* z, const int iz, const int jz,
                   const int descz[9], int* info) noexcept {
-  pxheevd<std::complex<double>>(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, 0l, m, *info);
+  pxheevd<std::complex<double>>(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, 1l, m, *info);
 }
 
 void dlaf_pzheevd_partial_spectrum(const char uplo, const int m, dlaf_complex_z* a, const int ia,

@@ -118,8 +118,8 @@ DLAF_EXTERN_C void dlaf_pssyevd(const char uplo, const int n, float* a, const in
                                 const int descz[9], int* info) DLAF_NOEXCEPT;
 
 // @copydoc dlaf_pssyevd
-/// @param eigenvalues_index_begin index of the first eigenvalue to compute (has to be 0)
-/// @param eigenvalues_index_end index of the last eigenvalue to compute (exclusive)
+/// @param eigenvalues_index_begin index of the first eigenvalue to compute (has to be 1)
+/// @param eigenvalues_index_end index of the last eigenvalue to compute (inclusive)
 DLAF_EXTERN_C void dlaf_pssyevd_partial_spectrum(
     const char uplo, const int n, float* a, const int ia, const int ja, const int desca[9], float* w,
     float* z, const int iz, const int jz, const int descz[9], const SizeType eigenvalues_index_begin,

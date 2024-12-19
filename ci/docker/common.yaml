@@ -42,6 +42,11 @@ packages:
   hwloc:
     variants:
       - '~libxml2'
+  pika:
+    require:
+      - '@git.async-rw-mutex-optimizations=0.31.0'
+    variants:
+      - 'malloc=system'
   git:
     # Force git as non-buildable to allow deprecated versions in environments
     # https://github.com/spack/spack/pull/30040

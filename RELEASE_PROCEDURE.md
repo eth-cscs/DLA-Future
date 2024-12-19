@@ -28,12 +28,26 @@ DLA-Future follows [Semantic Versioning](https://semver.org).
 1. Ensure you have `gh` ([GitHub CLI](https://cli.github.com)) installed. Run `gh auth login` to authenticate
    with your GitHub account, or set `GITHUB_TOKEN` to a token with `public_repo` access.
 
+1. Ensure you are working from the `eth-cscs/DLA-Future` and not your own fork for following steps.
+
+1. For patch releases: switch to `version_X.Y` branch.
+
+1. For patch releases: cherry pick the commits for the patch from `master` to the `version_X.Y` branch.
+   Make sure the cherry-picked commits are listed in the `CHANGELOG.md`.
+
+1. Check the release branch to make sure the content matches the release notes.
+
+1. Push/merge the changes to the release branch. Wait for tests to pass on the release branch
+   (either `master` for major/minor releases or `version_X.Y` for patch releases).
+
 1. Create a release on GitHub using the script `scripts/roll_release.sh`. This
    script automatically tags the release with the corresponding release number.
 
 1. For patch releases: merge the `version_X.Y` branch into `master`.
 
 1. Update spack recipe in `spack/packages/dla-future/package.py` adding the new release.
+
+1. For patch releases: update `CHANGELOG.md` in `master` to match the content of the patch release.
 
 1. Synchronize [upstream spack
    package](https://github.com/spack/spack/blob/develop/var/spack/repos/builtin/packages/dla-future/package.py)

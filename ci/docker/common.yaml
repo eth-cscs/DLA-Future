@@ -43,6 +43,8 @@ packages:
     variants:
       - '~libxml2'
   pika:
+    require:
+      - '@git.async-rw-mutex-optimizations=0.31.0'
     variants:
       - 'malloc=system'
   git:

@@ -1,5 +1,18 @@
 # Changelog
 
+## DLA-Future 0.7.2
+
+### Bug fixes
+
+- Changed C ScaLAPACK API indexing convention to 1-based for partial eigenspectrum. (#1248)
+
+## DLA-Future 0.7.1
+
+### Bug fixes
+
+- Fixed a compilation issue with ROCm. (#1241)
+- Fixed missing includes of `<complex>`. (#1243)
+
 ## DLA-Future 0.7.0
 
 ### Changes

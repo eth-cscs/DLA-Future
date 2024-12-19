@@ -40,6 +40,8 @@ packages:
       - '~fortran'
       - '~libxml2'
   hwloc:
+    require:
+      - '@git.async-rw-mutex-optimizations=0.31.0'
     variants:
       - '~libxml2'
   pika:

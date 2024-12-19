@@ -526,7 +526,7 @@ The matrix <picture><source srcset="form_3_dark.png" media="(prefers-color-schem
 <dl class="section return"><dt>Returns</dt><dd>0 if the eigensolver completed normally   </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute </td></tr>
+    <tr><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute (has to be 0) </td></tr>
     <tr><td class="paramname">eigenvalues_index_end</td><td>index of the last eigenvalue to compute (exclusive)   </td></tr>
   </table>
   </dd>
@@ -637,7 +637,7 @@ The matrix <picture><source srcset="form_3_dark.png" media="(prefers-color-schem
 <dl class="section return"><dt>Returns</dt><dd>0 if the eigensolver completed normally   </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute </td></tr>
+    <tr><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute (has to be 0) </td></tr>
     <tr><td class="paramname">eigenvalues_index_end</td><td>index of the last eigenvalue to compute (exclusive)   </td></tr>
   </table>
   </dd>
@@ -748,7 +748,7 @@ The matrix <picture><source srcset="form_3_dark.png" media="(prefers-color-schem
 <dl class="section return"><dt>Returns</dt><dd>0 if the eigensolver completed normally   </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute </td></tr>
+    <tr><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute (has to be 0) </td></tr>
     <tr><td class="paramname">eigenvalues_index_end</td><td>index of the last eigenvalue to compute (exclusive)   </td></tr>
   </table>
   </dd>
@@ -857,7 +857,7 @@ The matrix <picture><source srcset="form_3_dark.png" media="(prefers-color-schem
 <dl class="section return"><dt>Returns</dt><dd>0 if the eigensolver completed normally   </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute </td></tr>
+    <tr><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute (has to be 0) </td></tr>
     <tr><td class="paramname">eigenvalues_index_end</td><td>index of the last eigenvalue to compute (exclusive)   </td></tr>
   </table>
   </dd>
@@ -1357,8 +1357,8 @@ Submatrices are currently not supported, so <code>n</code> is the size of the fu
     <tr><td class="paramdir"></td><td class="paramname">jz</td><td>column index of the global matrix <picture><source srcset="form_0_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$\mathbf{A}$" src="form_0.png"/></picture> identifying the first column of the submatrix <picture><source srcset="form_0_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$\mathbf{A}$" src="form_0.png"/></picture>, has to be 1 </td></tr>
     <tr><td class="paramdir"></td><td class="paramname">descz</td><td>ScaLAPACK array descriptor of the global matrix <picture><source srcset="form_1_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$\mathbf{Z}$" src="form_1.png"/></picture> </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">info</td><td>0 if the eigensolver completed normally   </td></tr>
-    <tr><td class="paramdir"></td><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute </td></tr>
-    <tr><td class="paramdir"></td><td class="paramname">eigenvalues_index_end</td><td>index of the last eigenvalue to compute (exclusive)   </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute (has to be 1) </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">eigenvalues_index_end</td><td>index of the last eigenvalue to compute (inclusive)   </td></tr>
   </table>
   </dd>
 </dl>
@@ -1490,8 +1490,8 @@ Submatrices are currently not supported, so <code>n</code> is the size of the fu
 <p></p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute </td></tr>
-    <tr><td class="paramname">eigenvalues_index_end</td><td>index of the last eigenvalue to compute (exclusive)   </td></tr>
+    <tr><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute (has to be 1) </td></tr>
+    <tr><td class="paramname">eigenvalues_index_end</td><td>index of the last eigenvalue to compute (inclusive)   </td></tr>
   </table>
   </dd>
 </dl>
@@ -1900,8 +1900,8 @@ Submatrices are currently not supported, so <code>n</code> is the size of the fu
     <tr><td class="paramdir"></td><td class="paramname">jz</td><td>column index of the global matrix <picture><source srcset="form_0_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$\mathbf{A}$" src="form_0.png"/></picture> identifying the first column of the submatrix <picture><source srcset="form_0_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$\mathbf{A}$" src="form_0.png"/></picture>, has to be 1 </td></tr>
     <tr><td class="paramdir"></td><td class="paramname">descz</td><td>ScaLAPACK array descriptor of the global matrix <picture><source srcset="form_1_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$\mathbf{Z}$" src="form_1.png"/></picture> </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">info</td><td>0 if the eigensolver completed normally   </td></tr>
-    <tr><td class="paramdir"></td><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute </td></tr>
-    <tr><td class="paramdir"></td><td class="paramname">eigenvalues_index_end</td><td>index of the last eigenvalue to compute (exclusive)   </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute (has to be 1) </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">eigenvalues_index_end</td><td>index of the last eigenvalue to compute (inclusive)   </td></tr>
   </table>
   </dd>
 </dl>
@@ -2033,8 +2033,8 @@ Submatrices are currently not supported, so <code>n</code> is the size of the fu
 <p></p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute </td></tr>
-    <tr><td class="paramname">eigenvalues_index_end</td><td>index of the last eigenvalue to compute (exclusive)   </td></tr>
+    <tr><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute (has to be 1) </td></tr>
+    <tr><td class="paramname">eigenvalues_index_end</td><td>index of the last eigenvalue to compute (inclusive)   </td></tr>
   </table>
   </dd>
 </dl>
@@ -2468,8 +2468,8 @@ Submatrices are currently not supported, so <code>n</code> is the size of the fu
     <tr><td class="paramdir"></td><td class="paramname">jz</td><td>column index of the global matrix <picture><source srcset="form_0_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$\mathbf{A}$" src="form_0.png"/></picture> identifying the first column of the submatrix <picture><source srcset="form_0_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$\mathbf{A}$" src="form_0.png"/></picture>, has to be 1 </td></tr>
     <tr><td class="paramdir"></td><td class="paramname">descz</td><td>ScaLAPACK array descriptor of the global matrix <picture><source srcset="form_1_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$\mathbf{Z}$" src="form_1.png"/></picture> </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">info</td><td>0 if the eigensolver completed normally   </td></tr>
-    <tr><td class="paramdir"></td><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute </td></tr>
-    <tr><td class="paramdir"></td><td class="paramname">eigenvalues_index_end</td><td>index of the last eigenvalue to compute (exclusive) </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute (has to be 1) </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">eigenvalues_index_end</td><td>index of the last eigenvalue to compute (inclusive) </td></tr>
   </table>
   </dd>
 </dl>
@@ -2601,8 +2601,8 @@ Submatrices are currently not supported, so <code>n</code> is the size of the fu
 <p></p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute </td></tr>
-    <tr><td class="paramname">eigenvalues_index_end</td><td>index of the last eigenvalue to compute (exclusive) </td></tr>
+    <tr><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute (has to be 1) </td></tr>
+    <tr><td class="paramname">eigenvalues_index_end</td><td>index of the last eigenvalue to compute (inclusive) </td></tr>
   </table>
   </dd>
 </dl>
@@ -3011,8 +3011,8 @@ Submatrices are currently not supported, so <code>n</code> is the size of the fu
     <tr><td class="paramdir"></td><td class="paramname">jz</td><td>column index of the global matrix <picture><source srcset="form_0_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$\mathbf{A}$" src="form_0.png"/></picture> identifying the first column of the submatrix <picture><source srcset="form_0_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$\mathbf{A}$" src="form_0.png"/></picture>, has to be 1 </td></tr>
     <tr><td class="paramdir"></td><td class="paramname">descz</td><td>ScaLAPACK array descriptor of the global matrix <picture><source srcset="form_1_dark.png" media="(prefers-color-scheme: dark)"/><img class="formulaInl" alt="$\mathbf{Z}$" src="form_1.png"/></picture> </td></tr>
     <tr><td class="paramdir">[out]</td><td class="paramname">info</td><td>0 if the eigensolver completed normally   </td></tr>
-    <tr><td class="paramdir"></td><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute </td></tr>
-    <tr><td class="paramdir"></td><td class="paramname">eigenvalues_index_end</td><td>index of the last eigenvalue to compute (exclusive)   </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute (has to be 1) </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">eigenvalues_index_end</td><td>index of the last eigenvalue to compute (inclusive)   </td></tr>
   </table>
   </dd>
 </dl>
@@ -3144,8 +3144,8 @@ Submatrices are currently not supported, so <code>n</code> is the size of the fu
 <p></p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute </td></tr>
-    <tr><td class="paramname">eigenvalues_index_end</td><td>index of the last eigenvalue to compute (exclusive)   </td></tr>
+    <tr><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute (has to be 1) </td></tr>
+    <tr><td class="paramname">eigenvalues_index_end</td><td>index of the last eigenvalue to compute (inclusive)   </td></tr>
   </table>
   </dd>
 </dl>
@@ -3525,7 +3525,7 @@ The matrix <picture><source srcset="form_3_dark.png" media="(prefers-color-schem
 <dl class="section return"><dt>Returns</dt><dd>0 if the eigensolver completed normally   </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute </td></tr>
+    <tr><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute (has to be 0) </td></tr>
     <tr><td class="paramname">eigenvalues_index_end</td><td>index of the last eigenvalue to compute (exclusive)   </td></tr>
   </table>
   </dd>
@@ -3636,7 +3636,7 @@ The matrix <picture><source srcset="form_3_dark.png" media="(prefers-color-schem
 <dl class="section return"><dt>Returns</dt><dd>0 if the eigensolver completed normally   </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute </td></tr>
+    <tr><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute (has to be 0) </td></tr>
     <tr><td class="paramname">eigenvalues_index_end</td><td>index of the last eigenvalue to compute (exclusive)   </td></tr>
   </table>
   </dd>
@@ -3747,7 +3747,7 @@ The matrix <picture><source srcset="form_3_dark.png" media="(prefers-color-schem
 <dl class="section return"><dt>Returns</dt><dd>0 if the eigensolver completed normally   </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute </td></tr>
+    <tr><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute (has to be 0) </td></tr>
     <tr><td class="paramname">eigenvalues_index_end</td><td>index of the last eigenvalue to compute (exclusive) </td></tr>
   </table>
   </dd>
@@ -3856,7 +3856,7 @@ The matrix <picture><source srcset="form_3_dark.png" media="(prefers-color-schem
 <dl class="section return"><dt>Returns</dt><dd>0 if the eigensolver completed normally   </dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute </td></tr>
+    <tr><td class="paramname">eigenvalues_index_begin</td><td>index of the first eigenvalue to compute (has to be 0) </td></tr>
     <tr><td class="paramname">eigenvalues_index_end</td><td>index of the last eigenvalue to compute (exclusive) </td></tr>
   </table>
   </dd>

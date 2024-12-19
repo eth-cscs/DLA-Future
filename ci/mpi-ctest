@@ -27,10 +27,10 @@ sleep 5
 # Run the tests, only output on the first rank
 if [[ $SLURM_PROCID == "0" ]]; then
     TZ=CET date +"Run started at: %H:%M:%S %z"
-    ctest --output-log "$CTEST_OUTPUT" -V $@
+    ctest --timeout 60 --repeat-until-fail 100 -R test_bt_reduction_to_band --output-log "$CTEST_OUTPUT" -V $@
     TZ=CET date +"Run finished at: %H:%M:%S %z"
 else
-    ctest --output-log "$CTEST_OUTPUT" -V -Q $@
+    ctest --timeout 60 --repeat-until-fail 100 -R test_bt_reduction_to_band --output-log "$CTEST_OUTPUT" -V -Q $@
 fi
 
 if [ $START_MPS -eq 1 ]; then

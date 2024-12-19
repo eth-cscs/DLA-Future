@@ -18,7 +18,8 @@ spack:
       true
 
   specs:
-  - dla-future@master +rocm amdgpu_target=gfx90a:xnack- +miniapps +ci-test
+  - dla-future@master ~rocm +miniapps +ci-test
+  # - dla-future@master +rocm amdgpu_target=gfx90a:xnack- +miniapps +ci-test
 
   packages:
     all:

@@ -1,0 +1,21 @@
+include:
+  - local: 'ci/common-ci.yml'
+
+rocm clang15 stdexec release 2 deps:
+  extends: .build_deps_common
+  variables:
+    BASE_IMAGE: docker.io/rocm/dev-ubuntu-22.04:6.1.2
+    EXTRA_APTGET: "clang-15 libomp-15-dev rocblas rocblas-dev rocsolver rocsolver-dev llvm-amdgpu rocm-device-libs"
+    COMPILER: clang@15
+    USE_ROCBLAS: "ON"
+    SPACK_ENVIRONMENT: ci/docker/release-rocm612-stdexec.yaml
+    DEPS_IMAGE: $CSCS_REGISTRY_PATH/rocm-clang15-stdexec-release-2/deps
+
+rocm clang15 stdexec release 2 build:
+  extends:
+    - .build_common
+  after_script: null
+  needs:
+    - rocm clang15 stdexec release 2 deps
+  variables:
+    DLAF_IMAGE: $CSCS_REGISTRY_PATH/rocm-clang15-stdexec-release-2/dlaf:$CI_COMMIT_SHA

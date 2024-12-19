@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: DLA-Future 0.7.1
+title: DLA-Future 0.7.2
 repository-code: https://github.com/eth-cscs/DLA-Future
 message: >-
   If you use this software, please cite it using the
@@ -54,5 +54,5 @@ keywords:
   - mpi
 license: BSD-3-Clause
 license-url: https://opensource.org/license/bsd-3-clause
-version: 0.7.1
-date-released: '2024-12-18'
+version: 0.7.2
+date-released: '2024-12-19'

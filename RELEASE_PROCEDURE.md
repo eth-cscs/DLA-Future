@@ -38,6 +38,8 @@ DLA-Future follows [Semantic Versioning](https://semver.org).
    with local repository. Exclude blocks delimited by `###` comments. These are only intended for the
    internal spack package.
 
+1. For patch releases: update `CHANGELOG` of `master` branch.
+
 1. Delete your `GITHUB_TOKEN` if created only for the release.
 
 1. Modify the release procedure if necessary.

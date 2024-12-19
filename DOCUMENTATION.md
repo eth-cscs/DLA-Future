@@ -3,6 +3,7 @@
 ## API documentation
 
 - [Documentation of `master` branch](https://eth-cscs.github.io/DLA-Future/master/)
+- [Documentation of `v0.7.2`](https://eth-cscs.github.io/DLA-Future/v0.7.2/)
 - [Documentation of `v0.7.1`](https://eth-cscs.github.io/DLA-Future/v0.7.1/)
 - [Documentation of `v0.7.0`](https://eth-cscs.github.io/DLA-Future/v0.7.0/)
 - [Documentation of `v0.6.0`](https://eth-cscs.github.io/DLA-Future/v0.6.0/)

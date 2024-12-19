@@ -41,7 +41,7 @@ DLAF_EXTERN_C int dlaf_symmetric_generalized_eigensolver_s(
     const struct DLAF_descriptor dlaf_descz) DLAF_NOEXCEPT;
 
 /// @copydoc dlaf_symmetric_generalized_eigensolver_s
-/// @param eigenvalues_index_begin index of the first eigenvalue to compute
+/// @param eigenvalues_index_begin index of the first eigenvalue to compute (has to be 0)
 /// @param eigenvalues_index_end index of the last eigenvalue to compute (exclusive)
 DLAF_EXTERN_C int dlaf_symmetric_generalized_eigensolver_partial_spectrum_s(
     const int dlaf_context, const char uplo, float* a, const struct DLAF_descriptor dlaf_desca, float* b,
@@ -116,7 +116,7 @@ DLAF_EXTERN_C int dlaf_symmetric_generalized_eigensolver_factorized_s(
     const struct DLAF_descriptor dlaf_descz) DLAF_NOEXCEPT;
 
 /// @copydoc dlaf_symmetric_generalized_eigensolver_factorized_s
-/// @param eigenvalues_index_begin index of the first eigenvalue to compute
+/// @param eigenvalues_index_begin index of the first eigenvalue to compute (has to be 0)
 /// @param eigenvalues_index_end index of the last eigenvalue to compute (exclusive)
 DLAF_EXTERN_C int dlaf_symmetric_generalized_eigensolver_partial_spectrum_factorized_s(
     const int dlaf_context, const char uplo, float* a, const struct DLAF_descriptor dlaf_desca, float* b,
@@ -208,8 +208,8 @@ DLAF_EXTERN_C void dlaf_pssygvd(const char uplo, const int n, float* a, const in
                                 const int descz[9], int* info) DLAF_NOEXCEPT;
 
 /// @copydoc dlaf_pssygvd
-/// @param eigenvalues_index_begin index of the first eigenvalue to compute
-/// @param eigenvalues_index_end index of the last eigenvalue to compute (exclusive)
+/// @param eigenvalues_index_begin index of the first eigenvalue to compute (has to be 1)
+/// @param eigenvalues_index_end index of the last eigenvalue to compute (inclusive)
 DLAF_EXTERN_C void dlaf_pssygvd_partial_spectrum(
     const char uplo, const int n, float* a, const int ia, const int ja, const int desca[9], float* b,
     const int ib, const int jb, const int descb[9], float* w, float* z, const int iz, const int jz,
@@ -303,8 +303,8 @@ DLAF_EXTERN_C void dlaf_pssygvd_factorized(const char uplo, const int n, float* 
                                            int* info) DLAF_NOEXCEPT;
 
 /// @copydoc dlaf_pssygvx_factorized
-/// @param eigenvalues_index_begin index of the first eigenvalue to compute
-/// @param eigenvalues_index_end index of the last eigenvalue to compute (exclusive)
+/// @param eigenvalues_index_begin index of the first eigenvalue to compute (has to be 1)
+/// @param eigenvalues_index_end index of the last eigenvalue to compute (inclusive)
 DLAF_EXTERN_C void dlaf_pssygvd_partial_spectrum_factorized(
     const char uplo, const int n, float* a, const int ia, const int ja, const int desca[9], float* b,
     const int ib, const int jb, const int descb[9], float* w, float* z, const int iz, const int jz,

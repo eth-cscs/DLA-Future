@@ -298,6 +298,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
               [nworkers](auto&& tile_t, auto&& workspaces, whip::stream_t stream) {
                 for (std::size_t index = 0; index < nworkers - 1; ++index) {
                   matrix::Tile<T, Device::GPU>& ws = workspaces[index];
+                  DLAF_ASSERT(equal_size(ws, tile_t), ws, tile_t);
                   gpulapack::add(blas::Uplo::Upper, tile_t.size().rows() - 1, tile_t.size().cols() - 1,
                                  T(1), ws.ptr({0, 1}), ws.ld(), tile_t.ptr({0, 1}), tile_t.ld(), stream);
                 }

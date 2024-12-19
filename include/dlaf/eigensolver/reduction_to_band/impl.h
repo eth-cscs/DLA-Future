@@ -1222,7 +1222,7 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
   const auto dist_ws = [&]() {
     using dlaf::factorization::internal::get_tfactor_nworkers;
     const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, get_tfactor_nworkers() - 1));
-    const SizeType nrefls_step = dist.tile_size().cols();
+    const SizeType nrefls_step = band_size;
     return matrix::Distribution{{nworkspaces * nrefls_step, nrefls_step}, {nrefls_step, nrefls_step}};
   }();
   common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panels_ws(n_workspaces, dist_ws);

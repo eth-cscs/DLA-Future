@@ -31,6 +31,8 @@ DLA-Future follows [Semantic Versioning](https://semver.org).
 1. Create a release on GitHub using the script `scripts/roll_release.sh`. This
    script automatically tags the release with the corresponding release number.
 
+1. For patch releases: merge the `version_X.Y` branch into `master`.
+
 1. Update spack recipe in `spack/packages/dla-future/package.py` adding the new release.
 
 1. Synchronize [upstream spack

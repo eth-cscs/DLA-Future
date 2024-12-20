@@ -21,7 +21,7 @@ DLA-Future follows [Semantic Versioning](https://semver.org).
    1. Update the minimum required versions if necessary.
 
    1. Add a link to the documentation for the release in `DOCUMENTATION.md` and update the link in `README.md`.
-      The documentation will be generated automatically after the `vx.y.z` tag has been created and pushed.
+      The documentation will be generated automatically after the `vX.Y.Z` tag has been created and pushed.
 
 1. Merge all the changes for the release to the `master` branch (also for patch releases), including the above
    changes to version, documentation, etc.

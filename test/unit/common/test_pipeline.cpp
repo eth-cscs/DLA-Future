@@ -398,7 +398,8 @@ TEST(SubPipeline, BasicReadonlyParentAccess) {
   // The first parent access and all sub pipeline accesses should complete here. The last parent access
   // should not complete until the sub pipeline has been reset.
   auto checkpointparent_last_started = ex::ensure_started(std::move(checkpointparent_last));
-  tt::sync_wait(ex::when_all(std::move(checkpoint1), std::move(checkpoint0), std::move(checkpoint2),
+  // TODO: Order depends on pika version
+  tt::sync_wait(ex::when_all(std::move(checkpoint2), std::move(checkpoint0), std::move(checkpoint1),
                              std::move(checkpointparent_first)));
   // Since the last parent access will be run as an inline continuation and the access was eagerly
   // started, it should be triggered by the reset of the sub pipeline even without a sync_wait.

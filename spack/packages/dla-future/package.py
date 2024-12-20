@@ -13,7 +13,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     homepage = "https://github.com/eth-cscs/DLA-Future"
     url = "https://github.com/eth-cscs/DLA-Future/archive/v0.0.0.tar.gz"
     git = "https://github.com/eth-cscs/DLA-Future.git"
-    maintainers = ["rasolca", "albestro", "msimberg", "aurianer"]
+    maintainers = ["rasolca", "albestro", "msimberg", "aurianer", "RMeli"]
 
     license("BSD-3-Clause")
 

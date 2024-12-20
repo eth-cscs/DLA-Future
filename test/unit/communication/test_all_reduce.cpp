@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <complex>
 #include <utility>
 
 #include <dlaf/common/data_descriptor.h>

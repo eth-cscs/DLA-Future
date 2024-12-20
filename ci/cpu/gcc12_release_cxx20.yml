@@ -14,7 +14,7 @@ cpu gcc12 cxx20 release deps:
 cpu gcc12 cxx20 release build:
   extends:
     - .build_common
-    - .build_for_eiger
+    - .build_for_daint-mc
   needs:
     - cpu gcc12 cxx20 release deps
   variables:

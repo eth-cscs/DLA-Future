@@ -1,5 +1,42 @@
 # Changelog
 
+## DLA-Future 0.7.3
+
+### Bug fixes
+
+- Changed C ScaLAPACK API indexing convention to 1-based for partial eigenspectrum. (#1248)
+
+## DLA-Future 0.7.2
+
+Not released.
+
+## DLA-Future 0.7.1
+
+### Bug fixes
+
+- Fixed a compilation issue with ROCm. (#1241)
+- Fixed missing includes of `<complex>`. (#1243)
+
+## DLA-Future 0.7.0
+
+### Changes
+
+- Added (generalized) eigensolver which computes only a part of the eigenspectrum. (#1194)
+- `Norm` is now fully asynchronous. (#1221)
+
+### Performance improvements
+
+- Refactored communication to use pika's `transform_mpi` and polling support. (#1125)
+- Use custom coalescing heuristic for memory pools. (#1183)
+- Added configuration option for number of CUDA streams and cuBLAS/SOLVER handles. (#1222, #1182)
+- Some algorithmic clean-ups and improvements. (#1213, #1219, #1232)
+
+### Bug fixes
+
+- Fixed builds with CUDA and stdexec enabled. (#1188)
+- Work around buggy HIP complex operator overloads. (#1195)
+- Namespace (SCA)LAPACK CMake modules with DLAF to avoid conflicts with other packages. (#1178)
+
 ## DLA-Future 0.6.0
 
 ### Changes

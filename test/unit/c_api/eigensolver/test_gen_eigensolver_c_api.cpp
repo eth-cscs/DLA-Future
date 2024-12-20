@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <complex>
 #include <optional>
 #include <set>
 #include <tuple>
@@ -273,12 +274,17 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
       int desc_b[] = {1, dlaf_context, (int) m, (int) m, (int) mb, (int) mb, 0, 0, lld_b};
       int desc_z[] = {1, dlaf_context, (int) m, (int) m, (int) mb, (int) mb, 0, 0, lld_eigenvectors};
       int info = -1;
+
+      // Treat special case when eval_idx_end is 0 for the C API
+      // The ScaLAPACK API uses base 1 indexing
+      const SizeType eval_idx_end_scalapack = m > 0 && eval_idx_end == 0 ? 1 : eval_idx_end;
+
       if constexpr (std::is_same_v<T, double>) {
         if constexpr (factorization == Factorization::do_factorization) {
           if (eigenvalues_index_end.has_value()) {
             C_dlaf_pdsygvd_partial_spectrum(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr,
                                             1, 1, desc_b, eigenvalues_ptr, local_eigenvectors_ptr, 1, 1,
-                                            desc_z, 0, eval_idx_end, &info);
+                                            desc_z, 1, eval_idx_end_scalapack, &info);
           }
           else {
             C_dlaf_pdsygvd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
@@ -293,8 +299,8 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
           if (eigenvalues_index_end.has_value()) {
             C_dlaf_pdsygvd_partial_spectrum_factorized(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a,
                                                        local_b_ptr, 1, 1, desc_b, eigenvalues_ptr,
-                                                       local_eigenvectors_ptr, 1, 1, desc_z, 0,
-                                                       eval_idx_end, &info);
+                                                       local_eigenvectors_ptr, 1, 1, desc_z, 1,
+                                                       eval_idx_end_scalapack, &info);
           }
           else {
             C_dlaf_pdsygvd_factorized(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1,
@@ -308,7 +314,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
           if (eigenvalues_index_end.has_value()) {
             C_dlaf_pssygvd_partial_spectrum(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr,
                                             1, 1, desc_b, eigenvalues_ptr, local_eigenvectors_ptr, 1, 1,
-                                            desc_z, 0, eval_idx_end, &info);
+                                            desc_z, 1, eval_idx_end_scalapack, &info);
           }
           else {
             C_dlaf_pssygvd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
@@ -323,8 +329,8 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
           if (eigenvalues_index_end.has_value()) {
             C_dlaf_pssygvd_partial_spectrum_factorized(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a,
                                                        local_b_ptr, 1, 1, desc_b, eigenvalues_ptr,
-                                                       local_eigenvectors_ptr, 1, 1, desc_z, 0,
-                                                       eval_idx_end, &info);
+                                                       local_eigenvectors_ptr, 1, 1, desc_z, 1,
+                                                       eval_idx_end_scalapack, &info);
           }
           else {
             C_dlaf_pssygvd_factorized(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1,
@@ -338,7 +344,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
           if (eigenvalues_index_end.has_value()) {
             C_dlaf_pzhegvd_partial_spectrum(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr,
                                             1, 1, desc_b, eigenvalues_ptr, local_eigenvectors_ptr, 1, 1,
-                                            desc_z, 0, eval_idx_end, &info);
+                                            desc_z, 1, eval_idx_end_scalapack, &info);
           }
           else {
             C_dlaf_pzhegvd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
@@ -353,8 +359,8 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
           if (eigenvalues_index_end.has_value()) {
             C_dlaf_pzhegvd_partial_spectrum_factorized(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a,
                                                        local_b_ptr, 1, 1, desc_b, eigenvalues_ptr,
-                                                       local_eigenvectors_ptr, 1, 1, desc_z, 0,
-                                                       eval_idx_end, &info);
+                                                       local_eigenvectors_ptr, 1, 1, desc_z, 1,
+                                                       eval_idx_end_scalapack, &info);
           }
           else {
             C_dlaf_pzhegvd_factorized(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1,
@@ -368,7 +374,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
           if (eigenvalues_index_end.has_value()) {
             C_dlaf_pchegvd_partial_spectrum(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr,
                                             1, 1, desc_b, eigenvalues_ptr, local_eigenvectors_ptr, 1, 1,
-                                            desc_z, 0, eval_idx_end, &info);
+                                            desc_z, 1, eval_idx_end_scalapack, &info);
           }
           else {
             C_dlaf_pchegvd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1, desc_b,
@@ -383,8 +389,8 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
           if (eigenvalues_index_end.has_value()) {
             C_dlaf_pchegvd_partial_spectrum_factorized(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a,
                                                        local_b_ptr, 1, 1, desc_b, eigenvalues_ptr,
-                                                       local_eigenvectors_ptr, 1, 1, desc_z, 0,
-                                                       eval_idx_end, &info);
+                                                       local_eigenvectors_ptr, 1, 1, desc_z, 1,
+                                                       eval_idx_end_scalapack, &info);
           }
           else {
             C_dlaf_pchegvd_factorized(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, local_b_ptr, 1, 1,

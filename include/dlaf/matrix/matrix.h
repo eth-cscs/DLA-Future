@@ -12,6 +12,7 @@
 
 /// @file
 
+#include <complex>
 #include <cstddef>
 #include <exception>
 #include <utility>

@@ -12,6 +12,8 @@
 
 #ifdef DLAF_WITH_GPU
 
+#include <complex>
+
 #include <blas.hh>
 #include <whip.hpp>
 

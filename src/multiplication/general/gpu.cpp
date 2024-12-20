@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <complex>
+
 #include <dlaf/multiplication/general/impl.h>
 
 namespace dlaf::multiplication::internal {

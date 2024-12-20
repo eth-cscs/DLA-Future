@@ -9,6 +9,8 @@
 //
 #pragma once
 
+#include <complex>
+
 #include <blas.hh>
 
 #include <dlaf/matrix/matrix.h>

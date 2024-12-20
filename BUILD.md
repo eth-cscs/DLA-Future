@@ -55,7 +55,7 @@ You can then install the master version with:
 spack install dla-future@master <variants>
 ```
 
-## Build the good old way
+## Manual build
 
 ### Dependencies
 
@@ -64,13 +64,17 @@ spack install dla-future@master <variants>
 - [umpire](https://github.com/LLNL/Umpire)
 - [blaspp](https://bitbucket.org/icl/blaspp/src/default/)
 - [lapackpp](https://bitbucket.org/icl/lapackpp/src/default/)
-- Intel MKL or other LAPACK implementation
+- BLAS/LAPACK implementations (e.g. Intel MKL, OpenBLAS, NVPL)
 - A ScaLAPACK implementation (optional, ScaLAPACK-like C API only)
 - [whip](https://github.com/eth-cscs/whip) (optional, GPU only)
 - [CUDA](https://developer.nvidia.com/cuda) (optional, NVidia GPUs only)
 - [HIP/ROCm](https://github.com/RadeonOpenCompute/ROCm) (optional, AMD GPUs only)
 - [GoogleTest](https://github.com/google/googletest) (optional; bundled) - unit testing
 - Doxygen (optional) - documentation
+
+### Version constraints
+
+Please refer to the [Spack package](https://packages.spack.io/package.html?name=dla-future) for requirements and conflicts.
 
 ### Get DLA-Future
 
@@ -94,9 +98,10 @@ CMake option | Values | Note
 `pika_DIR` | CMAKE:PATH | Location of the pika CMake-config file
 `blaspp_DIR` | CMAKE:PATH | Location of the blaspp CMake-config file
 `lapackpp_DIR` | CMAKE:PATH | Location of the lapackpp CMake-config file
+`DLAF_LAPACK_LIBRARY` | CMAKE:STRING | Full link line for BLAS and LAPACK
+`DLAF_SCALAPACK_LIBRARY` | CMAKE:STRING | Full link line for ScaLAPACK
 `DLAF_WITH_MKL` | `{ON,OFF}` (default: `OFF`) | if blaspp/lapackpp is built with oneMKL
 `DLAF_WITH_SCALAPACK` | `{ON,OFF}` (default: `OFF`) | Enable ScaLAPACK-like API.
-`MKL_ROOT` | CMAKE:PATH | Location of the MKL library
 `DLAF_ASSERT_ENABLE` | `{ON,OFF}` (default: `ON`) | enable/disable cheap assertions
 `DLAF_ASSERT_MODERATE_ENABLE` | `{ON,OFF}` (default: `ON` in Debug, `OFF` otherwise) | enable/disable moderate assertions
 `DLAF_ASSERT_HEAVY_ENABLE` | `{ON,OFF}` (default: `ON` in Debug, `OFF` otherwise) | enable/disable heavy assertions

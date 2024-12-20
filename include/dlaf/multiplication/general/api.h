@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <complex>
+
 #include <blas.hh>
 
 #include <dlaf/common/index2d.h>

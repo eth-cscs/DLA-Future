@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <complex>
+
 #include <dlaf/blas/tile.h>
 #include <dlaf/common/vector.h>
 #include <dlaf/communication/communicator_grid.h>

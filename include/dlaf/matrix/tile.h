@@ -12,6 +12,7 @@
 
 /// @file
 
+#include <complex>
 #include <exception>
 #include <memory>
 #include <ostream>

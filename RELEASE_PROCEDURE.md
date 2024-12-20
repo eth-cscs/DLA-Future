@@ -2,28 +2,26 @@
 
 DLA-Future follows [Semantic Versioning](https://semver.org).
 
-1. For minor and major releases: check out the `master` branch. All changes required for the release are
-   added to `master` via pull requests. For patch releases: check out the corresponding
-   `version_major.minor` branch.
+1. Update the following files via a PR to the `master` branch:
 
-1. Write release notes in `CHANGELOG.md`. Check for issues and pull requests for the release on the
-   [DLA-F Planning board](https://github.com/orgs/eth-cscs/projects/1). Make sure to include changes that
-   may affect users, such as API changes, bugfixes, performance improvements, dependency updates. Changes
-   that do not directly affect users may be left out, such as CI changes, miscellaneous spack package
-   updates, documentation updates, or utility script updates. All list entries and paragraphs must be on
-   a single line for correct formatting on GitHub.
+   1. Write release notes in `CHANGELOG.md`. Check for issues and pull requests for the release on the
+      [DLA-F Planning board](https://github.com/orgs/eth-cscs/projects/1). Make sure to include changes that
+      may affect users, such as API changes, bugfixes, performance improvements, dependency updates. Changes
+      that do not directly affect users may be left out, such as CI changes, miscellaneous spack package
+      updates, documentation updates, or utility script updates. All list entries and paragraphs must be on
+      a single line for correct formatting on GitHub.
 
-1. Update the version in `CMakeLists.txt`.
+   1. Update the version in `CMakeLists.txt`.
 
-1. Update the version and date in `CITATION.cff`.
+   1. Update the version and date in `CITATION.cff`.
 
-1. When making a post-1.0.0 major release, remove deprecated functionality if
-   appropriate.
+   1. When making a post-1.0.0 major release, remove deprecated functionality if
+      appropriate.
 
-1. Update the minimum required versions if necessary.
+   1. Update the minimum required versions if necessary.
 
-1. Add a link to the documentation for the release in `DOCUMENTATION.md` and update the link in `README.md`.
-   The documentation will be generated automatically after the `vx.y.z` tag has been created and pushed.
+   1. Add a link to the documentation for the release in `DOCUMENTATION.md` and update the link in `README.md`.
+      The documentation will be generated automatically after the `vx.y.z` tag has been created and pushed.
 
 1. Merge all the changes for the release to the `master` branch (also for patch releases), including the above
    changes to version, documentation, etc.
@@ -33,7 +31,8 @@ DLA-Future follows [Semantic Versioning](https://semver.org).
 
 1. Ensure you are working from the `eth-cscs/DLA-Future` and not your own fork for following steps.
 
-1. For patch releases: switch to `version_X.Y` branch. If it doesn't exist yet, create it from the `vX.Y.0` tag.
+1. For minor and major releases: check out the `master` branch. For patch releases: check out the corresponding
+   `version_major.minor` branch. If it doesn't exist yet, create it from the `vX.Y.0` tag.
 
 1. For patch releases: cherry pick the commits for the patch from `master` to the `version_X.Y` branch.
    Make sure the cherry-picked commits are listed in the `CHANGELOG.md`, and make sure you cherry-picked

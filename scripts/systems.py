@@ -198,7 +198,7 @@ printenv > env_{bs_name}.txt
 """,
 }
 
-cscs["santis"] = {
+cscs["alps-gh200"] = {
     "Cores": 288,
     "Threads per core": 1,
     "Allowed rpns": [4],
@@ -231,6 +231,8 @@ printenv > env_{bs_name}.txt
 # Commands
 """,
 }
+
+cscs["alps-todi"] = cscs["alps-gh200"].copy()
 
 csc = {}
 

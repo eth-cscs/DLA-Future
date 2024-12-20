@@ -25,7 +25,8 @@ DLA-Future follows [Semantic Versioning](https://semver.org).
 1. Add a link to the documentation for the release in `DOCUMENTATION.md` and update the link in `README.md`.
    The documentation will be generated automatically after the `vx.y.z` tag has been created and pushed.
 
-1. Merge all the changes to the `master` branch (also for patch releases).
+1. Merge all the changes for the release to the `master` branch (also for patch releases), including the above
+   changes to version, documentation, etc.
 
 1. Ensure you have `gh` ([GitHub CLI](https://cli.github.com)) installed. Run `gh auth login` to authenticate
    with your GitHub account, or set `GITHUB_TOKEN` to a token with `public_repo` access.

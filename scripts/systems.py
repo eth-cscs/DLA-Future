@@ -199,7 +199,7 @@ printenv > env_{bs_name}.txt
 }
 
 cscs["alps-gh200"] = {
-    "Cores": 288,
+    "Cores": 256,
     "Threads per core": 1,
     "Allowed rpns": [4],
     "Multiple rpn in same job": True,

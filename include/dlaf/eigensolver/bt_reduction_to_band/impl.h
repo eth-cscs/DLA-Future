@@ -30,6 +30,7 @@
 #include <dlaf/communication/kernels.h>
 #include <dlaf/eigensolver/bt_reduction_to_band/api.h>
 #include <dlaf/factorization/qr.h>
+#include <dlaf/factorization/qr/internal/get_tfactor_nworkers.h>
 #include <dlaf/matrix/copy.h>
 #include <dlaf/matrix/copy_tile.h>
 #include <dlaf/matrix/distribution.h>
@@ -134,6 +135,7 @@ void BackTransformationReductionToBand<backend, device, T>::call(
     const SizeType b, MatrixRef<T, device>& mat_c, Matrix<const T, device>& mat_v,
     Matrix<const T, Device::CPU>& mat_taus) {
   using namespace bt_red_band;
+  using dlaf::factorization::internal::computeTFactor;
 
   auto hp = pika::execution::thread_priority::high;
   auto np = pika::execution::thread_priority::normal;
@@ -162,6 +164,14 @@ void BackTransformationReductionToBand<backend, device, T>::call(
   dlaf::matrix::Distribution dist_t({mb, total_nr_reflector}, {mb, mb});
   matrix::Panel<Coord::Row, T, device> panelT(dist_t);
 
+  const auto dist_ws = [&]() {
+    using dlaf::factorization::internal::get_tfactor_nworkers;
+    const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, get_tfactor_nworkers() - 1));
+    const SizeType nrefls_step = dist_v.tile_size().cols();
+    return matrix::Distribution{{nworkspaces * nrefls_step, nrefls_step}, {nrefls_step, nrefls_step}};
+  }();
+  common::RoundRobin<matrix::Panel<Coord::Col, T, device>> panelsWS(n_workspaces, dist_ws);
+
   const SizeType nr_reflector_blocks = dist_t.nrTiles().cols();
 
   for (SizeType k = nr_reflector_blocks - 1; k >= 0; --k) {
@@ -174,6 +184,7 @@ void BackTransformationReductionToBand<backend, device, T>::call(
     const matrix::SubPanelView panel_view(dist_v, v_offset, nr_reflectors);
     const matrix::SubMatrixView mat_c_view(dist_c, c_offset);
 
+    auto& panelWS = panelsWS.nextResource();
     auto& panelV = panelsV.nextResource();
     auto& panelW = panelsW.nextResource();
     auto& panelW2 = panelsW2.nextResource();
@@ -182,6 +193,7 @@ void BackTransformationReductionToBand<backend, device, T>::call(
     panelW.setRangeStart(v_offset);
 
     if (is_last) {
+      panelWS.setWidth(nr_reflectors);
       panelT.setHeight(nr_reflectors);
       panelW2.setHeight(nr_reflectors);
       panelW.setWidth(nr_reflectors);
@@ -207,8 +219,10 @@ void BackTransformationReductionToBand<backend, device, T>::call(
 
     const LocalTileIndex taus_index{Coord::Row, k};
     const LocalTileIndex t_index{Coord::Col, k};
-    dlaf::factorization::internal::computeTFactor<backend>(panelV, mat_taus.read(taus_index),
-                                                           panelT.readwrite(t_index));
+
+    computeTFactor<backend>(panelV, mat_taus.read(taus_index), panelT.readwrite(t_index),
+                            select(panelWS, panelWS.iteratorLocal()));
+    panelWS.reset();
 
     // W = V T
     auto tile_t = panelT.read(t_index);
@@ -242,6 +256,7 @@ void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
                                                       Matrix<const T, Device::CPU>& mat_taus) {
   namespace ex = pika::execution::experimental;
   using namespace bt_red_band;
+  using dlaf::factorization::internal::computeTFactor;
 
   auto hp = pika::execution::thread_priority::high;
   auto np = pika::execution::thread_priority::normal;
@@ -277,6 +292,14 @@ void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
                                     dist_v.sourceRankIndex());
   matrix::Panel<Coord::Row, T, D> panelT(dist_t);
 
+  const auto dist_ws = [&]() {
+    using dlaf::factorization::internal::get_tfactor_nworkers;
+    const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, get_tfactor_nworkers() - 1));
+    const SizeType nrefls_step = dist_v.tile_size().cols();
+    return matrix::Distribution{{nworkspaces * nrefls_step, nrefls_step}, {nrefls_step, nrefls_step}};
+  }();
+  common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panelsWS(n_workspaces, dist_ws);
+
   const SizeType nr_reflector_blocks = dist_t.nrTiles().cols();
 
   for (SizeType k = nr_reflector_blocks - 1; k >= 0; --k) {
@@ -289,6 +312,7 @@ void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
     const matrix::SubPanelView panel_view(dist_v, v_offset, nr_reflectors);
     const matrix::SubMatrixView mat_c_view(dist_c, c_offset);
 
+    auto& panelWS = panelsWS.nextResource();
     auto& panelV = panelsV.nextResource();
     auto& panelW = panelsW.nextResource();
     auto& panelW2 = panelsW2.nextResource();
@@ -298,6 +322,7 @@ void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
     panelT.setRange(GlobalTileIndex(Coord::Col, k), GlobalTileIndex(Coord::Col, k + 1));
 
     if (is_last) {
+      panelWS.setWidth(nr_reflectors);
       panelT.setHeight(nr_reflectors);
       panelW2.setHeight(nr_reflectors);
       panelW.setWidth(nr_reflectors);
@@ -329,8 +354,8 @@ void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
       const GlobalTileIndex taus_index{Coord::Row, k};
       const SizeType k_local = dist_t.template localTileFromGlobalTile<Coord::Col>(k);
       const LocalTileIndex t_index{Coord::Col, k_local};
-      dlaf::factorization::internal::computeTFactor<B>(panelV, mat_taus.read(taus_index),
-                                                       panelT.readwrite(t_index), mpi_col_task_chain);
+      computeTFactor<B>(panelV, mat_taus.read(taus_index), panelT.readwrite(t_index),
+                        select(panelWS, panelWS.iteratorLocal()), mpi_col_task_chain);
 
       // WH = V T
       for (const auto& idx : panel_view.iteratorLocal()) {
@@ -362,6 +387,7 @@ void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
                             splitTile(mat_c.readwrite(ij), mat_c_view(ij)));
     }
 
+    panelWS.reset();
     panelV.reset();
     panelW.reset();
     panelW2.reset();

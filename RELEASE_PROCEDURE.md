@@ -32,7 +32,7 @@ DLA-Future follows [Semantic Versioning](https://semver.org).
 
 1. Ensure you are working from the `eth-cscs/DLA-Future` and not your own fork for following steps.
 
-1. For patch releases: switch to `version_X.Y` branch.
+1. For patch releases: switch to `version_X.Y` branch. If it doesn't exist yet, create it from the `vX.Y.0` tag.
 
 1. For patch releases: cherry pick the commits for the patch from `master` to the `version_X.Y` branch.
    Make sure the cherry-picked commits are listed in the `CHANGELOG.md`, and make sure you cherry-picked

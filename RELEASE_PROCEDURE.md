@@ -40,14 +40,13 @@ DLA-Future follows [Semantic Versioning](https://semver.org).
 
 1. Check the release branch to make sure the content matches the release notes.
 
+1. Wait for CI tests to pass before making a release. CI is automatically triggered for `master` and `version_*`
+   branches.
+
 1. Create a release on GitHub using the script `scripts/roll_release.sh`. This
    script automatically tags the release with the corresponding release number.
 
-1. For patch releases: merge the `version_X.Y` branch into `master`.
-
 1. Update spack recipe in `spack/packages/dla-future/package.py` adding the new release.
-
-1. For patch releases: update `CHANGELOG.md` in `master` to match the content of the patch release.
 
 1. Synchronize [upstream spack
    package](https://github.com/spack/spack/blob/develop/var/spack/repos/builtin/packages/dla-future/package.py)

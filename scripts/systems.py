@@ -198,13 +198,13 @@ printenv > env_{bs_name}.txt
 """,
 }
 
-cscs["santis"] = {
+cscs["daint"] = {
     "Cores": 288,
     "Threads per core": 1,
     "Allowed rpns": [4],
     "Multiple rpn in same job": True,
     "GPU": True,
-    "Run command": "srun -u {srun_args} -n {total_ranks} --gpus-per-task=1 --cpu-bind=core -c {threads_per_rank}",
+    "Run command": "srun --uenv=/capstor/scratch/cscs/simbergm/uenv-images/dlaf-status-update-202410.squashfs -u {srun_args} -n {total_ranks} --gpus-per-task=1 --cpu-bind=core -c {threads_per_rank} timeout 1800",
     "Launch command": "sbatch --chdir={job_path} {job_file}",
     "Batch preamble": """
 #!/bin/bash -l
@@ -221,6 +221,8 @@ export FI_MR_CACHE_MONITOR=disabled
 export MPICH_GPU_SUPPORT_ENABLED=1
 export MIMALLOC_EAGER_COMMIT_DELAY=0
 export MIMALLOC_ALLOW_LARGE_OS_PAGES=1
+export PIKA_MPI_COMPLETION_MODE=31
+export PIKA_MPI_ENABLE_POOL=1
 export DLAF_BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE=128
 export DLAF_UMPIRE_DEVICE_MEMORY_POOL_ALIGNMENT_BYTES=$((1 << 21)) # 2 MiB, large page size
 

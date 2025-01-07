@@ -18,24 +18,23 @@ import argparse
 import miniapps as mp
 import systems
 
-system = systems.cscs["daint-gpu"]
+system = systems.cscs["daint"]
 
-dlafpath = "<path_to_dlaf_miniapp_dir>"
-matrixrefpath = "<path_to_h5_refs>"
+dlafpath = "/user-environment/linux-sles15-neoverse_v2/gcc-13.3.0/dla-future-git.202410-develop_0.7.0-virbeq6o47zeihzraiblbc5zfxzafrpw/bin"
+matrixrefpath = ""
+run_dir = ""
 
-run_dir = "~/ws/runs/strong"
+time = 12 * 60  # minutes
+nruns = 10
+nodes_arr = [0.25, 0.5, 1, 2, 4, 8, 16, 32]
 
-time = 400  # minutes
-nruns = 5
-nodes_arr = [1, 2, 4, 8, 16]
-
-rpn = 1
+rpn = 4
 m_szs_d = [10240, 20480, 30097, 40960]
-mb_szs_d = 512
+mb_szs_d = [512, 1024]
 m_szs_z = [10240, 20480]
-mb_szs_z = 512
+mb_szs_z = [512, 1024]
 
-extra_flags = ""
+extra_flags = "--pika:threads=64 --nwarmups=0"
 
 parser = argparse.ArgumentParser(description="Run strong scaling benchmarks.")
 parser.add_argument(

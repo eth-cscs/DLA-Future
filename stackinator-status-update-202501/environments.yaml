@@ -1,0 +1,18 @@
+gcc-env:
+  compiler:
+      - toolchain: gcc
+        spec: gcc@13
+  unify: true
+  specs:
+  - dla-future@git.202501-develop=0.7.3 +miniapps +hdf5 +mpi_gpu_aware +mpi_gpu_force_contiguous
+  - pika@0.31.0 cxxstd=20 +stdexec malloc=mimalloc
+  - stdexec@24.09
+  - nvpl-blas
+  - nvpl-lapack
+  mpi:
+    spec: cray-mpich
+    gpu: cuda
+  variants:
+    - +mpi
+    - +cuda
+    - cuda_arch=90a

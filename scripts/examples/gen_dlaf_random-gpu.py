@@ -20,9 +20,9 @@ import miniapps as mp
 import random
 import systems
 
-system = systems.cscs["santis"]
+system = systems.cscs["daint"]
 
-dlafpath = ""
+dlafpath = "/user-environment/linux-sles15-neoverse_v2/gcc-13.3.0/dla-future-git.202410-develop_0.7.0-virbeq6o47zeihzraiblbc5zfxzafrpw/bin"
 run_dir = ""
 
 time = 60  # minutes
@@ -114,4 +114,6 @@ def createAndSubmitRun(run_dir, nodes_arr, **kwargs):
 
 
 for i in range(njobs):
-    createAndSubmitRun(run_dir + "/" + str(i), [random.choice(nodes_arr)], extra_flags=extra_flags)
+    createAndSubmitRun(
+        run_dir + "/" + str(i), [random.choice(nodes_arr)], extra_flags=extra_flags
+    )

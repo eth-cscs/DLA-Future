@@ -32,6 +32,7 @@ spack:
       require:
         - 'build_type=Debug'
         - 'malloc=system'
+        - '+stdexec'
     # For correct code coverage
     # https://github.com/eth-cscs/DLA-Future/pull/1002
     umpire:

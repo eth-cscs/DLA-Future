@@ -41,7 +41,7 @@ fi
 if [[ "$ENABLE_COVERAGE" == "YES" ]]; then
     # On daint-mc (XC40) reduce the number of tasks to avoid out-of-memory error
     if [ $SLURM_CPUS_ON_NODE -eq 72 -a "$SLURM_CLUSTER_NAME" = "daint" ]; then
-      COV_THREADS=$((SLURM_CPUS_PER_TASK/2))
+      COV_THREADS=1
     else
       COV_THREADS=$SLURM_CPUS_PER_TASK
     fi

@@ -44,7 +44,10 @@ packages:
       - '~libxml2'
   pika:
     require:
-      - '@git.9345a05100e2dc1f99d5d1d9d3c3f4723c41abc6=0.31.0'
+      # pika@main with potential fix for yielding in async_rw_mutex:
+      # '@git.9345a05100e2dc1f99d5d1d9d3c3f4723c41abc6=0.31.0'
+      # pika@main before the above commit:
+      - '@git.2ffc93f3d55b139f1a317201b835190b29c828f8=0.31.0'
   git:
     # Force git as non-buildable to allow deprecated versions in environments
     # https://github.com/spack/spack/pull/30040

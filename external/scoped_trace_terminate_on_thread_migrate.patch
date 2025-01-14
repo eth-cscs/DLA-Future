@@ -1,0 +1,76 @@
+diff --git a/googletest/include/gtest/gtest.h b/googletest/include/gtest/gtest.h
+index 3e452a50..c51dd607 100644
+--- a/googletest/include/gtest/gtest.h
++++ b/googletest/include/gtest/gtest.h
+@@ -58,6 +58,7 @@
+ #include <set>
+ #include <sstream>
+ #include <string>
++#include <thread>
+ #include <type_traits>
+ #include <vector>
+ 
+@@ -2056,15 +2057,18 @@ class GTEST_API_ ScopedTrace {
+   // Slow, but flexible.
+   template <typename T>
+   ScopedTrace(const char* file, int line, const T& message) {
++    id = std::this_thread::get_id();
+     PushTrace(file, line, (Message() << message).GetString());
+   }
+ 
+   // Optimize for some known types.
+   ScopedTrace(const char* file, int line, const char* message) {
++    id = std::this_thread::get_id();
+     PushTrace(file, line, message ? message : "(null)");
+   }
+ 
+   ScopedTrace(const char* file, int line, const std::string& message) {
++    id = std::this_thread::get_id();
+     PushTrace(file, line, message);
+   }
+ 
+@@ -2079,6 +2083,8 @@ class GTEST_API_ ScopedTrace {
+ 
+   ScopedTrace(const ScopedTrace&) = delete;
+   ScopedTrace& operator=(const ScopedTrace&) = delete;
++
++  std::thread::id id;
+ };
+ 
+ // Causes a trace (including the source file path, the current line
+diff --git a/googletest/src/gtest.cc b/googletest/src/gtest.cc
+index a64e887c..2e1fccb9 100644
+--- a/googletest/src/gtest.cc
++++ b/googletest/src/gtest.cc
+@@ -44,14 +44,17 @@
+ #include <chrono>  // NOLINT
+ #include <cmath>
+ #include <cstdint>
++#include <exception>
+ #include <initializer_list>
+ #include <iomanip>
++#include <iostream>
+ #include <iterator>
+ #include <limits>
+ #include <list>
+ #include <map>
+ #include <ostream>  // NOLINT
+ #include <sstream>
++#include <thread>
+ #include <unordered_set>
+ #include <vector>
+ 
+@@ -6838,6 +6841,13 @@ void ScopedTrace::PushTrace(const char* file, int line, std::string message) {
+ 
+ // Pops the info pushed by the c'tor.
+ ScopedTrace::~ScopedTrace() GTEST_LOCK_EXCLUDED_(&UnitTest::mutex_) {
++  if (id != std::this_thread::get_id()) {
++    std::cerr << "ScopedTrace was created and destroyed on different "
++                 "std::threads, terminating to avoid segfaults, hangs, or "
++                 "silent corruption. Are you using any pika functionality that "
++                 "may yield a task after creating the ScopedTrace?\n";
++    std::terminate();
++  }
+   UnitTest::GetInstance()->PopGTestTrace();
+ }
+ 

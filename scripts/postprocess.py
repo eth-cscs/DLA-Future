@@ -213,34 +213,19 @@ def _parse_optional_text(text):
         return None
 
 
-# Optionally match "(INT, INT)" and extract both integers in a tuple
-@with_pattern(r"(|\s+\(\d+, \d+\))")
-def _parse_optional_int_pair(s):
-    if s:
-        p = parse("({first:d}, {last:d})", s.strip())
-        return (p["first"], p["last"])
-    else:
-        return None
+@with_pattern(r"(?:\s+\(\d+, \d+\))?")
+def _parse_optional_int_pair(text):
+    """
+    Optionally match "(INT, INT)" and extract both integers in a tuple, otherwise return (None, None)
+    """
+    m = re.match(r"\((\d+), (\d+)\)", text.strip())
+    return tuple(map(int, m.groups())) if m else (None, None)
 
 
 additional_parsers = {
     "optional_text": _parse_optional_text,
     "optional_int_pair": _parse_optional_int_pair,
 }
-# {
-#     "run_index":
-#     "matrix_rows":
-#     "matrix_cols":
-#     "block_rows":
-#     "block_cols":
-#     "grid_rows":
-#     "grid_cols":
-#     "time":
-#     "perf":
-#     "perf_per_node":
-#     "bench_name":
-#     "nodes":
-# }
 
 
 def _parse_line_based(fout, bench_name, nodes):
@@ -331,6 +316,13 @@ def _parse_line_based(fout, bench_name, nodes):
 
             if "perf" in rd:
                 rd["perf_per_node"] = rd["perf"] / nodes
+
+            if "evals_idxs" in rd:
+                rd["from_ev"], rd["to_ev"] = rd.pop("evals_idxs")
+                if rd["from_ev"] is None:
+                    rd["from_ev"] = 0
+                if rd["to_ev"] is None:
+                    rd["to_ev"] = rd["matrix_rows"]
 
             # makes _calc_*_metrics work
             #

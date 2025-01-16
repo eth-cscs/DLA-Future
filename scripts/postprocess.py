@@ -457,7 +457,18 @@ def calc_chol_metrics(df):
 
 
 def calc_trsm_metrics(df):
-    return _calc_metrics(["matrix_rows", "matrix_cols", "block_rows", "nodes", "bench_name"], df)
+    return _calc_metrics(
+        [
+            "matrix_rows",
+            "matrix_cols",
+            "block_rows",
+            "nodes",
+            "bench_name",
+            "from_ev",
+            "to_ev",
+        ],
+        df,
+    )
 
 
 def calc_trmm_metrics(df):
@@ -481,19 +492,65 @@ def calc_trid_evp_metrics(df):
 
 
 def calc_bt_band2trid_metrics(df):
-    return _calc_metrics(["matrix_rows", "matrix_cols", "block_rows", "band", "nodes", "bench_name"], df)
+    return _calc_metrics(
+        [
+            "matrix_rows",
+            "matrix_cols",
+            "block_rows",
+            "band",
+            "nodes",
+            "bench_name",
+            "from_ev",
+            "to_ev",
+        ],
+        df,
+    )
 
 
 def calc_bt_red2band_metrics(df):
-    return _calc_metrics(["matrix_rows", "matrix_cols", "block_rows", "band", "nodes", "bench_name"], df)
+    return _calc_metrics(
+        [
+            "matrix_rows",
+            "matrix_cols",
+            "block_rows",
+            "band",
+            "nodes",
+            "bench_name",
+            "from_ev",
+            "to_ev",
+        ],
+        df,
+    )
 
 
 def calc_evp_metrics(df):
-    return _calc_metrics(["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df)
+    return _calc_metrics(
+        [
+            "matrix_rows",
+            "block_rows",
+            "band",
+            "nodes",
+            "bench_name",
+            "from_ev",
+            "to_ev",
+        ],
+        df,
+    )
 
 
 def calc_gevp_metrics(df):
-    return _calc_metrics(["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df)
+    return _calc_metrics(
+        [
+            "matrix_rows",
+            "block_rows",
+            "band",
+            "nodes",
+            "bench_name",
+            "from_ev",
+            "to_ev",
+        ],
+        df,
+    )
 
 
 # Customization that add a simple legend

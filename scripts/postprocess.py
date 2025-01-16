@@ -203,7 +203,7 @@ def _calc_metrics(cols, df):
     )
 
 
-@with_pattern(r"(|\s+\S+)")
+@with_pattern(r"(?:\s+\S+)?")
 def _parse_optional_text(text):
     text = text.strip()
     # TODO: Prefer empty string or None?

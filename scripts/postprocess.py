@@ -641,6 +641,9 @@ def _gen_plot(
         if has_band:
             group_list += ["band"]
 
+    if "from_ev" in df.columns:
+        group_list += ["from_ev", "to_ev"]
+
     # silence a warning in pandas.
     if len(group_list) == 1:
         group_list = group_list[0]
@@ -669,6 +672,7 @@ def _gen_plot(
         title = f"{name}: {scaling} scaling"
         filename_ppn = f"{filename}_{scaling}_ppn"
         filename_time = f"{filename}_{scaling}_time"
+
         if size_type == "m":
             title += f" ({m} x {m})"
             filename_ppn += f"_{m}"
@@ -677,6 +681,12 @@ def _gen_plot(
             title += f" ({m} x {n})"
             filename_ppn += f"_{m}_{n}"
             filename_time += f"_{m}_{n}"
+
+        if "from_ev" in df.columns:
+            partial_spectrum_suffix = "-".join(x[-2:])
+            filename_ppn += f"_{partial_spectrum_suffix}"
+            filename_time += f"_{partial_spectrum_suffix}"
+
         if not combine_mb:
             title += f", block_size = {mb} x {mb}"
             filename_ppn += f"_{mb}"

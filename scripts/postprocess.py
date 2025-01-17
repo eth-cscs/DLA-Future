@@ -358,11 +358,21 @@ def _parse_line_based(fout, bench_name, nodes):
 def parse_jobs(data_dirs, distinguish_dir=False):
     if not isinstance(data_dirs, list):
         data_dirs = [data_dirs]
+
+    def default_missing_tags(entry):
+        return entry if isinstance(entry, tuple) else (None, entry)
+
+    data_dirs = map(default_missing_tags, data_dirs)
+
     data = []
-    for data_dir_label in data_dirs:
-        dir_label = data_dir_label.split(":")
+    for tag, data_dir_label in data_dirs:
+        if ":" in str(data_dir_label):
+            dir_label = data_dir_label.split(":")
+        else:
+            dir_label = [data_dir_label]
+
         assert 1 <= len(dir_label) <= 2
-        data_dir = dir_label[0]
+        data_dir = Path(dir_label[0])
         if len(dir_label) == 2:
             bench_name_postfix = dir_label[1]
         else:
@@ -374,7 +384,7 @@ def parse_jobs(data_dirs, distinguish_dir=False):
         else:
             print(
                 "The base of the --path provided is not a z or d folder, the results",
-                f"for complex and double might be aggreted in the plot. Path provided: {data_dir}",
+                f"for complex and double might be aggregated in the plot. Path provided: {data_dir}",
             )
         for subdir, dirs, files in os.walk(os.path.expanduser(data_dir)):
             for f in files:
@@ -382,7 +392,12 @@ def parse_jobs(data_dirs, distinguish_dir=False):
                     nodes = float(os.path.basename(subdir))
                     benchname = f[:-4]
                     if distinguish_dir:
-                        benchname += "@" + bench_name_postfix
+                        benchname += (
+                            "*"
+                            + str(data_dir.parts[-1])
+                            + (f"#{tag}" if tag else "")
+                            + f"@{bench_name_postfix}"
+                        )
 
                     with open(os.path.join(subdir, f), "r") as fout:
                         data.extend(_parse_line_based(fout, benchname, nodes))
@@ -638,8 +653,9 @@ def _gen_plot(
 
     if not combine_mb:
         group_list += ["block_rows"]
-        if has_band:
-            group_list += ["band"]
+
+    if has_band:
+        group_list += ["band"]
 
     if "from_ev" in df.columns:
         group_list += ["from_ev", "to_ev"]
@@ -653,7 +669,7 @@ def _gen_plot(
     for x, grp_data in it_space:
         if size_type == "m" and combine_mb:
             # single element has to be treated differently
-            m = x
+            m = x[0]
         else:
             if size_type == "m":
                 m = x[0]
@@ -683,7 +699,7 @@ def _gen_plot(
             filename_time += f"_{m}_{n}"
 
         if "from_ev" in df.columns:
-            partial_spectrum_suffix = "-".join(x[-2:])
+            partial_spectrum_suffix = "-".join(map(lambda part: str(int(part)), x[-2:]))
             filename_ppn += f"_{partial_spectrum_suffix}"
             filename_time += f"_{partial_spectrum_suffix}"
 

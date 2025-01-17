@@ -42,6 +42,10 @@ packages:
   hwloc:
     variants:
       - '~libxml2'
+  pika:
+    require:
+      # pika@0.31.0:
+      - '@git.be0f6e0ff195ccb32e0c67ffd001514cbb90d735=0.31.0'
   git:
     # Force git as non-buildable to allow deprecated versions in environments
     # https://github.com/spack/spack/pull/30040

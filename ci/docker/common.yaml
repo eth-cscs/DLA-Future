@@ -44,12 +44,7 @@ packages:
       - '~libxml2'
   pika:
     require:
-      # pika@0.31.0:
-      # - '@git.be0f6e0ff195ccb32e0c67ffd001514cbb90d735=0.31.0'
-      # pika@0.31.0 + transform_mpi bloat fix:
-      # - '@git.2937bfcbb89b87c854d681338747348e8dcd8d88=0.31.0'
-      # above + any_receiver revert:
-      - '@git.199eefb19341e49c6e7e541a90e9277202065cd9=0.31.0'
+      - '@0.30.0'
   git:
     # Force git as non-buildable to allow deprecated versions in environments
     # https://github.com/spack/spack/pull/30040

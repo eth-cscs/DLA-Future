@@ -13,7 +13,7 @@ cpu clang15 release deps:
 cpu clang15 release build:
   extends:
     - .build_common
-    - .build_for_daint-mc
+    - .build_for_eiger
   needs:
     - cpu clang15 release deps
   variables:

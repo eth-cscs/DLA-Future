@@ -250,9 +250,9 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
     const std::size_t batch_size = workers_params.batch_size;
     DLAF_ASSERT(workspaces.size() >= nworkers - 1, workspaces.size(), nworkers - 1);
 
-    for (std::size_t id_worker = 0; id_worker < nworkers; ++id_worker) {
-      const std::size_t begin = id_worker * batch_size;
-      const std::size_t end = std::min(hh_tiles.size(), (id_worker + 1) * batch_size);
+    for (std::size_t worker_id = 0; worker_id < nworkers; ++worker_id) {
+      const std::size_t begin = worker_id * batch_size;
+      const std::size_t end = std::min(hh_tiles.size(), (worker_id + 1) * batch_size);
 
       if (end - begin <= 0)
         continue;
@@ -263,7 +263,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
         input_tiles.emplace_back(std::move(hh_tiles[sub]));
 
       matrix::ReadWriteTileSender<T, Device::GPU>& workspace =
-          id_worker == 0 ? tile_t : workspaces[id_worker - 1];
+          worker_id == 0 ? tile_t : workspaces[worker_id - 1];
 
       workspace =
           di::whenAllLift(ex::when_all_vector(std::move(input_tiles)), taus, std::move(workspace)) |
@@ -294,10 +294,10 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
                 return std::move(tile_t);
               });
 
-      if (id_worker == 0)
+      if (worker_id == 0)
         tile_t = std::move(workspace);
       else
-        workspaces[id_worker - 1] = std::move(workspace);
+        workspaces[worker_id - 1] = std::move(workspace);
     }
 
     if (nworkers > 1)

@@ -103,7 +103,7 @@ void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
 /// @param mpi_col_task_chain where internal communications are issued
 ///
 /// @pre reflectors in hh_panel are well formed (1s on the diagonal and 0s in the upper part)
-/// @pre hh_pane.getWidth() <= t.get().size().rows && hh_panel.size().getWidth() <= t.get().size().cols()
+/// @pre hh_panel.getWidth() <= t.get().size().rows && hh_panel.size().getWidth() <= t.get().size().cols()
 template <Backend backend, Device device, class T>
 void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
                     matrix::ReadOnlyTileSender<T, Device::CPU> taus,

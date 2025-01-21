@@ -50,11 +50,20 @@ namespace dlaf::factorization::internal {
 
 namespace tfactor_l {
 
-inline std::size_t num_workers_gemv(const std::size_t nrtiles) {
+inline auto split_tfactor_work(const std::size_t nrtiles) {
   const std::size_t min_workers = 1;
   const std::size_t available_workers = get_tfactor_nworkers();
-  const std::size_t ideal_workers = util::ceilDiv(to_sizet(nrtiles), to_sizet(2));
-  return std::clamp(ideal_workers, min_workers, available_workers);
+  const std::size_t ideal_workers = util::ceilDiv(to_sizet(nrtiles), to_sizet(1));
+
+  struct {
+    std::size_t nworkers;
+    std::size_t batch_size;
+  } params;
+
+  params.batch_size = util::ceilDiv(nrtiles, std::clamp(ideal_workers, min_workers, available_workers));
+  params.nworkers = std::max<std::size_t>(1, util::ceilDiv(nrtiles, params.batch_size));
+
+  return params;
 }
 
 template <Backend backend, Device device, class T>
@@ -108,15 +117,17 @@ struct Helpers<Backend::MC, Device::CPU, T> {
     std::vector<matrix::ReadOnlyTileSender<T, Device::CPU>> hh_tiles =
         selectRead(hh_panel, hh_panel.iteratorLocal());
 
-    const std::size_t nworkers = num_workers_gemv(hh_tiles.size());
+    const auto workers_params = split_tfactor_work(hh_tiles.size());
+    const std::size_t nworkers = workers_params.nworkers;
+    const std::size_t batch_size = workers_params.batch_size;
     DLAF_ASSERT(workspaces.size() >= nworkers - 1, workspaces.size(), nworkers - 1);
 
     const auto hp_scheduler = di::getBackendScheduler<Backend::MC>(thread_priority::high);
     return ex::when_all(ex::when_all_vector(std::move(hh_tiles)), std::move(taus), std::move(tile_t),
                         ex::when_all_vector(std::move(workspaces))) |
            di::continues_on(hp_scheduler) |
-           ex::let_value([hp_scheduler, nworkers](auto&& hh_tiles, auto&& taus, auto&& tile_t,
-                                                  auto&& workspaces) {
+           ex::let_value([hp_scheduler, nworkers, batch_size](auto&& hh_tiles, auto&& taus,
+                                                              auto&& tile_t, auto&& workspaces) {
              const std::chrono::duration<double> barrier_busy_wait = std::chrono::microseconds(1000);
 
              return ex::just(std::make_unique<pika::barrier<>>(nworkers)) |
@@ -126,7 +137,6 @@ struct Helpers<Backend::MC, Device::CPU, T> {
                                                                          auto& barrier_ptr) mutable {
                                const SizeType k = taus.get().size().rows();
 
-                               const std::size_t batch_size = util::ceilDiv(hh_tiles.size(), nworkers);
                                const std::size_t begin = worker_id * batch_size;
                                const std::size_t end =
                                    std::min(worker_id * batch_size + batch_size, hh_tiles.size());
@@ -235,20 +245,20 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
     std::vector<matrix::ReadOnlyTileSender<T, Device::GPU>> hh_tiles =
         selectRead(hh_panel, hh_panel.iteratorLocal());
 
-    const std::size_t nworkers = num_workers_gemv(hh_tiles.size());
+    const auto workers_params = split_tfactor_work(hh_tiles.size());
+    const std::size_t nworkers = workers_params.nworkers;
+    const std::size_t batch_size = workers_params.batch_size;
     DLAF_ASSERT(workspaces.size() >= nworkers - 1, workspaces.size(), nworkers - 1);
 
-    const std::size_t batch_size = util::ceilDiv(hh_tiles.size(), nworkers);
     for (std::size_t id_worker = 0; id_worker < nworkers; ++id_worker) {
       const std::size_t begin = id_worker * batch_size;
       const std::size_t end = std::min(hh_tiles.size(), (id_worker + 1) * batch_size);
 
-      // Note
-      // Cannot skip if (end - begin <= 0) because otherwise the worker will be considered for reduction
-      // but its workspace would have not been reset. We could in principle skip it, but it would
-      // require a slightly more complex logic to skip also the reduction (quite cheap anyway).
+      if (end - begin <= 0)
+        continue;
 
       std::vector<matrix::ReadOnlyTileSender<T, Device::GPU>> input_tiles;
+      input_tiles.reserve(end - begin);
       for (std::size_t sub = begin; sub < end; ++sub)
         input_tiles.emplace_back(std::move(hh_tiles[sub]));
 

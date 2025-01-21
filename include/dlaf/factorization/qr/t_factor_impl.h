@@ -132,39 +132,40 @@ struct Helpers<Backend::MC, Device::CPU, T> {
 
              return ex::just(std::make_unique<pika::barrier<>>(nworkers)) |
                     di::continues_on(hp_scheduler) |
-                    ex::bulk(nworkers,
-                             [=, &hh_tiles, &taus, &tile_t, &workspaces](const std::size_t worker_id,
-                                                                         auto& barrier_ptr) mutable {
-                               const SizeType k = taus.get().size().rows();
+                    ex::bulk(
+                        nworkers,
+                        [=, &hh_tiles, &taus, &tile_t, &workspaces](const std::size_t worker_id,
+                                                                    auto& barrier_ptr) mutable {
+                          const SizeType k = taus.get().size().rows();
 
-                               const std::size_t begin = worker_id * batch_size;
-                               const std::size_t end =
-                                   std::min(worker_id * batch_size + batch_size, hh_tiles.size());
+                          const std::size_t begin = worker_id * batch_size;
+                          const std::size_t end =
+                              std::min(worker_id * batch_size + batch_size, hh_tiles.size());
 
-                               const matrix::Tile<T, Device::CPU>& ws_worker =
-                                   worker_id == 0 ? tile_t : workspaces[worker_id - 1];
+                          const matrix::Tile<T, Device::CPU>& ws_worker =
+                              worker_id == 0 ? tile_t : workspaces[worker_id - 1];
 
-                               tile::internal::set0<T>(ws_worker);
-                               lapack::lacpy(blas::Uplo::General, 1, k, taus.get().ptr(), 1,
-                                             ws_worker.ptr(), ws_worker.ld() + 1);
+                          DLAF_ASSERT(equal_size(ws_worker, tile_t), ws_worker.size(), tile_t.size());
 
-                               // make it work on worker_id section of tiles
-                               for (std::size_t index = begin; index < end; ++index) {
-                                 const matrix::Tile<const T, Device::CPU>& tile_v =
-                                     hh_tiles[index].get();
-                                 loop_gemv(tile_v, taus.get(), ws_worker);
-                               }
+                          tile::internal::set0<T>(ws_worker);
+                          lapack::lacpy(blas::Uplo::General, 1, k, taus.get().ptr(), 1, ws_worker.ptr(),
+                                        ws_worker.ld() + 1);
 
-                               barrier_ptr->arrive_and_wait(barrier_busy_wait);
+                          // make it work on worker_id section of tiles
+                          for (std::size_t index = begin; index < end; ++index) {
+                            const matrix::Tile<const T, Device::CPU>& tile_v = hh_tiles[index].get();
+                            loop_gemv(tile_v, taus.get(), ws_worker);
+                          }
 
-                               // reduce ws_T in tile_t
-                               if (worker_id == 0) {
-                                 for (std::size_t other_worker = 1; other_worker < nworkers;
-                                      ++other_worker) {
-                                   tile::internal::add(T(1), workspaces[other_worker - 1], tile_t);
-                                 }
-                               }
-                             }) |
+                          barrier_ptr->arrive_and_wait(barrier_busy_wait);
+
+                          // reduce ws_T in tile_t
+                          if (worker_id == 0) {
+                            for (std::size_t other_worker = 1; other_worker < nworkers; ++other_worker) {
+                              tile::internal::add(T(1), workspaces[other_worker - 1], tile_t);
+                            }
+                          }
+                        }) |
                     // Note: drop the barrier sent by the bulk and return tile_t
                     ex::then([&tile_t](auto&&) mutable { return std::move(tile_t); });
            });
@@ -271,7 +272,9 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
               di::Policy<Backend::GPU>(thread_priority::high),
               [](cublasHandle_t handle, auto&& hh_tiles, auto&& taus,
                  matrix::Tile<T, Device::GPU>& tile_t) {
-                const SizeType k = tile_t.size().cols();
+                const SizeType k = taus.size().rows();
+
+                DLAF_ASSERT(tile_t.size() == TileElementSize(k, k), tile_t.size(), k);
 
                 // Note:
                 // prepare the diagonal of taus in t and reset the rest

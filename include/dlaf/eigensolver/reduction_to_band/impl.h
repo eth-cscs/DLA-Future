@@ -1075,8 +1075,13 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
     // TODO probably the first one in any panel is ok?
     Matrix<T, D> t({nrefls_tile, nrefls_tile}, dist.blockSize());
 
+    auto workspace_fit = select(ws, ws.iteratorLocal());
+    if (isPanelIncomplete)
+      for (auto& tile_ws : workspace_fit)
+        tile_ws = splitTile(std::move(tile_ws), {{0, 0}, {nrefls_tile, nrefls_tile}});
+
     computeTFactor<B>(v, mat_taus_retiled.read(GlobalTileIndex(j_sub, 0)), t.readwrite(t_idx),
-                      select(ws, ws.iteratorLocal()));
+                      std::move(workspace_fit));
     ws.reset();
 
     // PREPARATION FOR TRAILING MATRIX UPDATE
@@ -1278,8 +1283,13 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
       red2band::local::setupReflectorPanelV<B, D, T>(rank.row() == rank_v0.row(), panel_view,
                                                      nrefls_tile, v, mat_a, !is_full_band);
 
+      auto workspace_fit = select(ws, ws.iteratorLocal());
+      if (nrefls_tile != dist.tile_size().rows())
+        for (auto& tile_ws : workspace_fit)
+          tile_ws = splitTile(std::move(tile_ws), {{0, 0}, {nrefls_tile, nrefls_tile}});
+
       computeTFactor<B>(v, mat_taus_retiled.read(GlobalTileIndex(j_sub, 0)), t.readwrite(t_idx),
-                        select(ws, ws.iteratorLocal()), mpi_col_chain);
+                        std::move(workspace_fit), mpi_col_chain);
       ws.reset();
     }
 

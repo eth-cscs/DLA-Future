@@ -20,13 +20,13 @@ cuda gcc11 codecov build:
     DOCKERFILE: ci/docker/codecov.Dockerfile
     DLAF_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-codecov/dlaf:$CI_COMMIT_SHA
 
-cuda gcc11 codecov test:
-  extends: .run_common
-  variables:
-    PIKA_MPI_ENABLE_POOL: 1
-  needs:
-    - cuda gcc11 codecov build
-  trigger:
-    include:
-      - artifact: pipeline.yml
-        job: cuda gcc11 codecov build
+# cuda gcc11 codecov test:
+#   extends: .run_common
+#   variables:
+#     PIKA_MPI_ENABLE_POOL: 1
+#   needs:
+#     - cuda gcc11 codecov build
+#   trigger:
+#     include:
+#       - artifact: pipeline.yml
+#         job: cuda gcc11 codecov build

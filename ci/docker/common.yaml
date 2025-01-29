@@ -42,10 +42,10 @@ packages:
   hwloc:
     variants:
       - '~libxml2'
-  pika:
-    require:
+  # pika:
+    # require:
       # https://github.com/pika-org/pika/compare/async-rw-mutex-optimizations:
-      '@git.ef9e0aa08ddc0231927579548fe7c351df073409=0.31.0'
+      # '@git.ef9e0aa08ddc0231927579548fe7c351df073409=0.31.0'
       # pika@main before the above PR:
       # - '@git.2ffc93f3d55b139f1a317201b835190b29c828f8=0.31.0'
   git:

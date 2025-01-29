@@ -55,4 +55,6 @@ DLA-Future follows [Semantic Versioning](https://semver.org).
 
 1. Delete your `GITHUB_TOKEN` if created only for the release.
 
+1. Create a new milestone named `vX.Y.Z` for the next major or minor release.
+
 1. Modify the release procedure if necessary.

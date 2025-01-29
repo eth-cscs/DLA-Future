@@ -44,7 +44,7 @@ packages:
       - '~libxml2'
   pika:
     require:
-      - '@git.8eb8a6eef5bb2bc05d7f9fe94a862937cbee6826=0.31.0'
+      - '@git.b5f389e7d2b1213af5f4b2d18473a6d0533ea224=0.31.0'
 
   git:
     # Force git as non-buildable to allow deprecated versions in environments

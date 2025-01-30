@@ -19,6 +19,7 @@ cuda gcc13 codecov build:
   variables:
     DOCKERFILE: ci/docker/codecov.Dockerfile
     DLAF_IMAGE: $CSCS_REGISTRY_PATH/cuda-gh200-gcc13-codecov/dlaf:$CI_COMMIT_SHA
+    PIP_OPTS: "--break-system-packages"
 
 cuda gcc13 codecov test:
   extends: .run_common

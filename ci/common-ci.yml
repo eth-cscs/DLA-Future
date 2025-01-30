@@ -22,10 +22,10 @@ variables:
     - TAG_IMAGE=`echo ${BASE_IMAGE##*/} | sed 's/[:]//g'`
     - TAG_APTGET=`echo ${EXTRA_APTGET} | sha256sum - | head -c 6`
     - TAG_COMPILER=`echo ${COMPILER}_CXX${CXXSTD} | sed 's/[@]//g'`
-    - TAG_DOCKERFILE=`sha256sum $DOCKERFILE | head -c 16`
-    - TAG_SPACK=`echo $SPACK_SHA`
-    - TAG_REPO=`find $SPACK_DLAF_REPO -type f -exec sha256sum {} \; | sha256sum - | head -c 16`
-    - TAG_ENVIRONMENT=`cat $SPACK_ENVIRONMENT $COMMON_SPACK_ENVIRONMENT | sha256sum | head -c 16`
+    - TAG_DOCKERFILE=`sha256sum $DOCKERFILE | head -c 12`
+    - TAG_SPACK=`echo $SPACK_SHA | sed "s/develop-//g" | head -c 16`
+    - TAG_REPO=`find $SPACK_DLAF_REPO -type f -exec sha256sum {} \; | sha256sum - | head -c 12`
+    - TAG_ENVIRONMENT=`cat $SPACK_ENVIRONMENT $COMMON_SPACK_ENVIRONMENT | sha256sum | head -c 12`
     - TAG=${TAG_IMAGE}-${TAG_APTGET}-${TAG_COMPILER}-MKL${USE_MKL}-${TAG_DOCKERFILE}-${TAG_SPACK}-${TAG_REPO}-${TAG_ENVIRONMENT}
     - export PERSIST_IMAGE_NAME=$DEPS_IMAGE:$TAG
     - echo "DEPS_IMAGE=$PERSIST_IMAGE_NAME" > build.env

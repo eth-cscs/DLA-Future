@@ -18,7 +18,7 @@ spack:
       true
 
   specs:
-    - dla-future@master +cuda +miniapps +ci-test
+    - dla-future@master +cuda +miniapps +ci-test +mpi_gpu_aware +mpi_gpu_force_contiguous
 
   packages:
     all:

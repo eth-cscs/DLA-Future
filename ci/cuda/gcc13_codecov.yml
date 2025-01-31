@@ -25,6 +25,7 @@ cuda gcc13 codecov test:
   extends: .run_common
   variables:
     PIKA_MPI_ENABLE_POOL: 1
+    PIKA_MPI_COMPLETION_MODE: 31
   needs:
     - cuda gcc13 codecov build
   trigger:

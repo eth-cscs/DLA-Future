@@ -24,3 +24,6 @@ spack:
     all:
       variants:
         - 'build_type=Release'
+    cray-mpich:
+      require:
+        - "+cuda"

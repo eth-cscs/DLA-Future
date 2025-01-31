@@ -19,7 +19,6 @@
 #include <dlaf/common/unwrap.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/communicator_pipeline.h>
-#include <dlaf/sender/continues_on.h>
 #include <dlaf/sender/transform.h>
 
 namespace dlaf::comm::internal {

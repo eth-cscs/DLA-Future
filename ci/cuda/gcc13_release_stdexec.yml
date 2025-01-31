@@ -22,6 +22,7 @@ cuda gcc13 stdexec release build:
 cuda gcc13 stdexec release test:
   extends: .run_common
   variables:
+    DLAF_CI_BIND_GPU: "ALPS-GH200"
     PIKA_MPI_ENABLE_POOL: 1
     PIKA_MPI_COMPLETION_MODE: 31
   needs:

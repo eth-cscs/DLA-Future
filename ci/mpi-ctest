@@ -11,6 +11,12 @@ CTEST_OUTPUT="$CI_PROJECT_DIR/output/ctest.$SLURM_PROCID.txt"
 
 pushd /DLA-Future-build > /dev/null
 
+if [[ $DLAF_CI_BIND_GPU == "ALPS-GH200" ]]
+then
+    export CUDA_VISIBLE_DEVICE=$(( SLURM_LOCALID % 4 ))
+    echo "Rank $SLURM_PROCID: set CUDA_VISIBLE_DEVICE=$CUDA_VISIBLE_DEVICE"
+fi
+
 # Run the tests, only output on the first rank
 if [[ $SLURM_PROCID == "0" ]]; then
     TZ=CET date +"Run started at: %H:%M:%S %z"

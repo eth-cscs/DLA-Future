@@ -24,7 +24,7 @@ cuda gcc13 release test:
     DLAF_CI_BIND_GPU: "ALPS-GH200"
     PIKA_MPI_ENABLE_POOL: 1
     PIKA_MPI_COMPLETION_MODE: 31
-    MPICH_GPU_SUPPORT_ENABLEDs: 1
+    MPICH_GPU_SUPPORT_ENABLED: 1
   needs:
     - cuda gcc13 release build
   trigger:

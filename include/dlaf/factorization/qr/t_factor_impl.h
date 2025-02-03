@@ -127,8 +127,8 @@ struct Helpers<Backend::MC, Device::CPU, T> {
     return ex::when_all(ex::when_all_vector(std::move(hh_tiles)), std::move(taus), std::move(tile_t),
                         ex::when_all_vector(std::move(workspaces))) |
            di::continues_on(hp_scheduler) |
-           ex::let_value([hp_scheduler, nworkers, batch_size](auto&& hh_tiles, auto&& taus,
-                                                              auto&& tile_t, auto&& workspaces) {
+           ex::let_value([hp_scheduler, nworkers, batch_size](auto& hh_tiles, auto& taus, auto& tile_t,
+                                                              auto& workspaces) {
              return ex::just(std::make_unique<pika::barrier<>>(nworkers)) |
                     di::continues_on(hp_scheduler) |
                     ex::bulk(

@@ -166,8 +166,8 @@ struct Helpers<Backend::MC, Device::CPU, T> {
                             }
                           }
                         }) |
-                    // Note: drop the barrier sent by the bulk and return tile_t
-                    ex::then([&tile_t](auto&&) mutable { return std::move(tile_t); });
+                    // Note: ignore the barrier sent by the bulk and just return tile_t
+                    ex::then([&tile_t](auto) mutable { return std::move(tile_t); });
            });
   }
 

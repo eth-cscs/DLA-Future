@@ -42,7 +42,7 @@
 #include <dlaf/eigensolver/internal/get_red2band_panel_nworkers.h>
 #include <dlaf/eigensolver/reduction_to_band/api.h>
 #include <dlaf/factorization/qr.h>
-#include <dlaf/factorization/qr/internal/get_tfactor_nworkers.h>
+#include <dlaf/factorization/qr/internal/get_tfactor_num_workers.h>
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/copy_tile.h>
 #include <dlaf/matrix/distribution.h>
@@ -1020,8 +1020,8 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
   common::RoundRobin<Panel<Coord::Col, T, D>> panels_x(n_workspaces, dist);
 
   const auto dist_ws = [&]() {
-    using dlaf::factorization::internal::get_tfactor_nworkers;
-    const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, get_tfactor_nworkers() - 1));
+    using dlaf::factorization::internal::get_tfactor_num_workers;
+    const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, get_tfactor_num_workers<B>() - 1));
     const SizeType nrefls_step = dist.tile_size().cols();
     return matrix::Distribution{{nworkspaces * nrefls_step, nrefls_step}, {nrefls_step, nrefls_step}};
   }();
@@ -1225,8 +1225,8 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
       n_workspaces, dist);
 
   const auto dist_ws = [&]() {
-    using dlaf::factorization::internal::get_tfactor_nworkers;
-    const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, get_tfactor_nworkers() - 1));
+    using dlaf::factorization::internal::get_tfactor_num_workers;
+    const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, get_tfactor_num_workers<B>() - 1));
     const SizeType nrefls_step = band_size;
     return matrix::Distribution{{nworkspaces * nrefls_step, nrefls_step}, {nrefls_step, nrefls_step}};
   }();

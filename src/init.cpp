@@ -291,7 +291,8 @@ void updateConfiguration(const pika::program_options::variables_map& vm, configu
   // These are added automatically by updateConfigurationValue.
   auto& param = getTuneParameters();
   // clang-format off
-  updateConfigurationValue(vm, param.tfactor_nworkers, "TFACTOR_NWORKERS", "tfactor-nworkers");
+  updateConfigurationValue(vm, param.tfactor_num_threads, "TFACTOR_NUM_THREADS", "tfactor-num-threads");
+  updateConfigurationValue(vm, param.tfactor_num_streams, "TFACTOR_NUM_STREAMS", "tfactor-num-streams");
   updateConfigurationValue(vm, param.tfactor_barrier_busy_wait_us, "TFACTOR_BARRIER_BUSY_WAIT_US", "tfactor-barrier-busy-wait-us");
   updateConfigurationValue(vm, param.red2band_panel_nworkers, "RED2BAND_PANEL_NWORKERS", "red2band-panel-nworkers");
   updateConfigurationValue(vm, param.red2band_barrier_busy_wait_us, "RED2BAND_BARRIER_BUSY_WAIT_US", "red2band-barrier-busy-wait-us");

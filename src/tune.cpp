@@ -19,7 +19,8 @@ TuneParameters& getTuneParameters() {
 }
 
 std::ostream& operator<<(std::ostream& os, const TuneParameters& params) {
-  os << "  tfactor_nworkers = " << params.tfactor_nworkers << std::endl;
+  os << "  tfactor_num_threads = " << params.tfactor_num_threads << std::endl;
+  os << "  tfactor_num_streams = " << params.tfactor_num_streams << std::endl;
   os << "  tfactor_barrier_busy_wait_us = " << params.tfactor_barrier_busy_wait_us << std::endl;
   os << "  red2band_panel_nworkers = " << params.red2band_panel_nworkers << std::endl;
   os << "  red2band_barrier_busy_wait_us = " << params.red2band_barrier_busy_wait_us << std::endl;

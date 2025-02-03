@@ -255,7 +255,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
       const std::size_t begin = worker_id * batch_size;
       const std::size_t end = std::min(hh_tiles.size(), (worker_id + 1) * batch_size);
 
-      if (end - begin <= 0)
+      if (end == begin)
         continue;
 
       std::vector<matrix::ReadOnlyTileSender<T, Device::GPU>> input_tiles;

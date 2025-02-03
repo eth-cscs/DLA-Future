@@ -31,7 +31,7 @@
 #include <dlaf/communication/kernels/all_reduce.h>
 #include <dlaf/factorization/qr/api.h>
 #include <dlaf/factorization/qr/internal/get_tfactor_barrier_busy_wait.h>
-#include <dlaf/factorization/qr/internal/get_tfactor_nworkers.h>
+#include <dlaf/factorization/qr/internal/get_tfactor_num_workers.h>
 #include <dlaf/lapack/gpu/larft.h>
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/matrix.h>
@@ -51,9 +51,10 @@ namespace dlaf::factorization::internal {
 
 namespace tfactor_l {
 
-inline auto split_tfactor_work(const std::size_t nrtiles) {
+template <Backend B>
+auto split_tfactor_work(const std::size_t nrtiles) {
   const std::size_t min_workers = 1;
-  const std::size_t available_workers = get_tfactor_nworkers();
+  const std::size_t available_workers = get_tfactor_num_workers<B>();
   const std::size_t ideal_workers = util::ceilDiv(to_sizet(nrtiles), to_sizet(1));
 
   struct {
@@ -118,7 +119,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
     std::vector<matrix::ReadOnlyTileSender<T, Device::CPU>> hh_tiles =
         selectRead(hh_panel, hh_panel.iteratorLocal());
 
-    const auto workers_params = split_tfactor_work(hh_tiles.size());
+    const auto workers_params = split_tfactor_work<Backend::MC>(hh_tiles.size());
     const std::size_t nworkers = workers_params.nworkers;
     const std::size_t batch_size = workers_params.batch_size;
     DLAF_ASSERT(workspaces.size() >= nworkers - 1, workspaces.size(), nworkers - 1);
@@ -246,7 +247,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
     std::vector<matrix::ReadOnlyTileSender<T, Device::GPU>> hh_tiles =
         selectRead(hh_panel, hh_panel.iteratorLocal());
 
-    const auto workers_params = split_tfactor_work(hh_tiles.size());
+    const auto workers_params = split_tfactor_work<Backend::GPU>(hh_tiles.size());
     const std::size_t nworkers = workers_params.nworkers;
     const std::size_t batch_size = workers_params.batch_size;
     DLAF_ASSERT(workspaces.size() >= nworkers - 1, workspaces.size(), nworkers - 1);

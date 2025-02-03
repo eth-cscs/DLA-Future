@@ -30,7 +30,7 @@
 #include <dlaf/communication/kernels.h>
 #include <dlaf/eigensolver/bt_reduction_to_band/api.h>
 #include <dlaf/factorization/qr.h>
-#include <dlaf/factorization/qr/internal/get_tfactor_nworkers.h>
+#include <dlaf/factorization/qr/internal/get_tfactor_num_workers.h>
 #include <dlaf/matrix/copy.h>
 #include <dlaf/matrix/copy_tile.h>
 #include <dlaf/matrix/distribution.h>
@@ -165,8 +165,9 @@ void BackTransformationReductionToBand<backend, device, T>::call(
   matrix::Panel<Coord::Row, T, device> panelT(dist_t);
 
   const auto dist_ws = [&]() {
-    using dlaf::factorization::internal::get_tfactor_nworkers;
-    const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, get_tfactor_nworkers() - 1));
+    using dlaf::factorization::internal::get_tfactor_num_workers;
+    const SizeType nworkspaces =
+        to_SizeType(std::max<std::size_t>(0, get_tfactor_num_workers<backend>() - 1));
     const SizeType nrefls_step = dist_v.tile_size().cols();
     return matrix::Distribution{{nworkspaces * nrefls_step, nrefls_step}, {nrefls_step, nrefls_step}};
   }();
@@ -300,8 +301,8 @@ void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
   matrix::Panel<Coord::Row, T, D> panelT(dist_t);
 
   const auto dist_ws = [&]() {
-    using dlaf::factorization::internal::get_tfactor_nworkers;
-    const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, get_tfactor_nworkers() - 1));
+    using dlaf::factorization::internal::get_tfactor_num_workers;
+    const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, get_tfactor_num_workers<B>() - 1));
     const SizeType nrefls_step = dist_v.tile_size().cols();
     return matrix::Distribution{{nworkspaces * nrefls_step, nrefls_step}, {nrefls_step, nrefls_step}};
   }();

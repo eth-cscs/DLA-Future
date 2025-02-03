@@ -59,6 +59,9 @@ namespace dlaf {
 ///     The maximum number of threads/streams to use for computing tfactor (e.g. which is used for
 ///     instance in red2band and its backtransformation). Set with --dlaf:tfactor-nworkers or env
 ///     variable DLAF_TFACTOR_NWORKERS.
+/// - tfactor_barrier_busy_wait_us:
+///     The duration in microseconds to busy-wait in barriers in the t_factor algorithm.
+///     Set with --dlaf:tfactor-barrier-busy-wait-us or env variable DLAF_TFACTOR_BARRIER_BUSY_WAIT_US.
 /// - red2band_panel_nworkers:
 ///     The maximum number of threads to use for computing the panel in the reduction to band algorithm.
 ///     Set with --dlaf:red2band-panel-nworkers or env variable DLAF_RED2BAND_PANEL_NWORKERS.
@@ -127,6 +130,7 @@ struct TuneParameters {
   bool debug_dump_tridiag_solver_data = false;
 
   std::size_t tfactor_nworkers = 1;
+  std::size_t tfactor_barrier_busy_wait_us = 0;
   std::size_t red2band_panel_nworkers = 1;
   std::size_t red2band_barrier_busy_wait_us = 1000;
   std::size_t tridiag_rank1_nworkers = 1;

@@ -30,6 +30,7 @@
 #include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/communication/kernels/all_reduce.h>
 #include <dlaf/factorization/qr/api.h>
+#include <dlaf/factorization/qr/internal/get_tfactor_barrier_busy_wait.h>
 #include <dlaf/factorization/qr/internal/get_tfactor_nworkers.h>
 #include <dlaf/lapack/gpu/larft.h>
 #include <dlaf/lapack/tile.h>
@@ -128,14 +129,13 @@ struct Helpers<Backend::MC, Device::CPU, T> {
            di::continues_on(hp_scheduler) |
            ex::let_value([hp_scheduler, nworkers, batch_size](auto&& hh_tiles, auto&& taus,
                                                               auto&& tile_t, auto&& workspaces) {
-             const std::chrono::duration<double> barrier_busy_wait = std::chrono::microseconds(1000);
-
              return ex::just(std::make_unique<pika::barrier<>>(nworkers)) |
                     di::continues_on(hp_scheduler) |
                     ex::bulk(
                         nworkers,
                         [=, &hh_tiles, &taus, &tile_t, &workspaces](const std::size_t worker_id,
                                                                     auto& barrier_ptr) mutable {
+                          const auto barrier_busy_wait = getTFactorBarrierBusyWait();
                           const SizeType k = taus.get().size().rows();
 
                           const std::size_t begin = worker_id * batch_size;

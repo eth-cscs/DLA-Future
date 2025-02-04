@@ -4,7 +4,7 @@ include:
 cuda gcc13 release scalapack deps:
   extends: .build_deps_common_gh200
   variables:
-    BASE_IMAGE: $CSCS_REGISTRY_PATH/base-images/cuda_12.6.1-devel-ubuntu24.04:v1.2
+    BASE_IMAGE: $CSCS_REGISTRY_PATH/base-images/cuda_12.6.1-devel-ubuntu24.04:v1.3
     COMPILER: gcc@13
     SPACK_ENVIRONMENT: ci/docker/release-cuda-gh200-scalapack.yaml
     DEPS_IMAGE: $CSCS_REGISTRY_PATH/cuda-gh200-gcc13-scalapack-release/deps

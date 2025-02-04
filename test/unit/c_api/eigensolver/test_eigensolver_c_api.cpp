@@ -80,7 +80,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
   // The final check needs to happen on all m eigenvalues/eigenvectors
   const SizeType eval_idx_end = eigenvalues_index_end.value_or(m);
 
-  auto dlaf_context = c_api_test_inititialize<api>(pika_argc, pika_argv, dlaf_argc, dlaf_argv, grid);
+  auto dlaf_context = c_api_test_initialize<api>(pika_argc, pika_argv, dlaf_argc, dlaf_argv, grid);
 
   // In normal use the runtime is resumed by the C API call
   // The pika runtime is suspended by dlaf_initialize

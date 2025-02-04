@@ -23,7 +23,8 @@ packages:
     ### Workaround until CE provides full MPI substitution.
     require: 'cray-mpich'
   pika:
-    require: "@git.9781c3c1c38f9cb997879cbde230e113ccb344ca=0.30.1"
+    require:
+      - "@git.6cfeeb1ba7541790134ec33a16d2b769a817b090=0.30.1"
   blaspp:
     variants:
       - '~cuda'
@@ -40,10 +41,12 @@ packages:
       - 'threads=openmp'
   openssl:
     # without version spack concretizes openssl@3.3.1 that doesn't build due to deprecation
-    require: '@3.3.2'
+    require:
+      - '@3.3.2'
   libfabric:
     # Fix version to be compatible with version on todi
-    require: '@1.15.2'
+    require:
+      - '@1.15.2'
   hwloc:
     variants:
       - '~libxml2'

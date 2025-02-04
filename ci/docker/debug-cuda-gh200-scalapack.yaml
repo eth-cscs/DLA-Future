@@ -37,6 +37,7 @@ spack:
         - '+fortran'
     pika:
       require:
-        - '@0.30.0'
+        # Use patched 30.1 pika to speed up C_API tests.
+        #- '@0.30.0'
         - 'build_type=Debug'
         - 'malloc=system'

@@ -22,6 +22,8 @@ packages:
   mpi:
     ### Workaround until CE provides full MPI substitution.
     require: 'cray-mpich'
+  pika:
+    require: "@git.9781c3c1c38f9cb997879cbde230e113ccb344ca=0.30.1"
   blaspp:
     variants:
       - '~cuda'

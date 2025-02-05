@@ -27,13 +27,7 @@ void dlaf_initialize(int argc_pika, const char** argv_pika, int argc_dlaf,
     // pika initialization
     pika::init_params params;
     params.desc_cmdline = desc;
-    // After pika 0.21.0 pika::start reports errors only by exception and returns void
-#if PIKA_VERSION_FULL >= 0x001500
     pika::start(argc_pika, argv_pika, params);
-#else
-    auto pika_started = pika::start(nullptr, argc_pika, argv_pika, params);
-    DLAF_ASSERT(pika_started, pika_started);
-#endif
 
     // DLA-Future initialization
     dlaf::initialize(argc_dlaf, argv_dlaf);

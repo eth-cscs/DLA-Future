@@ -10,7 +10,7 @@
 
 spack:
   include:
-  - /spack_environment/common.yaml
+  - /spack_environment/common-gh200.yaml
 
   view: false
   concretizer:
@@ -18,7 +18,7 @@ spack:
       true
 
   specs:
-    - dla-future@master build_type=Debug +cuda +miniapps +scalapack +ci-test +hdf5 +pch
+    - dla-future@master build_type=Debug +cuda +miniapps +ci-test
 
   packages:
     all:
@@ -28,13 +28,11 @@ spack:
       require:: 'openblas'
     lapack:
       require:: 'openblas'
-    scalapack:
-      require:: 'netlib-scalapack'
-    mpich:
-      require:
-        - '+fortran'
     pika:
       require:
-        - '@0.30.0'
         - 'build_type=Debug'
         - 'malloc=system'
+    # For correct code coverage
+    # https://github.com/eth-cscs/DLA-Future/pull/1002
+    umpire:
+      require: '@2022.03.1'

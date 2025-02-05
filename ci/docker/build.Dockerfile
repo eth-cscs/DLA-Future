@@ -85,6 +85,12 @@ COPY $SPACK_DLAF_REPO /user_repo
 
 RUN spack repo add --scope site /user_repo
 
+### Workaround until CE provides full MPI substitution.
+# Add ~/site/repo if it exists in the base image
+RUN if [ -d ~/site/repo ]; then \
+      spack repo add --scope site ~/site/repo; \
+    fi
+
 # Set this to a spack.yaml file which contains a spec
 # e.g. --build-arg SPACK_ENVIRONMENT=ci/spack/my-env.yaml
 ARG SPACK_ENVIRONMENT
@@ -99,7 +105,9 @@ RUN spack env create --with-view ${ENV_VIEW} ci /spack_environment/spack.yaml
 # 2. Set the C++ standard
 ARG CXXSTD=17
 RUN spack -e ci config add "packages:dla-future:variants:cxxstd=${CXXSTD}"
-# 3. Install only the dependencies of this (top level is our package)
+# 3. Concretize environment
+RUN spack -e ci concretize
+# 4. Install only the dependencies of this (top level is our package)
 ARG NUM_PROCS
 RUN spack -e ci install --jobs ${NUM_PROCS} --fail-fast --only=dependencies
 

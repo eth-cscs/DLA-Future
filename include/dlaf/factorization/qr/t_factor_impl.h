@@ -320,6 +320,8 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 
       if (worker_id == 0)
         tile_t = std::move(workspace);
+      else
+        ex::start_detached(std::move(workspace));
     }
 
     if (nworkers > 1 and k > 1) {

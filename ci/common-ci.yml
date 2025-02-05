@@ -37,7 +37,7 @@ variables:
     reports:
       dotenv: build.env
   variables:
-    SPACK_SHA: develop-2024-11-24
+    SPACK_SHA: develop-2025-02-09
     SPACK_DLAF_REPO: ./spack
     DOCKER_BUILD_ARGS: '[
         "BASE_IMAGE",

@@ -18,7 +18,9 @@ spack:
       true
 
   specs:
-    - dla-future@master build_type=Debug +cuda +miniapps +scalapack +ci-test +hdf5 +pch
+    # pika spawns extra threads for shutdown prior to 0.32.0. We explicitly don't check for the number of
+    # threads spawned by tests in this configuration.
+    - dla-future@master build_type=Debug +cuda +miniapps +scalapack +ci-test +hdf5 +pch ~ci-check-threads
 
   packages:
     all:

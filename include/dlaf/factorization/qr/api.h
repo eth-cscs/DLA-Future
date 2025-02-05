@@ -31,11 +31,11 @@ struct QR_Tfactor {
   static void call(matrix::Panel<Coord::Col, T, device>& hh_panel,
                    matrix::ReadOnlyTileSender<T, Device::CPU> taus,
                    matrix::ReadWriteTileSender<T, device> t,
-                   std::vector<matrix::ReadWriteTileSender<T, device>> workspaces);
+                   matrix::Panel<Coord::Col, T, device>& workspaces);
   static void call(matrix::Panel<Coord::Col, T, device>& hh_panel,
                    matrix::ReadOnlyTileSender<T, Device::CPU> taus,
                    matrix::ReadWriteTileSender<T, device> t,
-                   std::vector<matrix::ReadWriteTileSender<T, device>> workspaces,
+                   matrix::Panel<Coord::Col, T, device>& workspaces,
                    comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_task_chain);
 };
 

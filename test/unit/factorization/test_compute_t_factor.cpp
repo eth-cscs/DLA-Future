@@ -306,16 +306,16 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
       panel_v.setTile(i, splitTile(v.get().read(i), panel_view(i)));
     }
 
-    matrix::Matrix<T, D> ws_T = [k]() {
+    auto workspaces = [k]() -> matrix::Panel<Coord::Col, T, D> {
       const SizeType nworkspaces = to_SizeType(
           std::max<std::size_t>(0, factorization::internal::get_tfactor_num_workers<B>() - 1));
       const SizeType nrefls_step = k;
-      return matrix::Matrix<T, D>({nworkspaces * nrefls_step, nrefls_step}, {nrefls_step, nrefls_step});
+      return matrix::Panel<Coord::Col, T, D>({{nworkspaces * nrefls_step, nrefls_step},
+                                              {nrefls_step, nrefls_step}});
     }();
 
-    auto workspaces = select(ws_T, common::iterate_range2d(ws_T.distribution().local_nr_tiles()));
     computeTFactor<B>(panel_v, mat_taus.read(GlobalTileIndex(0, 0)), t_output.get().readwrite(t_idx),
-                      std::move(workspaces));
+                      workspaces);
   }
 
   // Note:
@@ -397,16 +397,16 @@ void testComputeTFactor(comm::CommunicatorGrid& grid, const SizeType m, const Si
       panel_v.setTile(i, splitTile(v.get().read(i), panel_view(i)));
     }
 
-    matrix::Matrix<T, D> ws_T = [k]() {
+    auto workspaces = [k]() -> matrix::Panel<Coord::Col, T, D> {
       const SizeType nworkspaces = to_SizeType(
           std::max<std::size_t>(0, factorization::internal::get_tfactor_num_workers<B>() - 1));
       const SizeType nrefls_step = k;
-      return matrix::Matrix<T, D>({nworkspaces * nrefls_step, nrefls_step}, {nrefls_step, nrefls_step});
+      return matrix::Panel<Coord::Col, T, D>({{nworkspaces * nrefls_step, nrefls_step},
+                                              {nrefls_step, nrefls_step}});
     }();
 
-    auto workspaces = select(ws_T, common::iterate_range2d(ws_T.distribution().local_nr_tiles()));
     computeTFactor<B>(panel_v, mat_taus.read(GlobalTileIndex(0, 0)), t_output.get().readwrite(t_idx),
-                      std::move(workspaces), serial_comm);
+                      workspaces, serial_comm);
   }
 
   // Note:

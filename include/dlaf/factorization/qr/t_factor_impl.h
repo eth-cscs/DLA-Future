@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstddef>
+#include <iterator>
 #include <utility>
 #include <vector>
 
@@ -110,7 +111,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
       matrix::Panel<Coord::Col, T, Device::CPU>& hh_panel,
       matrix::ReadOnlyTileSender<T, Device::CPU> taus,
       matrix::ReadWriteTileSender<T, Device::CPU> tile_t,
-      std::vector<matrix::ReadWriteTileSender<T, Device::CPU>> workspaces) {
+      matrix::Panel<Coord::Col, T, Device::CPU>& workspaces) {
     namespace ex = pika::execution::experimental;
     namespace di = dlaf::internal;
 
@@ -124,11 +125,15 @@ struct Helpers<Backend::MC, Device::CPU, T> {
     const auto workers_params = split_tfactor_work<Backend::MC>(hh_tiles.size());
     const std::size_t nworkers = workers_params.nworkers;
     const std::size_t batch_size = workers_params.batch_size;
-    DLAF_ASSERT(workspaces.size() >= nworkers - 1, workspaces.size(), nworkers - 1);
+
+    const auto range_workspaces = common::iterate_range2d(LocalTileSize{to_SizeType(nworkers - 1), 1});
+    DLAF_ASSERT(to_sizet(std::distance(range_workspaces.begin(), range_workspaces.end())) >=
+                    nworkers - 1,
+                std::distance(range_workspaces.begin(), range_workspaces.end()), nworkers - 1);
 
     const auto hp_scheduler = di::getBackendScheduler<Backend::MC>(thread_priority::high);
     return ex::when_all(ex::when_all_vector(std::move(hh_tiles)), std::move(taus), std::move(tile_t),
-                        ex::when_all_vector(std::move(workspaces))) |
+                        ex::when_all_vector(select(workspaces, range_workspaces))) |
            di::continues_on(hp_scheduler) |
            ex::let_value([hp_scheduler, k, nworkers, batch_size](auto& hh_tiles, auto& taus,
                                                                  auto& tile_t, auto& workspaces) {
@@ -243,7 +248,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
       matrix::Panel<Coord::Col, T, Device::GPU>& hh_panel,
       matrix::ReadOnlyTileSender<T, Device::CPU> taus,
       matrix::ReadWriteTileSender<T, Device::GPU> tile_t,
-      std::vector<matrix::ReadWriteTileSender<T, Device::GPU>> workspaces) {
+      matrix::Panel<Coord::Col, T, Device::GPU>& workspaces) {
     namespace ex = pika::execution::experimental;
     namespace di = dlaf::internal;
 
@@ -257,7 +262,11 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
     const auto workers_params = split_tfactor_work<Backend::GPU>(hh_tiles.size());
     const std::size_t nworkers = workers_params.nworkers;
     const std::size_t batch_size = workers_params.batch_size;
-    DLAF_ASSERT(workspaces.size() >= nworkers - 1, workspaces.size(), nworkers - 1);
+
+    const auto range_workspaces = common::iterate_range2d(LocalTileSize{to_SizeType(nworkers - 1), 1});
+    DLAF_ASSERT(to_sizet(std::distance(range_workspaces.begin(), range_workspaces.end())) >=
+                    nworkers - 1,
+                std::distance(range_workspaces.begin(), range_workspaces.end()), nworkers - 1);
 
     for (std::size_t worker_id = 0; worker_id < nworkers; ++worker_id) {
       const std::size_t begin = worker_id * batch_size;
@@ -273,8 +282,9 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
       for (std::size_t sub = begin; sub < end; ++sub)
         input_tiles.emplace_back(std::move(hh_tiles[sub]));
 
-      matrix::ReadWriteTileSender<T, Device::GPU>& workspace =
-          worker_id == 0 ? tile_t : workspaces[worker_id - 1];
+      matrix::ReadWriteTileSender<T, Device::GPU> workspace =
+          worker_id == 0 ? std::move(tile_t)
+                         : workspaces.readwrite(LocalTileIndex{to_SizeType(worker_id - 1), 0});
 
       workspace =
           di::whenAllLift(ex::when_all_vector(std::move(input_tiles)), taus, std::move(workspace)) |
@@ -310,19 +320,18 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 
       if (worker_id == 0)
         tile_t = std::move(workspace);
-      else
-        workspaces[worker_id - 1] = std::move(workspace);
     }
 
     if (nworkers > 1 and k > 1) {
       tile_t =
-          di::whenAllLift(std::move(tile_t), ex::when_all_vector(std::move(workspaces))) |
+          di::whenAllLift(std::move(tile_t),
+                          ex::when_all_vector(selectRead(workspaces, range_workspaces))) |
           di::transform<dlaf::internal::TransformDispatchType::Plain>(
               di::Policy<Backend::GPU>(thread_priority::high),
               [nworkers](auto&& tile_t, auto&& workspaces, whip::stream_t stream) {
                 for (std::size_t index = 0; index < nworkers - 1; ++index) {
-                  matrix::Tile<T, Device::GPU> ws =
-                      workspaces[index].subTileReference({{0, 0}, tile_t.size()});
+                  matrix::Tile<const T, Device::GPU> ws =
+                      workspaces[index].get().subTileReference({{0, 0}, tile_t.size()});
                   DLAF_ASSERT(equal_size(ws, tile_t), ws, tile_t);
                   gpulapack::add(blas::Uplo::Upper, tile_t.size().rows() - 1, tile_t.size().cols() - 1,
                                  T(1), ws.ptr({0, 1}), ws.ld(), tile_t.ptr({0, 1}), tile_t.ld(), stream);
@@ -377,10 +386,10 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 }
 
 template <Backend backend, Device device, class T>
-void QR_Tfactor<backend, device, T>::call(
-    matrix::Panel<Coord::Col, T, device>& hh_panel, matrix::ReadOnlyTileSender<T, Device::CPU> taus,
-    matrix::ReadWriteTileSender<T, device> tile_t,
-    std::vector<matrix::ReadWriteTileSender<T, device>> workspaces) {
+void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& hh_panel,
+                                          matrix::ReadOnlyTileSender<T, Device::CPU> taus,
+                                          matrix::ReadWriteTileSender<T, device> tile_t,
+                                          matrix::Panel<Coord::Col, T, device>& workspaces) {
   namespace ex = pika::execution::experimental;
 
   using Helpers = tfactor_l::Helpers<backend, device, T>;
@@ -403,15 +412,14 @@ void QR_Tfactor<backend, device, T>::call(
   // 1) "GEMV" t = -tau(j) . V(j:, 0:j)* . V(j:, j)
   // 2) "TRMV" T(0:j, j) = T(0:j, 0:j) . t
 
-  tile_t = Helpers::step_gemv(hh_panel, taus, std::move(tile_t), std::move(workspaces));
+  tile_t = Helpers::step_gemv(hh_panel, taus, std::move(tile_t), workspaces);
   ex::start_detached(Helpers::step_copy_diag_and_trmv(taus, std::move(tile_t)));
 }
 
 template <Backend backend, Device device, class T>
 void QR_Tfactor<backend, device, T>::call(
     matrix::Panel<Coord::Col, T, device>& hh_panel, matrix::ReadOnlyTileSender<T, Device::CPU> taus,
-    matrix::ReadWriteTileSender<T, device> tile_t,
-    std::vector<matrix::ReadWriteTileSender<T, device>> workspaces,
+    matrix::ReadWriteTileSender<T, device> tile_t, matrix::Panel<Coord::Col, T, device>& workspaces,
     comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_task_chain) {
   namespace ex = pika::execution::experimental;
 
@@ -439,7 +447,7 @@ void QR_Tfactor<backend, device, T>::call(
   // reset is needed because not all ranks might have computations to do, but they will participate
   // to mpi reduction anyway.
   tile_t = Helpers::set0_and_return(std::move(tile_t));
-  tile_t = Helpers::step_gemv(hh_panel, taus, std::move(tile_t), std::move(workspaces));
+  tile_t = Helpers::step_gemv(hh_panel, taus, std::move(tile_t), workspaces);
 
   // Note: at this point each rank has its partial result for each column
   // so, let's reduce the results (on all ranks, so that everyone can independently compute T factor)

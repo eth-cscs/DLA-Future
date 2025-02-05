@@ -62,8 +62,8 @@ template <Backend backend, Device device, class T>
 void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
                     matrix::ReadOnlyTileSender<T, Device::CPU> taus,
                     matrix::ReadWriteTileSender<T, device> t,
-                    std::vector<matrix::ReadWriteTileSender<T, device>> workspaces) {
-  QR_Tfactor<backend, device, T>::call(hh_panel, std::move(taus), std::move(t), std::move(workspaces));
+                    matrix::Panel<Coord::Col, T, device>& workspaces) {
+  QR_Tfactor<backend, device, T>::call(hh_panel, std::move(taus), std::move(t), workspaces);
 }
 
 /// Forms the triangular factor T of a block of reflectors H, which is defined as a product
@@ -108,9 +108,9 @@ template <Backend backend, Device device, class T>
 void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
                     matrix::ReadOnlyTileSender<T, Device::CPU> taus,
                     matrix::ReadWriteTileSender<T, device> t,
-                    std::vector<matrix::ReadWriteTileSender<T, device>> workspaces,
+                    matrix::Panel<Coord::Col, T, device>& workspaces,
                     comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_task_chain) {
-  QR_Tfactor<backend, device, T>::call(hh_panel, std::move(taus), std::move(t), std::move(workspaces),
+  QR_Tfactor<backend, device, T>::call(hh_panel, std::move(taus), std::move(t), workspaces,
                                        mpi_col_task_chain);
 }
 

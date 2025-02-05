@@ -119,6 +119,8 @@ struct Helpers<Backend::MC, Device::CPU, T> {
     std::vector<matrix::ReadOnlyTileSender<T, Device::CPU>> hh_tiles =
         selectRead(hh_panel, hh_panel.iteratorLocal());
 
+    const SizeType k = hh_panel.getWidth();
+
     const auto workers_params = split_tfactor_work<Backend::MC>(hh_tiles.size());
     const std::size_t nworkers = workers_params.nworkers;
     const std::size_t batch_size = workers_params.batch_size;
@@ -128,8 +130,8 @@ struct Helpers<Backend::MC, Device::CPU, T> {
     return ex::when_all(ex::when_all_vector(std::move(hh_tiles)), std::move(taus), std::move(tile_t),
                         ex::when_all_vector(std::move(workspaces))) |
            di::continues_on(hp_scheduler) |
-           ex::let_value([hp_scheduler, nworkers, batch_size](auto& hh_tiles, auto& taus, auto& tile_t,
-                                                              auto& workspaces) {
+           ex::let_value([hp_scheduler, k, nworkers, batch_size](auto& hh_tiles, auto& taus,
+                                                                 auto& tile_t, auto& workspaces) {
              return ex::just(std::make_unique<pika::barrier<>>(nworkers)) |
                     di::continues_on(hp_scheduler) |
                     ex::bulk(
@@ -137,7 +139,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
                         [=, &hh_tiles, &taus, &tile_t, &workspaces](const std::size_t worker_id,
                                                                     auto& barrier_ptr) mutable {
                           const auto barrier_busy_wait = getTFactorBarrierBusyWait();
-                          const SizeType k = taus.get().size().rows();
+                          DLAF_ASSERT_HEAVY(k == taus.get().size().rows(), k, taus.get().size().rows());
 
                           const std::size_t begin = worker_id * batch_size;
                           const std::size_t end =
@@ -247,6 +249,8 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
     std::vector<matrix::ReadOnlyTileSender<T, Device::GPU>> hh_tiles =
         selectRead(hh_panel, hh_panel.iteratorLocal());
 
+    const SizeType k = hh_panel.getWidth();
+
     const auto workers_params = split_tfactor_work<Backend::GPU>(hh_tiles.size());
     const std::size_t nworkers = workers_params.nworkers;
     const std::size_t batch_size = workers_params.batch_size;
@@ -273,10 +277,9 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
           di::whenAllLift(ex::when_all_vector(std::move(input_tiles)), taus, std::move(workspace)) |
           di::transform<dlaf::internal::TransformDispatchType::Blas>(
               di::Policy<Backend::GPU>(thread_priority::high),
-              [](cublasHandle_t handle, auto&& hh_tiles, auto&& taus,
-                 matrix::Tile<T, Device::GPU>& tile_t) {
-                const SizeType k = taus.size().rows();
-
+              [k](cublasHandle_t handle, auto&& hh_tiles, auto&& taus,
+                  matrix::Tile<T, Device::GPU>& tile_t) {
+                DLAF_ASSERT_MODERATE(k == taus.size().rows(), k, taus.size().rows());
                 DLAF_ASSERT(tile_t.size() == TileElementSize(k, k), tile_t.size(), k);
 
                 // Note:
@@ -306,7 +309,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
         workspaces[worker_id - 1] = std::move(workspace);
     }
 
-    if (nworkers > 1)
+    if (nworkers > 1 and k > 1)
       tile_t =
           di::whenAllLift(std::move(tile_t), ex::when_all_vector(std::move(workspaces))) |
           di::transform<dlaf::internal::TransformDispatchType::Plain>(

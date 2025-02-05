@@ -1076,10 +1076,6 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
     Matrix<T, D> t({nrefls_tile, nrefls_tile}, dist.blockSize());
 
     auto workspace_fit = select(ws, ws.iteratorLocal());
-    if (isPanelIncomplete)
-      for (auto& tile_ws : workspace_fit)
-        tile_ws = splitTile(std::move(tile_ws), {{0, 0}, {nrefls_tile, nrefls_tile}});
-
     computeTFactor<B>(v, mat_taus_retiled.read(GlobalTileIndex(j_sub, 0)), t.readwrite(t_idx),
                       std::move(workspace_fit));
     ws.reset();
@@ -1284,10 +1280,6 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
                                                      nrefls_tile, v, mat_a, !is_full_band);
 
       auto workspace_fit = select(ws, ws.iteratorLocal());
-      if (nrefls_tile != dist.tile_size().rows())
-        for (auto& tile_ws : workspace_fit)
-          tile_ws = splitTile(std::move(tile_ws), {{0, 0}, {nrefls_tile, nrefls_tile}});
-
       computeTFactor<B>(v, mat_taus_retiled.read(GlobalTileIndex(j_sub, 0)), t.readwrite(t_idx),
                         std::move(workspace_fit), mpi_col_chain);
       ws.reset();

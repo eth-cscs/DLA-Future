@@ -222,12 +222,6 @@ void BackTransformationReductionToBand<backend, device, T>::call(
     const LocalTileIndex t_index{Coord::Col, k};
 
     auto workspace_fit = select(panelWS, panelWS.iteratorLocal());
-    if (is_last) {
-      for (auto& tile_ws : workspace_fit) {
-        tile_ws = splitTile(std::move(tile_ws), {{0, 0}, {nr_reflectors, nr_reflectors}});
-      }
-    }
-
     computeTFactor<backend>(panelV, mat_taus.read(taus_index), panelT.readwrite(t_index),
                             std::move(workspace_fit));
     panelWS.reset();
@@ -364,12 +358,6 @@ void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
       const LocalTileIndex t_index{Coord::Col, k_local};
 
       auto workspace_fit = select(panelWS, panelWS.iteratorLocal());
-      if (is_last) {
-        for (auto& tile_ws : workspace_fit) {
-          tile_ws = splitTile(std::move(tile_ws), {{0, 0}, {nr_reflectors, nr_reflectors}});
-        }
-      }
-
       computeTFactor<B>(panelV, mat_taus.read(taus_index), panelT.readwrite(t_index),
                         std::move(workspace_fit), mpi_col_task_chain);
 

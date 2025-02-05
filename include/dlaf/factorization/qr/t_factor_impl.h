@@ -145,8 +145,9 @@ struct Helpers<Backend::MC, Device::CPU, T> {
                           const std::size_t end =
                               std::min(worker_id * batch_size + batch_size, hh_tiles.size());
 
-                          const matrix::Tile<T, Device::CPU>& ws_worker =
-                              worker_id == 0 ? tile_t : workspaces[worker_id - 1];
+                          const matrix::Tile<T, Device::CPU> ws_worker =
+                              (worker_id == 0 ? tile_t : workspaces[worker_id - 1])
+                                  .subTileReference({{0, 0}, tile_t.size()});
 
                           DLAF_ASSERT(equal_size(ws_worker, tile_t), ws_worker.size(), tile_t.size());
 
@@ -165,7 +166,9 @@ struct Helpers<Backend::MC, Device::CPU, T> {
                           // reduce ws_T in tile_t
                           if (worker_id == 0) {
                             for (std::size_t other_worker = 1; other_worker < nworkers; ++other_worker) {
-                              tile::internal::add(T(1), workspaces[other_worker - 1], tile_t);
+                              matrix::Tile<T, Device::CPU> ws =
+                                  workspaces[other_worker - 1].subTileReference({{0, 0}, tile_t.size()});
+                              tile::internal::add(T(1), ws, tile_t);
                             }
                           }
                         }) |
@@ -278,7 +281,9 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
           di::transform<dlaf::internal::TransformDispatchType::Blas>(
               di::Policy<Backend::GPU>(thread_priority::high),
               [k](cublasHandle_t handle, auto&& hh_tiles, auto&& taus,
-                  matrix::Tile<T, Device::GPU>& tile_t) {
+                  matrix::Tile<T, Device::GPU>& tile_t_full) {
+                matrix::Tile<T, Device::GPU> tile_t = tile_t_full.subTileReference({{0, 0}, {k, k}});
+
                 DLAF_ASSERT_MODERATE(k == taus.size().rows(), k, taus.size().rows());
                 DLAF_ASSERT(tile_t.size() == TileElementSize(k, k), tile_t.size(), k);
 
@@ -300,7 +305,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
                   Helpers::loop_gemv(handle, tile_v, taus, tile_t);
                 }
 
-                return std::move(tile_t);
+                return std::move(tile_t_full);
               });
 
       if (worker_id == 0)
@@ -309,20 +314,22 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
         workspaces[worker_id - 1] = std::move(workspace);
     }
 
-    if (nworkers > 1 and k > 1)
+    if (nworkers > 1 and k > 1) {
       tile_t =
           di::whenAllLift(std::move(tile_t), ex::when_all_vector(std::move(workspaces))) |
           di::transform<dlaf::internal::TransformDispatchType::Plain>(
               di::Policy<Backend::GPU>(thread_priority::high),
               [nworkers](auto&& tile_t, auto&& workspaces, whip::stream_t stream) {
                 for (std::size_t index = 0; index < nworkers - 1; ++index) {
-                  matrix::Tile<T, Device::GPU>& ws = workspaces[index];
+                  matrix::Tile<T, Device::GPU> ws =
+                      workspaces[index].subTileReference({{0, 0}, tile_t.size()});
                   DLAF_ASSERT(equal_size(ws, tile_t), ws, tile_t);
                   gpulapack::add(blas::Uplo::Upper, tile_t.size().rows() - 1, tile_t.size().cols() - 1,
                                  T(1), ws.ptr({0, 1}), ws.ld(), tile_t.ptr({0, 1}), tile_t.ld(), stream);
                 }
                 return std::move(tile_t);
               });
+    }
 
     return tile_t;
   }

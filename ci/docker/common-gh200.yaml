@@ -24,7 +24,7 @@ packages:
     require: 'cray-mpich'
   pika:
     require:
-      - "@git.6cfeeb1ba7541790134ec33a16d2b769a817b090=0.30.1"
+      - "@git.0.32.0=0.32.0"
   blaspp:
     variants:
       - '~cuda'

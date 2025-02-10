@@ -198,8 +198,8 @@ printenv > env_{bs_name}.txt
 """,
 }
 
-cscs["santis"] = {
-    "Cores": 288,
+cscs["alps-gh200"] = {
+    "Cores": 256,
     "Threads per core": 1,
     "Allowed rpns": [4],
     "Multiple rpn in same job": True,
@@ -217,12 +217,19 @@ cscs["santis"] = {
 #SBATCH --no-requeue
 
 # Env
+
 export FI_MR_CACHE_MONITOR=disabled
 export MPICH_GPU_SUPPORT_ENABLED=1
 export MIMALLOC_EAGER_COMMIT_DELAY=0
 export MIMALLOC_ALLOW_LARGE_OS_PAGES=1
+
+export PIKA_MPI_COMPLETION_MODE=31
+export PIKA_MPI_ENABLE_POOL=1
+
 export DLAF_BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE=128
 export DLAF_UMPIRE_DEVICE_MEMORY_POOL_ALIGNMENT_BYTES=$((1 << 21)) # 2 MiB, large page size
+export DLAF_RED2BAND_PANEL_NWORKERS=50
+export DLAF_TFACTOR_NWORKERS=4
 
 # Debug
 module list &> modules_{bs_name}.txt
@@ -231,6 +238,8 @@ printenv > env_{bs_name}.txt
 # Commands
 """,
 }
+
+cscs["alps-todi"] = cscs["alps-gh200"].copy()
 
 csc = {}
 

@@ -3,9 +3,6 @@ include:
 
 # Need custom definition as remote adds SLURM_MPI_TYPE: pmi2
 .dlaf-container-runner-daint-gh200:
-  extends: .container-runner-daint
+  extends: .container-runner-daint-gh200
   variables:
-    ARCH: 'aarch64'
-    USE_CE: 'YES'
-    NVIDIA_VISIBLE_DEVICES: 'all'
-    NVIDIA_DRIVER_CAPABILITIES: 'compute,utility'
+    SLURM_MPI_TYPE: cray_shasta

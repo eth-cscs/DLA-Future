@@ -64,6 +64,7 @@ auto split_tfactor_work(const std::size_t nrtiles) {
   } params;
 
   params.batch_size = util::ceilDiv(nrtiles, std::clamp(ideal_workers, min_workers, available_workers));
+  DLAF_ASSERT_MODERATE(params.batch_size > 0, params.batch_size, nrtiles);
   params.nworkers = std::max<std::size_t>(1, util::ceilDiv(nrtiles, params.batch_size));
 
   return params;
@@ -121,6 +122,9 @@ struct Helpers<Backend::MC, Device::CPU, T> {
         selectRead(hh_panel, hh_panel.iteratorLocal());
 
     const SizeType k = hh_panel.getWidth();
+
+    if (hh_tiles.size() == 0)
+      return tile_t;
 
     const auto workers_params = split_tfactor_work<Backend::MC>(hh_tiles.size());
     const std::size_t nworkers = workers_params.nworkers;
@@ -258,6 +262,9 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
         selectRead(hh_panel, hh_panel.iteratorLocal());
 
     const SizeType k = hh_panel.getWidth();
+
+    if (hh_tiles.size() == 0)
+      return tile_t;
 
     const auto workers_params = split_tfactor_work<Backend::GPU>(hh_tiles.size());
     const std::size_t nworkers = workers_params.nworkers;

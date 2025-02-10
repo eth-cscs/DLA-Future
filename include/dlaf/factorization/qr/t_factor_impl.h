@@ -158,8 +158,6 @@ struct Helpers<Backend::MC, Device::CPU, T> {
                               (worker_id == 0 ? tile_t : workspaces[worker_id - 1])
                                   .subTileReference({{0, 0}, tile_t.size()});
 
-                          DLAF_ASSERT(equal_size(ws_worker, tile_t), ws_worker.size(), tile_t.size());
-
                           tile::internal::set0<T>(ws_worker);
                           lapack::lacpy(blas::Uplo::General, 1, k, taus.get().ptr(), 1, ws_worker.ptr(),
                                         ws_worker.ld() + 1);
@@ -299,10 +297,9 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
               di::Policy<Backend::GPU>(thread_priority::high),
               [k](cublasHandle_t handle, auto&& hh_tiles, auto&& taus,
                   matrix::Tile<T, Device::GPU>& tile_t_full) {
-                matrix::Tile<T, Device::GPU> tile_t = tile_t_full.subTileReference({{0, 0}, {k, k}});
-
                 DLAF_ASSERT_MODERATE(k == taus.size().rows(), k, taus.size().rows());
-                DLAF_ASSERT(tile_t.size() == TileElementSize(k, k), tile_t.size(), k);
+
+                matrix::Tile<T, Device::GPU> tile_t = tile_t_full.subTileReference({{0, 0}, {k, k}});
 
                 // Note:
                 // prepare the diagonal of taus in t and reset the rest

@@ -222,7 +222,6 @@ void BackTransformationReductionToBand<backend, device, T>::call(
     const LocalTileIndex t_index{Coord::Col, k};
 
     computeTFactor<backend>(panelV, mat_taus.read(taus_index), panelT.readwrite(t_index), panelWS);
-    panelWS.reset();
 
     // W = V T
     auto tile_t = panelT.read(t_index);
@@ -247,6 +246,7 @@ void BackTransformationReductionToBand<backend, device, T>::call(
     panelW.reset();
     panelW2.reset();
     panelT.reset();
+    panelWS.reset();
   }
 }
 
@@ -389,11 +389,11 @@ void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
                             splitTile(mat_c.readwrite(ij), mat_c_view(ij)));
     }
 
-    panelWS.reset();
     panelV.reset();
     panelW.reset();
     panelW2.reset();
     panelT.reset();
+    panelWS.reset();
   }
 }
 }

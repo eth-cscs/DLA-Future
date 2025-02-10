@@ -54,10 +54,10 @@ namespace dlaf::factorization::internal {
 /// @param t tile where the resulting T factor will be stored in its top-left sub-matrix of size
 /// TileElementSize(k, k)
 /// @param workspaces array of tiles used as workspace, with at least one tile per worker (see
-/// get_tfactor_num_workers), each tile should have the same size as @param tile_t
+/// get_tfactor_num_workers), each tile should be at least of size TileElementSize(k, k)
 ///
 /// @pre reflectors in hh_panel are well formed (1s on the diagonal and 0s in the upper part)
-/// @pre hh_panel.getWidth() <= t.get().size().rows && hh_panel.size().getWidth() <= t.get().size().cols()
+/// @pre hh_panel.getWidth() <= t.get().size().rows && hh_panel.getWidth() <= t.get().size().cols()
 template <Backend backend, Device device, class T>
 void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
                     matrix::ReadOnlyTileSender<T, Device::CPU> taus,
@@ -99,11 +99,11 @@ void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
 /// @param t tile where the resulting T factor will be stored in its top-left sub-matrix of size
 /// TileElementSize(k, k)
 /// @param workspaces array of tiles used as workspace, with at least one tile per worker (see
-/// get_tfactor_num_workers), each tile should have the same size as @param tile_t
+/// get_tfactor_num_workers), each tile should be at least of size TileElementSize(k, k)
 /// @param mpi_col_task_chain where internal communications are issued
 ///
 /// @pre reflectors in hh_panel are well formed (1s on the diagonal and 0s in the upper part)
-/// @pre hh_panel.getWidth() <= t.get().size().rows && hh_panel.size().getWidth() <= t.get().size().cols()
+/// @pre hh_panel.getWidth() <= t.get().size().rows && hh_panel.getWidth() <= t.get().size().cols()
 template <Backend backend, Device device, class T>
 void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
                     matrix::ReadOnlyTileSender<T, Device::CPU> taus,

@@ -55,6 +55,17 @@ namespace dlaf {
 ///     Enable dump of tridiagonal solver input/output data to "tridiagonal.h5" file that will before
 ///     created in the working folder (it should not exist before the execution).
 ///     Set with environment variable DLAF_DEBUG_DUMP_TRIDIAG_SOLVER_DATA.
+/// - tfactor_num_threads:
+///     The maximum number of threads to use for computing tfactor (e.g. which is used for
+///     instance in red2band and its backtransformation). Set with --dlaf:tfactor-num-threads or env
+///     variable DLAF_TFACTOR_NTHREADS.
+/// - tfactor_num_streams:
+///     The maximum number of streams to use for computing tfactor (e.g. which is used for
+///     instance in red2band and its backtransformation). Set with --dlaf:tfactor-num-streams or env
+///     variable DLAF_TFACTOR_NSTREAMS.
+/// - tfactor_barrier_busy_wait_us:
+///     The duration in microseconds to busy-wait in barriers in the tfactor algorithm.
+///     Set with --dlaf:tfactor-barrier-busy-wait-us or env variable DLAF_TFACTOR_BARRIER_BUSY_WAIT_US.
 /// - red2band_panel_nworkers:
 ///     The maximum number of threads to use for computing the panel in the reduction to band algorithm.
 ///     Set with --dlaf:red2band-panel-nworkers or env variable DLAF_RED2BAND_PANEL_NWORKERS.
@@ -108,6 +119,7 @@ struct TuneParameters {
 
     const auto default_pool_thread_count =
         pika::resource::get_thread_pool("default").get_os_thread_count();
+    tfactor_num_threads = std::max<std::size_t>(1, default_pool_thread_count / 2);
     red2band_panel_nworkers = std::max<std::size_t>(1, default_pool_thread_count / 2);
     tridiag_rank1_nworkers = default_pool_thread_count;
   }
@@ -118,6 +130,10 @@ struct TuneParameters {
   bool debug_dump_reduction_to_band_data = false;
   bool debug_dump_band_to_tridiagonal_data = false;
   bool debug_dump_tridiag_solver_data = false;
+
+  std::size_t tfactor_num_threads = 1;
+  std::size_t tfactor_num_streams = 4;
+  std::size_t tfactor_barrier_busy_wait_us = 0;
   std::size_t red2band_panel_nworkers = 1;
   std::size_t red2band_barrier_busy_wait_us = 1000;
   std::size_t tridiag_rank1_nworkers = 1;

@@ -55,6 +55,7 @@ ENV NVIDIA_REQUIRE_CUDA "cuda>=10.2"
 ENV ENABLE_COVERAGE="YES"
 
 # Automatically print stacktraces on segfault
-ENV LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so
+ARG DLAF_LD_PRELOAD
+ENV LD_PRELOAD=${DLAF_LD_PRELOAD}
 
 WORKDIR ${BUILD}

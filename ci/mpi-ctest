@@ -11,30 +11,19 @@ CTEST_OUTPUT="$CI_PROJECT_DIR/output/ctest.$SLURM_PROCID.txt"
 
 pushd /DLA-Future-build > /dev/null
 
-export CUDA_MPS_PIPE_DIRECTORY=/tmp/nvidia-mps
-export CUDA_MPS_LOG_DIRECTORY=/tmp/nvidia-log
-
-if which nvidia-cuda-mps-control && [ $SLURM_LOCALID = 0 ]; then START_MPS=1; else START_MPS=0; fi &> /dev/null
-
-# Workaround on daint to avoid test hanging (See PR #1197)
-# Launch MPS from a single rank per node
-if [ $START_MPS -eq 1 ]; then
-    nvidia-cuda-mps-control -d
+if [[ $DLAF_CI_BIND_GPU == "ALPS-GH200" ]]
+then
+    export CUDA_VISIBLE_DEVICE=$(( SLURM_LOCALID % 4 ))
+    echo "Rank $SLURM_PROCID: set CUDA_VISIBLE_DEVICE=$CUDA_VISIBLE_DEVICE"
 fi
-# Wait for MPS to start
-sleep 5
 
 # Run the tests, only output on the first rank
 if [[ $SLURM_PROCID == "0" ]]; then
     TZ=CET date +"Run started at: %H:%M:%S %z"
-    ctest --output-log "$CTEST_OUTPUT" -V $@
+    ctest --output-log "$CTEST_OUTPUT" -V $@ | grep -v "PU.*Core.*Socket.*pool" | grep -v "MPI rank: 0" | grep -E -v "\*{70}"
     TZ=CET date +"Run finished at: %H:%M:%S %z"
 else
     ctest --output-log "$CTEST_OUTPUT" -V -Q $@
-fi
-
-if [ $START_MPS -eq 1 ]; then
-    echo quit | nvidia-cuda-mps-control
 fi
 
 # Create coverage reports for code run

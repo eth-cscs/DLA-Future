@@ -10,7 +10,7 @@
 
 spack:
   include:
-  - /spack_environment/common.yaml
+  - /spack_environment/common-gh200.yaml
 
   view: false
   concretizer:
@@ -18,12 +18,9 @@ spack:
       true
 
   specs:
-    - dla-future@master +cuda +miniapps +ci-test
+    - dla-future@master +cuda +miniapps +scalapack +ci-test
 
   packages:
     all:
       variants:
         - 'build_type=Release'
-    pika:
-      require:
-        - '+stdexec'

@@ -17,7 +17,6 @@
 #include <dlaf/common/unwrap.h>
 #include <dlaf/init.h>
 #include <dlaf/schedulers.h>
-#include <dlaf/sender/continues_on.h>
 #include <dlaf/sender/policy.h>
 #include <dlaf/sender/typelist.h>
 #include <dlaf/sender/when_all_lift.h>
@@ -54,7 +53,7 @@ template <TransformDispatchType Tag = TransformDispatchType::Plain, Backend B = 
           typename F = void, typename Sender = void,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 [[nodiscard]] decltype(auto) transform(const Policy<B> policy, F&& f, Sender&& sender) {
-  using dlaf::internal::continues_on;
+  using pika::execution::experimental::continues_on;
   using pika::execution::experimental::drop_operation_state;
   using pika::execution::experimental::then;
 

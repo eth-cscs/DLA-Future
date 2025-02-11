@@ -17,18 +17,13 @@ strace \
 # grep -c exits with code 0 if there are matches, 1 if there are no
 # matches, and 2 if there was an error. We only exit on 2.
 set +e
-num_threads=$(cat "$test_output_file" | grep -c 'PU L')
+num_threads_expected=$(cat "$test_output_file" | grep -c 'PU L')
 ((PIPESTATUS[1] < 2)) || exit 1
 num_threads_spawned=$(cat "$strace_output_file" | grep -c 'clone3(')
 ((PIPESTATUS[1] < 2)) || exit 1
 set -e
 
-if ((num_threads > 0)); then
-    # We expect pika to spawn one additional thread outside of thread
-    # pools each time the runtime is started
-    num_extra_threads=$(cat "$test_output_file" | grep -c ' 0: PU L')
-    num_threads_expected=$((num_threads + num_extra_threads))
-
+if ((num_threads_expected > 0)); then
     if ((num_threads_spawned == num_threads_expected)); then
         echo "Expected $num_threads_expected threads to be spawned by pika; correct number spawned"
     else

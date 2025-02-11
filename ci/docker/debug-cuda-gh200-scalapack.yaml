@@ -20,7 +20,7 @@ spack:
   specs:
     # - dla-future@master build_type=Debug +cuda +miniapps +scalapack +ci-test +hdf5 +pch
     # Disable HDF5 as test fails due to filesystem permissions
-    - dla-future@master build_type=Debug +cuda +miniapps +scalapack +ci-test +pch
+    - dla-future@master build_type=Debug +cuda +miniapps +scalapack +ci-test +pch ~ci-check-threads
 
   packages:
     all:
@@ -37,6 +37,6 @@ spack:
         - '+fortran'
     pika:
       require:
-        - '@0.32.0'
+        - '@0.30.1'
         - 'build_type=Debug'
         - 'malloc=system'

@@ -54,7 +54,7 @@ therefore we can safely remove it for gh200.
 ## Build and push
 
 ```
-export TAG="v1.3"
+export TAG="v1.4"
 CSCS_REGISTRY="jfrog.svc.cscs.ch/docker-ci-ext/4700071344751697"
 podman login jfrog.svc.cscs.ch
 

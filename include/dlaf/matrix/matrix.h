@@ -349,12 +349,11 @@ void Matrix<const T, D>::waitLocalTiles() noexcept {
   const auto range_local = common::iterate_range2d(distribution().local_nr_tiles());
 
   auto s = pika::execution::experimental::when_all_vector(internal::selectGeneric(
-               [this](const LocalTileIndex& index) {
-                 return this->tile_managers_[tileLinearIndex(index)].readwrite();
-               },
-               range_local)) |
-           pika::execution::experimental::drop_value();
-  pika::this_thread::experimental::sync_wait(std::move(s));
+      [this](const LocalTileIndex& index) {
+        return this->tile_managers_[tileLinearIndex(index)].readwrite();
+      },
+      range_local));
+  [[maybe_unused]] auto tiles = pika::this_thread::experimental::sync_wait(std::move(s));
 }
 
 template <class T, Device D>

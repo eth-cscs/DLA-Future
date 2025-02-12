@@ -26,8 +26,8 @@
 enum class API { dlaf, scalapack };
 
 template <API api>
-int c_api_test_inititialize(int pika_argc, const char* pika_argv[], int dlaf_argc,
-                            const char* dlaf_argv[], const dlaf::comm::CommunicatorGrid& grid) {
+int c_api_test_initialize(int pika_argc, const char* pika_argv[], int dlaf_argc, const char* dlaf_argv[],
+                          const dlaf::comm::CommunicatorGrid& grid) {
   dlaf_initialize(pika_argc, pika_argv, dlaf_argc, dlaf_argv);
 
   char grid_order = grid_ordering(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(),

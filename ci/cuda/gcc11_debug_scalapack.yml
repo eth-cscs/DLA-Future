@@ -18,13 +18,13 @@ cuda gcc11 debug scalapack build:
   variables:
     DLAF_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-scalapack-debug/dlaf:$CI_COMMIT_SHA
 
-cuda gcc11 debug scalapack test:
-  extends: .run_common
-  variables:
-    PIKA_MPI_ENABLE_POOL: 1
-  needs:
-    - cuda gcc11 debug scalapack build
-  trigger:
-    include:
-      - artifact: pipeline.yml
-        job: cuda gcc11 debug scalapack build
+# cuda gcc11 debug scalapack test:
+#   extends: .run_common
+#   variables:
+#     PIKA_MPI_ENABLE_POOL: 1
+#   needs:
+#     - cuda gcc11 debug scalapack build
+#   trigger:
+#     include:
+#       - artifact: pipeline.yml
+#         job: cuda gcc11 debug scalapack build

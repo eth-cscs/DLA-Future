@@ -15,7 +15,6 @@ import re
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 from parse import parse, with_pattern
 
@@ -204,7 +203,7 @@ def _calc_metrics(cols, df):
     )
 
 
-@with_pattern(r"(|\s+\S+)")
+@with_pattern(r"(?:\s+\S+)?")
 def _parse_optional_text(text):
     text = text.strip()
     # TODO: Prefer empty string or None?
@@ -214,34 +213,19 @@ def _parse_optional_text(text):
         return None
 
 
-# Optionally match "(INT, INT)" and extract both integers in a tuple
-@with_pattern(r"(|\s+\(\d+, \d+\))")
-def _parse_optional_int_pair(s):
-    if s:
-        p = parse("({first:d}, {last:d})", s.strip())
-        return (p["first"], p["last"])
-    else:
-        return None
+@with_pattern(r"(?:\s+\(\d+, \d+\))?")
+def _parse_optional_int_pair(text):
+    """
+    Optionally match "(INT, INT)" and extract both integers in a tuple, otherwise return (None, None)
+    """
+    m = re.match(r"\((\d+), (\d+)\)", text.strip())
+    return tuple(map(int, m.groups())) if m else (None, None)
 
 
 additional_parsers = {
     "optional_text": _parse_optional_text,
     "optional_int_pair": _parse_optional_int_pair,
 }
-# {
-#     "run_index":
-#     "matrix_rows":
-#     "matrix_cols":
-#     "block_rows":
-#     "block_cols":
-#     "grid_rows":
-#     "grid_cols":
-#     "time":
-#     "perf":
-#     "perf_per_node":
-#     "bench_name":
-#     "nodes":
-# }
 
 
 def _parse_line_based(fout, bench_name, nodes):
@@ -333,6 +317,13 @@ def _parse_line_based(fout, bench_name, nodes):
             if "perf" in rd:
                 rd["perf_per_node"] = rd["perf"] / nodes
 
+            if "evals_idxs" in rd:
+                rd["from_ev"], rd["to_ev"] = rd.pop("evals_idxs")
+                if rd["from_ev"] is None:
+                    rd["from_ev"] = 0
+                if rd["to_ev"] is None:
+                    rd["to_ev"] = rd["matrix_rows"]
+
             # makes _calc_*_metrics work
             #
             # Note: DPLASMA trsm miniapp does not respect `--nruns`. This is a workaround
@@ -367,11 +358,21 @@ def _parse_line_based(fout, bench_name, nodes):
 def parse_jobs(data_dirs, distinguish_dir=False):
     if not isinstance(data_dirs, list):
         data_dirs = [data_dirs]
+
+    def default_missing_tags(entry):
+        return entry if isinstance(entry, tuple) else (None, entry)
+
+    data_dirs = map(default_missing_tags, data_dirs)
+
     data = []
-    for data_dir_label in data_dirs:
-        dir_label = data_dir_label.split(":")
+    for tag, data_dir_label in data_dirs:
+        if ":" in str(data_dir_label):
+            dir_label = data_dir_label.split(":")
+        else:
+            dir_label = [data_dir_label]
+
         assert 1 <= len(dir_label) <= 2
-        data_dir = dir_label[0]
+        data_dir = Path(dir_label[0])
         if len(dir_label) == 2:
             bench_name_postfix = dir_label[1]
         else:
@@ -383,7 +384,7 @@ def parse_jobs(data_dirs, distinguish_dir=False):
         else:
             print(
                 "The base of the --path provided is not a z or d folder, the results",
-                f"for complex and double might be aggreted in the plot. Path provided: {data_dir}",
+                f"for complex and double might be aggregated in the plot. Path provided: {data_dir}",
             )
         for subdir, dirs, files in os.walk(os.path.expanduser(data_dir)):
             for f in files:
@@ -391,7 +392,12 @@ def parse_jobs(data_dirs, distinguish_dir=False):
                     nodes = float(os.path.basename(subdir))
                     benchname = f[:-4]
                     if distinguish_dir:
-                        benchname += "@" + bench_name_postfix
+                        benchname += (
+                            "*"
+                            + str(data_dir.parts[-1])
+                            + (f"#{tag}" if tag else "")
+                            + f"@{bench_name_postfix}"
+                        )
 
                     with open(os.path.join(subdir, f), "r") as fout:
                         data.extend(_parse_line_based(fout, benchname, nodes))
@@ -466,7 +472,18 @@ def calc_chol_metrics(df):
 
 
 def calc_trsm_metrics(df):
-    return _calc_metrics(["matrix_rows", "matrix_cols", "block_rows", "nodes", "bench_name"], df)
+    return _calc_metrics(
+        [
+            "matrix_rows",
+            "matrix_cols",
+            "block_rows",
+            "nodes",
+            "bench_name",
+            "from_ev",
+            "to_ev",
+        ],
+        df,
+    )
 
 
 def calc_trmm_metrics(df):
@@ -490,19 +507,65 @@ def calc_trid_evp_metrics(df):
 
 
 def calc_bt_band2trid_metrics(df):
-    return _calc_metrics(["matrix_rows", "matrix_cols", "block_rows", "band", "nodes", "bench_name"], df)
+    return _calc_metrics(
+        [
+            "matrix_rows",
+            "matrix_cols",
+            "block_rows",
+            "band",
+            "nodes",
+            "bench_name",
+            "from_ev",
+            "to_ev",
+        ],
+        df,
+    )
 
 
 def calc_bt_red2band_metrics(df):
-    return _calc_metrics(["matrix_rows", "matrix_cols", "block_rows", "band", "nodes", "bench_name"], df)
+    return _calc_metrics(
+        [
+            "matrix_rows",
+            "matrix_cols",
+            "block_rows",
+            "band",
+            "nodes",
+            "bench_name",
+            "from_ev",
+            "to_ev",
+        ],
+        df,
+    )
 
 
 def calc_evp_metrics(df):
-    return _calc_metrics(["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df)
+    return _calc_metrics(
+        [
+            "matrix_rows",
+            "block_rows",
+            "band",
+            "nodes",
+            "bench_name",
+            "from_ev",
+            "to_ev",
+        ],
+        df,
+    )
 
 
 def calc_gevp_metrics(df):
-    return _calc_metrics(["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df)
+    return _calc_metrics(
+        [
+            "matrix_rows",
+            "block_rows",
+            "band",
+            "nodes",
+            "bench_name",
+            "from_ev",
+            "to_ev",
+        ],
+        df,
+    )
 
 
 # Customization that add a simple legend
@@ -590,8 +653,12 @@ def _gen_plot(
 
     if not combine_mb:
         group_list += ["block_rows"]
-        if has_band:
-            group_list += ["band"]
+
+    if has_band:
+        group_list += ["band"]
+
+    if "from_ev" in df.columns:
+        group_list += ["from_ev", "to_ev"]
 
     # silence a warning in pandas.
     if len(group_list) == 1:
@@ -602,7 +669,7 @@ def _gen_plot(
     for x, grp_data in it_space:
         if size_type == "m" and combine_mb:
             # single element has to be treated differently
-            m = x
+            m = x[0]
         else:
             if size_type == "m":
                 m = x[0]
@@ -621,6 +688,7 @@ def _gen_plot(
         title = f"{name}: {scaling} scaling"
         filename_ppn = f"{filename}_{scaling}_ppn"
         filename_time = f"{filename}_{scaling}_time"
+
         if size_type == "m":
             title += f" ({m} x {m})"
             filename_ppn += f"_{m}"
@@ -629,6 +697,12 @@ def _gen_plot(
             title += f" ({m} x {n})"
             filename_ppn += f"_{m}_{n}"
             filename_time += f"_{m}_{n}"
+
+        if "from_ev" in df.columns:
+            partial_spectrum_suffix = "-".join(map(lambda part: str(int(part)), x[-2:]))
+            filename_ppn += f"_{partial_spectrum_suffix}"
+            filename_time += f"_{partial_spectrum_suffix}"
+
         if not combine_mb:
             title += f", block_size = {mb} x {mb}"
             filename_ppn += f"_{mb}"

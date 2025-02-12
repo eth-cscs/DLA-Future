@@ -53,7 +53,6 @@
 #include <dlaf/matrix/tile.h>
 #include <dlaf/matrix/views.h>
 #include <dlaf/schedulers.h>
-#include <dlaf/sender/continues_on.h>
 #include <dlaf/sender/traits.h>
 #include <dlaf/types.h>
 #include <dlaf/util_math.h>
@@ -315,7 +314,8 @@ void computePanelReflectors(MatrixLikeA& mat_a, MatrixLikeTaus& mat_taus, const 
   const std::size_t nworkers = [nrtiles = panel_tiles.size()]() {
     const std::size_t min_workers = 1;
     const std::size_t available_workers = get_red2band_panel_nworkers();
-    const std::size_t ideal_workers = to_sizet(nrtiles);
+    const std::size_t ideal_workers =
+        util::ceilDiv(to_sizet(nrtiles), get_red2band_panel_worker_minwork());
     return std::clamp(ideal_workers, min_workers, available_workers);
   }();
   ex::start_detached(
@@ -323,7 +323,7 @@ void computePanelReflectors(MatrixLikeA& mat_a, MatrixLikeTaus& mat_taus, const 
                             std::vector<common::internal::vector<T>>{}),  // w (internally required)
                    mat_taus.readwrite(LocalTileIndex(j_sub, 0)),
                    ex::when_all_vector(std::move(panel_tiles))) |
-      di::continues_on(di::getBackendScheduler<Backend::MC>(thread_priority::high)) |
+      ex::continues_on(di::getBackendScheduler<Backend::MC>(thread_priority::high)) |
       ex::bulk(nworkers, [nworkers, cols = panel_view.cols()](const std::size_t index, auto& barrier_ptr,
                                                               auto& w, auto& taus, auto& tiles) {
         const auto barrier_busy_wait = getReductionToBandBarrierBusyWait();
@@ -640,7 +640,8 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
   const std::size_t nworkers = [nrtiles = panel_tiles.size()]() {
     const std::size_t min_workers = 1;
     const std::size_t available_workers = get_red2band_panel_nworkers();
-    const std::size_t ideal_workers = util::ceilDiv(to_sizet(nrtiles), to_sizet(2));
+    const std::size_t ideal_workers =
+        util::ceilDiv(to_sizet(nrtiles), get_red2band_panel_worker_minwork());
     return std::clamp(ideal_workers, min_workers, available_workers);
   }();
 
@@ -650,7 +651,7 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
                    mat_taus.readwrite(GlobalTileIndex(j_sub, 0)),
                    ex::when_all_vector(std::move(panel_tiles)),
                    std::forward<CommSender>(mpi_col_chain_panel), std::forward<TriggerSender>(trigger)) |
-      di::continues_on(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
+      ex::continues_on(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
       ex::bulk(nworkers, [nworkers, rank_v0,
                           cols = panel_view.cols()](const std::size_t index, auto& barrier_ptr, auto& w,
                                                     auto& taus, auto& tiles, auto&& pcomm) {

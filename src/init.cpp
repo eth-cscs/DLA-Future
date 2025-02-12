@@ -105,14 +105,8 @@ void initializeGpuPool(int device, std::size_t num_np_streams, std::size_t num_h
 #else
                                                             0
 #endif
-#if PIKA_VERSION_FULL >= 0x001D00  // >= 0.29.0
                                                             ,
-                                                            num_blas_handles, num_lapack_handles
-#endif
-      );
-#if PIKA_VERSION_FULL < 0x001D00  // < 0.29.0
-  dlaf::internal::silenceUnusedWarningFor(num_blas_handles, num_lapack_handles);
-#endif
+                                                            num_blas_handles, num_lapack_handles);
 }
 
 void finalizeGpuPool() {
@@ -280,10 +274,6 @@ void updateConfiguration(const pika::program_options::variables_map& vm, configu
   updateConfigurationValue(vm, cfg.umpire_device_memory_pool_coalescing_reallocation_ratio, "UMPIRE_DEVICE_MEMORY_POOL_COALESCING_REALLOCATION_RATIO", "umpire-device-memory-pool-coalescing-reallocation-ratio");
   updateConfigurationValue(vm, cfg.num_gpu_blas_handles, "NUM_GPU_BLAS_HANDLES", "num-gpu-blas-handles");
   updateConfigurationValue(vm, cfg.num_gpu_lapack_handles, "NUM_GPU_LAPACK_HANDLES", "num-gpu-lapack-handles");
-#if PIKA_VERSION_FULL < 0x001D00  // < 0.29.0
-  warnUnusedConfigurationOption(vm, "NUM_GPU_BLAS_HANDLES", "num-gpu-blas-handles", "only supported with pika 0.29.0 or newer");
-  warnUnusedConfigurationOption(vm, "NUM_GPU_LAPACK_HANDLES", "num-gpu-lapack-handles", "only supported with pika 0.29.0 or newer");
-#endif
 
   // update tune parameters
   //

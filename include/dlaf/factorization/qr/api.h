@@ -11,7 +11,6 @@
 #pragma once
 
 #include <complex>
-#include <vector>
 
 #include <pika/execution.hpp>
 

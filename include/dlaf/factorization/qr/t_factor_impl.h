@@ -138,11 +138,11 @@ struct Helpers<Backend::MC, Device::CPU, T> {
     const auto hp_scheduler = di::getBackendScheduler<Backend::MC>(thread_priority::high);
     return ex::when_all(ex::when_all_vector(std::move(hh_tiles)), std::move(taus), std::move(tile_t),
                         ex::when_all_vector(select(workspaces, range_workspaces))) |
-           di::continues_on(hp_scheduler) |
+           ex::continues_on(hp_scheduler) |
            ex::let_value([hp_scheduler, k, nworkers, batch_size](auto& hh_tiles, auto& taus,
                                                                  auto& tile_t, auto& workspaces) {
              return ex::just(std::make_unique<pika::barrier<>>(nworkers)) |
-                    di::continues_on(hp_scheduler) |
+                    ex::continues_on(hp_scheduler) |
                     ex::bulk(
                         nworkers,
                         [=, &hh_tiles, &taus, &tile_t, &workspaces](const std::size_t worker_id,

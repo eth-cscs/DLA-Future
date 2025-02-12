@@ -27,62 +27,14 @@ struct QR {};
 
 template <Backend backend, Device device, class T>
 struct QR_Tfactor {
-  /// Forms the triangular factor T of a block of reflectors H, which is defined as a product of k
-  /// elementary reflectors.
-  ///
-  /// It is similar to what xLARFT in LAPACK does.
-  /// Given @p k elementary reflectors stored in the column of @p v starting at tile @p v_start,
-  /// together with related tau values in @p taus, in @p t will be formed the triangular factor for the H
-  /// block of reflector, such that
-  ///
-  /// H = I - V . T . V*
-  ///
-  /// where H = H1 . H2 . ... . Hk
-  ///
-  /// in which Hi represents a single elementary reflector transformation
-  ///
-  /// @param k the number of elementary reflectors to use (from the beginning of the tile)
-  /// @param v where the elementary reflectors are stored
-  /// @param v_start tile in @p v where the column of reflectors starts
-  /// @param taus tile of the taus vector, associated with the related elementary reflector
-  /// @param t tile where the resulting T factor will be stored in its top-left sub-matrix of size
-  /// TileElementSize(k, k)
-  ///
-  /// @pre k <= t.get().size().rows && k <= t.get().size().cols()
-  /// @pre k >= 0
-  /// @pre v_start.isIn(v.nrTiles())
-  static void call(matrix::Panel<Coord::Col, T, device>& panel_view,
-                   matrix::ReadOnlyTileSender<T, Device::CPU> taus,
-                   matrix::ReadWriteTileSender<T, device> t);
-
-  /// Forms the triangular factor T of a block of reflectors H, which is defined as a product of k
-  /// elementary reflectors.
-  ///
-  /// It is similar to what xLARFT in LAPACK does.
-  /// Given @p k elementary reflectors stored in the column of @p v starting at tile @p v_start,
-  /// together with related tau values in @p taus, in @p t will be formed the triangular factor for the H
-  /// block of reflector, such that
-  ///
-  /// H = I - V . T . V*
-  ///
-  /// where H = H1 . H2 . ... . Hk
-  ///
-  /// in which Hi represents a single elementary reflector transformation
-  ///
-  /// @param k the number of elementary reflectors to use (from the beginning of the tile)
-  /// @param v where the elementary reflectors are stored
-  /// @param v_start tile in @p v where the column of reflectors starts
-  /// @param taus tile of the taus vector, associated with the related elementary reflector
-  /// @param t tile where the resulting T factor will be stored in its top-left sub-matrix of size
-  /// TileElementSize(k, k)
-  /// @param mpi_col_task_chain where internal communications are issued
-  ///
-  /// @pre k <= t.get().size().rows && k <= t.get().size().cols()
-  /// @pre k >= 0
-  /// @pre v_start.isIn(v.nrTiles())
   static void call(matrix::Panel<Coord::Col, T, device>& hh_panel,
                    matrix::ReadOnlyTileSender<T, Device::CPU> taus,
                    matrix::ReadWriteTileSender<T, device> t,
+                   matrix::Panel<Coord::Col, T, device>& workspaces);
+  static void call(matrix::Panel<Coord::Col, T, device>& hh_panel,
+                   matrix::ReadOnlyTileSender<T, Device::CPU> taus,
+                   matrix::ReadWriteTileSender<T, device> t,
+                   matrix::Panel<Coord::Col, T, device>& workspaces,
                    comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_task_chain);
 };
 

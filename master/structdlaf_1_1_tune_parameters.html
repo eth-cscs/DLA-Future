@@ -105,6 +105,15 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>debug_dump_band_to_tr
 <tr class="memitem:ab4d07707175a19d47e989e21c9ba97ab" id="r_ab4d07707175a19d47e989e21c9ba97ab"><td class="memItemLeft" align="right" valign="top"><a id="ab4d07707175a19d47e989e21c9ba97ab" name="ab4d07707175a19d47e989e21c9ba97ab"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>debug_dump_tridiag_solver_data</b> = false</td></tr>
 <tr class="separator:ab4d07707175a19d47e989e21c9ba97ab"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a633665fcd5d9a9397017509b42465fbe" id="r_a633665fcd5d9a9397017509b42465fbe"><td class="memItemLeft" align="right" valign="top"><a id="a633665fcd5d9a9397017509b42465fbe" name="a633665fcd5d9a9397017509b42465fbe"></a>
+std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>tfactor_num_threads</b> = 1</td></tr>
+<tr class="separator:a633665fcd5d9a9397017509b42465fbe"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab731a2b88d3362ad12373298f670a182" id="r_ab731a2b88d3362ad12373298f670a182"><td class="memItemLeft" align="right" valign="top"><a id="ab731a2b88d3362ad12373298f670a182" name="ab731a2b88d3362ad12373298f670a182"></a>
+std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>tfactor_num_streams</b> = 4</td></tr>
+<tr class="separator:ab731a2b88d3362ad12373298f670a182"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a87128737c68ad787f2584a837e0b3c4b" id="r_a87128737c68ad787f2584a837e0b3c4b"><td class="memItemLeft" align="right" valign="top"><a id="a87128737c68ad787f2584a837e0b3c4b" name="a87128737c68ad787f2584a837e0b3c4b"></a>
+std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>tfactor_barrier_busy_wait_us</b> = 0</td></tr>
+<tr class="separator:a87128737c68ad787f2584a837e0b3c4b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9ae21c43d98f2124d531d928f922171d" id="r_a9ae21c43d98f2124d531d928f922171d"><td class="memItemLeft" align="right" valign="top"><a id="a9ae21c43d98f2124d531d928f922171d" name="a9ae21c43d98f2124d531d928f922171d"></a>
 std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>red2band_panel_nworkers</b> = 1</td></tr>
 <tr class="separator:a9ae21c43d98f2124d531d928f922171d"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -140,6 +149,9 @@ std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>communicator_g
 <li>debug_dump_reduction_to_band_data: Enable dump of reduction_to_band input/output data to "reduction_to_band.h5" file that will be created in the working folder (it should not exist before the execution). environment variable DLAF_DEBUG_DUMP_EIGENSOLVER_DATA.</li>
 <li>debug_dump_band_to_tridiagonal_data: Enable dump of band_to_trigiagonal input/output data to "band_to_tridiagonal.h5" file that will be created in the working folder (it should not exist before the execution). environment variable DLAF_DEBUG_DUMP_BAND_TO_TRIDIAGONAL_DATA.</li>
 <li>debug_dump_tridiag_solver_data: Enable dump of tridiagonal solver input/output data to "tridiagonal.h5" file that will before created in the working folder (it should not exist before the execution). Set with environment variable DLAF_DEBUG_DUMP_TRIDIAG_SOLVER_DATA.</li>
+<li>tfactor_num_threads: The maximum number of threads to use for computing tfactor (e.g. which is used for instance in red2band and its backtransformation). Set with &ndash;dlaf:tfactor-num-threads or env variable DLAF_TFACTOR_NTHREADS.</li>
+<li>tfactor_num_streams: The maximum number of streams to use for computing tfactor (e.g. which is used for instance in red2band and its backtransformation). Set with &ndash;dlaf:tfactor-num-streams or env variable DLAF_TFACTOR_NSTREAMS.</li>
+<li>tfactor_barrier_busy_wait_us: The duration in microseconds to busy-wait in barriers in the tfactor algorithm. Set with &ndash;dlaf:tfactor-barrier-busy-wait-us or env variable DLAF_TFACTOR_BARRIER_BUSY_WAIT_US.</li>
 <li>red2band_panel_nworkers: The maximum number of threads to use for computing the panel in the reduction to band algorithm. Set with &ndash;dlaf:red2band-panel-nworkers or env variable DLAF_RED2BAND_PANEL_NWORKERS.</li>
 <li>red2band_barrier_busy_wait_us: The duration in microseconds to busy-wait in barriers in the reduction to band algorithm. Set with &ndash;dlaf:red2band-barrier-busy-wait-us or env variable DLAF_RED2BAND_BARRIER_BUSY_WAIT_US.</li>
 <li>tridiag_rank1_nworkers: The maximum number of threads to use for computing rank1 problem solution in tridiagonal solver algorithm. Set with &ndash;dlaf:tridiag-rank1-nworkers or env variable DLAF_TRIDIAG_RANK1_NWORKERS.</li>

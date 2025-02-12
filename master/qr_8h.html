@@ -88,17 +88,16 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a4654c00202b44c6c9365d1a03eff9e99" id="r_a4654c00202b44c6c9365d1a03eff9e99"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
-<tr class="memitem:a4654c00202b44c6c9365d1a03eff9e99"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qr_8h.html#a4654c00202b44c6c9365d1a03eff9e99">dlaf::factorization::internal::computeTFactor</a> (<a class="el" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel</a>&lt; Coord::Col, T, device &gt; &amp;hh_panel, matrix::ReadOnlyTileSender&lt; T, Device::CPU &gt; taus, matrix::ReadWriteTileSender&lt; T, device &gt; t)</td></tr>
-<tr class="separator:a4654c00202b44c6c9365d1a03eff9e99"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aaec3ec64a3396f38b0f12c8d200cc812" id="r_aaec3ec64a3396f38b0f12c8d200cc812"><td class="memTemplParams" colspan="2"><a id="aaec3ec64a3396f38b0f12c8d200cc812" name="aaec3ec64a3396f38b0f12c8d200cc812"></a>
-template&lt;Backend backend, Device device, class T &gt; </td></tr>
-<tr class="memitem:aaec3ec64a3396f38b0f12c8d200cc812"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::factorization::internal::computeTFactor</b> (<a class="el" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel</a>&lt; Coord::Col, T, device &gt; &amp;hh_panel, matrix::ReadOnlyTileSender&lt; T, Device::CPU &gt; taus, matrix::ReadWriteTileSender&lt; T, device &gt; t, <a class="el" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">comm::CommunicatorPipeline</a>&lt; comm::CommunicatorType::Col &gt; &amp;mpi_col_task_chain)</td></tr>
-<tr class="separator:aaec3ec64a3396f38b0f12c8d200cc812"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a357f718f0ad547a9e4cecfe1b423d72d" id="r_a357f718f0ad547a9e4cecfe1b423d72d"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
+<tr class="memitem:a357f718f0ad547a9e4cecfe1b423d72d"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qr_8h.html#a357f718f0ad547a9e4cecfe1b423d72d">dlaf::factorization::internal::computeTFactor</a> (<a class="el" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel</a>&lt; Coord::Col, T, device &gt; &amp;hh_panel, matrix::ReadOnlyTileSender&lt; T, Device::CPU &gt; taus, matrix::ReadWriteTileSender&lt; T, device &gt; t, <a class="el" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel</a>&lt; Coord::Col, T, device &gt; &amp;workspaces)</td></tr>
+<tr class="separator:a357f718f0ad547a9e4cecfe1b423d72d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9640b81494215ddc6068096aa54a106c" id="r_a9640b81494215ddc6068096aa54a106c"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
+<tr class="memitem:a9640b81494215ddc6068096aa54a106c"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qr_8h.html#a9640b81494215ddc6068096aa54a106c">dlaf::factorization::internal::computeTFactor</a> (<a class="el" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel</a>&lt; Coord::Col, T, device &gt; &amp;hh_panel, matrix::ReadOnlyTileSender&lt; T, Device::CPU &gt; taus, matrix::ReadWriteTileSender&lt; T, device &gt; t, <a class="el" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel</a>&lt; Coord::Col, T, device &gt; &amp;workspaces, <a class="el" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">comm::CommunicatorPipeline</a>&lt; comm::CommunicatorType::Col &gt; &amp;mpi_col_task_chain)</td></tr>
+<tr class="separator:a9640b81494215ddc6068096aa54a106c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="a4654c00202b44c6c9365d1a03eff9e99" name="a4654c00202b44c6c9365d1a03eff9e99"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4654c00202b44c6c9365d1a03eff9e99">&#9670;&#160;</a></span>computeTFactor()</h2>
+<a id="a357f718f0ad547a9e4cecfe1b423d72d" name="a357f718f0ad547a9e4cecfe1b423d72d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a357f718f0ad547a9e4cecfe1b423d72d">&#9670;&#160;</a></span>computeTFactor() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -121,7 +120,13 @@ template&lt;Backend backend, Device device, class T &gt; </div>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">matrix::ReadWriteTileSender&lt; T, device &gt;&#160;</td>
-          <td class="paramname"><em>t</em>&#160;</td>
+          <td class="paramname"><em>t</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel</a>&lt; Coord::Col, T, device &gt; &amp;&#160;</td>
+          <td class="paramname"><em>workspaces</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -131,10 +136,92 @@ template&lt;Backend backend, Device device, class T &gt; </div>
       </table>
 </div><div class="memdoc">
 <p>Forms the triangular factor T of a block reflector H of order n, which is defined as a product of k := hh_panel.getWidth() elementary reflectors.</p>
-<p>hh_panel should have the following form H0 0 0 ... 0 . H1 0 ... 0 . . H2 ... 0 . . . ... 0 . . . ... HK-1 . . . ... . H0 H1 H2 ... HK-1 Note: The first element of the HH reflectors is NOT implicitly assumed to be 1, it has to be set correctly in the panel (0s as well). A Storage-Efficient WY Representation for Products of Householder Transformations. Schreiber, Robert &amp; VanLoan, Charles. (1989) SIAM Journal on Scientific and Statistical Computing. 10. 10.1137/0910005.</p>
-<dl class="section pre"><dt>Precondition</dt><dd>taus contains a vector with k elements </dd>
+<p>hh_panel should have the following form H0 0 0 ... 0 . H1 0 ... 0 . . H2 ... 0 . . . ... 0 . . . ... HK-1 . . . ... . H0 H1 H2 ... HK-1 Note: The first element of the HH reflectors is NOT implicitly assumed to be 1, it has to be set correctly in the panel (0s as well).</p>
+<p>It is similar to what xLARFT in LAPACK does. Given <code>k</code> elementary reflectors stored in the column of <code>hh_panel</code> together with related tau values in <code>taus</code>, in <code>t</code> will be formed the triangular factor for the H block of reflectors, such that</p>
+<p>H = I - V . T . V*</p>
+<p>where H = H1 . H2 . ... . Hk</p>
+<p>in which Hi represents a single elementary reflector transformation.</p>
+<p>A Storage-Efficient WY Representation for Products of Householder Transformations. Schreiber, Robert &amp; VanLoan, Charles. (1989) SIAM Journal on Scientific and Statistical Computing. 10. 10.1137/0910005.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">hh_panel</td><td>where the elementary reflectors are stored </td></tr>
+    <tr><td class="paramname">taus</td><td>array of taus, associated with the related elementary reflector </td></tr>
+    <tr><td class="paramname">t</td><td>tile where the resulting T factor will be stored in its top-left sub-matrix of size TileElementSize(k, k) </td></tr>
+    <tr><td class="paramname">workspaces</td><td>array of tiles used as workspace, with at least one tile per worker (see get_tfactor_num_workers), each tile should be at least of size TileElementSize(k, k)</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd>reflectors in hh_panel are well formed (1s on the diagonal and 0s in the upper part) </dd>
 <dd>
-t contains a (k x k) tile </dd></dl>
+hh_panel.getWidth() &lt;= t.get().size().rows &amp;&amp; hh_panel.getWidth() &lt;= t.get().size().cols() </dd></dl>
+
+</div>
+</div>
+<a id="a9640b81494215ddc6068096aa54a106c" name="a9640b81494215ddc6068096aa54a106c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9640b81494215ddc6068096aa54a106c">&#9670;&#160;</a></span>computeTFactor() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;Backend backend, Device device, class T &gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">void dlaf::factorization::internal::computeTFactor </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel</a>&lt; Coord::Col, T, device &gt; &amp;&#160;</td>
+          <td class="paramname"><em>hh_panel</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">matrix::ReadOnlyTileSender&lt; T, Device::CPU &gt;&#160;</td>
+          <td class="paramname"><em>taus</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">matrix::ReadWriteTileSender&lt; T, device &gt;&#160;</td>
+          <td class="paramname"><em>t</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel</a>&lt; Coord::Col, T, device &gt; &amp;&#160;</td>
+          <td class="paramname"><em>workspaces</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">comm::CommunicatorPipeline</a>&lt; comm::CommunicatorType::Col &gt; &amp;&#160;</td>
+          <td class="paramname"><em>mpi_col_task_chain</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Forms the triangular factor T of a block of reflectors H, which is defined as a product of k := hh_panel.getWidth() elementary reflectors.</p>
+<p>hh_panel should have the following form H0 0 0 ... 0 . H1 0 ... 0 . . H2 ... 0 . . . ... 0 . . . ... HK-1 . . . ... . H0 H1 H2 ... HK-1 Note: The first element of the HH reflectors is NOT implicitly assumed to be 1, it has to be set correctly in the panel (0s as well).</p>
+<p>It is similar to what xLARFT in LAPACK does. Given <code>k</code> elementary reflectors stored in the column of <code>hh_panel</code> together with related tau values in <code>taus</code>, in <code>t</code> will be formed the triangular factor for the H block of reflectors, such that</p>
+<p>H = I - V . T . V*</p>
+<p>where H = H1 . H2 . ... . Hk</p>
+<p>in which Hi represents a single elementary reflector transformation.</p>
+<p>A Storage-Efficient WY Representation for Products of Householder Transformations. Schreiber, Robert &amp; VanLoan, Charles. (1989) SIAM Journal on Scientific and Statistical Computing. 10. 10.1137/0910005.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">hh_panel</td><td>where the elementary reflectors are stored </td></tr>
+    <tr><td class="paramname">taus</td><td>array of taus, associated with the related elementary reflector </td></tr>
+    <tr><td class="paramname">t</td><td>tile where the resulting T factor will be stored in its top-left sub-matrix of size TileElementSize(k, k) </td></tr>
+    <tr><td class="paramname">workspaces</td><td>array of tiles used as workspace, with at least one tile per worker (see get_tfactor_num_workers), each tile should be at least of size TileElementSize(k, k) </td></tr>
+    <tr><td class="paramname">mpi_col_task_chain</td><td>where internal communications are issued</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd>reflectors in hh_panel are well formed (1s on the diagonal and 0s in the upper part) </dd>
+<dd>
+hh_panel.getWidth() &lt;= t.get().size().rows &amp;&amp; hh_panel.getWidth() &lt;= t.get().size().cols() </dd></dl>
 
 </div>
 </div>

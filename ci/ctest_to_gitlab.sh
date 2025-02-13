@@ -33,7 +33,7 @@ upload_reports:
     DISABLE_AFTER_SCRIPT: 'YES'
   script: upload_codecov
 "
-TIMELIMIT="60:00"
+TIMELIMIT="2:00:00"
 ARTIFACTS="
   artifacts:
     when: always
@@ -46,7 +46,7 @@ STAGES="
   - test
 "
 EXTRA_JOBS=""
-TIMELIMIT="45:00"
+TIMELIMIT="2:00:00"
 ARTIFACTS="
   artifacts:
     when: always

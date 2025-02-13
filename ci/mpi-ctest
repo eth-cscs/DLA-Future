@@ -20,10 +20,10 @@ fi
 # Run the tests, only output on the first rank
 if [[ $SLURM_PROCID == "0" ]]; then
     TZ=CET date +"Run started at: %H:%M:%S %z"
-    ctest --output-log "$CTEST_OUTPUT" -V $@ | grep -v "PU.*Core.*Socket.*pool" | grep -v "MPI rank: 0" | grep -E -v "\*{70}"
+    ctest --repeat-until-fail 5 --output-log "$CTEST_OUTPUT" -V $@ | grep -v "PU.*Core.*Socket.*pool" | grep -v "MPI rank: 0" | grep -E -v "\*{70}"
     TZ=CET date +"Run finished at: %H:%M:%S %z"
 else
-    ctest --output-log "$CTEST_OUTPUT" -V -Q $@
+    ctest --repeat-until-fail 5 --output-log "$CTEST_OUTPUT" -V -Q $@
 fi
 
 # Create coverage reports for code run

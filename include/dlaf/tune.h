@@ -58,11 +58,11 @@ namespace dlaf {
 /// - tfactor_num_threads:
 ///     The maximum number of threads to use for computing tfactor (e.g. which is used for
 ///     instance in red2band and its backtransformation). Set with --dlaf:tfactor-num-threads or env
-///     variable DLAF_TFACTOR_NTHREADS.
+///     variable DLAF_TFACTOR_NUM_THREADS.
 /// - tfactor_num_streams:
 ///     The maximum number of streams to use for computing tfactor (e.g. which is used for
 ///     instance in red2band and its backtransformation). Set with --dlaf:tfactor-num-streams or env
-///     variable DLAF_TFACTOR_NSTREAMS.
+///     variable DLAF_TFACTOR_NUM_STREAMS.
 /// - tfactor_barrier_busy_wait_us:
 ///     The duration in microseconds to busy-wait in barriers in the tfactor algorithm.
 ///     Set with --dlaf:tfactor-barrier-busy-wait-us or env variable DLAF_TFACTOR_BARRIER_BUSY_WAIT_US.

@@ -328,140 +328,140 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span>    DLAF_ASSERT(taus.size().rows() == k, taus.size().rows(), k);</div>
 <div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span>    DLAF_ASSERT(taus.size().cols() == 1, taus.size().cols());</div>
 <div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span> </div>
-<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>    gpulapack::larft_gemv0(handle, m, k, tile_v.ptr(), tile_v.ld(), taus.ptr(), tile_t.ptr(),</div>
-<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>                           tile_t.ld());</div>
-<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>  }</div>
-<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span> </div>
-<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>  <span class="keyword">static</span> <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::ReadWriteTileSender&lt;T, Device::GPU&gt;</a> step_gemv(</div>
-<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>      <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Panel&lt;Coord::Col, T, Device::GPU&gt;</a>&amp; hh_panel,</div>
-<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>      <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::ReadOnlyTileSender&lt;T, Device::CPU&gt;</a> taus,</div>
-<div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>      <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::ReadWriteTileSender&lt;T, Device::GPU&gt;</a> tile_t,</div>
-<div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>      <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Panel&lt;Coord::Col, T, Device::GPU&gt;</a>&amp; workspaces) {</div>
-<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>    <span class="keyword">namespace </span>ex = pika::execution::experimental;</div>
-<div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span>    <span class="keyword">namespace </span>di = dlaf::internal;</div>
-<div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span> </div>
-<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span>    <span class="keyword">using </span>pika::execution::thread_priority;</div>
-<div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span> </div>
-<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>    std::vector&lt;matrix::ReadOnlyTileSender&lt;T, Device::GPU&gt;&gt; hh_tiles =</div>
-<div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span>        selectRead(hh_panel, hh_panel.iteratorLocal());</div>
-<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span> </div>
-<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span>    <span class="keyword">const</span> SizeType k = hh_panel.getWidth();</div>
-<div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span> </div>
-<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span>    <span class="keywordflow">if</span> (hh_tiles.size() == 0)</div>
-<div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span>      <span class="keywordflow">return</span> tile_t;</div>
-<div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span> </div>
-<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>    <span class="keyword">const</span> <span class="keyword">auto</span> workers_params = split_tfactor_work&lt;Backend::GPU&gt;(hh_tiles.size());</div>
-<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>    <span class="keyword">const</span> std::size_t nworkers = workers_params.nworkers;</div>
-<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>    <span class="keyword">const</span> std::size_t batch_size = workers_params.batch_size;</div>
-<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span> </div>
-<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>    <span class="keyword">const</span> <span class="keyword">auto</span> range_workspaces = common::iterate_range2d(<a class="code hl_class" href="classdlaf_1_1common_1_1_size2_d.html">LocalTileSize</a>{<a class="code hl_function" href="types_8h.html#ab1f0edc8e1281293c9c1325cb9d4bec9">to_SizeType</a>(nworkers - 1), 1});</div>
-<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>    DLAF_ASSERT(<a class="code hl_function" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(std::distance(range_workspaces.begin(), range_workspaces.end())) &gt;=</div>
-<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>                    nworkers - 1,</div>
-<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>                std::distance(range_workspaces.begin(), range_workspaces.end()), nworkers - 1);</div>
-<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span> </div>
-<div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span>    <span class="keywordflow">for</span> (std::size_t worker_id = 0; worker_id &lt; nworkers; ++worker_id) {</div>
-<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span>      <span class="keyword">const</span> std::size_t begin = worker_id * batch_size;</div>
-<div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span>      <span class="keyword">const</span> std::size_t end = std::min(hh_tiles.size(), (worker_id + 1) * batch_size);</div>
-<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span> </div>
-<div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span>      DLAF_ASSERT(end &gt;= begin, begin, end);</div>
-<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span> </div>
-<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>      <span class="keywordflow">if</span> (end == begin)</div>
-<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span>        <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span> </div>
-<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span>      std::vector&lt;matrix::ReadOnlyTileSender&lt;T, Device::GPU&gt;&gt; input_tiles;</div>
-<div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span>      input_tiles.reserve(end - begin);</div>
-<div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span>      <span class="keywordflow">for</span> (std::size_t sub = begin; sub &lt; end; ++sub)</div>
-<div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span>        input_tiles.emplace_back(std::move(hh_tiles[sub]));</div>
-<div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span> </div>
-<div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span>      <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::ReadWriteTileSender&lt;T, Device::GPU&gt;</a> workspace =</div>
-<div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>          worker_id == 0 ? std::move(tile_t)</div>
-<div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span>                         : workspaces.<a class="code hl_function" href="classdlaf_1_1matrix_1_1_matrix.html#ad11e9036fe317b6328ae71585b19c811">readwrite</a>(<a class="code hl_class" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a>{<a class="code hl_function" href="types_8h.html#ab1f0edc8e1281293c9c1325cb9d4bec9">to_SizeType</a>(worker_id - 1), 0});</div>
-<div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span> </div>
-<div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span>      workspace =</div>
-<div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span>          di::whenAllLift(ex::when_all_vector(std::move(input_tiles)), taus, std::move(workspace)) |</div>
-<div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span>          di::transform&lt;dlaf::internal::TransformDispatchType::Blas&gt;(</div>
-<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span>              di::Policy&lt;Backend::GPU&gt;(thread_priority::high),</div>
-<div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span>              [k](cublasHandle_t handle, <span class="keyword">auto</span>&amp;&amp; hh_tiles, <span class="keyword">auto</span>&amp;&amp; taus,</div>
-<div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>                  <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Tile&lt;T, Device::GPU&gt;</a>&amp; tile_t_full) {</div>
-<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>                DLAF_ASSERT_MODERATE(k == taus.size().rows(), k, taus.size().rows());</div>
-<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span> </div>
-<div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span>                <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Tile&lt;T, Device::GPU&gt;</a> tile_t = tile_t_full.subTileReference({{0, 0}, {k, k}});</div>
-<div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span> </div>
-<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span>                <span class="comment">// Note:</span></div>
-<div class="line"><a id="l00305" name="l00305"></a><span class="lineno">  305</span>                <span class="comment">// prepare the diagonal of taus in t and reset the rest</span></div>
-<div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span>                whip::stream_t stream;</div>
-<div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span>                DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &amp;stream));</div>
-<div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span> </div>
-<div class="line"><a id="l00309" name="l00309"></a><span class="lineno">  309</span>                whip::memset_2d_async(tile_t.ptr(), <span class="keyword">sizeof</span>(T) * <a class="code hl_function" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(tile_t.ld()), 0,</div>
-<div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span>                                      <span class="keyword">sizeof</span>(T) * <a class="code hl_function" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(k), <a class="code hl_function" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(k), stream);</div>
-<div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span>                gpulapack::lacpy(blas::Uplo::General, 1, k, taus.ptr(), 1, tile_t.ptr(), tile_t.ld() + 1,</div>
-<div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span>                                 stream);</div>
-<div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span> </div>
-<div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span>                <span class="comment">// Note:</span></div>
-<div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>                <span class="comment">// - call one gemv per tile</span></div>
-<div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span>                <span class="comment">// - being on the same stream, they are already serialised on GPU</span></div>
-<div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>                <span class="keywordflow">for</span> (std::size_t index = 0; index &lt; hh_tiles.size(); ++index) {</div>
-<div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span>                  <span class="keyword">const</span> <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Tile&lt;const T, Device::GPU&gt;</a>&amp; tile_v = hh_tiles[index].get();</div>
-<div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span>                  Helpers::loop_gemv(handle, tile_v, taus, tile_t);</div>
-<div class="line"><a id="l00320" name="l00320"></a><span class="lineno">  320</span>                }</div>
-<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span> </div>
-<div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span>                <span class="keywordflow">return</span> std::move(tile_t_full);</div>
-<div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>              });</div>
-<div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span> </div>
-<div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span>      <span class="keywordflow">if</span> (worker_id == 0)</div>
-<div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span>        tile_t = std::move(workspace);</div>
-<div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span>      <span class="keywordflow">else</span></div>
-<div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span>        ex::start_detached(std::move(workspace));</div>
-<div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span>    }</div>
-<div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span> </div>
-<div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span>    <span class="keywordflow">if</span> (nworkers &gt; 1 and k &gt; 1) {</div>
-<div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span>      tile_t =</div>
-<div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span>          di::whenAllLift(std::move(tile_t),</div>
-<div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span>                          ex::when_all_vector(selectRead(workspaces, range_workspaces))) |</div>
-<div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span>          di::transform&lt;dlaf::internal::TransformDispatchType::Plain&gt;(</div>
-<div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span>              di::Policy&lt;Backend::GPU&gt;(thread_priority::high),</div>
-<div class="line"><a id="l00337" name="l00337"></a><span class="lineno">  337</span>              [nworkers](<span class="keyword">auto</span>&amp;&amp; tile_t, <span class="keyword">auto</span>&amp;&amp; workspaces, whip::stream_t stream) {</div>
-<div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span>                <span class="keywordflow">for</span> (std::size_t index = 0; index &lt; nworkers - 1; ++index) {</div>
-<div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span>                  <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Tile&lt;const T, Device::GPU&gt;</a> ws =</div>
-<div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span>                      workspaces[index].get().subTileReference({{0, 0}, tile_t.size()});</div>
-<div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span>                  DLAF_ASSERT(equal_size(ws, tile_t), ws, tile_t);</div>
-<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>                  gpulapack::add(blas::Uplo::Upper, tile_t.size().rows() - 1, tile_t.size().cols() - 1,</div>
-<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>                                 T(1), ws.ptr({0, 1}), ws.ld(), tile_t.ptr({0, 1}), tile_t.ld(), stream);</div>
-<div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span>                }</div>
-<div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span>                <span class="keywordflow">return</span> std::move(tile_t);</div>
-<div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span>              });</div>
-<div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span>    }</div>
-<div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span> </div>
-<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>    <span class="keywordflow">return</span> tile_t;</div>
-<div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span>  }</div>
-<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span> </div>
-<div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span>  <span class="keyword">static</span> <span class="keywordtype">void</span> loop_trmv(cublasHandle_t handle, <span class="keyword">const</span> <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Tile&lt;T, Device::GPU&gt;</a>&amp; tile_t) {</div>
-<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>    <span class="keyword">const</span> SizeType k = tile_t.size().cols();</div>
-<div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span> </div>
-<div class="line"><a id="l00355" name="l00355"></a><span class="lineno">  355</span>    <span class="comment">// Update each column (in order) t = T . t</span></div>
-<div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>    <span class="comment">// remember that T is upper triangular, so it is possible to use TRMV</span></div>
-<div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span>    <span class="keywordflow">for</span> (SizeType j = 0; j &lt; k; ++j) {</div>
-<div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span>      <span class="keyword">const</span> <a class="code hl_class" href="classdlaf_1_1common_1_1_index2_d.html">TileElementIndex</a> t_start{0, j};</div>
-<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>      <span class="keyword">const</span> <a class="code hl_class" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a> t_size{j, 1};</div>
-<div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span> </div>
-<div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span>      gpublas::internal::Trmv&lt;T&gt;::call(handle, CUBLAS_FILL_MODE_UPPER, CUBLAS_OP_N, CUBLAS_DIAG_NON_UNIT,</div>
-<div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span>                                       <a class="code hl_function" href="types_8h.html#af90e7fd5acadf5987b7199b0bd44deea">to_int</a>(t_size.rows()), util::blasToCublasCast(tile_t.ptr()),</div>
-<div class="line"><a id="l00363" name="l00363"></a><span class="lineno">  363</span>                                       <a class="code hl_function" href="types_8h.html#af90e7fd5acadf5987b7199b0bd44deea">to_int</a>(tile_t.ld()), util::blasToCublasCast(tile_t.ptr(t_start)),</div>
-<div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span>                                       1);</div>
-<div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span>    }</div>
-<div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span>  }</div>
-<div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span> </div>
-<div class="line"><a id="l00368" name="l00368"></a><span class="lineno">  368</span>  <span class="keyword">static</span> <span class="keyword">auto</span> step_copy_diag_and_trmv(<a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::ReadOnlyTileSender&lt;T, Device::CPU&gt;</a> taus,</div>
-<div class="line"><a id="l00369" name="l00369"></a><span class="lineno">  369</span>                                      <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::ReadWriteTileSender&lt;T, Device::GPU&gt;</a> tile_t) <span class="keyword">noexcept</span> {</div>
-<div class="line"><a id="l00370" name="l00370"></a><span class="lineno">  370</span>    <span class="comment">// Update each column (in order) t = T . t</span></div>
-<div class="line"><a id="l00371" name="l00371"></a><span class="lineno">  371</span>    <span class="comment">// remember that T is upper triangular, so it is possible to use TRMV</span></div>
-<div class="line"><a id="l00372" name="l00372"></a><span class="lineno">  372</span>    <span class="keyword">auto</span> trmv_func = [](cublasHandle_t handle, <span class="keyword">const</span> <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Tile&lt;const T, Device::CPU&gt;</a>&amp; taus,</div>
-<div class="line"><a id="l00373" name="l00373"></a><span class="lineno">  373</span>                        <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Tile&lt;T, Device::GPU&gt;</a>&amp; tile_t) {</div>
-<div class="line"><a id="l00374" name="l00374"></a><span class="lineno">  374</span>      whip::stream_t stream;</div>
-<div class="line"><a id="l00375" name="l00375"></a><span class="lineno">  375</span>      DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &amp;stream));</div>
-<div class="line"><a id="l00376" name="l00376"></a><span class="lineno">  376</span> </div>
-<div class="line"><a id="l00377" name="l00377"></a><span class="lineno">  377</span>      <span class="keyword">const</span> SizeType k = tile_t.size().cols();</div>
-<div class="line"><a id="l00378" name="l00378"></a><span class="lineno">  378</span>      gpulapack::lacpy(blas::Uplo::General, 1, k, taus.ptr(), 1, tile_t.ptr(), tile_t.ld() + 1, stream);</div>
+<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>    gpulapack::larft_gemv1_notau(handle, m, k, tile_v.ptr(), tile_v.ld(), tile_t.ptr(), tile_t.ld());</div>
+<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>  }</div>
+<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span> </div>
+<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>  <span class="keyword">static</span> <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::ReadWriteTileSender&lt;T, Device::GPU&gt;</a> step_gemv(</div>
+<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>      <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Panel&lt;Coord::Col, T, Device::GPU&gt;</a>&amp; hh_panel,</div>
+<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>      <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::ReadOnlyTileSender&lt;T, Device::CPU&gt;</a> taus,</div>
+<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>      <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::ReadWriteTileSender&lt;T, Device::GPU&gt;</a> tile_t,</div>
+<div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>      <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Panel&lt;Coord::Col, T, Device::GPU&gt;</a>&amp; workspaces) {</div>
+<div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>    <span class="keyword">namespace </span>ex = pika::execution::experimental;</div>
+<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>    <span class="keyword">namespace </span>di = dlaf::internal;</div>
+<div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span> </div>
+<div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span>    <span class="keyword">using </span>pika::execution::thread_priority;</div>
+<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span> </div>
+<div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span>    std::vector&lt;matrix::ReadOnlyTileSender&lt;T, Device::GPU&gt;&gt; hh_tiles =</div>
+<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>        selectRead(hh_panel, hh_panel.iteratorLocal());</div>
+<div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span> </div>
+<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span>    <span class="keyword">const</span> SizeType k = hh_panel.getWidth();</div>
+<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span> </div>
+<div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span>    <span class="keywordflow">if</span> (hh_tiles.size() == 0)</div>
+<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span>      <span class="keywordflow">return</span> tile_t;</div>
+<div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span> </div>
+<div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span>    <span class="keyword">const</span> <span class="keyword">auto</span> workers_params = split_tfactor_work&lt;Backend::GPU&gt;(hh_tiles.size());</div>
+<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>    <span class="keyword">const</span> std::size_t nworkers = workers_params.nworkers;</div>
+<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>    <span class="keyword">const</span> std::size_t batch_size = workers_params.batch_size;</div>
+<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span> </div>
+<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>    <span class="keyword">const</span> <span class="keyword">auto</span> range_workspaces = common::iterate_range2d(<a class="code hl_class" href="classdlaf_1_1common_1_1_size2_d.html">LocalTileSize</a>{<a class="code hl_function" href="types_8h.html#ab1f0edc8e1281293c9c1325cb9d4bec9">to_SizeType</a>(nworkers - 1), 1});</div>
+<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>    DLAF_ASSERT(<a class="code hl_function" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(std::distance(range_workspaces.begin(), range_workspaces.end())) &gt;=</div>
+<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>                    nworkers - 1,</div>
+<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>                std::distance(range_workspaces.begin(), range_workspaces.end()), nworkers - 1);</div>
+<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span> </div>
+<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span>    <span class="keywordflow">for</span> (std::size_t worker_id = 0; worker_id &lt; nworkers; ++worker_id) {</div>
+<div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span>      <span class="keyword">const</span> std::size_t begin = worker_id * batch_size;</div>
+<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span>      <span class="keyword">const</span> std::size_t end = std::min(hh_tiles.size(), (worker_id + 1) * batch_size);</div>
+<div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span> </div>
+<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span>      DLAF_ASSERT(end &gt;= begin, begin, end);</div>
+<div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span> </div>
+<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span>      <span class="keywordflow">if</span> (end == begin)</div>
+<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>        <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span> </div>
+<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span>      std::vector&lt;matrix::ReadOnlyTileSender&lt;T, Device::GPU&gt;&gt; input_tiles;</div>
+<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span>      input_tiles.reserve(end - begin);</div>
+<div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span>      <span class="keywordflow">for</span> (std::size_t sub = begin; sub &lt; end; ++sub)</div>
+<div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span>        input_tiles.emplace_back(std::move(hh_tiles[sub]));</div>
+<div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span> </div>
+<div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span>      <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::ReadWriteTileSender&lt;T, Device::GPU&gt;</a> workspace =</div>
+<div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span>          worker_id == 0 ? std::move(tile_t)</div>
+<div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>                         : workspaces.<a class="code hl_function" href="classdlaf_1_1matrix_1_1_matrix.html#ad11e9036fe317b6328ae71585b19c811">readwrite</a>(<a class="code hl_class" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a>{<a class="code hl_function" href="types_8h.html#ab1f0edc8e1281293c9c1325cb9d4bec9">to_SizeType</a>(worker_id - 1), 0});</div>
+<div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span> </div>
+<div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span>      workspace =</div>
+<div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span>          di::whenAllLift(ex::when_all_vector(std::move(input_tiles)), taus, std::move(workspace)) |</div>
+<div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span>          di::transform&lt;dlaf::internal::TransformDispatchType::Blas&gt;(</div>
+<div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span>              di::Policy&lt;Backend::GPU&gt;(thread_priority::high),</div>
+<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span>              [k](cublasHandle_t handle, <span class="keyword">auto</span>&amp;&amp; hh_tiles, <span class="keyword">auto</span>&amp;&amp; taus,</div>
+<div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span>                  <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Tile&lt;T, Device::GPU&gt;</a>&amp; tile_t_full) {</div>
+<div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>                DLAF_ASSERT_MODERATE(k == taus.size().rows(), k, taus.size().rows());</div>
+<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span> </div>
+<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span>                <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Tile&lt;T, Device::GPU&gt;</a> tile_t = tile_t_full.subTileReference({{0, 0}, {k, k}});</div>
+<div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span> </div>
+<div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span>                <span class="comment">// Note:</span></div>
+<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span>                <span class="comment">// prepare the diagonal of taus in t and reset the rest</span></div>
+<div class="line"><a id="l00305" name="l00305"></a><span class="lineno">  305</span>                whip::stream_t stream;</div>
+<div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span>                DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &amp;stream));</div>
+<div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span> </div>
+<div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span>                whip::memset_2d_async(tile_t.ptr(), <span class="keyword">sizeof</span>(T) * <a class="code hl_function" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(tile_t.ld()), 0,</div>
+<div class="line"><a id="l00309" name="l00309"></a><span class="lineno">  309</span>                                      <span class="keyword">sizeof</span>(T) * <a class="code hl_function" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(k), <a class="code hl_function" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(k), stream);</div>
+<div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span>                gpulapack::lacpy(blas::Uplo::General, 1, k, taus.ptr(), 1, tile_t.ptr(), tile_t.ld() + 1,</div>
+<div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span>                                 stream);</div>
+<div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span> </div>
+<div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span>                <span class="comment">// Note:</span></div>
+<div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span>                <span class="comment">// - call one gemv per tile</span></div>
+<div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>                <span class="comment">// - being on the same stream, they are already serialised on GPU</span></div>
+<div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span>                <span class="keywordflow">for</span> (std::size_t index = 0; index &lt; hh_tiles.size(); ++index) {</div>
+<div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>                  <span class="keyword">const</span> <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Tile&lt;const T, Device::GPU&gt;</a>&amp; tile_v = hh_tiles[index].get();</div>
+<div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span>                  Helpers::loop_gemv(handle, tile_v, taus, tile_t);</div>
+<div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span>                }</div>
+<div class="line"><a id="l00320" name="l00320"></a><span class="lineno">  320</span> </div>
+<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span>                <span class="keywordflow">return</span> std::move(tile_t_full);</div>
+<div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span>              });</div>
+<div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span> </div>
+<div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span>      <span class="keywordflow">if</span> (worker_id == 0)</div>
+<div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span>        tile_t = std::move(workspace);</div>
+<div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span>      <span class="keywordflow">else</span></div>
+<div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span>        ex::start_detached(std::move(workspace));</div>
+<div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span>    }</div>
+<div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span> </div>
+<div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span>    <span class="keywordflow">if</span> (nworkers &gt; 1 and k &gt; 1) {</div>
+<div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span>      tile_t =</div>
+<div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span>          di::whenAllLift(std::move(tile_t),</div>
+<div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span>                          ex::when_all_vector(selectRead(workspaces, range_workspaces))) |</div>
+<div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span>          di::transform&lt;dlaf::internal::TransformDispatchType::Plain&gt;(</div>
+<div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span>              di::Policy&lt;Backend::GPU&gt;(thread_priority::high),</div>
+<div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span>              [nworkers](<span class="keyword">auto</span>&amp;&amp; tile_t, <span class="keyword">auto</span>&amp;&amp; workspaces, whip::stream_t stream) {</div>
+<div class="line"><a id="l00337" name="l00337"></a><span class="lineno">  337</span>                <span class="keywordflow">for</span> (std::size_t index = 0; index &lt; nworkers - 1; ++index) {</div>
+<div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span>                  <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Tile&lt;const T, Device::GPU&gt;</a> ws =</div>
+<div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span>                      workspaces[index].get().subTileReference({{0, 0}, tile_t.size()});</div>
+<div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span>                  DLAF_ASSERT(equal_size(ws, tile_t), ws, tile_t);</div>
+<div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span>                  gpulapack::add(blas::Uplo::Upper, tile_t.size().rows() - 1, tile_t.size().cols() - 1,</div>
+<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>                                 T(1), ws.ptr({0, 1}), ws.ld(), tile_t.ptr({0, 1}), tile_t.ld(), stream);</div>
+<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>                }</div>
+<div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span>                <span class="keywordflow">return</span> std::move(tile_t);</div>
+<div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span>              });</div>
+<div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span>    }</div>
+<div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span> </div>
+<div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span>    <span class="keywordflow">return</span> tile_t;</div>
+<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>  }</div>
+<div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span> </div>
+<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>  <span class="keyword">static</span> <span class="keywordtype">void</span> loop_trmv(cublasHandle_t handle, <span class="keyword">const</span> <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Tile&lt;T, Device::GPU&gt;</a>&amp; tile_t) {</div>
+<div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span>    <span class="keyword">const</span> SizeType k = tile_t.size().cols();</div>
+<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span> </div>
+<div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span>    <span class="comment">// Update each column (in order) t = T . t</span></div>
+<div class="line"><a id="l00355" name="l00355"></a><span class="lineno">  355</span>    <span class="comment">// remember that T is upper triangular, so it is possible to use TRMV</span></div>
+<div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>    <span class="keywordflow">for</span> (SizeType j = 0; j &lt; k; ++j) {</div>
+<div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span>      <span class="keyword">const</span> <a class="code hl_class" href="classdlaf_1_1common_1_1_index2_d.html">TileElementIndex</a> t_start{0, j};</div>
+<div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span>      <span class="keyword">const</span> <a class="code hl_class" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a> t_size{j, 1};</div>
+<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span> </div>
+<div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span>      gpublas::internal::Trmv&lt;T&gt;::call(handle, CUBLAS_FILL_MODE_UPPER, CUBLAS_OP_N, CUBLAS_DIAG_NON_UNIT,</div>
+<div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span>                                       <a class="code hl_function" href="types_8h.html#af90e7fd5acadf5987b7199b0bd44deea">to_int</a>(t_size.rows()), util::blasToCublasCast(tile_t.ptr()),</div>
+<div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span>                                       <a class="code hl_function" href="types_8h.html#af90e7fd5acadf5987b7199b0bd44deea">to_int</a>(tile_t.ld()), util::blasToCublasCast(tile_t.ptr(t_start)),</div>
+<div class="line"><a id="l00363" name="l00363"></a><span class="lineno">  363</span>                                       1);</div>
+<div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span>    }</div>
+<div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span>  }</div>
+<div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span> </div>
+<div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span>  <span class="keyword">static</span> <span class="keyword">auto</span> step_copy_diag_and_trmv(<a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::ReadOnlyTileSender&lt;T, Device::CPU&gt;</a> taus,</div>
+<div class="line"><a id="l00368" name="l00368"></a><span class="lineno">  368</span>                                      <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::ReadWriteTileSender&lt;T, Device::GPU&gt;</a> tile_t) <span class="keyword">noexcept</span> {</div>
+<div class="line"><a id="l00369" name="l00369"></a><span class="lineno">  369</span>    <span class="comment">// Update each column (in order) t = T . t</span></div>
+<div class="line"><a id="l00370" name="l00370"></a><span class="lineno">  370</span>    <span class="comment">// remember that T is upper triangular, so it is possible to use TRMV</span></div>
+<div class="line"><a id="l00371" name="l00371"></a><span class="lineno">  371</span>    <span class="keyword">auto</span> trmv_func = [](cublasHandle_t handle, <span class="keyword">const</span> <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Tile&lt;const T, Device::CPU&gt;</a>&amp; taus,</div>
+<div class="line"><a id="l00372" name="l00372"></a><span class="lineno">  372</span>                        <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Tile&lt;T, Device::GPU&gt;</a>&amp; tile_t) {</div>
+<div class="line"><a id="l00373" name="l00373"></a><span class="lineno">  373</span>      whip::stream_t stream;</div>
+<div class="line"><a id="l00374" name="l00374"></a><span class="lineno">  374</span>      DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &amp;stream));</div>
+<div class="line"><a id="l00375" name="l00375"></a><span class="lineno">  375</span> </div>
+<div class="line"><a id="l00376" name="l00376"></a><span class="lineno">  376</span>      <span class="keyword">const</span> SizeType k = tile_t.size().cols();</div>
+<div class="line"><a id="l00377" name="l00377"></a><span class="lineno">  377</span>      gpulapack::lacpy(blas::Uplo::General, 1, k, taus.ptr(), 1, tile_t.ptr(), tile_t.ld() + 1, stream);</div>
+<div class="line"><a id="l00378" name="l00378"></a><span class="lineno">  378</span>      gpulapack::larft_gemv1_fixtau(k, tile_t.ptr(), tile_t.ld() + 1, tile_t.ptr(), tile_t.ld(), stream);</div>
 <div class="line"><a id="l00379" name="l00379"></a><span class="lineno">  379</span> </div>
 <div class="line"><a id="l00380" name="l00380"></a><span class="lineno">  380</span>      loop_trmv(handle, tile_t);</div>
 <div class="line"><a id="l00381" name="l00381"></a><span class="lineno">  381</span>    };</div>

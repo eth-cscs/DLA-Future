@@ -812,7 +812,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
   // Note: at least two column of tiles per-worker, in the range [1, getTridiagRank1NWorkers()]
   const std::size_t nthreads = [nrtiles = (i_end - i_begin)]() {
     const std::size_t min_workers = 1;
-    const std::size_t available_workers = getTridiagRank1NWorkers();
+    const std::size_t available_workers = get_tridiag_rank1_num_workers();
     const std::size_t ideal_workers = util::ceilDiv(to_sizet(nrtiles), to_sizet(2));
     return std::clamp(ideal_workers, min_workers, available_workers);
   }();
@@ -1346,7 +1346,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
           const std::size_t workload_unit = 2 * to_sizet(dist_sub.tile_size().linear_size());
 
           const std::size_t min_workers = 1;
-          const std::size_t available_workers = getTridiagRank1NWorkers();
+          const std::size_t available_workers = get_tridiag_rank1_num_workers();
 
           const std::size_t ideal_workers = util::ceilDiv(to_sizet(workload), workload_unit);
           return std::clamp(ideal_workers, min_workers, available_workers);

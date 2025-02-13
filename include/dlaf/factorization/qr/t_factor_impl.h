@@ -242,8 +242,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
     DLAF_ASSERT(taus.size().rows() == k, taus.size().rows(), k);
     DLAF_ASSERT(taus.size().cols() == 1, taus.size().cols());
 
-    gpulapack::larft_gemv0(handle, m, k, tile_v.ptr(), tile_v.ld(), taus.ptr(), tile_t.ptr(),
-                           tile_t.ld());
+    gpulapack::larft_gemv1_notau(handle, m, k, tile_v.ptr(), tile_v.ld(), tile_t.ptr(), tile_t.ld());
   }
 
   static matrix::ReadWriteTileSender<T, Device::GPU> step_gemv(
@@ -376,6 +375,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 
       const SizeType k = tile_t.size().cols();
       gpulapack::lacpy(blas::Uplo::General, 1, k, taus.ptr(), 1, tile_t.ptr(), tile_t.ld() + 1, stream);
+      gpulapack::larft_gemv1_fixtau(k, tile_t.ptr(), tile_t.ld() + 1, tile_t.ptr(), tile_t.ld(), stream);
 
       loop_trmv(handle, tile_t);
     };

@@ -1075,7 +1075,7 @@ Matrix<T, D> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const SizeType 
     // TODO used just by the column, maybe we can re-use a panel tile?
     // TODO probably the first one in any panel is ok?
     Matrix<T, D> t({nrefls_tile, nrefls_tile}, dist.blockSize());
-    computeTFactor<B>(v, mat_taus_retiled.read(GlobalTileIndex(j_sub, 0)), t.readwrite(t_idx), ws);
+    // computeTFactor<B>(v, mat_taus_retiled.read(GlobalTileIndex(j_sub, 0)), t.readwrite(t_idx), ws);
     ws.reset();
 
     // PREPARATION FOR TRAILING MATRIX UPDATE
@@ -1277,8 +1277,8 @@ Matrix<T, D> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix
       red2band::local::setupReflectorPanelV<B, D, T>(rank.row() == rank_v0.row(), panel_view,
                                                      nrefls_tile, v, mat_a, !is_full_band);
 
-      computeTFactor<B>(v, mat_taus_retiled.read(GlobalTileIndex(j_sub, 0)), t.readwrite(t_idx), ws,
-                        mpi_col_chain);
+      // computeTFactor<B>(v, mat_taus_retiled.read(GlobalTileIndex(j_sub, 0)), t.readwrite(t_idx), ws,
+      //                   mpi_col_chain);
       ws.reset();
     }
 

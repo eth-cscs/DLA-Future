@@ -214,6 +214,10 @@ class Pika(CMakePackage, CudaPackage, ROCmPackage):
         spec, args = self.spec, []
 
         args += [
+            # NOTE: Added for CI
+            self.define("PIKA_WITH_STACKOVERFLOW_DETECTION", True),
+            self.define("PIKA_WITH_SPINLOCK_DEADLOCK_DETECTION", True),
+
             self.define_from_variant("BUILD_SHARED_LIBS", "shared"),
             self.define("PIKA_WITH_CXX_STANDARD", spec.variants["cxxstd"].value),
             self.define_from_variant("PIKA_WITH_EXAMPLES", "examples"),

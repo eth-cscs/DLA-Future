@@ -141,11 +141,14 @@ struct BacktransformReductionToBandMiniapp {
 
     auto nr_reflectors = std::max<SizeType>(0, opts.m - opts.b - 1);
 
-    Matrix<T, Device::CPU> mat_taus(Distribution(GlobalElementSize(nr_reflectors, 1),
-                                                 TileElementSize(opts.mb, 1),
-                                                 Size2D(comm_grid.size().cols(), 1),
-                                                 Index2D(comm_grid.rank().col(), 0), Index2D(0, 0)));
-    set(mat_taus, [](const GlobalElementIndex&) { return T(2); });
+    ConstHostMatrixType mat_taus_host = [&]() {
+      HostMatrixType mat_taus(Distribution(GlobalElementSize(nr_reflectors, 1),
+                                           TileElementSize(opts.mb, 1),
+                                           Size2D(comm_grid.size().cols(), 1),
+                                           Index2D(comm_grid.rank().col(), 0), Index2D(0, 0)));
+      set(mat_taus, [](const GlobalElementIndex&) { return T(2); });
+      return mat_taus;
+    }();
 
     for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
       if (0 == world.rank() && run_index >= 0)
@@ -161,11 +164,12 @@ struct BacktransformReductionToBandMiniapp {
       {
         MatrixMirrorType mat_e(mat_e_host);
         MatrixMirrorType mat_hh(mat_hh_host);
+        MatrixMirror<const T, DefaultDevice_v<backend>, Device::CPU> mat_taus(mat_taus_host);
 
         // Wait for matrices to be copied
         mat_e.get().waitLocalTiles();
         mat_hh.get().waitLocalTiles();
-        mat_taus.waitLocalTiles();
+        mat_taus.get().waitLocalTiles();
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         auto spec =
@@ -175,10 +179,10 @@ struct BacktransformReductionToBandMiniapp {
         dlaf::common::Timer<> timeit;
         if (opts.local)
           dlaf::eigensolver::internal::bt_reduction_to_band<backend, DefaultDevice_v<backend>, T>(
-              opts.b, mat_e_ref, mat_hh.get(), mat_taus);
+              opts.b, mat_e_ref, mat_hh.get(), mat_taus.get());
         else
           dlaf::eigensolver::internal::bt_reduction_to_band<backend, DefaultDevice_v<backend>, T>(
-              comm_grid, opts.b, mat_e_ref, mat_hh.get(), mat_taus);
+              comm_grid, opts.b, mat_e_ref, mat_hh.get(), mat_taus.get());
 
         // wait and barrier for all ranks
         mat_e.get().waitLocalTiles();

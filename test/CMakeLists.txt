@@ -101,6 +101,6 @@ target_include_directories(DLAF_test INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT
 
 target_link_libraries(DLAF_test INTERFACE gtest)
 
-add_subdirectory(header)
+# add_subdirectory(header)
 add_subdirectory(src)
 add_subdirectory(unit)

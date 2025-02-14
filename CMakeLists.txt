@@ -221,7 +221,7 @@ if(DLAF_BUILD_MINIAPPS)
   file(TOUCH ${FAKE_INSTALL_DIR}/DLAFConfig.cmake)
   list(PREPEND CMAKE_PREFIX_PATH ${FAKE_INSTALL_DIR})
 
-  add_subdirectory(miniapp)
+  # add_subdirectory(miniapp)
 endif()
 
 # ---------------------------------------------------------------------------

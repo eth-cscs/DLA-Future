@@ -22,10 +22,10 @@ using matrix::internal::MatrixRef;
 template <Backend backend, Device device, class T>
 struct BackTransformationReductionToBand {
   static void call(SizeType b, MatrixRef<T, device>& mat_c, Matrix<const T, device>& mat_v,
-                   Matrix<const T, Device::CPU>& mat_taus);
+                   Matrix<const T, device>& mat_taus);
 
   static void call(comm::CommunicatorGrid& grid, const SizeType b, MatrixRef<T, device>& mat_c,
-                   Matrix<const T, device>& mat_v, Matrix<const T, Device::CPU>& mat_taus);
+                   Matrix<const T, device>& mat_v, Matrix<const T, device>& mat_taus);
 };
 
 // ETI

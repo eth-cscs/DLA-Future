@@ -136,3 +136,6 @@ variables:
     strategy: depend
     forward:
       pipeline_variables: true
+  variables:
+    PIKA_SMALL_STACK_SIZE: 0xF0000
+    PIKA_MEDIUM_STACK_SIZE: 0xF0000

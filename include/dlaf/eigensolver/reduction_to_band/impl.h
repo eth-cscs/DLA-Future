@@ -923,9 +923,9 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
 
     // compute on CPU
     using dlaf::eigensolver::internal::red2band::distributed::computePanelReflectors;
-    computePanelReflectors(std::forward<TriggerSender>(trigger), rank_v0,
-                           std::forward<CommSender>(mpi_col_chain_panel), v, mat_taus, j_sub,
-                           panel_view);
+    // computePanelReflectors(std::forward<TriggerSender>(trigger), rank_v0,
+    //                        std::forward<CommSender>(mpi_col_chain_panel), v, mat_taus, j_sub,
+    //                        panel_view);
 
     // copy back to GPU
     copyFromCPU(panel_view, v, mat_a);

@@ -898,8 +898,6 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
             const matrix::SubPanelView& panel_view) {
     using red2band::local::computePanelReflectors;
 
-    namespace ex = pika::execution::experimental;
-
     // Note:
     // - copy panel_view from GPU to CPU
     // - computePanelReflectors on CPU (on a matrix like, with just a panel)

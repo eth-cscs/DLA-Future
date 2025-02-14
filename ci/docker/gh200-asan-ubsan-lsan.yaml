@@ -1,0 +1,38 @@
+#
+# Distributed Linear Algebra with Future (DLAF)
+#
+# Copyright (c) 2018-2024, ETH Zurich
+# All rights reserved.
+#
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+
+spack:
+  include:
+  - /spack_environment/common-gh200.yaml
+
+  view: false
+  concretizer:
+    unify:
+      true
+
+  specs:
+    - dla-future@master ~cuda build_type=RelWithDebInfo cxxflags="-fsanitize=address -fsanitize-address-use-after-scope -fsanitize=undefined -fno-omit-frame-pointer" cflags="-fsanitize=address -fsanitize-address-use-after-scope -fsanitize=undefined -fno-omit-frame-pointer" ldflags="-fsanitize=address -fsanitize=undefined" +miniapps +ci-test
+
+  packages:
+    all:
+      variants:
+        - 'build_type=Release'
+    pika:
+      require:
+        - 'build_type=RelWithDebInfo'
+        - 'malloc=system'
+        - '+sanitizers'
+        - '+stdexec'
+    nvpl-blas:
+        require::
+        - 'threads=none'
+    nvpl-lapack:
+        require::
+        - 'threads=none'

@@ -1,0 +1,37 @@
+include:
+  - local: 'ci/common-ci.yml'
+
+gh200 asan ubsan lsan deps:
+  extends: .build_deps_common_gh200
+  variables:
+    BASE_IMAGE: $CSCS_REGISTRY_PATH/base-images/cuda_12.6.1-devel-ubuntu24.04:v1.4
+    EXTRA_APTGET: "clang-18 libclang-rt-18-dev libomp-18-dev llvm-18"
+    COMPILER: clang@18
+    CXXSTD: 20
+    SPACK_ENVIRONMENT: ci/docker/gh200-asan-ubsan-lsan.yaml
+    DEPS_IMAGE: $CSCS_REGISTRY_PATH/gh200-asan-ubsan-lsan/deps
+
+gh200 asan ubsan lsan build:
+  extends:
+    - .build_common_gh200
+    - .build_for_alps_gh200
+  needs:
+    - gh200 asan ubsan lsan deps
+  variables:
+    DLAF_IMAGE: $CSCS_REGISTRY_PATH/gh200-asan-ubsan-lsan/dlaf:$CI_COMMIT_SHA
+
+gh200 asan ubsan lsan test:
+  extends: .run_common
+  needs:
+    - gh200 asan ubsan lsan build
+  variables:
+    DLAF_CI_BIND_GPU: "ALPS-GH200"
+    PIKA_MPI_ENABLE_POOL: 1
+    ASAN_OPTIONS: "fast_unwind_on_malloc=0:strict_string_checks=1:detect_leaks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1"
+    UBSAN_OPTIONS: "halt_on_error=1:print_stacktrace=1"
+    # Override use of libSegFault, not necessary with sanitizers
+    DLAF_LD_PRELOAD: ""
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: gh200 asan ubsan lsan build

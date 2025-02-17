@@ -11,6 +11,8 @@
 packages:
   all:
     target: [neoverse_v2]
+    require:
+      - 'cuda_arch=90'
   # Set nvpl as default blas, lapack and scalapack provider.
   # Can be overwritten in environments if needed.
   blas:

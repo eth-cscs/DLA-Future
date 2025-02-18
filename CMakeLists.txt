@@ -207,6 +207,8 @@ if(DLAF_CI_RUNNER_USES_MPIRUN)
   set(DLAF_MPI_PRESET "custom" CACHE STRING "" FORCE)
 endif()
 
+dlaf_setup_mpi_preset()
+
 # ---------------------------------------------------------------------------
 # mini Apps
 # ---------------------------------------------------------------------------

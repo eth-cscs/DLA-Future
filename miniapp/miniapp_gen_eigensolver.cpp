@@ -378,7 +378,7 @@ void checkGenEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<co
     return;
 
   constexpr auto eps = std::numeric_limits<dlaf::BaseType<T>>::epsilon();
-  const auto n = eval_idx_end;
+  const auto n = A.size().rows();
 
   const auto diff_ratio = norm_diff / norm_A / norm_B;
 

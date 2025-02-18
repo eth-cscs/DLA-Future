@@ -114,15 +114,15 @@ std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>tfactor_num_st
 <tr class="memitem:a87128737c68ad787f2584a837e0b3c4b" id="r_a87128737c68ad787f2584a837e0b3c4b"><td class="memItemLeft" align="right" valign="top"><a id="a87128737c68ad787f2584a837e0b3c4b" name="a87128737c68ad787f2584a837e0b3c4b"></a>
 std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>tfactor_barrier_busy_wait_us</b> = 0</td></tr>
 <tr class="separator:a87128737c68ad787f2584a837e0b3c4b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9ae21c43d98f2124d531d928f922171d" id="r_a9ae21c43d98f2124d531d928f922171d"><td class="memItemLeft" align="right" valign="top"><a id="a9ae21c43d98f2124d531d928f922171d" name="a9ae21c43d98f2124d531d928f922171d"></a>
-std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>red2band_panel_nworkers</b> = 1</td></tr>
-<tr class="separator:a9ae21c43d98f2124d531d928f922171d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6b4ce1d93ae8a46b1a51c536d7a7cdf4" id="r_a6b4ce1d93ae8a46b1a51c536d7a7cdf4"><td class="memItemLeft" align="right" valign="top"><a id="a6b4ce1d93ae8a46b1a51c536d7a7cdf4" name="a6b4ce1d93ae8a46b1a51c536d7a7cdf4"></a>
+std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>red2band_panel_num_threads</b> = 1</td></tr>
+<tr class="separator:a6b4ce1d93ae8a46b1a51c536d7a7cdf4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6d7a35956da99141f6bcd00f2a0cecc5" id="r_a6d7a35956da99141f6bcd00f2a0cecc5"><td class="memItemLeft" align="right" valign="top"><a id="a6d7a35956da99141f6bcd00f2a0cecc5" name="a6d7a35956da99141f6bcd00f2a0cecc5"></a>
 std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>red2band_barrier_busy_wait_us</b> = 1000</td></tr>
 <tr class="separator:a6d7a35956da99141f6bcd00f2a0cecc5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad94d00453e4197e87b8a6616a55c7c4c" id="r_ad94d00453e4197e87b8a6616a55c7c4c"><td class="memItemLeft" align="right" valign="top"><a id="ad94d00453e4197e87b8a6616a55c7c4c" name="ad94d00453e4197e87b8a6616a55c7c4c"></a>
-std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>tridiag_rank1_nworkers</b> = 1</td></tr>
-<tr class="separator:ad94d00453e4197e87b8a6616a55c7c4c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aff5902884e6e4f18e4fb06d665cb6f5f" id="r_aff5902884e6e4f18e4fb06d665cb6f5f"><td class="memItemLeft" align="right" valign="top"><a id="aff5902884e6e4f18e4fb06d665cb6f5f" name="aff5902884e6e4f18e4fb06d665cb6f5f"></a>
+std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>tridiag_rank1_num_threads</b> = 1</td></tr>
+<tr class="separator:aff5902884e6e4f18e4fb06d665cb6f5f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab468a066388750faccd2a30e399d70c8" id="r_ab468a066388750faccd2a30e399d70c8"><td class="memItemLeft" align="right" valign="top"><a id="ab468a066388750faccd2a30e399d70c8" name="ab468a066388750faccd2a30e399d70c8"></a>
 std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>tridiag_rank1_barrier_busy_wait_us</b> = 0</td></tr>
 <tr class="separator:ab468a066388750faccd2a30e399d70c8"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -149,12 +149,12 @@ std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>communicator_g
 <li>debug_dump_reduction_to_band_data: Enable dump of reduction_to_band input/output data to "reduction_to_band.h5" file that will be created in the working folder (it should not exist before the execution). environment variable DLAF_DEBUG_DUMP_EIGENSOLVER_DATA.</li>
 <li>debug_dump_band_to_tridiagonal_data: Enable dump of band_to_trigiagonal input/output data to "band_to_tridiagonal.h5" file that will be created in the working folder (it should not exist before the execution). environment variable DLAF_DEBUG_DUMP_BAND_TO_TRIDIAGONAL_DATA.</li>
 <li>debug_dump_tridiag_solver_data: Enable dump of tridiagonal solver input/output data to "tridiagonal.h5" file that will before created in the working folder (it should not exist before the execution). Set with environment variable DLAF_DEBUG_DUMP_TRIDIAG_SOLVER_DATA.</li>
-<li>tfactor_num_threads: The maximum number of threads to use for computing tfactor (e.g. which is used for instance in red2band and its backtransformation). Set with &ndash;dlaf:tfactor-num-threads or env variable DLAF_TFACTOR_NTHREADS.</li>
-<li>tfactor_num_streams: The maximum number of streams to use for computing tfactor (e.g. which is used for instance in red2band and its backtransformation). Set with &ndash;dlaf:tfactor-num-streams or env variable DLAF_TFACTOR_NSTREAMS.</li>
+<li>tfactor_num_threads: The maximum number of threads to use for computing tfactor (e.g. which is used for instance in red2band and its backtransformation). Set with &ndash;dlaf:tfactor-num-threads or env variable DLAF_TFACTOR_NUM_THREADS.</li>
+<li>tfactor_num_streams: The maximum number of streams to use for computing tfactor (e.g. which is used for instance in red2band and its backtransformation). Set with &ndash;dlaf:tfactor-num-streams or env variable DLAF_TFACTOR_NUM_STREAMS.</li>
 <li>tfactor_barrier_busy_wait_us: The duration in microseconds to busy-wait in barriers in the tfactor algorithm. Set with &ndash;dlaf:tfactor-barrier-busy-wait-us or env variable DLAF_TFACTOR_BARRIER_BUSY_WAIT_US.</li>
-<li>red2band_panel_nworkers: The maximum number of threads to use for computing the panel in the reduction to band algorithm. Set with &ndash;dlaf:red2band-panel-nworkers or env variable DLAF_RED2BAND_PANEL_NWORKERS.</li>
+<li>red2band_panel_num_threads: The maximum number of threads to use for computing the panel in the reduction to band algorithm. Set with &ndash;dlaf:red2band-panel-num-threads or env variable DLAF_RED2BAND_PANEL_NUM_THREADS.</li>
 <li>red2band_barrier_busy_wait_us: The duration in microseconds to busy-wait in barriers in the reduction to band algorithm. Set with &ndash;dlaf:red2band-barrier-busy-wait-us or env variable DLAF_RED2BAND_BARRIER_BUSY_WAIT_US.</li>
-<li>tridiag_rank1_nworkers: The maximum number of threads to use for computing rank1 problem solution in tridiagonal solver algorithm. Set with &ndash;dlaf:tridiag-rank1-nworkers or env variable DLAF_TRIDIAG_RANK1_NWORKERS.</li>
+<li>tridiag_rank1_num_threads: The maximum number of threads to use for computing rank1 problem solution in tridiagonal solver algorithm. Set with &ndash;dlaf:tridiag-rank1-num-threads or env variable DLAF_TRIDIAG_RANK1_NUM_THREADS.</li>
 <li>tridiag_rank1_barrier_busy_wait_us: The duration in microseconds to busy-wait in barriers when computing rank1 problem solution in the tridiagonal solver algorithm. Set with &ndash;dlaf:tridiag-rank1-barrier-busy-wait-us or env variable DLAF_TRIDIAG_RANK1_BARRIER_BUSY_WAIT_US.</li>
 <li>eigensolver_min_band: The minimum value to start looking for a divisor of the block size. Set with &ndash;dlaf:eigensolver-min-band or env variable DLAF_EIGENSOLVER_MIN_BAND.</li>
 <li>band_to_tridiag_1d_block_size_base: The 1D block size for band_to_tridiagonal is computed as 1d_block_size_base / nb * nb. The input matrix is distributed with a {nb x nb} block size. Set with &ndash;dlaf:band-to-tridiag-1d-block-size-base or env variable DLAF_BAND_TO_TRIDIAG_1D_BLOCK_SIZE_BASE.</li>

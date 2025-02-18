@@ -396,7 +396,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span> </div>
 <div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span>  <span class="keyword">const</span> std::size_t nworkers = [nrtiles = panel_tiles.size()]() {</div>
 <div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>    <span class="keyword">const</span> std::size_t min_workers = 1;</div>
-<div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span>    <span class="keyword">const</span> std::size_t available_workers = get_red2band_panel_nworkers();</div>
+<div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span>    <span class="keyword">const</span> std::size_t available_workers = get_red2band_panel_num_workers();</div>
 <div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>    <span class="keyword">const</span> std::size_t ideal_workers =</div>
 <div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span>        util::ceilDiv(<a class="code hl_function" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(nrtiles), get_red2band_panel_worker_minwork());</div>
 <div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span>    <span class="keywordflow">return</span> std::clamp(ideal_workers, min_workers, available_workers);</div>
@@ -722,7 +722,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00639" name="l00639"></a><span class="lineno">  639</span> </div>
 <div class="line"><a id="l00640" name="l00640"></a><span class="lineno">  640</span>  <span class="keyword">const</span> std::size_t nworkers = [nrtiles = panel_tiles.size()]() {</div>
 <div class="line"><a id="l00641" name="l00641"></a><span class="lineno">  641</span>    <span class="keyword">const</span> std::size_t min_workers = 1;</div>
-<div class="line"><a id="l00642" name="l00642"></a><span class="lineno">  642</span>    <span class="keyword">const</span> std::size_t available_workers = get_red2band_panel_nworkers();</div>
+<div class="line"><a id="l00642" name="l00642"></a><span class="lineno">  642</span>    <span class="keyword">const</span> std::size_t available_workers = get_red2band_panel_num_workers();</div>
 <div class="line"><a id="l00643" name="l00643"></a><span class="lineno">  643</span>    <span class="keyword">const</span> std::size_t ideal_workers =</div>
 <div class="line"><a id="l00644" name="l00644"></a><span class="lineno">  644</span>        util::ceilDiv(<a class="code hl_function" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(nrtiles), get_red2band_panel_worker_minwork());</div>
 <div class="line"><a id="l00645" name="l00645"></a><span class="lineno">  645</span>    <span class="keywordflow">return</span> std::clamp(ideal_workers, min_workers, available_workers);</div>

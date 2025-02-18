@@ -903,7 +903,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00812" name="l00812"></a><span class="lineno">  812</span>  <span class="comment">// Note: at least two column of tiles per-worker, in the range [1, getTridiagRank1NWorkers()]</span></div>
 <div class="line"><a id="l00813" name="l00813"></a><span class="lineno">  813</span>  <span class="keyword">const</span> std::size_t nthreads = [nrtiles = (i_end - i_begin)]() {</div>
 <div class="line"><a id="l00814" name="l00814"></a><span class="lineno">  814</span>    <span class="keyword">const</span> std::size_t min_workers = 1;</div>
-<div class="line"><a id="l00815" name="l00815"></a><span class="lineno">  815</span>    <span class="keyword">const</span> std::size_t available_workers = getTridiagRank1NWorkers();</div>
+<div class="line"><a id="l00815" name="l00815"></a><span class="lineno">  815</span>    <span class="keyword">const</span> std::size_t available_workers = get_tridiag_rank1_num_workers();</div>
 <div class="line"><a id="l00816" name="l00816"></a><span class="lineno">  816</span>    <span class="keyword">const</span> std::size_t ideal_workers = util::ceilDiv(<a class="code hl_function" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(nrtiles), <a class="code hl_function" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(2));</div>
 <div class="line"><a id="l00817" name="l00817"></a><span class="lineno">  817</span>    <span class="keywordflow">return</span> std::clamp(ideal_workers, min_workers, available_workers);</div>
 <div class="line"><a id="l00818" name="l00818"></a><span class="lineno">  818</span>  }();</div>
@@ -1439,7 +1439,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l01346" name="l01346"></a><span class="lineno"> 1346</span>          const std::size_t workload_unit = 2 * to_sizet(dist_sub.tile_size().linear_size());</div>
 <div class="line"><a id="l01347" name="l01347"></a><span class="lineno"> 1347</span> </div>
 <div class="line"><a id="l01348" name="l01348"></a><span class="lineno"> 1348</span>          const std::size_t min_workers = 1;</div>
-<div class="line"><a id="l01349" name="l01349"></a><span class="lineno"> 1349</span>          const std::size_t available_workers = getTridiagRank1NWorkers();</div>
+<div class="line"><a id="l01349" name="l01349"></a><span class="lineno"> 1349</span>          const std::size_t available_workers = get_tridiag_rank1_num_workers();</div>
 <div class="line"><a id="l01350" name="l01350"></a><span class="lineno"> 1350</span> </div>
 <div class="line"><a id="l01351" name="l01351"></a><span class="lineno"> 1351</span>          const std::size_t ideal_workers = util::ceilDiv(to_sizet(workload), workload_unit);</div>
 <div class="line"><a id="l01352" name="l01352"></a><span class="lineno"> 1352</span>          return std::clamp(ideal_workers, min_workers, available_workers);</div>

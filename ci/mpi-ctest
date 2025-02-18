@@ -13,8 +13,8 @@ pushd /DLA-Future-build > /dev/null
 
 if [[ $DLAF_CI_BIND_GPU == "ALPS-GH200" ]]
 then
-    export CUDA_VISIBLE_DEVICE=$(( SLURM_LOCALID % 4 ))
-    echo "Rank $SLURM_PROCID: set CUDA_VISIBLE_DEVICE=$CUDA_VISIBLE_DEVICE"
+    export CUDA_VISIBLE_DEVICES=$(( SLURM_LOCALID % 4 ))
+    echo "Rank $SLURM_PROCID: set CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES"
 fi
 
 # Run the tests, only output on the first rank

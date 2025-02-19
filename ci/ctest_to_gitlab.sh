@@ -93,7 +93,7 @@ JOB_TEMPLATE="
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
     DLAF_HDF5_TEST_OUTPUT_PATH: /dev/shm
-  script: mpi-ctest -L {{CATEGORY_LABEL}} -L {{RANK_LABEL}}
+  script: stdbuf -oL -eL mpi-ctest -L {{CATEGORY_LABEL}} -L {{RANK_LABEL}}
   $ARTIFACTS
 "
 

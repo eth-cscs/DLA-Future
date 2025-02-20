@@ -58,20 +58,27 @@ template <TransformDispatchType Tag = TransformDispatchType::Plain, Backend B = 
   using pika::execution::experimental::then;
 
   auto scheduler = getBackendScheduler<B>(policy.priority(), policy.stacksize());
-  auto transfer_sender = continues_on(std::forward<Sender>(sender), std::move(scheduler));
 
   using dlaf::common::internal::ConsumeRvalues;
   using dlaf::common::internal::Unwrapping;
 
   if constexpr (B == Backend::MC) {
-    return then(std::move(transfer_sender), ConsumeRvalues{Unwrapping{std::forward<F>(f)}}) |
-           drop_operation_state();
+    return std::forward<Sender>(sender) | continues_on(std::move(scheduler)) |
+           then(ConsumeRvalues{Unwrapping{std::forward<F>(f)}}) | drop_operation_state();
   }
   else if constexpr (B == Backend::GPU) {
 #if defined(DLAF_WITH_GPU)
     using pika::cuda::experimental::then_with_cublas;
     using pika::cuda::experimental::then_with_cusolver;
     using pika::cuda::experimental::then_with_stream;
+
+    // The GPU schedulers in pika only logically change context, but do not actually create a new task or
+    // thread, so we explicitly transfer to a new task before starting work on the Backend::GPU scheduler
+    // to reduce the risk of stack overflows from inline execution.
+    auto mc_scheduler = getBackendScheduler<Backend::MC>(policy.priority(), policy.stacksize());
+    auto transfer_sender = std::forward<Sender>(sender) |
+                           continues_on(std::move(mc_scheduler)) |
+                           continues_on(std::move(scheduler));
 
     if constexpr (Tag == TransformDispatchType::Plain) {
       return then_with_stream(std::move(transfer_sender),

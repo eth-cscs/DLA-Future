@@ -136,3 +136,5 @@ variables:
     strategy: depend
     forward:
       pipeline_variables: true
+  variables:
+    PIKA_USE_GUARD_PAGES: 1

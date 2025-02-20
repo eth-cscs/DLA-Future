@@ -72,7 +72,7 @@ variables:
     - .build_deps_common_base
   variables:
     COMMON_SPACK_ENVIRONMENT: ci/docker/common-gh200.yaml
-    SLURM_TIMELIMIT: 00:45:00
+    SLURM_TIMELIMIT: '00:45:00'
 
 ## BUILD DLAF
 
@@ -115,7 +115,7 @@ variables:
     - .build_common_base
   variables:
     DLAF_LD_PRELOAD: "/lib/aarch64-linux-gnu/libSegFault.so"
-    SLURM_TIMELIMIT: 00:45:00
+    SLURM_TIMELIMIT: '00:45:00'
 
 .build_for_eiger:
   variables:

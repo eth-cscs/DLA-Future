@@ -14,7 +14,7 @@ variables:
 
 .build_deps_common_base:
   stage: build_deps
-  timeout: 6 hours
+  timeout: 2 hours
   before_script:
     - echo $DOCKERHUB_TOKEN | podman login docker.io -u $DOCKERHUB_USERNAME --password-stdin
     - TAG_IMAGE=`echo ${BASE_IMAGE##*/} | sed 's/[:]//g'`
@@ -66,11 +66,13 @@ variables:
     COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
 
 .build_deps_common_gh200:
+  timeout: 6 hours
   extends:
     - .container-builder-cscs-gh200
     - .build_deps_common_base
   variables:
     COMMON_SPACK_ENVIRONMENT: ci/docker/common-gh200.yaml
+    SLURM_TIMELIMIT: '00:45:00'
 
 ## BUILD DLAF
 
@@ -107,11 +109,13 @@ variables:
 
 
 .build_common_gh200:
+  timeout: 6 hours
   extends:
     - .container-builder-cscs-gh200
     - .build_common_base
   variables:
     DLAF_LD_PRELOAD: "/lib/aarch64-linux-gnu/libSegFault.so"
+    SLURM_TIMELIMIT: '00:45:00'
 
 .build_for_eiger:
   variables:

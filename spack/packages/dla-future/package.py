@@ -191,11 +191,22 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     variant("ci-test", default=False, description="Build for CI (Advanced usage).")
     conflicts("~miniapps", when="+ci-test")
 
+    # ci-check-threads conflicts for cuda or rocm builds as the libraries create their own threads.
+    # enabled by default when +ci-test
     variant(
         "ci-check-threads",
         default=False,
         description="Check number of spawned threads in CI (Advanced usage).",
     )
+    variant(
+        "ci-check-threads",
+        default=True,
+        when="+ci-test"
+        description="Check number of spawned threads in CI (Advanced usage).",
+    )
+    conflicts("+ci-check-threads", when="+cuda")
+    conflicts("+ci-check-threads", when="+rocm")
+    conflicts("+ci-check-threads", when="platform=darwin")
 
     variant("pch", default=False, description="Enable precompiled headers.")
     ###

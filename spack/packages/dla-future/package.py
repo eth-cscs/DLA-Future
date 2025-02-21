@@ -201,7 +201,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     variant(
         "ci-check-threads",
         default=True,
-        when="+ci-test"
+        when="+ci-test",
         description="Check number of spawned threads in CI (Advanced usage).",
     )
     conflicts("+ci-check-threads", when="+cuda")

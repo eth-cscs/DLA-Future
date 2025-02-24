@@ -239,7 +239,7 @@ printenv > env_{bs_name}.txt
 """,
 }
 
-cscs["alps-todi"] = cscs["alps-gh200"].copy()
+cscs["alps-daint"] = cscs["alps-gh200"].copy()
 
 csc = {}
 

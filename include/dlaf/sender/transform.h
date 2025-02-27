@@ -75,9 +75,9 @@ template <TransformDispatchType Tag = TransformDispatchType::Plain, Backend B = 
     // The GPU schedulers in pika only logically change context, but do not actually create a new task or
     // thread, so we explicitly transfer to a new task before starting work on the Backend::GPU scheduler
     // to reduce the risk of stack overflows from inline execution.
-    auto mc_scheduler = getBackendScheduler<Backend::MC>(policy.priority(), policy.stacksize());
-    auto transfer_sender = std::forward<Sender>(sender) |
-                           continues_on(std::forward<Sender>(sender), std::move(mc_scheduler)) |
+    auto mc_scheduler = getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high,
+                                                         pika::execution::thread_stacksize::nostack);
+    auto transfer_sender = std::forward<Sender>(sender) | continues_on(std::move(mc_scheduler)) |
                            continues_on(std::move(scheduler));
 
     if constexpr (Tag == TransformDispatchType::Plain) {

@@ -199,7 +199,7 @@ printenv > env_{bs_name}.txt
 }
 
 cscs["alps-gh200"] = {
-    "Cores": 256,
+    "Cores": 288,
     "Threads per core": 1,
     "Allowed rpns": [4],
     "Multiple rpn in same job": True,
@@ -217,12 +217,12 @@ cscs["alps-gh200"] = {
 #SBATCH --no-requeue
 
 # Env
-
 export FI_MR_CACHE_MONITOR=disabled
 export MPICH_GPU_SUPPORT_ENABLED=1
 export MIMALLOC_EAGER_COMMIT_DELAY=0
 export MIMALLOC_ALLOW_LARGE_OS_PAGES=1
 
+export PIKA_THREADS=64
 export PIKA_MPI_COMPLETION_MODE=31
 export PIKA_MPI_ENABLE_POOL=1
 

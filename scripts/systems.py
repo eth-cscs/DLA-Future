@@ -239,8 +239,6 @@ printenv > env_{bs_name}.txt
 """,
 }
 
-cscs["alps-daint"] = cscs["alps-gh200"].copy()
-
 csc = {}
 
 csc["lumi-cpu"] = {

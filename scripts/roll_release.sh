@@ -25,9 +25,9 @@ VERSION_TITLE="DLA-Future ${VERSION_FULL}"
 CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 RELEASE_DATE=$(date '+%Y-%m-%d')
 
-REGEX_VERSION_FULL="$(echo -e ${VERSION_FULL} | sed s/\\./\\\\./g)"
-REGEX_VERSION_FULL_TAG="$(echo -e ${VERSION_FULL_TAG} | sed s/\\./\\\\./g)"
-REGEX_VERSION_TITLE="$(echo -e ${VERSION_TITLE} | sed s/\\./\\\\./g)"
+REGEX_VERSION_FULL="$(echo ${VERSION_FULL} | sed s/\\./\\\\./g)"
+REGEX_VERSION_FULL_TAG="$(echo ${VERSION_FULL_TAG} | sed s/\\./\\\\./g)"
+REGEX_VERSION_TITLE="$(echo ${VERSION_TITLE} | sed s/\\./\\\\./g)"
 
 OK='\033[0;32mOK\033[0m'
 ERROR="\033[0;31mERROR\033[0m"

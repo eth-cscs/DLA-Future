@@ -39,6 +39,13 @@ if ! gh auth status >/dev/null 2>&1; then
     exit 1
 fi
 
+echo "You are about to tag and create a final release on GitHub."
+
+echo ""
+echo "Sanity checking release"
+
+sanity_errors=0
+
 # Major and minor releases are made directly from master. Patch releases are branched out from the major
 # and minor releases with a version_X.Y branch.
 if [[ "${VERSION_PATCH}" -eq 0 ]]; then
@@ -49,20 +56,13 @@ fi
 
 if ! [[ "$CURRENT_BRANCH" == "$RELEASE_BRANCH" ]]; then
     echo "Not on release branch (expected \"$RELEASE_BRANCH\", currently on \"${CURRENT_BRANCH}\"). Not continuing to make release."
-    exit 1
+    sanity_errors=$((sanity_errors + 1))
 fi
 
 changelog_path="CHANGELOG.md"
 readme_path="README.md"
 documentation_path="DOCUMENTATION.md"
 cff_path="CITATION.cff"
-
-echo "You are about to tag and create a final release on GitHub."
-
-echo ""
-echo "Sanity checking release"
-
-sanity_errors=0
 
 printf "Checking that the git repository is in a clean state... "
 if [[ $(git status --porcelain | wc -l) -eq 0  ]] ; then

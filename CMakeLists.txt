@@ -10,7 +10,7 @@
 
 cmake_minimum_required(VERSION 3.22)
 
-project(DLAF VERSION 0.7.3)
+project(DLAF VERSION 0.8.0)
 
 # ---------------------------------------------------------------------------
 # CMake configurations

@@ -115,9 +115,8 @@ else
     sanity_errors=$((sanity_errors + 1))
 fi
 
-printf "Checking that %s has no extra documentation entries... " "${readme_path}"
+echo "Checking that %s has no extra documentation entries... " "${readme_path}"
 if [[ $(grep "^- \[Documentation of .*\](.*)" "${readme_path}" | wc -l) -eq 2 ]] ; then
-    echo ""
     echo -e $OK
 else
     echo -e $FAILED

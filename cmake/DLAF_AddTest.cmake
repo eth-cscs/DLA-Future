@@ -33,8 +33,10 @@
 #   - MPIPIKA: uses a main that initializes both pika and MPI
 # If not specified, no external main is used and it should exist in the test source code.
 #
-# Moreover, the variable DLAF_PIKATEST_EXTRA_ARGS can be used to pass extra arguments that will
-# be given to all tests involving PIKA (i.e. USE_MAIN=PIKA or USE_MAIN=MPIPIKA).
+# Moreover, there are a few variables to control the behavior:
+# - DLAF_PIKATEST_EXTRA_ARGS can be used to pass extra arguments that will be given to all tests involving PIKA (i.e. USE_MAIN=PIKA or USE_MAIN=MPIPIKA).
+# - MPIEXEC_NUMCORE_FLAG can be set to mpi runner flag that controls number of cores per rank (see MPIEXEC_NUMCORES).
+# - MPIEXEC_NUMCORES can be set to number of cores to assign to each MPI rank (default=1)
 #
 # e.g.
 #

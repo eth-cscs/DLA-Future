@@ -14,7 +14,7 @@
 
 ### Bug fixes
 
-- Fixed a bug in correctness checking of eigensolver miniapps when computing partial eigenspectrum. (#1267)
+- Fixed a bug in correctness checking of eigensolver miniapps when computing partial eigenspectrum. (#1283)
 
 ## DLA-Future 0.7.3
 

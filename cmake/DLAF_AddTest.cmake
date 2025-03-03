@@ -8,20 +8,119 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-# DLAF_addTest(test_target_name
-#   SOURCES <source1> [<source2> ...]
-#   [COMPILE_DEFINITIONS <arguments for target_compile_definitions>]
-#   [INCLUDE_DIRS <arguments for target_include_directories>]
-#   [LIBRARIES <arguments for target_link_libraries>]
+set(DLAF_PIKATEST_EXTRA_ARGS "" CACHE STRING "Extra arguments for tests with pika")
+
+macro(dlaf_setup_mpi_preset)
+  # if a preset has been selected and it has been changed from previous configurations
+  if(NOT DLAF_MPI_PRESET STREQUAL _DLAF_MPI_PRESET)
+
+    if(DLAF_MPI_PRESET STREQUAL "plain-mpi")
+      # set(MPIEXEC_EXECUTABLE "" CACHE STRING "Executable for running MPI programs")
+      # set(MPIEXEC_NUMPROC_FLAG "" CACHE STRING "Flag used by MPI to specify the number of processes for mpiexec; the next option will be the number of processes." FORCE)
+      set(MPIEXEC_NUMCORE_FLAG
+          ""
+          CACHE
+            STRING
+            "Flag used by MPI to specify the number of cores per rank for mpiexec. If not empty, you have to specify also the number of cores available per node in MPIEXEC_NUMCORES."
+            FORCE
+      )
+      set(MPIEXEC_NUMCORES "" CACHE STRING "Number of cores available for each MPI rank." FORCE)
+      if(DLAF_TEST_THREAD_BINDING_ENABLED)
+        message(WARNING "Disabling pika binding")
+        set(DLAF_TEST_THREAD_BINDING_ENABLED FALSE CACHE BOOL "" FORCE)
+      endif()
+
+    elseif(DLAF_MPI_PRESET STREQUAL "slurm")
+      if(NOT DLAF_TEST_THREAD_BINDING_ENABLED)
+        message(
+          WARNING "When using DLAF_MPI_PRESET=slurm DLAF_TEST_THREAD_BINDING_ENABLED should be enabled. "
+                  "It is currently disabled and you may incur in performance drop. "
+                  "Leave it disabled at your own risk."
+        )
+      endif()
+
+      execute_process(
+        COMMAND which srun OUTPUT_VARIABLE SLURM_EXECUTABLE OUTPUT_STRIP_TRAILING_WHITESPACE
+      )
+      set(MPIEXEC_EXECUTABLE ${SLURM_EXECUTABLE} CACHE STRING "Executable for running MPI programs"
+                                                       FORCE
+      )
+      set(MPIEXEC_NUMPROC_FLAG
+          "-n"
+          CACHE
+            STRING
+            "Flag used by MPI to specify the number of processes for mpiexec; the next option will be the number of processes."
+            FORCE
+      )
+      set(MPIEXEC_NUMCORE_FLAG
+          "-c"
+          CACHE
+            STRING
+            "Flag used by MPI to specify the number of cores per rank for mpiexec. If not empty, you have to specify also the number of cores available per node in MPIEXEC_NUMCORES."
+            FORCE
+      )
+      set(MPIEXEC_NUMCORES "1" CACHE STRING "Number of cores available for each MPI rank.")
+
+    elseif(DLAF_MPI_PRESET STREQUAL "custom")
+      set(MPIEXEC_EXECUTABLE "" CACHE STRING "Executable for running MPI programs")
+      set(MPIEXEC_NUMPROC_FLAG
+          ""
+          CACHE
+            STRING
+            "Flag used by MPI to specify the number of processes for mpiexec; the next option will be the number of processes."
+      )
+      set(MPIEXEC_NUMCORE_FLAG
+          ""
+          CACHE
+            STRING
+            "Flag used by MPI to specify the number of cores per rank for mpiexec. If not empty, you have to specify also the number of cores available per node in MPIEXEC_NUMCORES."
+      )
+      set(MPIEXEC_NUMCORES "" CACHE STRING "Number of cores available for each MPI rank.")
+
+    else()
+      message(FATAL_ERROR "Preset ${DLAF_MPI_PRESET} is not supported")
+    endif()
+
+    message(STATUS "MPI preset: ${DLAF_MPI_PRESET}")
+
+    # make mpi preset selection persistent (with the aim to not overwrite each time, user may have changed some values (see custom)
+    set(_DLAF_MPI_PRESET ${DLAF_MPI_PRESET} CACHE INTERNAL "Store what preset is being used")
+
+    mark_as_advanced(MPIEXEC_EXECUTABLE MPIEXEC_NUMPROC_FLAG MPIEXEC_NUMCORE_FLAG MPIEXEC_NUMCORES)
+  endif()
+
+  # ----- MPI
+  # there must be an mpiexec, otherwise it will not be possible to run MPI based tests
+  if(NOT MPIEXEC_EXECUTABLE)
+    message(FATAL_ERROR "Please set MPIEXEC_EXECUTABLE to run MPI tests.")
+  endif()
+
+  # if a numcore flag is specified, it must be specified also the number of cores per node (and viceversa)
+  if((MPIEXEC_NUMCORE_FLAG OR MPIEXEC_NUMCORES) AND NOT (MPIEXEC_NUMCORE_FLAG AND MPIEXEC_NUMCORES))
+    message(
+      FATAL_ERROR "MPIEXEC_NUMCORES and MPIEXEC_NUMCORE_FLAG must be either both sets or both empty."
+    )
+  endif()
+endmacro()
+
+# Check if LIST_NAME contains at least an element that matches ELEMENT_REGEX. If not, add FALLBACK
+# to the list.
+function(_set_element_to_fallback_value LIST_NAME ELEMENT_REGEX FALLBACK)
+  set(_TMP_LIST ${${LIST_NAME}})
+  list(FILTER _TMP_LIST INCLUDE REGEX ${ELEMENT_REGEX})
+  list(LENGTH _TMP_LIST _NUM_TMP_LIST)
+  if(_NUM_TMP_LIST EQUAL 0)
+    list(APPEND ${LIST_NAME} ${FALLBACK})
+    set(${LIST_NAME} ${${LIST_NAME}} PARENT_SCOPE)
+  endif()
+endfunction()
+
+# DLAF_addTargetTest(test_target_name
+#   [ARGUMENTS <command-line-arguments-for-test-executable>]
 #   [MPIRANKS <number of rank>]
 #   [USE_MAIN {PLAIN | PIKA | MPI | MPIPIKA}]
 #   [CATEGORY <category>]
 # )
-#
-# At least one source file has to be specified, while other parameters are optional.
-#
-# COMPILE_DEFINITIONS, INCLUDE_DIRS and LIBRARIES are passed to respective cmake wrappers, so it is
-# possible to specify PRIVATE/INTERFACE/PUBLIC modifiers.
 #
 # MPIRANKS specifies the number of ranks on which the test will be carried out and it implies a link with
 # MPI library. At build time the constant NUM_MPI_RANKS=MPIRANKS is set.
@@ -40,28 +139,17 @@
 #
 # e.g.
 #
-# DLAF_addTest(example_test
-#   SOURCE main.cpp testfixture.cpp
-#   LIBRARIES
-#     PRIVATE
-#       boost::boost
-#       include/
+# DLAF_addTargetTest(
+#   example_test
+#   USE_MAIN
+#   MPIPIKA
+#   MPIRANKS 6
+#   ARGUMENTS
+#     --grid-rows=3
+#     --grid-cols=2
+#     --check=all
+#   CATEGORY MINIAPP
 # )
-
-set(DLAF_PIKATEST_EXTRA_ARGS "" CACHE STRING "Extra arguments for tests with pika")
-
-# Check if LIST_NAME contains at least an element that matches ELEMENT_REGEX. If not, add FALLBACK
-# to the list.
-function(_set_element_to_fallback_value LIST_NAME ELEMENT_REGEX FALLBACK)
-  set(_TMP_LIST ${${LIST_NAME}})
-  list(FILTER _TMP_LIST INCLUDE REGEX ${ELEMENT_REGEX})
-  list(LENGTH _TMP_LIST _NUM_TMP_LIST)
-  if(_NUM_TMP_LIST EQUAL 0)
-    list(APPEND ${LIST_NAME} ${FALLBACK})
-    set(${LIST_NAME} ${${LIST_NAME}} PARENT_SCOPE)
-  endif()
-endfunction()
-
 function(DLAF_addTargetTest test_target_name)
   set(options "")
   set(oneValueArgs CATEGORY MPIRANKS USE_MAIN)
@@ -109,7 +197,7 @@ function(DLAF_addTargetTest test_target_name)
       message(
         WARNING
           "\
-          YOU ARE ASKING FOR ${DLAF_ATT_MPIRANKS} RANKS, BUT THERE ARE JUST ${MPIEXEC_MAX_NUMPROCS} CORES.
+      YOU ARE ASKING FOR ${DLAF_ATT_MPIRANKS} RANKS, BUT THERE ARE JUST ${MPIEXEC_MAX_NUMPROCS} CORES.
       You can adjust MPIEXEC_MAX_NUMPROCS value to suppress this warning.
       Using OpenMPI may require to set the environment variable OMPI_MCA_rmaps_base_oversubscribe=1."
       )
@@ -222,6 +310,34 @@ function(DLAF_addTargetTest test_target_name)
   set_tests_properties(${test_target_name} PROPERTIES LABELS "${_TEST_LABELS}")
 endfunction()
 
+# DLAF_addTest(test_target_name
+#   SOURCES <source1> [<source2> ...]
+#   [COMPILE_DEFINITIONS <arguments for target_compile_definitions>]
+#   [INCLUDE_DIRS <arguments for target_include_directories>]
+#   [LIBRARIES <arguments for target_link_libraries>]
+#   [ARGUMENTS <command-line-arguments-for-test-executable>]
+#   [MPIRANKS <number of rank>]
+#   [USE_MAIN {PLAIN | PIKA | MPI | MPIPIKA}]
+#   [CATEGORY <category>]
+# )
+#
+# Utility function over DLAF_addTargetTest that takes care of creating the CMake target.
+#
+# At least one source file has to be specified, while other parameters are optional.
+#
+# COMPILE_DEFINITIONS, INCLUDE_DIRS and LIBRARIES are passed to respective cmake wrappers, so it is
+# possible to specify PRIVATE/INTERFACE/PUBLIC modifiers.
+#
+# For all other options see DLAF_addTargetTest documentation.
+#
+# e.g.
+# DLAF_addTest(example_test
+#   SOURCE main.cpp testfixture.cpp
+#   LIBRARIES
+#     PRIVATE
+#       boost::boost
+#       include/
+# )
 function(DLAF_addTest test_target_name)
   set(options "")
   set(oneValueArgs CATEGORY MPIRANKS USE_MAIN)

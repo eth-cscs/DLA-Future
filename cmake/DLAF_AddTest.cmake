@@ -24,7 +24,7 @@ macro(dlaf_setup_mpi_preset)
             "Flag used by MPI to specify the number of cores per rank for mpiexec. If not empty, you have to specify also the number of cores available per node in MPIEXEC_NUMCORES_PER_RANK."
             FORCE
       )
-      set(MPIEXEC_NUMCORES_PER_RANK "" CACHE STRING "Number of cores available for each MPI rank." FORCE)
+      set(MPIEXEC_NUMCORES_PER_RANK "" CACHE STRING "Number of cores used by each MPI rank." FORCE)
       if(DLAF_TEST_THREAD_BINDING_ENABLED)
         message(WARNING "Disabling pika binding")
         set(DLAF_TEST_THREAD_BINDING_ENABLED FALSE CACHE BOOL "" FORCE)
@@ -59,7 +59,7 @@ macro(dlaf_setup_mpi_preset)
             "Flag used by MPI to specify the number of cores per rank for mpiexec. If not empty, you have to specify also the number of cores available per node in MPIEXEC_NUMCORES_PER_RANK."
             FORCE
       )
-      set(MPIEXEC_NUMCORES_PER_RANK "1" CACHE STRING "Number of cores available for each MPI rank.")
+      set(MPIEXEC_NUMCORES_PER_RANK "1" CACHE STRING "Number of cores used by each MPI rank.")
 
     elseif(DLAF_MPI_PRESET STREQUAL "custom")
       set(MPIEXEC_EXECUTABLE "" CACHE STRING "Executable for running MPI programs")
@@ -75,7 +75,7 @@ macro(dlaf_setup_mpi_preset)
             STRING
             "Flag used by MPI to specify the number of cores per rank for mpiexec. If not empty, you have to specify also the number of cores available per node in MPIEXEC_NUMCORES_PER_RANK."
       )
-      set(MPIEXEC_NUMCORES_PER_RANK "" CACHE STRING "Number of cores available for each MPI rank.")
+      set(MPIEXEC_NUMCORES_PER_RANK "" CACHE STRING "Number of cores used by each MPI rank.")
 
     else()
       message(FATAL_ERROR "Preset ${DLAF_MPI_PRESET} is not supported")

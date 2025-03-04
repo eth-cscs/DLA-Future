@@ -19,7 +19,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/javascript-action@v1
 
       - name: Install tools
         run: |

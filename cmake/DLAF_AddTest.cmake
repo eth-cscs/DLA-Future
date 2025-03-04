@@ -206,7 +206,7 @@ function(DLAF_addTargetTest test_target_name)
     if(NOT DLAF_ATT_MPIRANKS GREATER 0)
       message(FATAL_ERROR "Wrong MPIRANKS number ${DLAF_ATT_MPIRANKS}")
     endif()
-    if(DLAF_ATT_MPIRANKS GREATER MPIEXEC_MAX_NUMPROCS)
+    if(DLAF_MPI_PRESET STREQUAL "plain-mpi" AND (DLAF_ATT_MPIRANKS GREATER MPIEXEC_MAX_NUMPROCS))
       message(
         WARNING
           "\

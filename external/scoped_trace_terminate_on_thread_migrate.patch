@@ -39,29 +39,27 @@ index 3e452a50..c51dd607 100644
  
  // Causes a trace (including the source file path, the current line
 diff --git a/googletest/src/gtest.cc b/googletest/src/gtest.cc
-index a64e887c..2e1fccb9 100644
+index 7ff82546..6e658ebc 100644
 --- a/googletest/src/gtest.cc
 +++ b/googletest/src/gtest.cc
-@@ -44,14 +44,17 @@
- #include <chrono>  // NOLINT
- #include <cmath>
+@@ -47,6 +47,7 @@
  #include <cstdint>
+ #include <cstdlib>
+ #include <cstring>
 +#include <exception>
  #include <initializer_list>
  #include <iomanip>
-+#include <iostream>
- #include <iterator>
- #include <limits>
- #include <list>
- #include <map>
+ #include <ios>
+@@ -58,6 +59,7 @@
  #include <ostream>  // NOLINT
+ #include <set>
  #include <sstream>
 +#include <thread>
  #include <unordered_set>
+ #include <utility>
  #include <vector>
- 
-@@ -6838,6 +6841,13 @@ void ScopedTrace::PushTrace(const char* file, int line, std::string message) {
- 
+@@ -6991,6 +6993,13 @@ void ScopedTrace::PushTrace(const char* file, int line, std::string message) {
+
  // Pops the info pushed by the c'tor.
  ScopedTrace::~ScopedTrace() GTEST_LOCK_EXCLUDED_(&UnitTest::mutex_) {
 +  if (id != std::this_thread::get_id()) {
@@ -73,4 +71,3 @@ index a64e887c..2e1fccb9 100644
 +  }
    UnitTest::GetInstance()->PopGTestTrace();
  }
- 

@@ -1,8 +1,8 @@
 diff --git a/googletest/include/gtest/gtest.h b/googletest/include/gtest/gtest.h
-index 3e452a50..c51dd607 100644
+index c8996695..e4bd164d 100644
 --- a/googletest/include/gtest/gtest.h
 +++ b/googletest/include/gtest/gtest.h
-@@ -58,6 +58,7 @@
+@@ -57,6 +57,7 @@
  #include <set>
  #include <sstream>
  #include <string>
@@ -10,7 +10,7 @@ index 3e452a50..c51dd607 100644
  #include <type_traits>
  #include <vector>
  
-@@ -2056,15 +2057,18 @@ class GTEST_API_ ScopedTrace {
+@@ -2077,15 +2078,18 @@ class GTEST_API_ ScopedTrace {
    // Slow, but flexible.
    template <typename T>
    ScopedTrace(const char* file, int line, const T& message) {
@@ -29,7 +29,7 @@ index 3e452a50..c51dd607 100644
      PushTrace(file, line, message);
    }
  
-@@ -2079,6 +2083,8 @@ class GTEST_API_ ScopedTrace {
+@@ -2100,6 +2104,8 @@ class GTEST_API_ ScopedTrace {
  
    ScopedTrace(const ScopedTrace&) = delete;
    ScopedTrace& operator=(const ScopedTrace&) = delete;
@@ -59,7 +59,7 @@ index 7ff82546..6e658ebc 100644
  #include <utility>
  #include <vector>
 @@ -6991,6 +6993,13 @@ void ScopedTrace::PushTrace(const char* file, int line, std::string message) {
-
+ 
  // Pops the info pushed by the c'tor.
  ScopedTrace::~ScopedTrace() GTEST_LOCK_EXCLUDED_(&UnitTest::mutex_) {
 +  if (id != std::this_thread::get_id()) {
@@ -71,3 +71,4 @@ index 7ff82546..6e658ebc 100644
 +  }
    UnitTest::GetInstance()->PopGTestTrace();
  }
+ 

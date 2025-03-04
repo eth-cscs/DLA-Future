@@ -9,8 +9,8 @@
 //
 #include <cmath>
 #include <tuple>
-#include <utility>
 #include <vector>
+#include <utility>
 
 #include <dlaf/lapack/tile.h>
 

@@ -131,9 +131,10 @@ void gemmTrailingMatrix(pika::execution::thread_priority priority, PanelTileSend
 // G. H. Golub and C. F. Van Loan, Matrix Computations, chapter 5, The Johns Hopkins University Press
 
 template <Backend backend, Device device, class T>
-void BackTransformationReductionToBand<backend, device, T>::call(
-    const SizeType b, MatrixRef<T, device>& mat_c, Matrix<const T, device>& mat_v,
-    Matrix<const T, Device::CPU>& mat_taus) {
+void BackTransformationReductionToBand<backend, device, T>::call(const SizeType b,
+                                                                 MatrixRef<T, device>& mat_c,
+                                                                 Matrix<const T, device>& mat_v,
+                                                                 Matrix<const T, device>& mat_taus) {
   using namespace bt_red_band;
   using dlaf::factorization::internal::computeTFactor;
 
@@ -221,7 +222,7 @@ void BackTransformationReductionToBand<backend, device, T>::call(
     const LocalTileIndex taus_index{Coord::Row, k};
     const LocalTileIndex t_index{Coord::Col, k};
 
-    computeTFactor<backend>(panelV, mat_taus.read(taus_index), panelT.readwrite(t_index), panelWS);
+    // computeTFactor<B>(panelV, mat_taus.read(taus_index), panelT.readwrite(t_index), panelWS);
 
     // W = V T
     auto tile_t = panelT.read(t_index);
@@ -253,7 +254,7 @@ void BackTransformationReductionToBand<backend, device, T>::call(
 template <Backend B, Device D, class T>
 void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid& grid, const SizeType b,
                                                       MatrixRef<T, D>& mat_c, Matrix<const T, D>& mat_v,
-                                                      Matrix<const T, Device::CPU>& mat_taus) {
+                                                      Matrix<const T, D>& mat_taus) {
   namespace ex = pika::execution::experimental;
   using namespace bt_red_band;
   using dlaf::factorization::internal::computeTFactor;
@@ -355,8 +356,8 @@ void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
       const SizeType k_local = dist_t.template localTileFromGlobalTile<Coord::Col>(k);
       const LocalTileIndex t_index{Coord::Col, k_local};
 
-      computeTFactor<B>(panelV, mat_taus.read(taus_index), panelT.readwrite(t_index), panelWS,
-                        mpi_col_task_chain);
+      // computeTFactor<B>(panelV, mat_taus.read(taus_index), panelT.readwrite(t_index), panelWS,
+      //                   mpi_col_task_chain);
 
       // WH = V T
       for (const auto& idx : panel_view.iteratorLocal()) {

@@ -869,7 +869,7 @@ struct ComputePanelHelper;
 
 template <class T>
 struct ComputePanelHelper<Backend::MC, Device::CPU, T> {
-  ComputePanelHelper(const std::size_t, matrix::Distribution) {}
+  ComputePanelHelper(const std::size_t, matrix::Distribution, matrix::Distribution) {}
 
   void call(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_taus, const SizeType j_sub,
             const matrix::SubPanelView& panel_view) {
@@ -891,22 +891,34 @@ struct ComputePanelHelper<Backend::MC, Device::CPU, T> {
 #ifdef DLAF_WITH_GPU
 template <class T>
 struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
-  ComputePanelHelper(const std::size_t n_workspaces, matrix::Distribution dist_a)
-      : panels_v(n_workspaces, dist_a) {}
+  ComputePanelHelper(const std::size_t n_workspaces, matrix::Distribution dist_a,
+                     matrix::Distribution dist_taus)
+      : panels_v(n_workspaces, dist_a), mat_taus_cpu(dist_taus) {}
 
   void call(Matrix<T, Device::GPU>& mat_a, Matrix<T, Device::GPU>& mat_taus, const SizeType j_sub,
             const matrix::SubPanelView& panel_view) {
     using red2band::local::computePanelReflectors;
+    namespace ex = pika::execution::experimental;
 
     // Note:
     // - copy panel_view from GPU to CPU
     // - computePanelReflectors on CPU (on a matrix like, with just a panel)
+    // - copy back taus from CPU to GPU
     // - copy back matrix "panel" from CPU to GPU
 
     auto& v = panels_v.nextResource();
 
     copyToCPU(panel_view, mat_a, v);
-    // computePanelReflectors(v, mat_taus, j_sub, panel_view);
+
+    computePanelReflectors(v, mat_taus_cpu, j_sub, panel_view);
+
+    ex::start_detached(
+        ex::when_all(mat_taus_cpu.read(GlobalTileIndex(j_sub, 0)),
+                     mat_taus.readwrite(GlobalTileIndex(j_sub, 0))) |
+        dlaf::matrix::copy(
+            dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>(
+                pika::execution::thread_priority::high)));
+
     copyFromCPU(panel_view, v, mat_a);
   }
 
@@ -914,23 +926,36 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
   void call(TriggerSender&& trigger, comm::IndexT_MPI rank_v0, CommSender&& mpi_col_chain_panel,
             Matrix<T, D>& mat_a, Matrix<T, D>& mat_taus, SizeType j_sub,
             const matrix::SubPanelView& panel_view) {
+    using dlaf::eigensolver::internal::red2band::distributed::computePanelReflectors;
+    namespace ex = pika::execution::experimental;
+
+    // Note:
+    // - copy panel_view from GPU to CPU
+    // - computePanelReflectors on CPU (on a matrix like, with just a panel)
+    // - copy back taus from CPU to GPU
+    // - copy back matrix "panel" from CPU to GPU
+
     auto& v = panels_v.nextResource();
 
-    // copy to CPU
     copyToCPU(panel_view, mat_a, v);
 
-    // compute on CPU
-    using dlaf::eigensolver::internal::red2band::distributed::computePanelReflectors;
-    // computePanelReflectors(std::forward<TriggerSender>(trigger), rank_v0,
-    //                        std::forward<CommSender>(mpi_col_chain_panel), v, mat_taus, j_sub,
-    //                        panel_view);
+    computePanelReflectors(std::forward<TriggerSender>(trigger), rank_v0,
+                           std::forward<CommSender>(mpi_col_chain_panel), v, mat_taus_cpu, j_sub,
+                           panel_view);
 
-    // copy back to GPU
+    ex::start_detached(
+        ex::when_all(mat_taus_cpu.read(GlobalTileIndex(j_sub, 0)),
+                     mat_taus.readwrite(GlobalTileIndex(j_sub, 0))) |
+        dlaf::matrix::copy(
+            dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>(
+                pika::execution::thread_priority::high)));
+
     copyFromCPU(panel_view, v, mat_a);
   }
 
 protected:
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panels_v;
+  matrix::Matrix<T, Device::CPU> mat_taus_cpu;
 
   void copyToCPU(const matrix::SubPanelView panel_view, matrix::Matrix<T, Device::GPU>& mat_a,
                  matrix::Panel<Coord::Col, T, Device::CPU>& v) {
@@ -1033,7 +1058,8 @@ Matrix<T, D> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const SizeType 
   //
   // It is a bit hacky usage, because SubPanelView is not meant to be used with Panel, but just with
   // Matrix. This results in a variable waste of memory, depending no the ratio band_size/nb.
-  red2band::ComputePanelHelper<B, D, T> compute_panel_helper(n_workspaces, dist_a);
+  red2band::ComputePanelHelper<B, D, T> compute_panel_helper(n_workspaces, dist_a,
+                                                             mat_taus_retiled.distribution());
 
   for (SizeType j_sub = 0; j_sub < ntiles; ++j_sub) {
     const auto i_sub = j_sub + 1;
@@ -1224,7 +1250,8 @@ Matrix<T, D> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix
   }();
   common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panels_ws(n_workspaces, dist_ws);
 
-  red2band::ComputePanelHelper<B, D, T> compute_panel_helper(n_workspaces, dist);
+  red2band::ComputePanelHelper<B, D, T> compute_panel_helper(n_workspaces, dist,
+                                                             mat_taus_retiled.distribution());
 
   ex::unique_any_sender<> trigger_panel{ex::just()};
   for (SizeType j_sub = 0; j_sub < ntiles; ++j_sub) {

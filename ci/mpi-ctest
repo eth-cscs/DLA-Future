@@ -11,6 +11,13 @@ CTEST_OUTPUT="$CI_PROJECT_DIR/output/ctest.$SLURM_PROCID.txt"
 
 pushd /DLA-Future-build > /dev/null
 
+# Solves container squashfs hang problems (#1305)
+if [[ $SLURM_LOCALID == "0" ]]; then
+    rm -rf Testing
+    ln -s /dev/shm Testing
+fi
+sleep 1
+
 if [[ $DLAF_CI_BIND_GPU == "ALPS-GH200" ]]
 then
     export CUDA_VISIBLE_DEVICES=$(( SLURM_LOCALID % 4 ))

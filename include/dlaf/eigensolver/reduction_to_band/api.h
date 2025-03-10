@@ -21,9 +21,8 @@ namespace dlaf::eigensolver::internal {
 
 template <Backend B, Device D, class T>
 struct ReductionToBand {
-  static Matrix<T, Device::CPU> call(Matrix<T, D>& mat_a, const SizeType band_size);
-  static Matrix<T, Device::CPU> call(comm::CommunicatorGrid& grid, Matrix<T, D>& mat_a,
-                                     const SizeType band_size);
+  static Matrix<T, D> call(Matrix<T, D>& mat_a, const SizeType band_size);
+  static Matrix<T, D> call(comm::CommunicatorGrid& grid, Matrix<T, D>& mat_a, const SizeType band_size);
 };
 
 // ETI

@@ -102,7 +102,7 @@ struct Options
 };
 }
 
-struct BacktransformBandToTridiagMiniapp {
+struct BacktransformReductionToBandMiniapp {
   template <Backend backend, typename T>
   static void run(const Options& opts) {
     using MatrixMirrorType = MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU>;
@@ -237,7 +237,7 @@ int pika_main(pika::program_options::variables_map& vm) {
   dlaf::ScopedInitializer init(vm);
   const Options opts(vm);
 
-  dlaf::miniapp::dispatchMiniapp<BacktransformBandToTridiagMiniapp>(opts);
+  dlaf::miniapp::dispatchMiniapp<BacktransformReductionToBandMiniapp>(opts);
 
   return EXIT_SUCCESS;
 }
@@ -248,7 +248,7 @@ int main(int argc, char** argv) {
 
   // options
   using namespace pika::program_options;
-  options_description desc_commandline("Usage: miniapp_bt_band_to_tridiag [options]");
+  options_description desc_commandline("Usage: miniapp_bt_reduction_to_band [options]");
   desc_commandline.add(dlaf::miniapp::getMiniappOptionsDescription());
   desc_commandline.add(dlaf::getOptionsDescription());
 

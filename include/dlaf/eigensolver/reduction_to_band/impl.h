@@ -470,8 +470,6 @@ void gemmUpdateX(matrix::Panel<Coord::Col, T, D>& x, matrix::Matrix<const T, D>&
 template <Backend B, Device D, class T>
 void hemmComputeX(matrix::Panel<Coord::Col, T, D>& x, const matrix::SubMatrixView& view,
                   matrix::Matrix<const T, D>& a, matrix::Panel<Coord::Col, const T, D>& w) {
-  namespace ex = pika::execution::experimental;
-
   using pika::execution::thread_priority;
 
   const auto dist = a.distribution();

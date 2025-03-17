@@ -34,7 +34,7 @@ macro(dlaf_setup_mpi_preset)
       if(NOT DLAF_TEST_THREAD_BINDING_ENABLED)
         message(
           WARNING "When using DLAF_MPI_PRESET=slurm DLAF_TEST_THREAD_BINDING_ENABLED should be enabled. "
-                  "It is currently disabled and you may incur in performance drop. "
+                  "It is currently disabled and you may incur in a performance drop. "
                   "Leave it disabled at your own risk."
         )
       endif()

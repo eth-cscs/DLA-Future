@@ -11,20 +11,24 @@
 set(DLAF_PIKATEST_EXTRA_ARGS "" CACHE STRING "Extra arguments for tests with pika")
 
 macro(dlaf_setup_mpi_preset)
+  set(MPIEXEC_NUMPROC_FLAG_DESCRIPTION
+      "Flag used by MPI to specify the number of processes for mpiexec; "
+      "the next option will be the number of processes."
+  )
+  set(MPIEXEC_NUMCORE_FLAG_DESCRIPTION
+      "Flag used by MPI to specify the number of cores per rank for mpiexec. "
+      "If not empty, you have to specify also the number of cores available per rank in MPIEXEC_NUMCORES_PER_RANK."
+  )
+  set(MPIEXEC_NUMCORES_PER_RANK_DESCRIPTION "Number of cores used by each MPI rank.")
+
   # if a preset has been selected and it has been changed from previous configurations
   if(NOT DLAF_MPI_PRESET STREQUAL _DLAF_MPI_PRESET)
 
     if(DLAF_MPI_PRESET STREQUAL "plain-mpi")
       # set(MPIEXEC_EXECUTABLE "" CACHE STRING "Executable for running MPI programs")
       # set(MPIEXEC_NUMPROC_FLAG "" CACHE STRING "Flag used by MPI to specify the number of processes for mpiexec; the next option will be the number of processes." FORCE)
-      set(MPIEXEC_NUMCORE_FLAG
-          ""
-          CACHE
-            STRING
-            "Flag used by MPI to specify the number of cores per rank for mpiexec. If not empty, you have to specify also the number of cores available per rank in MPIEXEC_NUMCORES_PER_RANK."
-            FORCE
-      )
-      set(MPIEXEC_NUMCORES_PER_RANK "" CACHE STRING "Number of cores used by each MPI rank." FORCE)
+      set(MPIEXEC_NUMCORE_FLAG "" CACHE STRING ${MPIEXEC_NUMCORE_FLAG_DESCRIPTION} FORCE)
+      set(MPIEXEC_NUMCORES_PER_RANK "" CACHE STRING ${MPIEXEC_NUMCORES_PER_RANK_DESCRIPTION} FORCE)
       if(DLAF_TEST_THREAD_BINDING_ENABLED)
         message(WARNING "Disabling pika binding")
         set(DLAF_TEST_THREAD_BINDING_ENABLED FALSE CACHE BOOL "" FORCE)
@@ -45,37 +49,15 @@ macro(dlaf_setup_mpi_preset)
       set(MPIEXEC_EXECUTABLE ${SLURM_EXECUTABLE} CACHE STRING "Executable for running MPI programs"
                                                        FORCE
       )
-      set(MPIEXEC_NUMPROC_FLAG
-          "-n"
-          CACHE
-            STRING
-            "Flag used by MPI to specify the number of processes for mpiexec; the next option will be the number of processes."
-            FORCE
-      )
-      set(MPIEXEC_NUMCORE_FLAG
-          "-c"
-          CACHE
-            STRING
-            "Flag used by MPI to specify the number of cores per rank for mpiexec. If not empty, you have to specify also the number of cores available per node in MPIEXEC_NUMCORES_PER_RANK."
-            FORCE
-      )
-      set(MPIEXEC_NUMCORES_PER_RANK "1" CACHE STRING "Number of cores used by each MPI rank.")
+      set(MPIEXEC_NUMPROC_FLAG "-n" CACHE STRING ${MPIEXEC_NUMPROC_FLAG_DESCRIPTION} FORCE)
+      set(MPIEXEC_NUMCORE_FLAG "-c" CACHE STRING ${MPIEXEC_NUMCORE_FLAG_DESCRIPTION} FORCE)
+      set(MPIEXEC_NUMCORES_PER_RANK "1" CACHE STRING ${MPIEXEC_NUMCORES_PER_RANK_DESCRIPTION})
 
     elseif(DLAF_MPI_PRESET STREQUAL "custom")
       set(MPIEXEC_EXECUTABLE "" CACHE STRING "Executable for running MPI programs")
-      set(MPIEXEC_NUMPROC_FLAG
-          ""
-          CACHE
-            STRING
-            "Flag used by MPI to specify the number of processes for mpiexec; the next option will be the number of processes."
-      )
-      set(MPIEXEC_NUMCORE_FLAG
-          ""
-          CACHE
-            STRING
-            "Flag used by MPI to specify the number of cores per rank for mpiexec. If not empty, you have to specify also the number of cores available per rank in MPIEXEC_NUMCORES_PER_RANK."
-      )
-      set(MPIEXEC_NUMCORES_PER_RANK "" CACHE STRING "Number of cores used by each MPI rank.")
+      set(MPIEXEC_NUMPROC_FLAG "" CACHE STRING ${MPIEXEC_NUMPROC_FLAG_DESCRIPTION})
+      set(MPIEXEC_NUMCORE_FLAG "" CACHE STRING ${MPIEXEC_NUMCORE_FLAG_DESCRIPTION})
+      set(MPIEXEC_NUMCORES_PER_RANK "" CACHE STRING ${MPIEXEC_NUMCORES_PER_RANK_DESCRIPTION})
 
     else()
       message(FATAL_ERROR "Preset ${DLAF_MPI_PRESET} is not supported")
@@ -148,7 +130,7 @@ endfunction()
 #   MPIEXEC_MAX_NUMPROCS is considered, and the number of processors is distributed evenly over MPIRANKS (as --pika:threads)
 # - With {"slurm", "custom"}
 #   MPIEXEC_NUMCORES_PER_RANK is used to set the number of cores for each rank.
-#   It can be set only if MPIEXEC_NUMCORE_FLAG is set, otherwise the information is skipped.
+#   It can be set only if MPIEXEC_NUMCORE_FLAG is set, otherwise the information is ignored.
 #
 # e.g.
 #

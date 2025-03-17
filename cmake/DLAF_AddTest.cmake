@@ -11,6 +11,7 @@
 set(DLAF_PIKATEST_EXTRA_ARGS "" CACHE STRING "Extra arguments for tests with pika")
 
 macro(dlaf_setup_mpi_preset)
+  set(MPIEXEC_EXECUTABLE_DESCRIPTION "Executable for running MPI programs")
   set(MPIEXEC_NUMPROC_FLAG_DESCRIPTION
       "Flag used by MPI to specify the number of processes for mpiexec; "
       "the next option will be the number of processes."
@@ -44,15 +45,13 @@ macro(dlaf_setup_mpi_preset)
       execute_process(
         COMMAND which srun OUTPUT_VARIABLE SLURM_EXECUTABLE OUTPUT_STRIP_TRAILING_WHITESPACE
       )
-      set(MPIEXEC_EXECUTABLE ${SLURM_EXECUTABLE} CACHE STRING "Executable for running MPI programs"
-                                                       FORCE
-      )
+      set(MPIEXEC_EXECUTABLE ${SLURM_EXECUTABLE} CACHE STRING ${MPIEXEC_EXECUTABLE_DESCRIPTION} FORCE)
       set(MPIEXEC_NUMPROC_FLAG "-n" CACHE STRING ${MPIEXEC_NUMPROC_FLAG_DESCRIPTION} FORCE)
       set(MPIEXEC_NUMCORE_FLAG "-c" CACHE STRING ${MPIEXEC_NUMCORE_FLAG_DESCRIPTION} FORCE)
       set(MPIEXEC_NUMCORES_PER_RANK "1" CACHE STRING ${MPIEXEC_NUMCORES_PER_RANK_DESCRIPTION})
 
     elseif(DLAF_MPI_PRESET STREQUAL "custom")
-      set(MPIEXEC_EXECUTABLE "" CACHE STRING "Executable for running MPI programs")
+      set(MPIEXEC_EXECUTABLE "" CACHE STRING ${MPIEXEC_EXECUTABLE_DESCRIPTION})
       set(MPIEXEC_NUMPROC_FLAG "" CACHE STRING ${MPIEXEC_NUMPROC_FLAG_DESCRIPTION})
       set(MPIEXEC_NUMCORE_FLAG "" CACHE STRING ${MPIEXEC_NUMCORE_FLAG_DESCRIPTION})
       set(MPIEXEC_NUMCORES_PER_RANK "" CACHE STRING ${MPIEXEC_NUMCORES_PER_RANK_DESCRIPTION})

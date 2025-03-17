@@ -140,7 +140,7 @@ endfunction()
 # Moreover, there are a few variables to control the behavior:
 # - DLAF_PIKATEST_EXTRA_ARGS can be used to pass extra arguments that will be given to all tests involving PIKA (i.e. USE_MAIN=PIKA or USE_MAIN=MPIPIKA).
 # - MPIEXEC_MAX_NUMPROCS is the maximum number of ranks that could be run
-# - MPIEXEC_NUMCORE_FLAG can be set to mpi runner flag that controls number of cores per rank (see MPIEXEC_NUMCORES_PER_RANK).
+# - MPIEXEC_NUMCORE_FLAG can be set to the MPI runner flag that controls the number of cores per rank (see MPIEXEC_NUMCORES_PER_RANK).
 # - MPIEXEC_NUMCORES_PER_RANK can be set to number of cores to assign to each MPI rank (default=1)
 #
 # The usage of the aforementioned MPIEXEC_* variables depends on the DLAF_MPI_PRESET value:

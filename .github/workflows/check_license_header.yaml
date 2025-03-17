@@ -93,6 +93,12 @@ jobs:
                 ".github/check_license.sh -r 4 HEADER_HASH {} > /dev/null || echo {}" \
             >> result.check
 
+          # Check license in script files without extensions in ci folder
+          find ci -type f -not -name "*.*"                                            \
+            | xargs -I{} sh -c                                                        \
+                ".github/check_license.sh -r 4 HEADER_HASH {} > /dev/null || echo {}" \
+            >> result.check
+
           # Generate an error message for each offending file
           for filepath in `cat result.check`; do                                  \
             echo "::error file=$filepath,line=1::check the license in $filepath"; \

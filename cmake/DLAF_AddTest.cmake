@@ -143,7 +143,7 @@ endfunction()
 # - MPIEXEC_NUMCORE_FLAG can be set to mpi runner flag that controls number of cores per rank (see MPIEXEC_NUMCORES_PER_RANK).
 # - MPIEXEC_NUMCORES_PER_RANK can be set to number of cores to assign to each MPI rank (default=1)
 #
-# About aforementioned MPIEXEC_* variables, their usage depends on the DLAF_MPI_PRESET value:
+# The usage of the aforementioned MPIEXEC_* variables depends on the DLAF_MPI_PRESET value:
 # - With {"plain-mpi"}
 #   MPIEXEC_MAX_NUMPROCS is considered, and the number of processors is distributed evenly over MPIRANKS (as --pika:threads)
 # - With {"slurm", "custom"}

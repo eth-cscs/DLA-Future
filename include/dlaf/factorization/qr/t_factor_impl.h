@@ -234,7 +234,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
                          });
   }
   static void loop_gemv(cublasHandle_t handle, const matrix::Tile<const T, Device::GPU>& tile_v,
-                        const matrix::Tile<const T, Device::CPU>& taus,
+                        const matrix::Tile<const T, Device::GPU>& taus,
                         const matrix::Tile<T, Device::GPU>& tile_t) noexcept {
     const SizeType m = tile_v.size().rows();
     const SizeType k = tile_t.size().cols();
@@ -247,7 +247,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 
   static matrix::ReadWriteTileSender<T, Device::GPU> step_gemv(
       matrix::Panel<Coord::Col, T, Device::GPU>& hh_panel,
-      matrix::ReadOnlyTileSender<T, Device::CPU> taus,
+      matrix::ReadOnlyTileSender<T, Device::GPU> taus,
       matrix::ReadWriteTileSender<T, Device::GPU> tile_t,
       matrix::Panel<Coord::Col, T, Device::GPU>& workspaces) {
     namespace ex = pika::execution::experimental;
@@ -364,11 +364,11 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
     }
   }
 
-  static auto step_copy_diag_and_trmv(matrix::ReadOnlyTileSender<T, Device::CPU> taus,
+  static auto step_copy_diag_and_trmv(matrix::ReadOnlyTileSender<T, Device::GPU> taus,
                                       matrix::ReadWriteTileSender<T, Device::GPU> tile_t) noexcept {
     // Update each column (in order) t = T . t
     // remember that T is upper triangular, so it is possible to use TRMV
-    auto trmv_func = [](cublasHandle_t handle, const matrix::Tile<const T, Device::CPU>& taus,
+    auto trmv_func = [](cublasHandle_t handle, const matrix::Tile<const T, Device::GPU>& taus,
                         matrix::Tile<T, Device::GPU>& tile_t) {
       whip::stream_t stream;
       DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
@@ -393,7 +393,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 
 template <Backend backend, Device device, class T>
 void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& hh_panel,
-                                          matrix::ReadOnlyTileSender<T, Device::CPU> taus,
+                                          matrix::ReadOnlyTileSender<T, device> taus,
                                           matrix::ReadWriteTileSender<T, device> tile_t,
                                           matrix::Panel<Coord::Col, T, device>& workspaces) {
   namespace ex = pika::execution::experimental;
@@ -424,7 +424,7 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
 
 template <Backend backend, Device device, class T>
 void QR_Tfactor<backend, device, T>::call(
-    matrix::Panel<Coord::Col, T, device>& hh_panel, matrix::ReadOnlyTileSender<T, Device::CPU> taus,
+    matrix::Panel<Coord::Col, T, device>& hh_panel, matrix::ReadOnlyTileSender<T, device> taus,
     matrix::ReadWriteTileSender<T, device> tile_t, matrix::Panel<Coord::Col, T, device>& workspaces,
     comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_task_chain) {
   namespace ex = pika::execution::experimental;

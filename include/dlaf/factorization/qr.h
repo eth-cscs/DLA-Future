@@ -59,8 +59,7 @@ namespace dlaf::factorization::internal {
 /// @pre hh_panel.getWidth() <= t.get().size().rows && hh_panel.getWidth() <= t.get().size().cols()
 template <Backend backend, Device device, class T>
 void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
-                    matrix::ReadOnlyTileSender<T, Device::CPU> taus,
-                    matrix::ReadWriteTileSender<T, device> t,
+                    matrix::ReadOnlyTileSender<T, device> taus, matrix::ReadWriteTileSender<T, device> t,
                     matrix::Panel<Coord::Col, T, device>& workspaces) {
   QR_Tfactor<backend, device, T>::call(hh_panel, std::move(taus), std::move(t), workspaces);
 }
@@ -105,8 +104,7 @@ void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
 /// @pre hh_panel.getWidth() <= t.get().size().rows && hh_panel.getWidth() <= t.get().size().cols()
 template <Backend backend, Device device, class T>
 void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
-                    matrix::ReadOnlyTileSender<T, Device::CPU> taus,
-                    matrix::ReadWriteTileSender<T, device> t,
+                    matrix::ReadOnlyTileSender<T, device> taus, matrix::ReadWriteTileSender<T, device> t,
                     matrix::Panel<Coord::Col, T, device>& workspaces,
                     comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_task_chain) {
   QR_Tfactor<backend, device, T>::call(hh_panel, std::move(taus), std::move(t), workspaces,

@@ -148,7 +148,7 @@ endfunction()
 #   MPIEXEC_MAX_NUMPROCS is considered, and the number of processors is distributed evenly over MPIRANKS (as --pika:threads)
 # - With {"slurm", "custom"}
 #   MPIEXEC_NUMCORES_PER_RANK is used to set the number of cores for each rank.
-#   It can be set just if MPIEXEC_NUMCORE_FLAG is set, otherwise the information is skipped.
+#   It can be set only if MPIEXEC_NUMCORE_FLAG is set, otherwise the information is skipped.
 #
 # e.g.
 #

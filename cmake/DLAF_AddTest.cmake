@@ -25,8 +25,6 @@ macro(dlaf_setup_mpi_preset)
   if(NOT DLAF_MPI_PRESET STREQUAL _DLAF_MPI_PRESET)
 
     if(DLAF_MPI_PRESET STREQUAL "plain-mpi")
-      # set(MPIEXEC_EXECUTABLE "" CACHE STRING "Executable for running MPI programs")
-      # set(MPIEXEC_NUMPROC_FLAG "" CACHE STRING "Flag used by MPI to specify the number of processes for mpiexec; the next option will be the number of processes." FORCE)
       set(MPIEXEC_NUMCORE_FLAG "" CACHE STRING ${MPIEXEC_NUMCORE_FLAG_DESCRIPTION} FORCE)
       set(MPIEXEC_NUMCORES_PER_RANK "" CACHE STRING ${MPIEXEC_NUMCORES_PER_RANK_DESCRIPTION} FORCE)
       if(DLAF_TEST_THREAD_BINDING_ENABLED)

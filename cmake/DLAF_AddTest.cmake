@@ -73,7 +73,7 @@ macro(dlaf_setup_mpi_preset)
           ""
           CACHE
             STRING
-            "Flag used by MPI to specify the number of cores per rank for mpiexec. If not empty, you have to specify also the number of cores available per node in MPIEXEC_NUMCORES_PER_RANK."
+            "Flag used by MPI to specify the number of cores per rank for mpiexec. If not empty, you have to specify also the number of cores available per rank in MPIEXEC_NUMCORES_PER_RANK."
       )
       set(MPIEXEC_NUMCORES_PER_RANK "" CACHE STRING "Number of cores used by each MPI rank.")
 

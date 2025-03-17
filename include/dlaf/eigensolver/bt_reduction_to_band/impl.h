@@ -222,7 +222,7 @@ void BackTransformationReductionToBand<backend, device, T>::call(const SizeType 
     const LocalTileIndex taus_index{Coord::Row, k};
     const LocalTileIndex t_index{Coord::Col, k};
 
-    // computeTFactor<B>(panelV, mat_taus.read(taus_index), panelT.readwrite(t_index), panelWS);
+    computeTFactor<backend>(panelV, mat_taus.read(taus_index), panelT.readwrite(t_index), panelWS);
 
     // W = V T
     auto tile_t = panelT.read(t_index);
@@ -356,8 +356,8 @@ void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
       const SizeType k_local = dist_t.template localTileFromGlobalTile<Coord::Col>(k);
       const LocalTileIndex t_index{Coord::Col, k_local};
 
-      // computeTFactor<B>(panelV, mat_taus.read(taus_index), panelT.readwrite(t_index), panelWS,
-      //                   mpi_col_task_chain);
+      computeTFactor<B>(panelV, mat_taus.read(taus_index), panelT.readwrite(t_index), panelWS,
+                        mpi_col_task_chain);
 
       // WH = V T
       for (const auto& idx : panel_view.iteratorLocal()) {

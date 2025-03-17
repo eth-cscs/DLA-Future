@@ -84,7 +84,7 @@ macro(dlaf_setup_mpi_preset)
     message(STATUS "MPI preset: ${DLAF_MPI_PRESET}")
 
     # make mpi preset selection persistent (with the aim to not overwrite each time, user may have changed some values (see custom)
-    set(_DLAF_MPI_PRESET ${DLAF_MPI_PRESET} CACHE INTERNAL "Store what preset is being used")
+    set(_DLAF_MPI_PRESET ${DLAF_MPI_PRESET} CACHE INTERNAL "Store what MPI preset is being used")
 
     mark_as_advanced(
       MPIEXEC_EXECUTABLE MPIEXEC_NUMPROC_FLAG MPIEXEC_NUMCORE_FLAG MPIEXEC_NUMCORES_PER_RANK

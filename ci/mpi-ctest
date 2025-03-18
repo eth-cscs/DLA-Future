@@ -1,4 +1,13 @@
 #!/bin/bash -e
+#
+# Distributed Linear Algebra with Future (DLAF)
+#
+# Copyright (c) ETH Zurich
+# All rights reserved.
+#
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+#
 
 if [[ "$ENABLE_COVERAGE" == "YES" ]]; then
     SHARED_REPORTS="$CI_PROJECT_DIR/codecov-reports"

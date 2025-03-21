@@ -82,7 +82,7 @@ macro(dlaf_setup_mpi_preset)
   )
     message(
       FATAL_ERROR
-        "MPIEXEC_NUMCORES_PER_RANK and MPIEXEC_NUMCORE_FLAG must be either both sets or both empty."
+        "MPIEXEC_NUMCORES_PER_RANK and MPIEXEC_NUMCORE_FLAG must be either both set or both empty."
     )
   endif()
 endmacro()

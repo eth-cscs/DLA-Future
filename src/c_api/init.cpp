@@ -14,8 +14,8 @@
 #include <pika/runtime.hpp>
 
 #include <dlaf/init.h>
-#include <dlaf_c/init.h>
 #include <dlaf_c/grid.h>
+#include <dlaf_c/init.h>
 
 static bool dlaf_initialized = false;
 

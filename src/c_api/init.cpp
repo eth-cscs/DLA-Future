@@ -15,6 +15,7 @@
 
 #include <dlaf/init.h>
 #include <dlaf_c/init.h>
+#include <dlaf_c/grid.h>
 
 static bool dlaf_initialized = false;
 
@@ -40,6 +41,7 @@ void dlaf_initialize(int argc_pika, const char** argv_pika, int argc_dlaf,
 void dlaf_finalize() noexcept {
   if (dlaf_initialized) {
     pika::resume();
+    dlaf_free_all_grids();
     pika::finalize();
     dlaf::finalize();
     auto pika_stopped = pika::stop();

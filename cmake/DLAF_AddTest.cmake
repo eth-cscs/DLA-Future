@@ -76,6 +76,8 @@ macro(dlaf_setup_mpi_preset)
   if((MPIEXEC_NUMCORE_FLAG OR MPIEXEC_NUMCORES_PER_RANK) AND NOT (MPIEXEC_NUMCORE_FLAG
                                                                   AND MPIEXEC_NUMCORES_PER_RANK)
   )
+    message(WARNING "MPIEXEC_NUMCORES_PER_RANK = '${MPIEXEC_NUMCORES_PER_RANK}'")
+    message(WARNING "MPIEXEC_NUMCORE_FLAG = '${MPIEXEC_NUMCORE_FLAG}'")
     message(
       FATAL_ERROR
         "MPIEXEC_NUMCORES_PER_RANK and MPIEXEC_NUMCORE_FLAG must be either both set or both empty."

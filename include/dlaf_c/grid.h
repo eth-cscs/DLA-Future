@@ -38,6 +38,12 @@ DLAF_EXTERN_C int dlaf_create_grid(MPI_Comm comm, int nprow, int npcol, char ord
 /// @param context BLACS or DLA-Future context associated to the grid being released
 DLAF_EXTERN_C void dlaf_free_grid(int context) DLAF_NOEXCEPT;
 
+/// Free all communicator grids
+///
+/// @warning This function only frees the DLA-Future grids stored internally. If you
+/// created a BLACS grid with blacs_gridinit you still need to call blacs_gridexit
+DLAF_EXTERN_C void dlaf_free_all_grids() DLAF_NOEXCEPT;
+
 /// Determine grid ordering
 ///
 /// @remark For DLA-Future grids, the MPI communicator needs to be the original

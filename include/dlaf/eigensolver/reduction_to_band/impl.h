@@ -914,7 +914,7 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
         ex::when_all(mat_taus_cpu.read(GlobalTileIndex(j_sub, 0)),
                      mat_taus.readwrite(GlobalTileIndex(j_sub, 0))) |
         dlaf::matrix::copy(
-            dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>(
+            dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::CPU, Device::GPU>>(
                 pika::execution::thread_priority::high)));
 
     copyFromCPU(panel_view, v, mat_a);
@@ -945,7 +945,7 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
         ex::when_all(mat_taus_cpu.read(GlobalTileIndex(j_sub, 0)),
                      mat_taus.readwrite(GlobalTileIndex(j_sub, 0))) |
         dlaf::matrix::copy(
-            dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>(
+            dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::CPU, Device::GPU>>(
                 pika::execution::thread_priority::high)));
 
     copyFromCPU(panel_view, v, mat_a);

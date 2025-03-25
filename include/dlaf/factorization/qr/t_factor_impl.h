@@ -346,8 +346,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
       DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
 
       const SizeType k = tile_t.size().cols();
-      gpulapack::lacpy(blas::Uplo::General, 1, k, taus.ptr(), 1, tile_t.ptr(), tile_t.ld() + 1, stream);
-      gpulapack::larft_gemv1_fixtau(k, tile_t.ptr(), tile_t.ld() + 1, tile_t.ptr(), tile_t.ld(), stream);
+      gpulapack::larft_gemv1_fixtau(k, taus.ptr(), 1, tile_t.ptr(), tile_t.ld(), stream);
 
       loop_trmv(handle, tile_t);
     };

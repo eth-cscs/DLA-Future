@@ -291,14 +291,12 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
                 matrix::Tile<T, Device::GPU> tile_t = tile_t_full.subTileReference({{0, 0}, {k, k}});
 
                 // Note:
-                // prepare the diagonal of taus in t and reset the rest
+                // set tile_t to zero (next loop_gemv cumulates results in it)
                 whip::stream_t stream;
                 DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
 
                 whip::memset_2d_async(tile_t.ptr(), sizeof(T) * to_sizet(tile_t.ld()), 0,
                                       sizeof(T) * to_sizet(k), to_sizet(k), stream);
-                gpulapack::lacpy(blas::Uplo::General, 1, k, taus.ptr(), 1, tile_t.ptr(), tile_t.ld() + 1,
-                                 stream);
 
                 // Note:
                 // - call one gemv per tile

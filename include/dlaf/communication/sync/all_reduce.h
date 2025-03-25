@@ -12,13 +12,18 @@
 
 /// @file
 
+#include <chrono>
+
 #include <mpi.h>
+
+#include <pika/execution.hpp>
 
 #include <dlaf/common/assert.h>
 #include <dlaf/common/data_descriptor.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/message.h>
 #include <dlaf/communication/sync/reduce.h>
+#include <dlaf/sender/transform_mpi.h>
 
 namespace dlaf {
 namespace comm {
@@ -86,8 +91,22 @@ void allReduceInPlace(Communicator& communicator, MPI_Op reduce_operation, const
   if (buffer_inout)
     common::copy(inout, buffer_inout);
 
+#ifdef DLAF_ALLREDUCE_SYNC_WAIT
+#ifndef DLAF_ALLREDUCE_SYNC_WAIT_BUSY_WAIT_TIME_US
+#define DLAF_ALLREDUCE_SYNC_WAIT_BUSY_WAIT_TIME_US 0
+#endif
+  using dlaf::comm::internal::transformMPI;
+  using dlaf::internal::whenAllLift;
+  using pika::this_thread::experimental::sync_wait;
+  sync_wait(whenAllLift(std::cref(communicator), reduce_operation, std::move(message_inout)) |
+            transformMPI([](const Communicator& communicator, MPI_Op reduce_operation, auto&& msg, MPI_Request* req) {
+              DLAF_MPI_CHECK_ERROR(MPI_Iallreduce(MPI_IN_PLACE, msg.data(), msg.count(), msg.mpi_type(),
+                                                  reduce_operation, communicator, req));
+            }), std::chrono::microseconds(DLAF_ALLREDUCE_SYNC_WAIT_BUSY_WAIT_TIME_US));
+#else
   DLAF_MPI_CHECK_ERROR(MPI_Allreduce(MPI_IN_PLACE, message_inout.data(), message_inout.count(),
                                      message_inout.mpi_type(), reduce_operation, communicator));
+#endif
 
   // if the output buffer has been used, copy-back output values
   if (buffer_inout)

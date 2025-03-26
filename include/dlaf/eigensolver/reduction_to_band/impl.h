@@ -896,7 +896,6 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
   void call(Matrix<T, Device::GPU>& mat_a, Matrix<T, Device::GPU>& mat_taus, const SizeType j_sub,
             const matrix::SubPanelView& panel_view) {
     using red2band::local::computePanelReflectors;
-    namespace ex = pika::execution::experimental;
 
     // Note:
     // - copy panel_view from GPU to CPU
@@ -910,13 +909,8 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
 
     computePanelReflectors(v, mat_taus_cpu, j_sub, panel_view);
 
-    ex::start_detached(
-        ex::when_all(mat_taus_cpu.read(GlobalTileIndex(j_sub, 0)),
-                     mat_taus.readwrite(GlobalTileIndex(j_sub, 0))) |
-        dlaf::matrix::copy(
-            dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::CPU, Device::GPU>>(
-                pika::execution::thread_priority::high)));
-
+    copyFromCPU(mat_taus_cpu.read(GlobalTileIndex(j_sub, 0)),
+                mat_taus.readwrite(GlobalTileIndex(j_sub, 0)));
     copyFromCPU(panel_view, v, mat_a);
   }
 
@@ -924,8 +918,7 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
   void call(TriggerSender&& trigger, comm::IndexT_MPI rank_v0, CommSender&& mpi_col_chain_panel,
             Matrix<T, D>& mat_a, Matrix<T, D>& mat_taus, SizeType j_sub,
             const matrix::SubPanelView& panel_view) {
-    using dlaf::eigensolver::internal::red2band::distributed::computePanelReflectors;
-    namespace ex = pika::execution::experimental;
+    using red2band::distributed::computePanelReflectors;
 
     // Note:
     // - copy panel_view from GPU to CPU
@@ -941,13 +934,8 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
                            std::forward<CommSender>(mpi_col_chain_panel), v, mat_taus_cpu, j_sub,
                            panel_view);
 
-    ex::start_detached(
-        ex::when_all(mat_taus_cpu.read(GlobalTileIndex(j_sub, 0)),
-                     mat_taus.readwrite(GlobalTileIndex(j_sub, 0))) |
-        dlaf::matrix::copy(
-            dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::CPU, Device::GPU>>(
-                pika::execution::thread_priority::high)));
-
+    copyFromCPU(mat_taus_cpu.read(GlobalTileIndex(j_sub, 0)),
+                mat_taus.readwrite(GlobalTileIndex(j_sub, 0)));
     copyFromCPU(panel_view, v, mat_a);
   }
 
@@ -976,6 +964,15 @@ protected:
 
   void copyFromCPU(const matrix::SubPanelView panel_view, matrix::Panel<Coord::Col, T, Device::CPU>& v,
                    matrix::Matrix<T, Device::GPU>& mat_a) {
+    for (const auto& i : panel_view.iteratorLocal()) {
+      auto spec = panel_view(i);
+      auto tile_a = mat_a.readwrite(i);
+      copyFromCPU(splitTile(v.read(i), spec), splitTile(std::move(tile_a), spec));
+    }
+  }
+
+  void copyFromCPU(matrix::ReadOnlyTileSender<T, Device::CPU> src,
+                   matrix::ReadWriteTileSender<T, Device::GPU> dst) {
     namespace ex = pika::execution::experimental;
 
     using dlaf::internal::Policy;
@@ -983,13 +980,11 @@ protected:
     using pika::execution::thread_priority;
     using pika::execution::thread_stacksize;
 
-    for (const auto& i : panel_view.iteratorLocal()) {
-      auto spec = panel_view(i);
-      auto tile_a = mat_a.readwrite(i);
-      ex::start_detached(ex::when_all(splitTile(v.read(i), spec), splitTile(std::move(tile_a), spec)) |
-                         matrix::copy(Policy<CopyBackend_v<Device::CPU, Device::GPU>>(
-                             thread_priority::high, thread_stacksize::nostack)));
-    }
+    ex::start_detached(
+        ex::when_all(std::move(src), std::move(dst)) |
+        dlaf::matrix::copy(
+            dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::CPU, Device::GPU>>(
+                thread_priority::high, thread_stacksize::nostack)));
   }
 };
 #endif

@@ -1,0 +1,42 @@
+#
+# Distributed Linear Algebra with Future (DLAF)
+#
+# Copyright (c) ETH Zurich
+# All rights reserved.
+#
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+include:
+  - local: 'ci/common-ci.yml'
+
+cpu tsan deps:
+  extends: .build_deps_common
+  variables:
+    EXTRA_APTGET: "clang-18 libclang-rt-18-dev libomp-18-dev llvm-18"
+    COMPILER: clang@18
+    SPACK_ENVIRONMENT: ci/docker/tsan.yaml
+    USE_MKL: "ON"
+    DEPS_IMAGE: $CSCS_REGISTRY_PATH/cpu-tsan/deps
+
+cpu tsan build:
+  extends:
+    - .build_common
+    - .build_for_eiger
+  needs:
+    - cpu tsan deps
+  variables:
+    DLAF_IMAGE: $CSCS_REGISTRY_PATH/cpu-tsan/dlaf:$CI_COMMIT_SHA
+
+cpu tsan test:
+  extends: .run_common
+  needs:
+    - cpu tsan build
+  variables:
+    TSAN_OPTIONS: "ignore_noninstrumented_modules=1:halt_on_error=1:history_size=0"
+    # Override use of libSegFault, not necessary with sanitizers
+    LD_PRELOAD: ""
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cpu tsan build

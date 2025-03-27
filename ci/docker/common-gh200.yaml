@@ -1,0 +1,55 @@
+#
+# Distributed Linear Algebra with Future (DLAF)
+#
+# Copyright (c) ETH Zurich
+# All rights reserved.
+#
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+
+packages:
+  all:
+    target: [neoverse_v2]
+    require:
+      - 'cuda_arch=90'
+  # Set nvpl as default blas, lapack and scalapack provider.
+  # Can be overwritten in environments if needed.
+  blas:
+    require: 'nvpl-blas'
+  lapack:
+    require: 'nvpl-lapack'
+  scalapack:
+    require: 'netlib-scalapack'
+  mpi:
+    ### Workaround until CE provides full MPI substitution.
+    require: 'cray-mpich'
+  blaspp:
+    variants:
+      - '~cuda'
+      - '~openmp'
+      - '~rocm'
+  nvpl-blas:
+    require:
+      - 'threads=openmp'
+  nvpl-lapack:
+    require:
+      - 'threads=openmp'
+  openblas:
+    variants:
+      - 'threads=openmp'
+  openssl:
+    # without version spack concretizes openssl@3.3.1 that doesn't build due to deprecation
+    require:
+      - '@3.3.2'
+  libfabric:
+    # Fix version to be compatible with version on todi
+    require:
+      - '@1.15.2'
+  hwloc:
+    variants:
+      - '~libxml2'
+  git:
+    # Force git as non-buildable to allow deprecated versions in environments
+    # https://github.com/spack/spack/pull/30040
+    buildable: false

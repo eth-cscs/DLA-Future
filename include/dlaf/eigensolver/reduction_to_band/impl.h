@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2024, ETH Zurich
+// Copyright (c) ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -42,6 +42,7 @@
 #include <dlaf/eigensolver/internal/get_red2band_panel_nworkers.h>
 #include <dlaf/eigensolver/reduction_to_band/api.h>
 #include <dlaf/factorization/qr.h>
+#include <dlaf/factorization/qr/internal/get_tfactor_num_workers.h>
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/copy_tile.h>
 #include <dlaf/matrix/distribution.h>
@@ -52,7 +53,6 @@
 #include <dlaf/matrix/tile.h>
 #include <dlaf/matrix/views.h>
 #include <dlaf/schedulers.h>
-#include <dlaf/sender/continues_on.h>
 #include <dlaf/sender/traits.h>
 #include <dlaf/types.h>
 #include <dlaf/util_math.h>
@@ -313,8 +313,9 @@ void computePanelReflectors(MatrixLikeA& mat_a, MatrixLikeTaus& mat_taus, const 
 
   const std::size_t nworkers = [nrtiles = panel_tiles.size()]() {
     const std::size_t min_workers = 1;
-    const std::size_t available_workers = get_red2band_panel_nworkers();
-    const std::size_t ideal_workers = to_sizet(nrtiles);
+    const std::size_t available_workers = get_red2band_panel_num_workers();
+    const std::size_t ideal_workers =
+        util::ceilDiv(to_sizet(nrtiles), get_red2band_panel_worker_minwork());
     return std::clamp(ideal_workers, min_workers, available_workers);
   }();
   ex::start_detached(
@@ -322,7 +323,7 @@ void computePanelReflectors(MatrixLikeA& mat_a, MatrixLikeTaus& mat_taus, const 
                             std::vector<common::internal::vector<T>>{}),  // w (internally required)
                    mat_taus.readwrite(LocalTileIndex(j_sub, 0)),
                    ex::when_all_vector(std::move(panel_tiles))) |
-      di::continues_on(di::getBackendScheduler<Backend::MC>(thread_priority::high)) |
+      ex::continues_on(di::getBackendScheduler<Backend::MC>(thread_priority::high)) |
       ex::bulk(nworkers, [nworkers, cols = panel_view.cols()](const std::size_t index, auto& barrier_ptr,
                                                               auto& w, auto& taus, auto& tiles) {
         const auto barrier_busy_wait = getReductionToBandBarrierBusyWait();
@@ -638,8 +639,9 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
 
   const std::size_t nworkers = [nrtiles = panel_tiles.size()]() {
     const std::size_t min_workers = 1;
-    const std::size_t available_workers = get_red2band_panel_nworkers();
-    const std::size_t ideal_workers = util::ceilDiv(to_sizet(nrtiles), to_sizet(2));
+    const std::size_t available_workers = get_red2band_panel_num_workers();
+    const std::size_t ideal_workers =
+        util::ceilDiv(to_sizet(nrtiles), get_red2band_panel_worker_minwork());
     return std::clamp(ideal_workers, min_workers, available_workers);
   }();
 
@@ -649,7 +651,7 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
                    mat_taus.readwrite(GlobalTileIndex(j_sub, 0)),
                    ex::when_all_vector(std::move(panel_tiles)),
                    std::forward<CommSender>(mpi_col_chain_panel), std::forward<TriggerSender>(trigger)) |
-      di::continues_on(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
+      ex::continues_on(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
       ex::bulk(nworkers, [nworkers, rank_v0,
                           cols = panel_view.cols()](const std::size_t index, auto& barrier_ptr, auto& w,
                                                     auto& taus, auto& tiles, auto&& pcomm) {
@@ -1018,6 +1020,14 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
   common::RoundRobin<Panel<Coord::Col, T, D>> panels_w(n_workspaces, dist);
   common::RoundRobin<Panel<Coord::Col, T, D>> panels_x(n_workspaces, dist);
 
+  const auto dist_ws = [&]() {
+    using dlaf::factorization::internal::get_tfactor_num_workers;
+    const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, get_tfactor_num_workers<B>() - 1));
+    const SizeType nrefls_step = dist.tile_size().cols();
+    return matrix::Distribution{{nworkspaces * nrefls_step, nrefls_step}, {nrefls_step, nrefls_step}};
+  }();
+  common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panels_ws(n_workspaces, dist_ws);
+
   // Note:
   // Here dist_a is given with full panel size instead of dist with just the part actually needeed,
   // because the GPU Helper internally exploits Panel data-structure. Indeed, the full size panel is
@@ -1043,10 +1053,13 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
     //        reflectors (i.e. at the end when last reflector size is 1)
     const matrix::SubPanelView panel_view(dist_a, ij_offset, band_size);
 
+    Panel<Coord::Col, T, D>& ws = panels_ws.nextResource();
     Panel<Coord::Col, T, D>& v = panels_v.nextResource();
     v.setRangeStart(ij_offset);
-    if (isPanelIncomplete)
+    if (isPanelIncomplete) {
+      ws.setWidth(nrefls_tile);
       v.setWidth(nrefls_tile);
+    }
 
     // PANEL
     compute_panel_helper.call(mat_a, mat_taus_retiled, j_sub, panel_view);
@@ -1062,8 +1075,8 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
     // TODO used just by the column, maybe we can re-use a panel tile?
     // TODO probably the first one in any panel is ok?
     Matrix<T, D> t({nrefls_tile, nrefls_tile}, dist.blockSize());
-
-    computeTFactor<B>(v, mat_taus_retiled.read(GlobalTileIndex(j_sub, 0)), t.readwrite(t_idx));
+    computeTFactor<B>(v, mat_taus_retiled.read(GlobalTileIndex(j_sub, 0)), t.readwrite(t_idx), ws);
+    ws.reset();
 
     // PREPARATION FOR TRAILING MATRIX UPDATE
     const GlobalElementIndex at_offset(ij_offset + GlobalElementSize(0, band_size));
@@ -1205,6 +1218,14 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
   common::RoundRobin<matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>> panels_xt(
       n_workspaces, dist);
 
+  const auto dist_ws = [&]() {
+    using dlaf::factorization::internal::get_tfactor_num_workers;
+    const SizeType nworkspaces = to_SizeType(std::max<std::size_t>(0, get_tfactor_num_workers<B>() - 1));
+    const SizeType nrefls_step = band_size;
+    return matrix::Distribution{{nworkspaces * nrefls_step, nrefls_step}, {nrefls_step, nrefls_step}};
+  }();
+  common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panels_ws(n_workspaces, dist_ws);
+
   red2band::ComputePanelHelper<B, D, T> compute_panel_helper(n_workspaces, dist);
 
   ex::unique_any_sender<> trigger_panel{ex::just()};
@@ -1228,10 +1249,12 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
 
     auto& v = panels_v.nextResource();
     auto& vt = panels_vt.nextResource();
+    auto& ws = panels_ws.nextResource();
 
     v.setRangeStart(at_offset);
     vt.setRangeStart(at_offset);
 
+    ws.setWidth(nrefls_tile);
     v.setWidth(nrefls_tile);
     vt.setHeight(nrefls_tile);
 
@@ -1253,8 +1276,10 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
       // deadlock due to tile shared between panel and trailing matrix
       red2band::local::setupReflectorPanelV<B, D, T>(rank.row() == rank_v0.row(), panel_view,
                                                      nrefls_tile, v, mat_a, !is_full_band);
-      computeTFactor<B>(v, mat_taus_retiled.read(GlobalTileIndex(j_sub, 0)), t.readwrite(t_idx),
+
+      computeTFactor<B>(v, mat_taus_retiled.read(GlobalTileIndex(j_sub, 0)), t.readwrite(t_idx), ws,
                         mpi_col_chain);
+      ws.reset();
     }
 
     // PREPARATION FOR TRAILING MATRIX UPDATE

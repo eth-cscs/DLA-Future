@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2024, ETH Zurich
+// Copyright (c) ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -26,8 +26,8 @@
 enum class API { dlaf, scalapack };
 
 template <API api>
-int c_api_test_inititialize(int pika_argc, const char* pika_argv[], int dlaf_argc,
-                            const char* dlaf_argv[], const dlaf::comm::CommunicatorGrid& grid) {
+int c_api_test_initialize(int pika_argc, const char* pika_argv[], int dlaf_argc, const char* dlaf_argv[],
+                          const dlaf::comm::CommunicatorGrid& grid) {
   dlaf_initialize(pika_argc, pika_argv, dlaf_argc, dlaf_argv);
 
   char grid_order = grid_ordering(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(),

@@ -1,3 +1,12 @@
+#
+# Distributed Linear Algebra with Future (DLAF)
+#
+# Copyright (c) ETH Zurich
+# All rights reserved.
+#
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+#
 include:
   - local: 'ci/common-ci.yml'
 
@@ -12,7 +21,7 @@ cpu gcc13 codecov deps:
 cpu gcc13 codecov build:
   extends:
     - .build_common
-    - .build_for_daint-mc
+    - .build_for_eiger
   needs:
     - cpu gcc13 codecov deps
   variables:

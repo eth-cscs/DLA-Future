@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2024, ETH Zurich
+// Copyright (c) ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -341,7 +341,7 @@ void checkEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<const
     return;
 
   constexpr auto eps = std::numeric_limits<dlaf::BaseType<T>>::epsilon();
-  const auto n = eval_idx_end;  // Number of valid eigenvectors
+  const auto n = A.size().rows();
 
   const auto diff_ratio = norm_diff / norm_A;
 

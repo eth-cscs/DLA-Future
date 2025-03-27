@@ -1,7 +1,7 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2024, ETH Zurich
+# Copyright (c) ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
@@ -18,7 +18,7 @@ spack:
       true
 
   specs:
-    - dla-future@master build_type=RelWithDebInfo cxxflags="-fsanitize=address -fsanitize-address-use-after-scope -fsanitize=undefined -fno-omit-frame-pointer" cflags="-fsanitize=address -fsanitize-address-use-after-scope -fsanitize=undefined -fno-omit-frame-pointer" ldflags="-fsanitize=address -fsanitize=undefined" +miniapps +ci-test
+    - dla-future@master build_type=RelWithDebInfo cxxflags="-fsanitize=address -fsanitize-address-use-after-scope -fsanitize=undefined -fno-omit-frame-pointer" cflags="-fsanitize=address -fsanitize-address-use-after-scope -fsanitize=undefined -fno-omit-frame-pointer" ldflags="-fsanitize=address -fsanitize=undefined" +miniapps +ci-test ~ci-check-threads
 
   packages:
     all:

@@ -1,7 +1,7 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2024, ETH Zurich
+# Copyright (c) ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
@@ -10,7 +10,7 @@
 
 spack:
   include:
-  - /spack_environment/common.yaml
+  - /spack_environment/common-gh200.yaml
 
   view: false
   concretizer:
@@ -18,12 +18,12 @@ spack:
       true
 
   specs:
-    - dla-future@master +cuda +miniapps +ci-test
+    - dla-future@master +cuda +miniapps +ci-test +mpi_gpu_aware +mpi_gpu_force_contiguous
 
   packages:
     all:
       variants:
         - 'build_type=Release'
-    pika:
+    cray-mpich:
       require:
-        - '+stdexec'
+        - "+cuda"

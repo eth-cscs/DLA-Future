@@ -1,0 +1,42 @@
+#
+# Distributed Linear Algebra with Future (DLAF)
+#
+# Copyright (c) ETH Zurich
+# All rights reserved.
+#
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+include:
+  - local: 'ci/common-ci.yml'
+
+cuda gcc13 debug deps:
+  extends: .build_deps_common_gh200
+  variables:
+    BASE_IMAGE: $CSCS_REGISTRY_PATH/base-images/cuda_12.6.1-devel-ubuntu24.04:v1.4
+    COMPILER: gcc@13
+    SPACK_ENVIRONMENT: ci/docker/debug-cuda-gh200.yaml
+    DEPS_IMAGE: $CSCS_REGISTRY_PATH/cuda-gh200-gcc13-debug/deps
+
+cuda gcc13 debug build:
+  extends:
+    - .build_common_gh200
+    - .build_for_alps_gh200
+  needs:
+    - cuda gcc13 debug deps
+  variables:
+    DLAF_IMAGE: $CSCS_REGISTRY_PATH/cuda-gh200-gcc13-debug/dlaf:$CI_COMMIT_SHA
+
+cuda gcc13 debug test:
+  extends: .run_common
+  variables:
+    DLAF_CI_BIND_GPU: "ALPS-GH200"
+    PIKA_MPI_ENABLE_POOL: 1
+    PIKA_MPI_COMPLETION_MODE: 30
+    MPICH_GPU_SUPPORT_ENABLED: 0
+  needs:
+    - cuda gcc13 debug build
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cuda gcc13 debug build

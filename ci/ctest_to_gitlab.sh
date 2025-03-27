@@ -3,7 +3,7 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2024, ETH Zurich
+# Copyright (c) ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
@@ -55,10 +55,10 @@ ARTIFACTS="
 "
 fi
 
-# CRAY_CUDA_MPS set to 0 to avoid test hanging on daint (See PR #1197)
 BASE_TEMPLATE="
 include:
   - remote: 'https://gitlab.com/cscs-ci/recipes/-/raw/master/templates/v2/.ci-ext.yml'
+  - local: 'ci/ci-ext-custom.yml'
 
 image: $IMAGE
 
@@ -70,7 +70,7 @@ variables:
   SLURM_EXCLUSIVE: ''
   SLURM_EXACT: ''
   SLURM_CONSTRAINT: $SLURM_CONSTRAINT
-  CRAY_CUDA_MPS: 0
+  CRAY_CUDA_MPS: 1
   MPICH_MAX_THREAD_SAFETY: multiple
 
 {{JOBS}}
@@ -92,8 +92,8 @@ JOB_TEMPLATE="
     PULL_IMAGE: 'YES'
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
-    DLAF_HDF5_TEST_OUTPUT_PATH: \$CI_PROJECT_DIR
-  script: mpi-ctest -L {{CATEGORY_LABEL}} -L {{RANK_LABEL}}
+    DLAF_HDF5_TEST_OUTPUT_PATH: /dev/shm
+  script: stdbuf --output=L --error=L mpi-ctest -L {{CATEGORY_LABEL}} -L {{RANK_LABEL}}
   $ARTIFACTS
 "
 
@@ -104,7 +104,7 @@ for rank_label in `ctest --print-labels | egrep -o "RANK_[1-9][0-9]?"`; do
         N=`echo "$rank_label" | sed "s/RANK_//"`
         C=$(( THREADS_PER_NODE / N ))
         if [ $C -gt $THREADS_MAX_PER_TASK ]; then
-        C=$THREADS_MAX_PER_TASK
+            C=$THREADS_MAX_PER_TASK
         fi
 
         # Skip label combinations that match no tests

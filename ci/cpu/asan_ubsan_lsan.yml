@@ -1,3 +1,12 @@
+#
+# Distributed Linear Algebra with Future (DLAF)
+#
+# Copyright (c) ETH Zurich
+# All rights reserved.
+#
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+#
 include:
   - local: 'ci/common-ci.yml'
 
@@ -13,7 +22,7 @@ cpu asan ubsan lsan deps:
 cpu asan ubsan lsan build:
   extends:
     - .build_common
-    - .build_for_daint-mc
+    - .build_for_eiger
   needs:
     - cpu asan ubsan lsan deps
   variables:
@@ -27,7 +36,7 @@ cpu asan ubsan lsan test:
     ASAN_OPTIONS: "fast_unwind_on_malloc=0:strict_string_checks=1:detect_leaks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1"
     UBSAN_OPTIONS: "halt_on_error=1:print_stacktrace=1"
     # Override use of libSegFault, not necessary with sanitizers
-    LD_PRELOAD: ""
+    DLAF_LD_PRELOAD: ""
   trigger:
     include:
       - artifact: pipeline.yml

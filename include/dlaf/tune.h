@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2024, ETH Zurich
+// Copyright (c) ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -55,15 +55,26 @@ namespace dlaf {
 ///     Enable dump of tridiagonal solver input/output data to "tridiagonal.h5" file that will before
 ///     created in the working folder (it should not exist before the execution).
 ///     Set with environment variable DLAF_DEBUG_DUMP_TRIDIAG_SOLVER_DATA.
-/// - red2band_panel_nworkers:
+/// - tfactor_num_threads:
+///     The maximum number of threads to use for computing tfactor (e.g. which is used for
+///     instance in red2band and its backtransformation). Set with --dlaf:tfactor-num-threads or env
+///     variable DLAF_TFACTOR_NUM_THREADS.
+/// - tfactor_num_streams:
+///     The maximum number of streams to use for computing tfactor (e.g. which is used for
+///     instance in red2band and its backtransformation). Set with --dlaf:tfactor-num-streams or env
+///     variable DLAF_TFACTOR_NUM_STREAMS.
+/// - tfactor_barrier_busy_wait_us:
+///     The duration in microseconds to busy-wait in barriers in the tfactor algorithm.
+///     Set with --dlaf:tfactor-barrier-busy-wait-us or env variable DLAF_TFACTOR_BARRIER_BUSY_WAIT_US.
+/// - red2band_panel_num_threads:
 ///     The maximum number of threads to use for computing the panel in the reduction to band algorithm.
-///     Set with --dlaf:red2band-panel-nworkers or env variable DLAF_RED2BAND_PANEL_NWORKERS.
+///     Set with --dlaf:red2band-panel-num-threads or env variable DLAF_RED2BAND_PANEL_NUM_THREADS.
 /// - red2band_barrier_busy_wait_us:
 ///     The duration in microseconds to busy-wait in barriers in the reduction to band algorithm.
 ///     Set with --dlaf:red2band-barrier-busy-wait-us or env variable DLAF_RED2BAND_BARRIER_BUSY_WAIT_US.
-/// - tridiag_rank1_nworkers:
+/// - tridiag_rank1_num_threads:
 ///     The maximum number of threads to use for computing rank1 problem solution in tridiagonal solver
-///     algorithm. Set with --dlaf:tridiag-rank1-nworkers or env variable DLAF_TRIDIAG_RANK1_NWORKERS.
+///     algorithm. Set with --dlaf:tridiag-rank1-num-threads or env variable DLAF_TRIDIAG_RANK1_NUM_THREADS.
 /// - tridiag_rank1_barrier_busy_wait_us:
 ///     The duration in microseconds to busy-wait in barriers when computing rank1 problem solution in
 ///     the tridiagonal solver algorithm. Set with --dlaf:tridiag-rank1-barrier-busy-wait-us or env
@@ -100,18 +111,17 @@ struct TuneParameters {
     // Some parameters require the pika runtime to be initialized since they depend on the number of
     // threads used by the runtime. We initialize them separately in the constructor after checking that
     // pika is initialized.
-#if PIKA_VERSION_FULL >= 0x001600  // >= 0.22.0
     if (!pika::is_runtime_initialized()) {
       std::cerr
           << "[ERROR] Trying to initialize DLA-Future tune parameters but the pika runtime is not initialized. Make sure pika is initialized first.\n";
       std::terminate();
     }
-#endif
 
     const auto default_pool_thread_count =
         pika::resource::get_thread_pool("default").get_os_thread_count();
-    red2band_panel_nworkers = std::max<std::size_t>(1, default_pool_thread_count / 2);
-    tridiag_rank1_nworkers = default_pool_thread_count;
+    tfactor_num_threads = std::max<std::size_t>(1, default_pool_thread_count / 2);
+    red2band_panel_num_threads = std::max<std::size_t>(1, default_pool_thread_count / 2);
+    tridiag_rank1_num_threads = default_pool_thread_count;
   }
   bool debug_dump_cholesky_factorization_data = false;
   bool debug_dump_generalized_to_standard_data = false;
@@ -120,9 +130,13 @@ struct TuneParameters {
   bool debug_dump_reduction_to_band_data = false;
   bool debug_dump_band_to_tridiagonal_data = false;
   bool debug_dump_tridiag_solver_data = false;
-  std::size_t red2band_panel_nworkers = 1;
+
+  std::size_t tfactor_num_threads = 1;
+  std::size_t tfactor_num_streams = 4;
+  std::size_t tfactor_barrier_busy_wait_us = 0;
+  std::size_t red2band_panel_num_threads = 1;
   std::size_t red2band_barrier_busy_wait_us = 1000;
-  std::size_t tridiag_rank1_nworkers = 1;
+  std::size_t tridiag_rank1_num_threads = 1;
   std::size_t tridiag_rank1_barrier_busy_wait_us = 0;
 
   SizeType eigensolver_min_band = 100;

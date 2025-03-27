@@ -1,5 +1,38 @@
 # Changelog
 
+## DLA-Future 0.8.0
+
+### Changes
+
+- Renamed tune parameters. (#1270)
+    - `dlaf:red2band-panel-nworkers` becomes `dlaf:red2band-panel-num-threads`.
+    - `dlaf:tridiag-rank1-nworkers` becomes `dlaf:tridiag-rank1-num-threads`.
+
+### Performance improvements
+
+- Many improvements to `reduction_to_band` and its backtransformation. (#1214, #1256, #1263)
+
+### Bug fixes
+
+- Fixed a bug in correctness checking of eigensolver miniapps when computing partial eigenspectrum. (#1283)
+
+## DLA-Future 0.7.3
+
+### Bug fixes
+
+- Changed C ScaLAPACK API indexing convention to 1-based for partial eigenspectrum. (#1248)
+
+## DLA-Future 0.7.2
+
+Not released.
+
+## DLA-Future 0.7.1
+
+### Bug fixes
+
+- Fixed a compilation issue with ROCm. (#1241)
+- Fixed missing includes of `<complex>`. (#1243)
+
 ## DLA-Future 0.7.0
 
 ### Changes

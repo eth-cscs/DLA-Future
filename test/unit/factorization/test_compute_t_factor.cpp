@@ -1,13 +1,14 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2024, ETH Zurich
+// Copyright (c) ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <cstddef>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -19,6 +20,7 @@
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/factorization/qr.h>
+#include <dlaf/factorization/qr/internal/get_tfactor_num_workers.h>
 #include <dlaf/lapack/tile.h>  // workaround for importing lapack.hh
 #include <dlaf/matrix/copy.h>
 #include <dlaf/matrix/copy_tile.h>
@@ -26,6 +28,7 @@
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_mirror.h>
 #include <dlaf/matrix/views.h>
+#include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 
 #include <gtest/gtest.h>
@@ -260,6 +263,8 @@ std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, GlobalElementInde
 template <class T, Backend B, Device D>
 void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, const SizeType nb,
                         const GlobalElementIndex v_start) {
+  using dlaf::factorization::internal::computeTFactor;
+
   ASSERT_LE(v_start.row() + k, m);
   ASSERT_LE(v_start.col() + k, nb);
 
@@ -301,8 +306,16 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
       panel_v.setTile(i, splitTile(v.get().read(i), panel_view(i)));
     }
 
-    using dlaf::factorization::internal::computeTFactor;
-    computeTFactor<B>(panel_v, mat_taus.read(GlobalTileIndex(0, 0)), t_output.get().readwrite(t_idx));
+    auto workspaces = [k]() -> matrix::Panel<Coord::Col, T, D> {
+      const SizeType nworkspaces = to_SizeType(
+          std::max<std::size_t>(0, factorization::internal::get_tfactor_num_workers<B>() - 1));
+      const SizeType nrefls_step = k;
+      return matrix::Panel<Coord::Col, T, D>({{nworkspaces * nrefls_step, nrefls_step},
+                                              {nrefls_step, nrefls_step}});
+    }();
+
+    computeTFactor<B>(panel_v, mat_taus.read(GlobalTileIndex(0, 0)), t_output.get().readwrite(t_idx),
+                      workspaces);
   }
 
   // Note:
@@ -329,6 +342,8 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
 template <class T, Backend B, Device D>
 void testComputeTFactor(comm::CommunicatorGrid& grid, const SizeType m, const SizeType k,
                         const SizeType mb, const SizeType nb, const GlobalElementIndex v_start) {
+  using dlaf::factorization::internal::computeTFactor;
+
   ASSERT_LE(v_start.row() + k, m);
   ASSERT_LE(v_start.col() + k, nb);
 
@@ -382,9 +397,16 @@ void testComputeTFactor(comm::CommunicatorGrid& grid, const SizeType m, const Si
       panel_v.setTile(i, splitTile(v.get().read(i), panel_view(i)));
     }
 
-    using dlaf::factorization::internal::computeTFactor;
+    auto workspaces = [k]() -> matrix::Panel<Coord::Col, T, D> {
+      const SizeType nworkspaces = to_SizeType(
+          std::max<std::size_t>(0, factorization::internal::get_tfactor_num_workers<B>() - 1));
+      const SizeType nrefls_step = k;
+      return matrix::Panel<Coord::Col, T, D>({{nworkspaces * nrefls_step, nrefls_step},
+                                              {nrefls_step, nrefls_step}});
+    }();
+
     computeTFactor<B>(panel_v, mat_taus.read(GlobalTileIndex(0, 0)), t_output.get().readwrite(t_idx),
-                      serial_comm);
+                      workspaces, serial_comm);
   }
 
   // Note:

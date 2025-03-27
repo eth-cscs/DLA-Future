@@ -3,7 +3,7 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2024, ETH Zurich
+# Copyright (c) ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
@@ -33,7 +33,7 @@ do
       # Check if tab are present.
       egrep -Hn $'\t' $FILE && TAB_FOUND=1 || true
       ;;
-    *.pdf|*.hdf5|*.jpg|*.png|*.ppt|*.pptx|*.ipe)
+    *.pdf|*.hdf5|*.jpg|*.patch|*.png|*.ppt|*.pptx|*.ipe)
       # Exclude some binary files types,
       # others can be excluded as needed.
       ;;

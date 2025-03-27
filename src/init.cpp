@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2024, ETH Zurich
+// Copyright (c) ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -105,14 +105,8 @@ void initializeGpuPool(int device, std::size_t num_np_streams, std::size_t num_h
 #else
                                                             0
 #endif
-#if PIKA_VERSION_FULL >= 0x001D00  // >= 0.29.0
                                                             ,
-                                                            num_blas_handles, num_lapack_handles
-#endif
-      );
-#if PIKA_VERSION_FULL < 0x001D00  // < 0.29.0
-  dlaf::internal::silenceUnusedWarningFor(num_blas_handles, num_lapack_handles);
-#endif
+                                                            num_blas_handles, num_lapack_handles);
 }
 
 void finalizeGpuPool() {
@@ -280,10 +274,6 @@ void updateConfiguration(const pika::program_options::variables_map& vm, configu
   updateConfigurationValue(vm, cfg.umpire_device_memory_pool_coalescing_reallocation_ratio, "UMPIRE_DEVICE_MEMORY_POOL_COALESCING_REALLOCATION_RATIO", "umpire-device-memory-pool-coalescing-reallocation-ratio");
   updateConfigurationValue(vm, cfg.num_gpu_blas_handles, "NUM_GPU_BLAS_HANDLES", "num-gpu-blas-handles");
   updateConfigurationValue(vm, cfg.num_gpu_lapack_handles, "NUM_GPU_LAPACK_HANDLES", "num-gpu-lapack-handles");
-#if PIKA_VERSION_FULL < 0x001D00  // < 0.29.0
-  warnUnusedConfigurationOption(vm, "NUM_GPU_BLAS_HANDLES", "num-gpu-blas-handles", "only supported with pika 0.29.0 or newer");
-  warnUnusedConfigurationOption(vm, "NUM_GPU_LAPACK_HANDLES", "num-gpu-lapack-handles", "only supported with pika 0.29.0 or newer");
-#endif
 
   // update tune parameters
   //
@@ -291,7 +281,10 @@ void updateConfiguration(const pika::program_options::variables_map& vm, configu
   // These are added automatically by updateConfigurationValue.
   auto& param = getTuneParameters();
   // clang-format off
-  updateConfigurationValue(vm, param.red2band_panel_nworkers, "RED2BAND_PANEL_NWORKERS", "red2band-panel-nworkers");
+  updateConfigurationValue(vm, param.tfactor_num_threads, "TFACTOR_NUM_THREADS", "tfactor-num-threads");
+  updateConfigurationValue(vm, param.tfactor_num_streams, "TFACTOR_NUM_STREAMS", "tfactor-num-streams");
+  updateConfigurationValue(vm, param.tfactor_barrier_busy_wait_us, "TFACTOR_BARRIER_BUSY_WAIT_US", "tfactor-barrier-busy-wait-us");
+  updateConfigurationValue(vm, param.red2band_panel_num_threads, "RED2BAND_PANEL_NUM_THREADS", "red2band-panel-num-threads");
   updateConfigurationValue(vm, param.red2band_barrier_busy_wait_us, "RED2BAND_BARRIER_BUSY_WAIT_US", "red2band-barrier-busy-wait-us");
   updateConfigurationValue(vm, param.eigensolver_min_band, "EIGENSOLVER_MIN_BAND", "eigensolver-min-band");
   updateConfigurationValue(vm, param.band_to_tridiag_1d_block_size_base, "BAND_TO_TRIDIAG_1D_BLOCK_SIZE_BASE", "band-to-tridiag-1d-block-size-base");
@@ -304,7 +297,7 @@ void updateConfiguration(const pika::program_options::variables_map& vm, configu
   updateConfigurationValue(vm, param.debug_dump_band_to_tridiagonal_data, "DEBUG_DUMP_BAND_TO_TRIDIAGONAL_DATA", "");
   updateConfigurationValue(vm, param.debug_dump_tridiag_solver_data, "DEBUG_DUMP_TRIDIAG_SOLVER_DATA", "");
 
-  updateConfigurationValue(vm, param.tridiag_rank1_nworkers, "TRIDIAG_RANK1_NWORKERS", "tridiag-rank1-nworkers");
+  updateConfigurationValue(vm, param.tridiag_rank1_num_threads, "TRIDIAG_RANK1_NUM_THREADS", "tridiag-rank1-num-threads");
 
   updateConfigurationValue(vm, param.tridiag_rank1_barrier_busy_wait_us, "TRIDIAG_RANK1_BARRIER_BUSY_WAIT_US", "tridiag-rank1-barrier-busy-wait-us");
 
@@ -345,14 +338,17 @@ pika::program_options::options_description getOptionsDescription() {
   desc.add_options()("dlaf:no-mpi-pool", pika::program_options::bool_switch(), "Disable the MPI pool.");
 
   // Tune parameters command line options
-  desc.add_options()( "dlaf:red2band-panel-nworkers", pika::program_options::value<std::size_t>(), "The maximum number of threads to use for computing the panel in the reduction to band algorithm.");
-  desc.add_options()( "dlaf:red2band-barrier-busy-wait-us", pika::program_options::value<std::size_t>(), "The duration in microseconds to busy-wait in barriers in the reduction to band algorithm.");
-  desc.add_options()( "dlaf:eigensolver-min-band", pika::program_options::value<SizeType>(), "The minimum value to start looking for a divisor of the block size. When larger than the block size, the block size will be used instead.");
-  desc.add_options()( "dlaf:band-to-tridiag-1d-block-size-base", pika::program_options::value<SizeType>(), "The 1D block size for band_to_tridiagonal is computed as 1d_block_size_base / nb * nb. (The input matrix is distributed with a {nb x nb} block size.)");
-  desc.add_options()( "dlaf:tridiag-rank1-nworkers", pika::program_options::value<std::size_t>(), "The maximum number of threads to use for computing rank1 problem solution in tridiagonal solver algorithm.");
-  desc.add_options()( "dlaf:tridiag-rank1-barrier-busy-wait-us", pika::program_options::value<std::size_t>(), "The duration in microseconds to busy-wait in barriers when computing rank1 problem solution in the tridiagonal solver algorithm.");
-  desc.add_options()( "dlaf:bt-band-to-tridiag-hh-apply-group-size", pika::program_options::value<SizeType>(), "The application of the HH reflector is splitted in smaller applications of group size reflectors.");
-  desc.add_options()( "dlaf:communicator-grid-num-pipelines", pika::program_options::value<std::size_t>(), "The default number of row, column, and full communicator pipelines to initialize in CommunicatorGrid.");
+  desc.add_options()("dlaf:tfactor-num-threads", pika::program_options::value<std::size_t>(), "The maximum number of threads to use for computing the tfactor.");
+  desc.add_options()("dlaf:tfactor-num-streams", pika::program_options::value<std::size_t>(), "The maximum number of GPU streams to use for computing the tfactor.");
+  desc.add_options()("dlaf:tfactor-barrier-busy-wait-us", pika::program_options::value<std::size_t>(), "The duration in microseconds to busy-wait in barriers in the tfactor algorithm.");
+  desc.add_options()("dlaf:red2band-panel-num-threads", pika::program_options::value<std::size_t>(), "The maximum number of threads to use for computing the panel in the reduction to band algorithm.");
+  desc.add_options()("dlaf:red2band-barrier-busy-wait-us", pika::program_options::value<std::size_t>(), "The duration in microseconds to busy-wait in barriers in the reduction to band algorithm.");
+  desc.add_options()("dlaf:eigensolver-min-band", pika::program_options::value<SizeType>(), "The minimum value to start looking for a divisor of the block size. When larger than the block size, the block size will be used instead.");
+  desc.add_options()("dlaf:band-to-tridiag-1d-block-size-base", pika::program_options::value<SizeType>(), "The 1D block size for band_to_tridiagonal is computed as 1d_block_size_base / nb * nb. (The input matrix is distributed with a {nb x nb} block size.)");
+  desc.add_options()("dlaf:tridiag-rank1-num-threads", pika::program_options::value<std::size_t>(), "The maximum number of threads to use for computing rank1 problem solution in tridiagonal solver algorithm.");
+  desc.add_options()("dlaf:tridiag-rank1-barrier-busy-wait-us", pika::program_options::value<std::size_t>(), "The duration in microseconds to busy-wait in barriers when computing rank1 problem solution in the tridiagonal solver algorithm.");
+  desc.add_options()("dlaf:bt-band-to-tridiag-hh-apply-group-size", pika::program_options::value<SizeType>(), "The application of the HH reflector is splitted in smaller applications of group size reflectors.");
+  desc.add_options()("dlaf:communicator-grid-num-pipelines", pika::program_options::value<std::size_t>(), "The default number of row, column, and full communicator pipelines to initialize in CommunicatorGrid.");
   // clang-format on
 
   return desc;

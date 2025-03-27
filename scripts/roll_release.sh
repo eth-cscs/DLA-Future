@@ -3,7 +3,7 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2024, ETH Zurich
+# Copyright (c) ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
@@ -29,6 +29,12 @@ REGEX_VERSION_FULL="$(echo ${VERSION_FULL} | sed s/\\./\\\\./g)"
 REGEX_VERSION_FULL_TAG="$(echo ${VERSION_FULL_TAG} | sed s/\\./\\\\./g)"
 REGEX_VERSION_TITLE="$(echo ${VERSION_TITLE} | sed s/\\./\\\\./g)"
 
+OK='\033[0;32mOK\033[0m'
+ERROR="\033[0;31mERROR\033[0m"
+FAILED="\033[0;31mFAILED\033[0m"
+MISSING="\033[0;33mMissing\033[0m"
+WARNING="\033[0;33mWarning\033[0m"
+
 if ! which gh >/dev/null 2>&1; then
     echo "GitHub CLI not installed on this system (see https://cli.github.com). Exiting."
     exit 1
@@ -39,6 +45,13 @@ if ! gh auth status >/dev/null 2>&1; then
     exit 1
 fi
 
+echo "You are about to tag and create a final release on GitHub."
+
+echo ""
+echo "Sanity checking release"
+
+sanity_errors=0
+
 # Major and minor releases are made directly from master. Patch releases are branched out from the major
 # and minor releases with a version_X.Y branch.
 if [[ "${VERSION_PATCH}" -eq 0 ]]; then
@@ -47,9 +60,13 @@ else
     RELEASE_BRANCH="version_${VERSION_MAJOR}.${VERSION_MINOR}"
 fi
 
-if ! [[ "$CURRENT_BRANCH" == "$RELEASE_BRANCH" ]]; then
-    echo "Not on release branch (expected \"$RELEASE_BRANCH\", currently on \"${CURRENT_BRANCH}\"). Not continuing to make release."
-    exit 1
+echo "Checking the git branch... $CURRENT_BRANCH"
+if [[ "$CURRENT_BRANCH" == "$RELEASE_BRANCH" ]]; then
+    echo -e $OK
+else
+    echo "Not on release branch (expected \"$RELEASE_BRANCH\")"
+    echo -e $ERROR
+    sanity_errors=$((sanity_errors + 1))
 fi
 
 changelog_path="CHANGELOG.md"
@@ -57,20 +74,12 @@ readme_path="README.md"
 documentation_path="DOCUMENTATION.md"
 cff_path="CITATION.cff"
 
-echo "You are about to tag and create a final release on GitHub."
-
-echo ""
-echo "Sanity checking release"
-
-sanity_errors=0
-
-printf "Checking that the git repository is in a clean state... "
+echo "Checking that the git repository is in a clean state... "
 if [[ $(git status --porcelain | wc -l) -eq 0  ]] ; then
-    echo "OK"
+    echo -e $OK
 else
-    echo "ERROR"
     git status -s
-    echo "Do you want to continue anyway?"
+    echo -e "${WARNING}: Do you want to continue anyway?"
     select yn in "Yes" "No"; do
       case $yn in
         Yes) break ;;
@@ -81,65 +90,72 @@ fi
 
 printf "Checking that %s has an entry for %s... " "${changelog_path}" "${VERSION_FULL}"
 if grep "## DLA-Future ${REGEX_VERSION_FULL}" "${changelog_path}"; then
-    echo "OK"
+    echo -e $OK
 else
-    echo "Missing"
+    echo -e $MISSING
+    echo -e $ERROR
     sanity_errors=$((sanity_errors + 1))
 fi
 
 printf "Checking that %s has a documentation entry for %s... " "${readme_path}" "master"
 if grep "^- \[Documentation of \`master\` branch\](https://eth-cscs.github.io/DLA-Future/master/)" "${readme_path}"; then
-    echo "OK"
+    echo -e $OK
 else
-    echo "Missing"
+    echo -e $MISSING
+    echo -e $ERROR
     sanity_errors=$((sanity_errors + 1))
 fi
 
 printf "Checking that %s has a documentation entry for %s... " "${readme_path}" "${VERSION_FULL}"
 if grep "^- \[Documentation of \`${REGEX_VERSION_FULL_TAG}\`\](https://eth-cscs.github.io/DLA-Future/${REGEX_VERSION_FULL_TAG}/)" "${readme_path}"; then
-    echo "OK"
+    echo -e $OK
 else
-    echo "Missing"
+    echo -e $MISSING
+    echo -e $ERROR
     sanity_errors=$((sanity_errors + 1))
 fi
 
-printf "Checking that %s has no extra documentation entries... " "${readme_path}"
+echo "Checking that %s has no extra documentation entries... " "${readme_path}"
 if [[ $(grep "^- \[Documentation of .*\](.*)" "${readme_path}" | wc -l) -eq 2 ]] ; then
-    echo "OK"
+    echo -e $OK
 else
-    echo "Failed"
+    echo -e $FAILED
     sanity_errors=$((sanity_errors + 1))
 fi
 
 printf "Checking that %s has a documentation entry for %s... " "${documentation_path}" "${VERSION_FULL}"
 if grep "^- \[Documentation of \`${REGEX_VERSION_FULL_TAG}\`\](https://eth-cscs.github.io/DLA-Future/${REGEX_VERSION_FULL_TAG}" "${documentation_path}"; then
-    echo "OK"
+    echo -e $OK
 else
-    echo "Missing"
+    echo -e $MISSING
+    echo -e $ERROR
     sanity_errors=$((sanity_errors + 1))
 fi
 
 printf "Checking that %s has correct version for %s... " "${cff_path}" "${VERSION_FULL}"
 if grep "^version: ${REGEX_VERSION_FULL}" "${cff_path}"; then
-    echo "OK"
+    echo -e $OK
 else
-    echo "Missing"
+    echo -e $MISSING
+    echo -e $ERROR
     sanity_errors=$((sanity_errors + 1))
 fi
 
 printf "Checking that %s has correct title for %s... " "${cff_path}" "${VERSION_FULL}"
 if grep "^title: ${REGEX_VERSION_TITLE}" "${cff_path}"; then
-    echo "OK"
+    echo -e $OK
 else
-    echo "Missing"
+    echo -e $MISSING
+    echo -e $ERROR
     sanity_errors=$((sanity_errors + 1))
 fi
 
 printf "Checking that %s has today's date... " "${cff_path}"
 if grep "^date-released: '${RELEASE_DATE}'" "${cff_path}"; then
-    echo "OK"
+    echo -e $OK
 else
-    echo "Missing"
+    echo -e $MISSING
+    echo -e $ERROR
     sanity_errors=$((sanity_errors + 1))
 fi
 

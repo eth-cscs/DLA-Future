@@ -1,7 +1,7 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2024, ETH Zurich
+# Copyright (c) ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
@@ -17,7 +17,6 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-      - uses: actions/javascript-action@v1
       - uses: actions/checkout@v4
 
       - name: Check file extensions
@@ -81,6 +80,8 @@ jobs:
                     -o  -name '*.cmake'                                           \
                     -o  -name '*.cmake.in'                                        \
                     -o  -name '*.yaml'                                            \
+                    -o  -name '*.yml'                                             \
+                    -o  -name 'Makefile'                                          \
                 ')'                                                               \
             | xargs -I{} sh -c                                                    \
                 ".github/check_license.sh HEADER_HASH {} > /dev/null || echo {}"  \
@@ -88,6 +89,12 @@ jobs:
 
           # Check license in scripts which may start with #! shebang and other directives
           find -type f '(' -name '*.py' -o -name '*.sh' ')'                           \
+            | xargs -I{} sh -c                                                        \
+                ".github/check_license.sh -r 4 HEADER_HASH {} > /dev/null || echo {}" \
+            >> result.check
+
+          # Check license in script files without extensions in ci folder
+          find ci -type f -not -name "*.*"                                            \
             | xargs -I{} sh -c                                                        \
                 ".github/check_license.sh -r 4 HEADER_HASH {} > /dev/null || echo {}" \
             >> result.check

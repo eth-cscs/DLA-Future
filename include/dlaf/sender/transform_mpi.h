@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2024, ETH Zurich
+// Copyright (c) ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -19,7 +19,6 @@
 #include <dlaf/common/unwrap.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/communicator_pipeline.h>
-#include <dlaf/sender/continues_on.h>
 #include <dlaf/sender/transform.h>
 
 namespace dlaf::comm::internal {

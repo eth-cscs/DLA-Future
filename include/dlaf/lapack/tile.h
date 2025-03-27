@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2024, ETH Zurich
+// Copyright (c) ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -44,6 +44,7 @@
 #include <dlaf/gpu/lapack/api.h>
 #include <dlaf/gpu/lapack/assert_info.h>
 #include <dlaf/gpu/lapack/error.h>
+#include <dlaf/lapack/gpu/lacpy.h>
 #include <dlaf/lapack/gpu/laset.h>
 #include <dlaf/util_cublas.h>
 #endif

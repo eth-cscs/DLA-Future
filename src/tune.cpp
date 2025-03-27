@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2024, ETH Zurich
+// Copyright (c) ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -19,9 +19,12 @@ TuneParameters& getTuneParameters() {
 }
 
 std::ostream& operator<<(std::ostream& os, const TuneParameters& params) {
-  os << "  red2band_panel_nworkers = " << params.red2band_panel_nworkers << std::endl;
+  os << "  tfactor_num_threads = " << params.tfactor_num_threads << std::endl;
+  os << "  tfactor_num_streams = " << params.tfactor_num_streams << std::endl;
+  os << "  tfactor_barrier_busy_wait_us = " << params.tfactor_barrier_busy_wait_us << std::endl;
+  os << "  red2band_panel_num_threads = " << params.red2band_panel_num_threads << std::endl;
   os << "  red2band_barrier_busy_wait_us = " << params.red2band_barrier_busy_wait_us << std::endl;
-  os << "  tridiag_rank1_nworkers = " << params.tridiag_rank1_nworkers << std::endl;
+  os << "  tridiag_rank1_num_threads = " << params.tridiag_rank1_num_threads << std::endl;
   os << "  tridiag_rank1_barrier_busy_wait_us = " << params.tridiag_rank1_barrier_busy_wait_us
      << std::endl;
   os << "  eigensolver_min_band = " << params.eigensolver_min_band << std::endl;

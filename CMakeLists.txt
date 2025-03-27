@@ -1,7 +1,7 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2024, ETH Zurich
+# Copyright (c) ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
@@ -10,7 +10,7 @@
 
 cmake_minimum_required(VERSION 3.22)
 
-project(DLAF VERSION 0.7.0)
+project(DLAF VERSION 0.8.0)
 
 # ---------------------------------------------------------------------------
 # CMake configurations
@@ -206,6 +206,8 @@ option(DLAF_TEST_THREAD_BINDING_ENABLED "If OFF disables pika thread binding." O
 if(DLAF_CI_RUNNER_USES_MPIRUN)
   set(DLAF_MPI_PRESET "custom" CACHE STRING "" FORCE)
 endif()
+
+dlaf_setup_mpi_preset()
 
 # ---------------------------------------------------------------------------
 # mini Apps

@@ -89,6 +89,8 @@ Functions</h2></td></tr>
 <tr class="separator:a01cc28271811fe3c25029a5f8b351d06"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a564bb160865cb33f3f35a4438c41169c" id="r_a564bb160865cb33f3f35a4438c41169c"><td class="memItemLeft" align="right" valign="top">DLAF_EXTERN_C void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="grid_8h.html#a564bb160865cb33f3f35a4438c41169c">dlaf_free_grid</a> (int context) DLAF_NOEXCEPT</td></tr>
 <tr class="separator:a564bb160865cb33f3f35a4438c41169c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0481f6fc6601e5770f9675156e51387c" id="r_a0481f6fc6601e5770f9675156e51387c"><td class="memItemLeft" align="right" valign="top">DLAF_EXTERN_C void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="grid_8h.html#a0481f6fc6601e5770f9675156e51387c">dlaf_free_all_grids</a> () DLAF_NOEXCEPT</td></tr>
+<tr class="separator:a0481f6fc6601e5770f9675156e51387c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a438a7328e8679dfd1bc4758e96688d6b" id="r_a438a7328e8679dfd1bc4758e96688d6b"><td class="memItemLeft" align="right" valign="top">DLAF_EXTERN_C char&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="grid_8h.html#a438a7328e8679dfd1bc4758e96688d6b">grid_ordering</a> (MPI_Comm comm, int nprow, int npcol, int myprow, int mypcol) DLAF_NOEXCEPT</td></tr>
 <tr class="separator:a438a7328e8679dfd1bc4758e96688d6b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae625da591acc6550b73ffee8ec52332f" id="r_ae625da591acc6550b73ffee8ec52332f"><td class="memItemLeft" align="right" valign="top">DLAF_EXTERN_C void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="grid_8h.html#ae625da591acc6550b73ffee8ec52332f">dlaf_create_grid_from_blacs</a> (int blacs_ctxt) DLAF_NOEXCEPT</td></tr>
@@ -178,6 +180,25 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
+
+</div>
+</div>
+<a id="a0481f6fc6601e5770f9675156e51387c" name="a0481f6fc6601e5770f9675156e51387c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0481f6fc6601e5770f9675156e51387c">&#9670;&#160;</a></span>dlaf_free_all_grids()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DLAF_EXTERN_C void dlaf_free_all_grids </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Free all communicator grids</p>
+<dl class="section warning"><dt>Warning</dt><dd>This function only frees the DLA-Future grids stored internally. If you created a BLACS grid with blacs_gridinit you still need to call blacs_gridexit </dd></dl>
 
 </div>
 </div>

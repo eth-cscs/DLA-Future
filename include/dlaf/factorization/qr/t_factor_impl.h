@@ -235,7 +235,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
                          });
   }
   static matrix::ReadWriteTileSender<T, Device::GPU> step_gemv(
-      matrix::Panel<Coord::Col, T, Device::GPU>& hh_panel,
+      matrix::Panel<Coord::Col, const T, Device::GPU>& hh_panel,
       matrix::ReadOnlyTileSender<T, Device::GPU> taus,
       matrix::ReadWriteTileSender<T, Device::GPU> tile_t,
       matrix::Panel<Coord::Col, T, Device::GPU>& workspaces) {

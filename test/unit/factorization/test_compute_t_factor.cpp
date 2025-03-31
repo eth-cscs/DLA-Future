@@ -296,9 +296,9 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
   const LocalTileIndex t_idx(0, 0);
 
   {
-    MatrixMirror<T, D, Device::CPU> v(v_h);
+    MatrixMirror<const T, D, Device::CPU> v(v_h);
     MatrixMirror<T, D, Device::CPU> t_output(t_output_h);
-    MatrixMirror<T, D, Device::CPU> mat_taus(mat_taus_h);
+    MatrixMirror<const T, D, Device::CPU> mat_taus(mat_taus_h);
 
     const matrix::SubPanelView panel_view(dist_v, v_start, k);
     Panel<Coord::Col, T, D> panel_v(dist_v);
@@ -389,9 +389,9 @@ void testComputeTFactor(comm::CommunicatorGrid& grid, const SizeType m, const Si
   const LocalTileIndex t_idx(0, 0);
 
   {
-    MatrixMirror<T, D, Device::CPU> v(v_h);
+    MatrixMirror<const T, D, Device::CPU> v(v_h);
     MatrixMirror<T, D, Device::CPU> t_output(t_output_h);
-    MatrixMirror<T, D, Device::CPU> mat_taus(mat_taus_h);
+    MatrixMirror<const T, D, Device::CPU> mat_taus(mat_taus_h);
     const matrix::SubPanelView panel_view(dist_v, v_start, k);
     Panel<Coord::Col, T, D> panel_v(dist_v);
     panel_v.setRangeStart(v_start);

@@ -196,7 +196,7 @@ void splitReflectorsAndBand(MatrixLocal<const T>& mat_v, MatrixLocal<T>& mat_b,
 }
 
 template <class T>
-auto allGatherTaus(const SizeType k, Matrix<T, Device::CPU>& mat_local_taus) {
+auto allGatherTaus(const SizeType k, Matrix<const T, Device::CPU>& mat_local_taus) {
   auto local_taus_tiles = sync_wait(when_all_vector(selectRead(
       mat_local_taus, common::iterate_range2d(LocalTileSize(mat_local_taus.nrTiles().rows(), 1)))));
 
@@ -212,7 +212,7 @@ auto allGatherTaus(const SizeType k, Matrix<T, Device::CPU>& mat_local_taus) {
 }
 
 template <class T>
-auto allGatherTaus(const SizeType k, Matrix<T, Device::CPU>& mat_taus,
+auto allGatherTaus(const SizeType k, Matrix<const T, Device::CPU>& mat_taus,
                    comm::CommunicatorGrid& comm_grid) {
   const auto local_num_tiles = mat_taus.distribution().localNrTiles().rows();
   const auto num_tiles = mat_taus.distribution().nrTiles().rows();
@@ -340,7 +340,7 @@ void testReductionToBandLocal(const LocalElementSize size, const TileElementSize
     return eigensolver::internal::reduction_to_band<B, D, T>(mat_a.get(), band_size);
   }();
 
-  MatrixMirror<T, Device::CPU, D> mat_local_taus_h(mat_local_taus);
+  MatrixMirror<const T, Device::CPU, D> mat_local_taus_h(mat_local_taus);
 
   ASSERT_EQ(mat_local_taus.blockSize().rows(), block_size.rows());
 
@@ -429,7 +429,7 @@ void testReductionToBand(comm::CommunicatorGrid& grid, const LocalElementSize si
     return eigensolver::internal::reduction_to_band<B>(grid, matrix_a.get(), band_size);
   }();
 
-  MatrixMirror<T, Device::CPU, D> mat_local_taus_h(mat_local_taus);
+  MatrixMirror<const T, Device::CPU, D> mat_local_taus_h(mat_local_taus);
 
   ASSERT_EQ(mat_local_taus.blockSize().rows(), block_size.rows());
 

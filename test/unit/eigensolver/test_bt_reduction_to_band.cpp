@@ -184,7 +184,7 @@ void testBackTransformationReductionToBand(SizeType m, SizeType n, SizeType mb, 
   auto mat_taus_h = setUpTest(mb, b, c_loc, v_loc);
 
   {
-    MatrixMirror<T, D, Device::CPU> mat_taus(mat_taus_h);
+    MatrixMirror<const T, D, Device::CPU> mat_taus(mat_taus_h);
     MatrixMirror<T, D, Device::CPU> mat_c(mat_c_h);
     MatrixMirror<const T, D, Device::CPU> mat_v(mat_v_h);
     matrix::internal::MatrixRef mat_c_ref(mat_c.get());
@@ -224,7 +224,7 @@ void testBackTransformationReductionToBand(comm::CommunicatorGrid& grid, SizeTyp
   auto mat_taus_h = setUpTest(mb, b, c_loc, v_loc, std::optional(std::ref(grid)), src_rank_index);
 
   {
-    MatrixMirror<T, D, Device::CPU> mat_taus(mat_taus_h);
+    MatrixMirror<const T, D, Device::CPU> mat_taus(mat_taus_h);
     MatrixMirror<T, D, Device::CPU> mat_c(mat_c_h);
     MatrixMirror<const T, D, Device::CPU> mat_v(mat_v_h);
     matrix::internal::MatrixRef mat_c_ref(mat_c.get());

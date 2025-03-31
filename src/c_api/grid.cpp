@@ -43,6 +43,10 @@ void dlaf_free_grid(int ctxt) noexcept {
   dlaf_grids.erase(ctxt);
 }
 
+void dlaf_free_all_grids() noexcept {
+  dlaf_grids.clear();
+}
+
 char grid_ordering(MPI_Comm comm, int nprow, int npcol, int myprow, int mypcol) noexcept {
   int rank;
   MPI_Comm_rank(comm, &rank);

@@ -40,31 +40,31 @@ spack:
         - 'netmod=tcp'
     llvm-amdgpu:
       externals:
-      - spec: llvm-amdgpu@6.3.0 ~rocm-device-libs
-        prefix: /opt/rocm-6.3.0/llvm
+      - spec: llvm-amdgpu@6.3.4 ~rocm-device-libs
+        prefix: /opt/rocm-6.3.4/llvm
       buildable: false
     rocm-device-libs:
       externals:
-      - spec: rocm-device-libs@6.3.0
-        prefix: /opt/rocm-6.3.0
+      - spec: rocm-device-libs@6.3.4
+        prefix: /opt/rocm-6.3.4
       buildable: false
     hip:
       externals:
-      - spec: hip@6.3.0
-        prefix: /opt/rocm-6.3.0
+      - spec: hip@6.3.4
+        prefix: /opt/rocm-6.3.4
       buildable: false
     rocblas:
       externals:
-      - spec: rocblas@6.3.0
-        prefix: /opt/rocm-6.3.0
+      - spec: rocblas@6.3.4
+        prefix: /opt/rocm-6.3.4
       buildable: false
     rocsolver:
       externals:
-      - spec: rocsolver@6.3.0
-        prefix: /opt/rocm-6.3.0
+      - spec: rocsolver@6.3.4
+        prefix: /opt/rocm-6.3.4
       buildable: false
     hsa-rocr-dev:
       externals:
-      - spec: hsa-rocr-dev@6.3.0
-        prefix: /opt/rocm-6.3.0
+      - spec: hsa-rocr-dev@6.3.4
+        prefix: /opt/rocm-6.3.4
       buildable: false

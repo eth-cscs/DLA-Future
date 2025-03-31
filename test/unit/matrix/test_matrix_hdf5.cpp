@@ -53,8 +53,13 @@ protected:
   }
 
   ~MatrixHDF5Test() override {
-    if (exists(filepath) && isMasterRank())
+    // Note:
+    // Ensures that all tests have finished on all ranks, before cleaning up.
+    DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
+
+    if (exists(filepath) && isMasterRank()) {
       std::filesystem::remove(filepath);
+    }
   }
 
   bool isMasterRank() const {

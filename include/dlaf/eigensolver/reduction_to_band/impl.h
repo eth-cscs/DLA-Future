@@ -980,11 +980,9 @@ protected:
     using pika::execution::thread_priority;
     using pika::execution::thread_stacksize;
 
-    ex::start_detached(
-        ex::when_all(std::move(src), std::move(dst)) |
-        dlaf::matrix::copy(
-            dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::CPU, Device::GPU>>(
-                thread_priority::high, thread_stacksize::nostack)));
+    ex::start_detached(ex::when_all(std::move(src), std::move(dst)) |
+                       dlaf::matrix::copy(Policy<CopyBackend_v<Device::CPU, Device::GPU>>(
+                           thread_priority::high, thread_stacksize::nostack)));
   }
 };
 #endif

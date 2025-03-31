@@ -56,3 +56,6 @@ packages:
   pika:
     require:
       - '@git.b70a76f6cd520bb99107fe7d1a41b4fbbba7e64a=main'
+  stdexec:
+    require:
+      - '@git.nvhpc-25.03.rc1=25.03'

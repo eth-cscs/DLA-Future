@@ -46,3 +46,6 @@ packages:
     # Force git as non-buildable to allow deprecated versions in environments
     # https://github.com/spack/spack/pull/30040
     buildable: false
+  pika:
+    require:
+      - '@git.b70a76f6cd520bb99107fe7d1a41b4fbbba7e64a=main'

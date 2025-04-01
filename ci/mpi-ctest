@@ -36,10 +36,10 @@ fi
 # Run the tests, only output on the first rank
 if [[ $SLURM_PROCID == "0" ]]; then
     TZ=CET date +"Run started at: %H:%M:%S %z"
-    ctest --repeat-until-fail 50 -R test_band_to_tridiag --output-log "$CTEST_OUTPUT" -V $@ | grep -v "PU.*Core.*Socket.*pool" | grep -v "MPI rank: 0" | grep -E -v "\*{70}"
+    ctest --output-log "$CTEST_OUTPUT" -V $@ | grep -v "PU.*Core.*Socket.*pool" | grep -v "MPI rank: 0" | grep -E -v "\*{70}"
     TZ=CET date +"Run finished at: %H:%M:%S %z"
 else
-    ctest --repeat-until-fail 50 -R test_band_to_tridiag --output-log "$CTEST_OUTPUT" -V -Q $@
+    ctest --output-log "$CTEST_OUTPUT" -V -Q $@
 fi
 
 # Create coverage reports for code run

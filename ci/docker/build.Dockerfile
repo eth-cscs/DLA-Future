@@ -53,11 +53,11 @@ ENV SPACK_SHA=$SPACK_SHA
 RUN mkdir -p /opt/spack && \
     curl -Ls "https://api.github.com/repos/spack/spack/tarball/$SPACK_SHA" | tar --strip-components=1 -xz -C /opt/spack
 
-# Find compilers + Add gfortran to clang specs + Define which compiler we want to use
+# Find compilers + Define which compiler we want to use
 ARG COMPILER
-RUN spack compiler find && \
-    gawk -i inplace '$0 ~ "compiler:" {flag=0} $0 ~ "spec:.*clang" {flag=1} flag == 1 && $1 ~ "^f[c7]" && $2 ~ "null" {gsub("null","/usr/bin/gfortran",$0)} {print $0}' /root/.spack/linux/compilers.yaml && \
-    spack config add "packages:all:require:[\"%${COMPILER}\"]"
+RUN spack external find gcc llvm && \
+    spack config add "packages:cxx:require:'${COMPILER}'" && \
+    spack config add "packages:c:require:'${COMPILER}'"
 
 RUN spack external find \
     autoconf \

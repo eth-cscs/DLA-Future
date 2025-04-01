@@ -75,7 +75,7 @@ variables:
     COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
 
 .build_deps_common_mi:
-  extends: .build_deps_common:
+  extends: .build_deps_common
   variables:
     COMMON_SPACK_ENVIRONMENT: ci/docker/common-mi.yaml
 

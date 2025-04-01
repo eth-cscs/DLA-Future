@@ -11,7 +11,7 @@ include:
   - local: 'ci/common-ci.yml'
 
 rocm clang15 release deps:
-  extends: .build_deps_common-mi
+  extends: .build_deps_common_mi
   variables:
     BASE_IMAGE: $CSCS_REGISTRY_PATH/base-images/rocm_6.0.2-dev-ubuntu-22.04:v0.1
     EXTRA_APTGET: "clang-15 libomp-15-dev rocblas rocblas-dev rocsolver rocsolver-dev llvm-amdgpu rocm-device-libs"

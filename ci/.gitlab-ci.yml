@@ -26,5 +26,3 @@ include:
 #  - local: 'ci/cuda/gcc13_release_stdexec.yml'
   - local: 'ci/rocm/clang15_release.yml'
 #  - local: 'ci/rocm/clang15_release_stdexec.yml'
-
-  - local: 'ci/rocm/test.yml'

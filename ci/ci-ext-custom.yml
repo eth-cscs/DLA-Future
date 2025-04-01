@@ -15,3 +15,25 @@ include:
   extends: .container-runner-daint-gh200
   variables:
     SLURM_MPI_TYPE: cray_shasta
+
+# beverin not yet in the cscs config
+.dlaf-container-runner-beverin:
+  extends: .f7t-container-runner
+  variables:
+    FIRECREST_SYSTEM: beverin
+    F7T_URL: 'https://api.tds.cscs.ch/stp/firecrest/v2'
+    F7T_TOKEN_URL: "https://auth-tds.cscs.ch/auth/realms/firecrest-clients/protocol/openid-connect/token"
+    F7T_CLIENT_ID: $F7T_TDS_CLIENT_ID
+    F7T_CLIENT_SECRET: $F7T_TDS_CLIENT_SECRET
+    ARCH: 'x86_64'
+    USE_CE: 'YES'
+
+.dlaf-container-runner-beverin-mi300a:
+  extends: .dlaf-container-runner-beverin
+  variables:
+    SLURM_PARTITION: mi300
+
+.dlaf-container-runner-beverin-mi250x:
+  extends: .dlaf-container-runner-beverin
+  variables:
+    SLURM_PARTITION: mi200

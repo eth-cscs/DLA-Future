@@ -32,6 +32,11 @@ then
     export CUDA_VISIBLE_DEVICES=$(( SLURM_LOCALID % 4 ))
     echo "Rank $SLURM_PROCID: set CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES"
 fi
+if [[ $DLAF_CI_BIND_GPU == "ALPS-MI250x" ]]
+then
+    export ROCM_VISIBLE_DEVICES=$(( SLURM_LOCALID % 8 ))
+    echo "Rank $SLURM_PROCID: set ROCM_VISIBLE_DEVICES=$ROCM_VISIBLE_DEVICES"
+fi
 
 # Run the tests, only output on the first rank
 if [[ $SLURM_PROCID == "0" ]]; then

@@ -27,7 +27,7 @@ test_mi300a:
   extends: .dlaf-container-runner-beverin-mi300a
   variables:
     SLURM_CPUS_PER_TASK: 24
-    SLURM_NTASKS: 4
+    SLURM_NTASKS: 1
     SLURM_TIMELIMIT: '0:30:00'
     SLURM_UNBUFFEREDIO: 1
     SLURM_WAIT: 0
@@ -41,7 +41,7 @@ test_mi250x:
   extends: .dlaf-container-runner-beverin-mi250x
   variables:
     SLURM_CPUS_PER_TASK: 24
-    SLURM_NTASKS: 4
+    SLURM_NTASKS: 1
     SLURM_TIMELIMIT: '0:30:00'
     SLURM_UNBUFFEREDIO: 1
     SLURM_WAIT: 0

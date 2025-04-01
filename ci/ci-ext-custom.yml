@@ -10,30 +10,27 @@
 include:
   - remote: 'https://gitlab.com/cscs-ci/recipes/-/raw/master/templates/v2/.ci-ext.yml'
 
-# Need custom definition as remote adds SLURM_MPI_TYPE: pmi2
 .dlaf-container-runner-daint-gh200:
   extends: .container-runner-daint-gh200
   variables:
+    CRAY_CUDA_MPS: 1
+    # Need to reset as remote adds SLURM_MPI_TYPE: pmi2
     SLURM_MPI_TYPE: cray_shasta
 
-# beverin not yet in the cscs config
+# TDS needs different credentials
 .dlaf-container-runner-beverin:
-  extends: .f7t-container-runner
   variables:
-    FIRECREST_SYSTEM: beverin
-    F7T_URL: 'https://api.tds.cscs.ch/stp/firecrest/v2'
-    F7T_TOKEN_URL: "https://auth-tds.cscs.ch/auth/realms/firecrest-clients/protocol/openid-connect/token"
     F7T_CLIENT_ID: $F7T_TDS_CLIENT_ID
     F7T_CLIENT_SECRET: $F7T_TDS_CLIENT_SECRET
-    ARCH: 'x86_64'
-    USE_CE: 'YES'
 
-.dlaf-container-runner-beverin-mi300a:
-  extends: .dlaf-container-runner-beverin
-  variables:
-    SLURM_PARTITION: mi300
+.dlaf-container-runner-beverin-mi300:
+  extends:
+    - .container-runner-beverin-mi300
+    - .dlaf-container-runner-beverin
 
-.dlaf-container-runner-beverin-mi250x:
-  extends: .dlaf-container-runner-beverin
+.dlaf-container-runner-beverin-mi200:
+  extends:
+    - .container-runner-beverin-mi300
+    - .dlaf-container-runner-beverin
   variables:
-    SLURM_PARTITION: mi200
+    SLURM_CPU_BIND: 'quiet,mask_cpu:ff00000000000000ff000000000000,ff00000000000000ff00000000000000,ff00000000000000ff0000,ff00000000000000ff000000,ff00000000000000ff,ff00000000000000ff00,ff00000000000000ff00000000,ff00000000000000ff0000000000'

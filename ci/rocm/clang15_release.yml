@@ -11,9 +11,9 @@ include:
   - local: 'ci/common-ci.yml'
 
 rocm clang15 release deps:
-  extends: .build_deps_common
+  extends: .build_deps_common-mi
   variables:
-    BASE_IMAGE: docker.io/rocm/dev-ubuntu-22.04:6.0.2
+    BASE_IMAGE: $CSCS_REGISTRY_PATH/base-images/rocm-6.0.2-dev-ubuntu-22.04:v0.1
     EXTRA_APTGET: "clang-15 libomp-15-dev rocblas rocblas-dev rocsolver rocsolver-dev llvm-amdgpu rocm-device-libs"
     COMPILER: clang@15
     USE_ROCBLAS: "ON"
@@ -23,8 +23,22 @@ rocm clang15 release deps:
 rocm clang15 release build:
   extends:
     - .build_common
-  after_script: null
+    - .build_for_beverin_mi200
   needs:
     - rocm clang15 release deps
   variables:
     DLAF_IMAGE: $CSCS_REGISTRY_PATH/rocm-clang15-release/dlaf:$CI_COMMIT_SHA
+
+rocm clang15 release test:
+  extends: .run_common
+  variables:
+    DLAF_CI_BIND_GPU: "MI250X"
+    PIKA_MPI_ENABLE_POOL: 1
+    PIKA_MPI_COMPLETION_MODE: 30
+    MPICH_GPU_SUPPORT_ENABLED: 0
+  needs:
+    - rocm clang15 release build
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: rocm clang15 release build

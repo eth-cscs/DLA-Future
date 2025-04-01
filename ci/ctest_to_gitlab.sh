@@ -99,7 +99,7 @@ JOB_TEMPLATE="
 
 JOBS=""
 
-for rank_label in `ctest --print-labels | egrep -o "RANK_6"`; do
+for rank_label in `ctest --print-labels | egrep -o "RANK_[1-9][0-9]?"`; do
     for category_label in `ctest --print-labels | egrep -o "CATEGORY_[A-Z]+"`; do
         N=`echo "$rank_label" | sed "s/RANK_//"`
         C=$(( THREADS_PER_NODE / N ))

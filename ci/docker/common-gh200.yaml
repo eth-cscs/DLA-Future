@@ -53,3 +53,6 @@ packages:
     # Force git as non-buildable to allow deprecated versions in environments
     # https://github.com/spack/spack/pull/30040
     buildable: false
+  stdexec:
+    require:
+      - '@git.nvhpc-25.03.rc1=25.03'

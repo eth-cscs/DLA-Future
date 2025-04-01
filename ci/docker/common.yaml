@@ -48,7 +48,7 @@ packages:
     buildable: false
   pika:
     require:
-      - '@git.b70a76f6cd520bb99107fe7d1a41b4fbbba7e64a=main'
+      - '@git.08fd50484190e691a59a28761b1c359e430c389d=main'
   stdexec:
     require:
       - '@git.nvhpc-25.03.rc1=25.03'

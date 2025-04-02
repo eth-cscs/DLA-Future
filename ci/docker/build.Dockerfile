@@ -93,6 +93,11 @@ RUN if [ -d ~/site/repo ]; then \
       spack repo add --scope site ~/site/repo; \
     fi
 
+# Add languages as dependencies to cray-mpich to make sure it correctly finds
+# compilers. Does nothing for the upstream cray-mpich.
+RUN sed -i '/depends_on("patchelf/a \    depends_on("c")\n    depends_on("cxx")\n    depends_on("fortran")' \
+      $(spack location -p cray-mpich)/package.py
+
 # Set this to a spack.yaml file which contains a spec
 # e.g. --build-arg SPACK_ENVIRONMENT=ci/spack/my-env.yaml
 ARG SPACK_ENVIRONMENT

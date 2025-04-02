@@ -85,29 +85,6 @@ struct Helpers<Backend::MC, Device::CPU, T> {
                          });
   }
 
-  static void loop_gemv(const matrix::Tile<const T, Device::CPU>& tile_v,
-                        const matrix::Tile<const T, Device::CPU>& taus,
-                        const matrix::Tile<T, Device::CPU>& tile_t) noexcept {
-    const SizeType k = tile_t.size().cols();
-
-    DLAF_ASSERT(tile_v.size().cols() == k, tile_v.size().cols(), k);
-    DLAF_ASSERT(taus.size().rows() == k, taus.size().rows(), k);
-
-    common::internal::SingleThreadedBlasScope single;
-    for (SizeType j = 0; j < k; ++j) {
-      // T(0:j, j) = -tau . V(j:, 0:j)* . V(j:, j)
-      // [j x 1] = [(n-j) x j]* . [(n-j) x 1]
-      const TileElementIndex t_start{0, j};
-      const TileElementIndex va_start{0, 0};
-      const TileElementIndex vb_start{0, j};
-      const TileElementSize va_size{tile_v.size().rows(), j};
-      const T tau = tile_t({j, j});
-
-      blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, va_size.rows(), va_size.cols(), -tau,
-                 tile_v.ptr(va_start), tile_v.ld(), tile_v.ptr(vb_start), 1, 1, tile_t.ptr(t_start), 1);
-    }
-  }
-
   static matrix::ReadWriteTileSender<T, Device::CPU> step_gemv(
       matrix::Panel<Coord::Col, T, Device::CPU>& hh_panel,
       matrix::ReadOnlyTileSender<T, Device::CPU> taus,
@@ -184,22 +161,6 @@ struct Helpers<Backend::MC, Device::CPU, T> {
            });
   }
 
-  static void loop_trmv(const matrix::Tile<T, Device::CPU>& tile_t) {
-    common::internal::SingleThreadedBlasScope single;
-
-    const SizeType k = tile_t.size().cols();
-
-    // Update each column (in order) t = T . t
-    // remember that T is upper triangular, so it is possible to use TRMV
-    for (SizeType j = 0; j < k; ++j) {
-      const TileElementIndex t_start{0, j};
-      const TileElementSize t_size{j, 1};
-
-      blas::trmv(blas::Layout::ColMajor, blas::Uplo::Upper, blas::Op::NoTrans, blas::Diag::NonUnit,
-                 t_size.rows(), tile_t.ptr(), tile_t.ld(), tile_t.ptr(t_start), 1);
-    }
-  }
-
   static auto step_copy_diag_and_trmv(matrix::ReadOnlyTileSender<T, Device::CPU> taus,
                                       matrix::ReadWriteTileSender<T, Device::CPU> tile_t) noexcept {
     auto tausdiag_trmvloop = [](const matrix::Tile<const T, Device::CPU>& taus,
@@ -219,6 +180,46 @@ struct Helpers<Backend::MC, Device::CPU, T> {
            di::transform(di::Policy<Backend::MC>(pika::execution::thread_priority::high),
                          std::move(tausdiag_trmvloop));
   }
+
+private:
+  static void loop_gemv(const matrix::Tile<const T, Device::CPU>& tile_v,
+                        const matrix::Tile<const T, Device::CPU>& taus,
+                        const matrix::Tile<T, Device::CPU>& tile_t) noexcept {
+    const SizeType k = tile_t.size().cols();
+
+    DLAF_ASSERT(tile_v.size().cols() == k, tile_v.size().cols(), k);
+    DLAF_ASSERT(taus.size().rows() == k, taus.size().rows(), k);
+
+    common::internal::SingleThreadedBlasScope single;
+    for (SizeType j = 0; j < k; ++j) {
+      // T(0:j, j) = -tau . V(j:, 0:j)* . V(j:, j)
+      // [j x 1] = [(n-j) x j]* . [(n-j) x 1]
+      const TileElementIndex t_start{0, j};
+      const TileElementIndex va_start{0, 0};
+      const TileElementIndex vb_start{0, j};
+      const TileElementSize va_size{tile_v.size().rows(), j};
+      const T tau = tile_t({j, j});
+
+      blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, va_size.rows(), va_size.cols(), -tau,
+                 tile_v.ptr(va_start), tile_v.ld(), tile_v.ptr(vb_start), 1, 1, tile_t.ptr(t_start), 1);
+    }
+  }
+
+  static void loop_trmv(const matrix::Tile<T, Device::CPU>& tile_t) {
+    common::internal::SingleThreadedBlasScope single;
+
+    const SizeType k = tile_t.size().cols();
+
+    // Update each column (in order) t = T . t
+    // remember that T is upper triangular, so it is possible to use TRMV
+    for (SizeType j = 0; j < k; ++j) {
+      const TileElementIndex t_start{0, j};
+      const TileElementSize t_size{j, 1};
+
+      blas::trmv(blas::Layout::ColMajor, blas::Uplo::Upper, blas::Op::NoTrans, blas::Diag::NonUnit,
+                 t_size.rows(), tile_t.ptr(), tile_t.ld(), tile_t.ptr(t_start), 1);
+    }
+  }
 };
 
 #ifdef DLAF_WITH_GPU
@@ -233,21 +234,9 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
                            return std::move(tile_t);
                          });
   }
-  static void loop_gemv(cublasHandle_t handle, const matrix::Tile<const T, Device::GPU>& tile_v,
-                        const matrix::Tile<const T, Device::CPU>& taus,
-                        const matrix::Tile<T, Device::GPU>& tile_t) noexcept {
-    const SizeType m = tile_v.size().rows();
-    const SizeType k = tile_t.size().cols();
-    DLAF_ASSERT(tile_v.size().cols() == k, tile_v.size().cols(), k);
-    DLAF_ASSERT(taus.size().rows() == k, taus.size().rows(), k);
-    DLAF_ASSERT(taus.size().cols() == 1, taus.size().cols());
-
-    gpulapack::larft_gemv1_notau(handle, m, k, tile_v.ptr(), tile_v.ld(), tile_t.ptr(), tile_t.ld());
-  }
-
   static matrix::ReadWriteTileSender<T, Device::GPU> step_gemv(
-      matrix::Panel<Coord::Col, T, Device::GPU>& hh_panel,
-      matrix::ReadOnlyTileSender<T, Device::CPU> taus,
+      matrix::Panel<Coord::Col, const T, Device::GPU>& hh_panel,
+      matrix::ReadOnlyTileSender<T, Device::GPU> taus,
       matrix::ReadWriteTileSender<T, Device::GPU> tile_t,
       matrix::Panel<Coord::Col, T, Device::GPU>& workspaces) {
     namespace ex = pika::execution::experimental;
@@ -297,25 +286,24 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
               [k](cublasHandle_t handle, auto&& hh_tiles, auto&& taus,
                   matrix::Tile<T, Device::GPU>& tile_t_full) {
                 DLAF_ASSERT_MODERATE(k == taus.size().rows(), k, taus.size().rows());
+                DLAF_ASSERT(taus.size().cols() == 1, taus.size().cols());
 
                 matrix::Tile<T, Device::GPU> tile_t = tile_t_full.subTileReference({{0, 0}, {k, k}});
 
                 // Note:
-                // prepare the diagonal of taus in t and reset the rest
+                // set tile_t to zero (next loop_gemv cumulates results in it)
                 whip::stream_t stream;
                 DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
 
                 whip::memset_2d_async(tile_t.ptr(), sizeof(T) * to_sizet(tile_t.ld()), 0,
                                       sizeof(T) * to_sizet(k), to_sizet(k), stream);
-                gpulapack::lacpy(blas::Uplo::General, 1, k, taus.ptr(), 1, tile_t.ptr(), tile_t.ld() + 1,
-                                 stream);
 
                 // Note:
                 // - call one gemv per tile
                 // - being on the same stream, they are already serialised on GPU
                 for (std::size_t index = 0; index < hh_tiles.size(); ++index) {
                   const matrix::Tile<const T, Device::GPU>& tile_v = hh_tiles[index].get();
-                  Helpers::loop_gemv(handle, tile_v, taus, tile_t);
+                  Helpers::loop_gemv(handle, tile_v, tile_t);
                 }
 
                 return std::move(tile_t_full);
@@ -348,6 +336,38 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
     return tile_t;
   }
 
+  static auto step_copy_diag_and_trmv(matrix::ReadOnlyTileSender<T, Device::GPU> taus,
+                                      matrix::ReadWriteTileSender<T, Device::GPU> tile_t) noexcept {
+    // Update each column (in order) t = T . t
+    // remember that T is upper triangular, so it is possible to use TRMV
+    auto trmv_func = [](cublasHandle_t handle, const matrix::Tile<const T, Device::GPU>& taus,
+                        matrix::Tile<T, Device::GPU>& tile_t) {
+      whip::stream_t stream;
+      DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
+
+      const SizeType k = tile_t.size().cols();
+      gpulapack::larft_gemv1_fixtau(k, taus.ptr(), 1, tile_t.ptr(), tile_t.ld(), stream);
+
+      loop_trmv(handle, tile_t);
+    };
+
+    namespace ex = pika::execution::experimental;
+    namespace di = dlaf::internal;
+
+    return ex::when_all(std::move(taus), std::move(tile_t)) |
+           di::transform<di::TransformDispatchType::Blas>(
+               di::Policy<Backend::GPU>(pika::execution::thread_priority::high), std::move(trmv_func));
+  }
+
+private:
+  static void loop_gemv(cublasHandle_t handle, const matrix::Tile<const T, Device::GPU>& tile_v,
+                        const matrix::Tile<T, Device::GPU>& tile_t) noexcept {
+    const SizeType m = tile_v.size().rows();
+    const SizeType k = tile_t.size().cols();
+    DLAF_ASSERT(tile_v.size().cols() == k, tile_v.size().cols(), k);
+    gpulapack::larft_gemv1_notau(handle, m, k, tile_v.ptr(), tile_v.ld(), tile_t.ptr(), tile_t.ld());
+  }
+
   static void loop_trmv(cublasHandle_t handle, const matrix::Tile<T, Device::GPU>& tile_t) {
     const SizeType k = tile_t.size().cols();
 
@@ -363,37 +383,13 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
                                        1);
     }
   }
-
-  static auto step_copy_diag_and_trmv(matrix::ReadOnlyTileSender<T, Device::CPU> taus,
-                                      matrix::ReadWriteTileSender<T, Device::GPU> tile_t) noexcept {
-    // Update each column (in order) t = T . t
-    // remember that T is upper triangular, so it is possible to use TRMV
-    auto trmv_func = [](cublasHandle_t handle, const matrix::Tile<const T, Device::CPU>& taus,
-                        matrix::Tile<T, Device::GPU>& tile_t) {
-      whip::stream_t stream;
-      DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
-
-      const SizeType k = tile_t.size().cols();
-      gpulapack::lacpy(blas::Uplo::General, 1, k, taus.ptr(), 1, tile_t.ptr(), tile_t.ld() + 1, stream);
-      gpulapack::larft_gemv1_fixtau(k, tile_t.ptr(), tile_t.ld() + 1, tile_t.ptr(), tile_t.ld(), stream);
-
-      loop_trmv(handle, tile_t);
-    };
-
-    namespace ex = pika::execution::experimental;
-    namespace di = dlaf::internal;
-
-    return ex::when_all(std::move(taus), std::move(tile_t)) |
-           di::transform<di::TransformDispatchType::Blas>(
-               di::Policy<Backend::GPU>(pika::execution::thread_priority::high), std::move(trmv_func));
-  }
 };
 #endif
 }
 
 template <Backend backend, Device device, class T>
 void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& hh_panel,
-                                          matrix::ReadOnlyTileSender<T, Device::CPU> taus,
+                                          matrix::ReadOnlyTileSender<T, device> taus,
                                           matrix::ReadWriteTileSender<T, device> tile_t,
                                           matrix::Panel<Coord::Col, T, device>& workspaces) {
   namespace ex = pika::execution::experimental;
@@ -424,7 +420,7 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
 
 template <Backend backend, Device device, class T>
 void QR_Tfactor<backend, device, T>::call(
-    matrix::Panel<Coord::Col, T, device>& hh_panel, matrix::ReadOnlyTileSender<T, Device::CPU> taus,
+    matrix::Panel<Coord::Col, T, device>& hh_panel, matrix::ReadOnlyTileSender<T, device> taus,
     matrix::ReadWriteTileSender<T, device> tile_t, matrix::Panel<Coord::Col, T, device>& workspaces,
     comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_task_chain) {
   namespace ex = pika::execution::experimental;

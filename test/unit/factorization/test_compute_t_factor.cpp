@@ -288,7 +288,7 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
 
   auto v_local = dlaf::matrix::test::allGather<const T>(blas::Uplo::General, v_h);
 
-  auto [mat_taus, h_expected] = computeHAndTFactor(k, v_local, v_start);
+  auto [mat_taus_h, h_expected] = computeHAndTFactor(k, v_local, v_start);
 
   is_orthogonal(h_expected);
 
@@ -296,8 +296,10 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
   const LocalTileIndex t_idx(0, 0);
 
   {
-    MatrixMirror<T, D, Device::CPU> v(v_h);
+    MatrixMirror<const T, D, Device::CPU> v(v_h);
     MatrixMirror<T, D, Device::CPU> t_output(t_output_h);
+    MatrixMirror<const T, D, Device::CPU> mat_taus(mat_taus_h);
+
     const matrix::SubPanelView panel_view(dist_v, v_start, k);
     Panel<Coord::Col, T, D> panel_v(dist_v);
     panel_v.setRangeStart(v_start);
@@ -314,8 +316,8 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
                                               {nrefls_step, nrefls_step}});
     }();
 
-    computeTFactor<B>(panel_v, mat_taus.read(GlobalTileIndex(0, 0)), t_output.get().readwrite(t_idx),
-                      workspaces);
+    computeTFactor<B>(panel_v, mat_taus.get().read(GlobalTileIndex(0, 0)),
+                      t_output.get().readwrite(t_idx), workspaces);
   }
 
   // Note:
@@ -377,7 +379,7 @@ void testComputeTFactor(comm::CommunicatorGrid& grid, const SizeType m, const Si
   if (dist_v.rankIndex().col() != source_rank_index.col())
     return;
 
-  auto [mat_taus, h_expected] = computeHAndTFactor(k, v_local, v_start);
+  auto [mat_taus_h, h_expected] = computeHAndTFactor(k, v_local, v_start);
 
   is_orthogonal(h_expected);
 
@@ -387,8 +389,9 @@ void testComputeTFactor(comm::CommunicatorGrid& grid, const SizeType m, const Si
   const LocalTileIndex t_idx(0, 0);
 
   {
-    MatrixMirror<T, D, Device::CPU> v(v_h);
+    MatrixMirror<const T, D, Device::CPU> v(v_h);
     MatrixMirror<T, D, Device::CPU> t_output(t_output_h);
+    MatrixMirror<const T, D, Device::CPU> mat_taus(mat_taus_h);
     const matrix::SubPanelView panel_view(dist_v, v_start, k);
     Panel<Coord::Col, T, D> panel_v(dist_v);
     panel_v.setRangeStart(v_start);
@@ -405,8 +408,8 @@ void testComputeTFactor(comm::CommunicatorGrid& grid, const SizeType m, const Si
                                               {nrefls_step, nrefls_step}});
     }();
 
-    computeTFactor<B>(panel_v, mat_taus.read(GlobalTileIndex(0, 0)), t_output.get().readwrite(t_idx),
-                      workspaces, serial_comm);
+    computeTFactor<B>(panel_v, mat_taus.get().read(GlobalTileIndex(0, 0)),
+                      t_output.get().readwrite(t_idx), workspaces, serial_comm);
   }
 
   // Note:

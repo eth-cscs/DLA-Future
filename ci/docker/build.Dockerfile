@@ -90,7 +90,9 @@ RUN spack repo add --scope site /user_repo
 ### Workaround until CE provides full MPI substitution.
 # Add ~/site/repo if it exists in the base image
 RUN if [ -d ~/site/repo ]; then \
-      spack repo add --scope site ~/site/repo; \
+      # spack repo add --scope site ~/site/repo; \
+      git clone -b spack-compilers-as-nodes --single-branch https://github.com/eth-cscs/alps-cluster-config ~/custom-site; \
+      spack repo add --scope site ~/custom-site/site/repo; \
     fi
 
 # Add languages as dependencies to cray-mpich to make sure it correctly finds

@@ -57,7 +57,8 @@ RUN mkdir -p /opt/spack && \
 ARG COMPILER
 RUN spack external find gcc llvm && \
     spack config add "packages:cxx:require:'${COMPILER}'" && \
-    spack config add "packages:c:require:'${COMPILER}'"
+    spack config add "packages:c:require:'${COMPILER}'" && \
+    spack config add "packages:fortran:require:gcc"
 
 RUN spack external find \
     autoconf \

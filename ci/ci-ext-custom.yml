@@ -30,7 +30,7 @@ include:
 
 .dlaf-container-runner-beverin-mi200:
   extends:
-    - .container-runner-beverin-mi300
+    - .container-runner-beverin-mi200
     - .dlaf-container-runner-beverin
   variables:
     SLURM_CPU_BIND: 'quiet,mask_cpu:ff00000000000000ff000000000000,ff00000000000000ff00000000000000,ff00000000000000ff0000,ff00000000000000ff000000,ff00000000000000ff,ff00000000000000ff00,ff00000000000000ff00000000,ff00000000000000ff0000000000'

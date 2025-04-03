@@ -24,5 +24,5 @@ include:
 #  - local: 'ci/cuda/gcc13_debug.yml'
 #  - local: 'ci/cuda/gcc13_debug_scalapack.yml'
 #  - local: 'ci/cuda/gcc13_release_stdexec.yml'
-  - local: 'ci/rocm/clang15_release.yml'
+  - local: 'ci/rocm/gcc12_release.yml'
 #  - local: 'ci/rocm/clang15_release_stdexec.yml'

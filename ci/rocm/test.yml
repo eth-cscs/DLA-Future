@@ -1,0 +1,63 @@
+#
+# Distributed Linear Algebra with Future (DLAF)
+#
+# Copyright (c) ETH Zurich
+# All rights reserved.
+#
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+include:
+  - remote: 'https://gitlab.com/cscs-ci/recipes/-/raw/master/templates/v2/.ci-ext.yml'
+  - local: 'ci/ci-ext-custom.yml'
+
+image: docker.io/rocm/dev-ubuntu-22.04:6.0.2
+
+stages:
+  - test
+
+variables:
+  FF_TIMESTAMPS: true
+  SLURM_EXCLUSIVE: ''
+  SLURM_EXACT: ''
+  MPICH_MAX_THREAD_SAFETY: multiple
+
+test_mi200:
+  stage: test
+  extends: .dlaf-container-runner-beverin-mi200
+  variables:
+    SLURM_CPUS_PER_TASK: 24
+    SLURM_NTASKS: 1
+    SLURM_TIMELIMIT: '0:30:00'
+    SLURM_UNBUFFEREDIO: 1
+    SLURM_WAIT: 0
+    PULL_IMAGE: 'YES'
+    USE_MPI: 'YES'
+    DISABLE_AFTER_SCRIPT: 'YES'
+  script: rocm-smi
+test_mi200-2:
+  stage: test
+  extends: .dlaf-container-runner-beverin-mi200-2
+  variables:
+    SLURM_CPUS_PER_TASK: 24
+    SLURM_NTASKS: 1
+    SLURM_TIMELIMIT: '0:30:00'
+    SLURM_UNBUFFEREDIO: 1
+    SLURM_WAIT: 0
+    PULL_IMAGE: 'YES'
+    USE_MPI: 'YES'
+    DISABLE_AFTER_SCRIPT: 'YES'
+  script: rocm-smi
+test_mi200-3:
+  stage: test
+  extends: .dlaf-container-runner-beverin-mi200-3
+  variables:
+    SLURM_CPUS_PER_TASK: 24
+    SLURM_NTASKS: 1
+    SLURM_TIMELIMIT: '0:30:00'
+    SLURM_UNBUFFEREDIO: 1
+    SLURM_WAIT: 0
+    PULL_IMAGE: 'YES'
+    USE_MPI: 'YES'
+    DISABLE_AFTER_SCRIPT: 'YES'
+  script: rocm-smi

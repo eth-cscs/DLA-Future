@@ -44,7 +44,8 @@ variables:
     reports:
       dotenv: build.env
   variables:
-    SPACK_SHA: develop-2025-02-09
+    # https://github.com/msimberg/spack/tree/mkl-clang-llvm
+    SPACK_SHA: 7dba07f6bb7e4076ba0148747e996566d7620f94
     SPACK_DLAF_REPO: ./spack
     DOCKER_BUILD_ARGS: '[
         "BASE_IMAGE",

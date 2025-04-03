@@ -15,8 +15,7 @@ rocm clang15 release deps:
   variables:
     BASE_IMAGE: docker.io/rocm/dev-ubuntu-22.04:6.0.2
     EXTRA_APTGET: "clang-15 libomp-15-dev rocblas rocblas-dev rocsolver rocsolver-dev llvm-amdgpu rocm-device-libs"
-    COMPILER: clang@15
-    USE_ROCBLAS: "ON"
+    COMPILER: llvm@15
     SPACK_ENVIRONMENT: ci/docker/release-rocm602.yaml
     DEPS_IMAGE: $CSCS_REGISTRY_PATH/rocm-clang15-release/deps
 

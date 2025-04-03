@@ -26,34 +26,9 @@ test_mi200:
   stage: test
   extends: .dlaf-container-runner-beverin-mi200
   variables:
-    SLURM_CPUS_PER_TASK: 24
     SLURM_NTASKS: 1
-    SLURM_TIMELIMIT: '0:30:00'
-    SLURM_UNBUFFEREDIO: 1
-    SLURM_WAIT: 0
-    PULL_IMAGE: 'YES'
-    USE_MPI: 'YES'
-    DISABLE_AFTER_SCRIPT: 'YES'
-  script: rocm-smi
-test_mi200-2:
-  stage: test
-  extends: .dlaf-container-runner-beverin-mi200-2
-  variables:
-    SLURM_CPUS_PER_TASK: 24
-    SLURM_NTASKS: 1
-    SLURM_TIMELIMIT: '0:30:00'
-    SLURM_UNBUFFEREDIO: 1
-    SLURM_WAIT: 0
-    PULL_IMAGE: 'YES'
-    USE_MPI: 'YES'
-    DISABLE_AFTER_SCRIPT: 'YES'
-  script: rocm-smi
-test_mi200-3:
-  stage: test
-  extends: .dlaf-container-runner-beverin-mi200-3
-  variables:
-    SLURM_CPUS_PER_TASK: 24
-    SLURM_NTASKS: 1
+    SLURM_NNODES: 1
+    SLURM_CPU_BIND: 'quiet,mask_cpu:ff00000000000000ff000000000000,ff00000000000000ff00000000000000,ff00000000000000ff0000,ff00000000000000ff000000,ff00000000000000ff,ff00000000000000ff00,ff00000000000000ff00000000,ff00000000000000ff0000000000'
     SLURM_TIMELIMIT: '0:30:00'
     SLURM_UNBUFFEREDIO: 1
     SLURM_WAIT: 0

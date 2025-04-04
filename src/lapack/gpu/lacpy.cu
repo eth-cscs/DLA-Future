@@ -198,15 +198,8 @@ void lacpy(const blas::Uplo uplo, const SizeType m, const SizeType n, const T* a
 
   if (uplo == blas::Uplo::General) {
     whip::memcpy_kind kind = get_lacpy_memcpy_kind(a, b);
-    try {
     whip::memcpy_2d_async(b, to_sizet(ldb) * sizeof(T), a, to_sizet(lda) * sizeof(T),
                           to_sizet(m) * sizeof(T), to_sizet(n), kind, stream);
-    }
-    catch(...) {
-      std::cout << b << " " << ldb << " " << a << " " << lda << " " << m << " " << n << std::endl;
-      std::cout << kind << std::endl;
-      throw;
-    }
   }
   else {
     const unsigned um = to_uint(m);

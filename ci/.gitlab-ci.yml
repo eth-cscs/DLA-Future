@@ -8,6 +8,10 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 include:
+
+  # This tests is needed to quickly check that TDS credentials are valid.
+  - local: 'ci/rocm/test.yml'
+
 #  - local: 'ci/cpu/asan_ubsan_lsan.yml'
 #  - local: 'ci/cpu/clang15_release_cxx20.yml'
 #  - local: 'ci/cpu/clang15_release_stdexec.yml'
@@ -24,6 +28,5 @@ include:
 #  - local: 'ci/cuda/gcc13_debug.yml'
 #  - local: 'ci/cuda/gcc13_debug_scalapack.yml'
 #  - local: 'ci/cuda/gcc13_release_stdexec.yml'
-#  - local: 'ci/rocm/gcc12_release.yml'
+  - local: 'ci/rocm/gcc12_release.yml'
 #  - local: 'ci/rocm/clang15_release_stdexec.yml'
- - local: 'ci/rocm/test.yml'

@@ -8,27 +8,18 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 include:
-  - remote: 'https://gitlab.com/cscs-ci/recipes/-/raw/master/templates/v2/.ci-ext.yml'
-  - local: 'ci/ci-ext-custom.yml'
-
-image: docker.io/rocm/dev-ubuntu-22.04:6.0.2
-
-stages:
-  - test
-
-variables:
-  FF_TIMESTAMPS: true
-  SLURM_EXCLUSIVE: ''
-  SLURM_EXACT: ''
-  MPICH_MAX_THREAD_SAFETY: multiple
+  - local: 'ci/common-ci.yml'
 
 test_mi200:
+  image: docker.io/rocm/dev-ubuntu-22.04:6.0.2
   stage: test
   extends: .dlaf-container-runner-beverin-mi200
   variables:
+    FF_TIMESTAMPS: true
+    SLURM_EXCLUSIVE: ''
+    SLURM_EXACT: ''
+    MPICH_MAX_THREAD_SAFETY: multiple
     SLURM_NTASKS: 1
-    SLURM_NNODES: 1
-    SLURM_CPU_BIND: 'quiet,mask_cpu:ff00000000000000ff000000000000,ff00000000000000ff00000000000000,ff00000000000000ff0000,ff00000000000000ff000000,ff00000000000000ff,ff00000000000000ff00,ff00000000000000ff00000000,ff00000000000000ff0000000000'
     SLURM_TIMELIMIT: '0:30:00'
     SLURM_UNBUFFEREDIO: 1
     SLURM_WAIT: 0

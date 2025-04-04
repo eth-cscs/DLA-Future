@@ -34,7 +34,27 @@ then
 fi
 if [[ $DLAF_CI_BIND_GPU == "ALPS-MI250x" ]]
 then
-    export ROCM_VISIBLE_DEVICES=$(( SLURM_LOCALID % 8 ))
+    case $SLURM_LOCALID in
+      0)
+        export ROCM_VISIBLE_DEVICES=4;;
+      1)
+        export ROCM_VISIBLE_DEVICES=5;;
+      2)
+        export ROCM_VISIBLE_DEVICES=2;;
+      3)
+        export ROCM_VISIBLE_DEVICES=3;;
+      4)
+        export ROCM_VISIBLE_DEVICES=6;;
+      5)
+        export ROCM_VISIBLE_DEVICES=7;;
+      6)
+        export ROCM_VISIBLE_DEVICES=0;;
+      7)
+        export ROCM_VISIBLE_DEVICES=1;;
+      *)
+        echo "Too many local Ranks!" && exit 1;;
+    esac
+
     echo "Rank $SLURM_PROCID: set ROCM_VISIBLE_DEVICES=$ROCM_VISIBLE_DEVICES"
 fi
 

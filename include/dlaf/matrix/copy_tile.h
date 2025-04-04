@@ -86,8 +86,14 @@ struct CopyTile<T, Device::CPU, Device::GPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
+    try {
     whip::memcpy_2d(destination.ptr(), ld_destination * sizeof(T), source.ptr(), ld_source * sizeof(T),
                     m * sizeof(T), n, whip::memcpy_host_to_device);
+    }
+    catch(...) {
+      std::cout << destination.ptr() << " " << ld_destination << " " << source.ptr() << " " << ld_source << " " << m << " " << n << std::endl;
+      throw;
+    }
   }
 
   static void call(const matrix::Tile<const T, Device::CPU>& source,
@@ -97,8 +103,14 @@ struct CopyTile<T, Device::CPU, Device::GPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
+    try {
     whip::memcpy_2d_async(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
                           ld_source * sizeof(T), m * sizeof(T), n, whip::memcpy_host_to_device, stream);
+    }
+    catch(...) {
+      std::cout << destination.ptr() << " " << ld_destination << " " << source.ptr() << " " << ld_source << " " << m << " " << n << std::endl;
+      throw;
+    }
   }
 };
 
@@ -111,8 +123,14 @@ struct CopyTile<T, Device::GPU, Device::CPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
+    try {
     whip::memcpy_2d(destination.ptr(), ld_destination * sizeof(T), source.ptr(), ld_source * sizeof(T),
                     m * sizeof(T), n, whip::memcpy_device_to_host);
+    }
+    catch(...) {
+      std::cout << destination.ptr() << " " << ld_destination << " " << source.ptr() << " " << ld_source << " " << m << " " << n << std::endl;
+      throw;
+    }
   }
 
   static void call(const matrix::Tile<const T, Device::GPU>& source,
@@ -122,8 +140,14 @@ struct CopyTile<T, Device::GPU, Device::CPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
+    try {
     whip::memcpy_2d_async(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
                           ld_source * sizeof(T), m * sizeof(T), n, whip::memcpy_device_to_host, stream);
+    }
+    catch(...) {
+      std::cout << destination.ptr() << " " << ld_destination << " " << source.ptr() << " " << ld_source << " " << m << " " << n << std::endl;
+      throw;
+    }
   }
 };
 

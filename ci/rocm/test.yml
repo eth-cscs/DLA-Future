@@ -12,7 +12,7 @@ include:
 
 test_mi200:
   image: docker.io/rocm/dev-ubuntu-22.04:6.0.2
-  stage: test
+  stage: build_deps
   extends: .dlaf-container-runner-beverin-mi200
   variables:
     FF_TIMESTAMPS: true

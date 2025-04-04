@@ -32,7 +32,7 @@ rocm gcc12 release build:
 rocm gcc12 release test:
   extends: .run_common
   variables:
-    DLAF_CI_BIND_GPU: "MI250X"
+    DLAF_CI_BIND_GPU: "ALPS-MI250X"
     PIKA_MPI_ENABLE_POOL: 1
     PIKA_MPI_COMPLETION_MODE: 30
     MPICH_GPU_SUPPORT_ENABLED: 0

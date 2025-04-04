@@ -9,7 +9,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-# Propagate error code when ctest is piped into grep. 
+# Propagate error code when ctest is piped into grep.
 set -o pipefail
 
 if [[ "$ENABLE_COVERAGE" == "YES" ]]; then

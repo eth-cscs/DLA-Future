@@ -9,15 +9,15 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-# Propagate error code when ctest is piped into grep.
-set -o pipefail
-
 if [[ "$ENABLE_COVERAGE" == "YES" ]]; then
     SHARED_REPORTS="$CI_PROJECT_DIR/codecov-reports"
     REPORT_NAME=`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1`
 
     mkdir -p "$SHARED_REPORTS"
 fi;
+
+# Propagate error code when ctest is piped into grep.
+set -o pipefail
 
 CTEST_OUTPUT="$CI_PROJECT_DIR/output/ctest.$SLURM_PROCID.txt"
 

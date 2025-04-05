@@ -33,7 +33,7 @@ Make sure to use the same version.
 ## Build and push
 
 ```
-export TAG="v0.1"
+export TAG="v0.2"
 CSCS_REGISTRY="jfrog.svc.cscs.ch/docker-ci-ext/4700071344751697"
 podman login jfrog.svc.cscs.ch
 

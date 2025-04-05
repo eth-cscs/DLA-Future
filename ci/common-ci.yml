@@ -132,7 +132,7 @@ variables:
 
 .build_for_eiger:
   variables:
-    RUNNER: ".container-runner-eiger"
+    RUNNER: ".dlaf-container-runner-eiger"
     THREADS_MAX_PER_TASK: 32
     THREADS_PER_NODE: 256
 

@@ -22,7 +22,7 @@ Modify `packages.yaml`:
 -    externals:
 -    - spec: libfabric@1.15.2.0
 -      prefix: /opt/cray/libfabric/1.15.2.0/
-+    require: "@1.15.2.0"
++    require: "@1.15.2"
    slurm:
      buildable: false
      externals:

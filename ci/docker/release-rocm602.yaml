@@ -10,7 +10,7 @@
 
 spack:
   include:
-  - /spack_environment/common.yaml
+  - /spack_environment/common-mi.yaml
 
   view: false
   concretizer:
@@ -18,7 +18,7 @@ spack:
       true
 
   specs:
-  - dla-future@master +rocm amdgpu_target=gfx90a:xnack- +mpi_gpu_aware +miniapps +ci-test
+  - dla-future@master +rocm amdgpu_target=gfx90a:xnack- +miniapps +ci-test
 
   packages:
     all:
@@ -30,11 +30,9 @@ spack:
       require:: openblas
     lapack:
       require:: openblas
-    mpich:
+    cray-mpich:
       require:
         - '~rocm'
-        - 'device=ch3'
-        - 'netmod=tcp'
     llvm-amdgpu:
       externals:
       - spec: llvm-amdgpu@6.0.2 ~rocm-device-libs

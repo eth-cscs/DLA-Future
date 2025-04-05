@@ -81,6 +81,9 @@ template <typename T>
 struct CopyTile<T, Device::CPU, Device::GPU> {
   static void call(const matrix::Tile<const T, Device::CPU>& source,
                    const matrix::Tile<T, Device::GPU>& destination) {
+    if (source.size().isEmpty())
+      return;
+
     const std::size_t m = to_sizet(source.size().rows());
     const std::size_t n = to_sizet(source.size().cols());
     const std::size_t ld_source = to_sizet(source.ld());
@@ -92,6 +95,9 @@ struct CopyTile<T, Device::CPU, Device::GPU> {
 
   static void call(const matrix::Tile<const T, Device::CPU>& source,
                    const matrix::Tile<T, Device::GPU>& destination, whip::stream_t stream) {
+    if (source.size().isEmpty())
+      return;
+
     const std::size_t m = to_sizet(source.size().rows());
     const std::size_t n = to_sizet(source.size().cols());
     const std::size_t ld_source = to_sizet(source.ld());
@@ -106,6 +112,9 @@ template <typename T>
 struct CopyTile<T, Device::GPU, Device::CPU> {
   static void call(const matrix::Tile<const T, Device::GPU>& source,
                    const matrix::Tile<T, Device::CPU>& destination) {
+    if (source.size().isEmpty())
+      return;
+
     const std::size_t m = to_sizet(source.size().rows());
     const std::size_t n = to_sizet(source.size().cols());
     const std::size_t ld_source = to_sizet(source.ld());
@@ -117,6 +126,9 @@ struct CopyTile<T, Device::GPU, Device::CPU> {
 
   static void call(const matrix::Tile<const T, Device::GPU>& source,
                    const matrix::Tile<T, Device::CPU>& destination, whip::stream_t stream) {
+    if (source.size().isEmpty())
+      return;
+
     const std::size_t m = to_sizet(source.size().rows());
     const std::size_t n = to_sizet(source.size().cols());
     const std::size_t ld_source = to_sizet(source.ld());
@@ -131,6 +143,9 @@ template <typename T>
 struct CopyTile<T, Device::GPU, Device::GPU> {
   static void call(const matrix::Tile<const T, Device::GPU>& source,
                    const matrix::Tile<T, Device::GPU>& destination) {
+    if (source.size().isEmpty())
+      return;
+
     const std::size_t m = to_sizet(source.size().rows());
     const std::size_t n = to_sizet(source.size().cols());
     const std::size_t ld_source = to_sizet(source.ld());
@@ -142,6 +157,9 @@ struct CopyTile<T, Device::GPU, Device::GPU> {
 
   static void call(const matrix::Tile<const T, Device::GPU>& source,
                    const matrix::Tile<T, Device::GPU>& destination, whip::stream_t stream) {
+    if (source.size().isEmpty())
+      return;
+
     const std::size_t m = to_sizet(source.size().rows());
     const std::size_t n = to_sizet(source.size().cols());
     const std::size_t ld_source = to_sizet(source.ld());

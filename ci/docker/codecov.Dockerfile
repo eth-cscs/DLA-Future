@@ -47,9 +47,6 @@ RUN cd /usr/local/bin && \
 
 # Make it easy to call our binaries.
 ENV PATH="${BIN}:$PATH"
-ENV NVIDIA_VISIBLE_DEVICES all
-ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
-ENV NVIDIA_REQUIRE_CUDA "cuda>=10.2"
 
 # Used in our ctest wrapper to upload reports
 ENV ENABLE_COVERAGE="YES"

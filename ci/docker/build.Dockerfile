@@ -91,7 +91,7 @@ RUN spack repo add --scope site /user_repo
 # Add ~/site/repo if it exists in the base image
 RUN if [ -d ~/site/repo ]; then \
       # spack repo add --scope site ~/site/repo; \
-      git clone -b spack-compilers-as-nodes --single-branch https://github.com/eth-cscs/alps-cluster-config ~/custom-site; \
+      git clone -b dlaf-pika-0.33.0-ci --single-branch https://github.com/eth-cscs/alps-cluster-config ~/custom-site; \
       spack repo add --scope site ~/custom-site/site/repo; \
     fi
 

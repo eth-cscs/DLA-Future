@@ -1,5 +1,17 @@
 # Changelog
 
+## DLA-Future 0.9.0
+
+### Changes
+
+- Automatically free all DLA-Future grids when finalizing the C API. (#1308) 
+- Tau factors are stored on GPU memory. (#1304) 
+
+# Bug fixes
+
+- Avoid potential stack overflows by transferring work to a new task on the default thread pool
+  before launching GPU work. (#1292)
+
 ## DLA-Future 0.8.0
 
 ### Changes

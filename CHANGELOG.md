@@ -4,8 +4,8 @@
 
 ### Changes
 
-- Automatically free all DLA-Future grids when finalizing the C API. (#1308) 
-- Tau factors are stored on GPU memory. (#1304) 
+- Automatically free all DLA-Future grids when finalizing the C API. (#1308)
+- Tau factors are stored on GPU memory. (#1304)
 
 # Bug fixes
 

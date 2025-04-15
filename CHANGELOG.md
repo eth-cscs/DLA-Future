@@ -9,8 +9,7 @@
 
 # Bug fixes
 
-- Avoid potential stack overflows by transferring work to a new task on the default thread pool
-  before launching GPU work. (#1292)
+- Avoid potential stack overflows by transferring work to a new task on the default thread pool before launching GPU work. (#1292)
 
 ## DLA-Future 0.8.0
 

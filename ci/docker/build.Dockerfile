@@ -91,14 +91,9 @@ RUN spack repo add --scope site /user_repo
 # Add ~/site/repo if it exists in the base image
 RUN if [ -d ~/site/repo ]; then \
       # spack repo add --scope site ~/site/repo; \
-      git clone -b dlaf-pika-0.33.0-ci --single-branch https://github.com/eth-cscs/alps-cluster-config ~/custom-site; \
+      git clone -b dlaf-pika-0.33.0-ci --single-branch https://github.com/eth-cscs/alps-cluster-config ~/custom-site && \
       spack repo add --scope site ~/custom-site/site/repo; \
     fi
-
-# Add languages as dependencies to cray-mpich to make sure it correctly finds
-# compilers. Does nothing for the upstream cray-mpich.
-RUN sed -i '/depends_on("patchelf/a \    depends_on("c")\n    depends_on("cxx")\n    depends_on("fortran")' \
-      $(spack location -p cray-mpich)/package.py
 
 # Set this to a spack.yaml file which contains a spec
 # e.g. --build-arg SPACK_ENVIRONMENT=ci/spack/my-env.yaml

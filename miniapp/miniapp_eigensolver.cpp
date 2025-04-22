@@ -232,8 +232,7 @@ struct EigensolverMiniapp {
                     << "threads, " << pika::get_os_thread_count() << ", "
                     << "backend, " << backend << ", "
                     << "first eigenvalue index, " << 0l << ", "
-                    << "last eigenvalue index, " << ", " << opts.eval_idx_end << ", " << opts.info
-                    << std::endl;
+                    << "last eigenvalue index, " << opts.eval_idx_end << ", " << opts.info << std::endl;
         }
       }
       // (optional) run test

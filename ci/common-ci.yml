@@ -74,10 +74,10 @@ variables:
   variables:
     COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
 
-.build_deps_common_mi:
+.build_deps_common_amdgpu:
   extends: .build_deps_common
   variables:
-    COMMON_SPACK_ENVIRONMENT: ci/docker/common-mi.yaml
+    COMMON_SPACK_ENVIRONMENT: ci/docker/common-amdgpu.yaml
 
 .build_deps_common_gh200:
   timeout: 6 hours

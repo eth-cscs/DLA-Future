@@ -10,7 +10,7 @@
 
 spack:
   include:
-  - /spack_environment/common-mi.yaml
+  - /spack_environment/common-amdgpu.yaml
 
   view: false
   concretizer:

@@ -111,7 +111,6 @@ ARG CXXSTD=17
 RUN spack -e ci config add "packages:dla-future:variants:cxxstd=${CXXSTD}"
 # 3. Concretize environment
 RUN spack -e ci concretize
-RUN spack -e ci spec -lI --cover edges
 # 4. Install only the dependencies of this (top level is our package)
 ARG NUM_PROCS
 RUN spack -e ci install --jobs ${NUM_PROCS} --fail-fast --only=dependencies

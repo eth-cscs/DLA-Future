@@ -38,10 +38,6 @@ packages:
   openblas:
     variants:
       - 'threads=openmp'
-  # openssl:
-  #   # without version spack concretizes openssl@3.3.1 that doesn't build due to deprecation
-  #   require:
-  #     - '@3.3.2'
   libfabric:
     # Fix version to be compatible with version on todi
     require:

@@ -20,13 +20,13 @@ Distribution::Distribution() noexcept
       block_size_(1, 1), tile_size_(1, 1), rank_index_(0, 0), grid_size_(1, 1),
       source_rank_index_(0, 0) {}
 
-Distribution::Distribution(const LocalElementSize& size, const TileElementSize& block_size,
+Distribution::Distribution(const LocalElementSize& size, const TileElementSize& tile_size,
                            const GlobalElementIndex& element_offset)
     : offset_(element_offset.row(), element_offset.col()), size_(0, 0), local_size_(size),
-      nr_tiles_(0, 0), local_nr_tiles_(0, 0), block_size_(block_size), tile_size_(block_size),
-      rank_index_(0, 0), grid_size_(1, 1), source_rank_index_(0, 0) {
+      nr_tiles_(0, 0), local_nr_tiles_(0, 0), block_size_({tile_size.rows(), tile_size.cols()}),
+      tile_size_(tile_size), rank_index_(0, 0), grid_size_(1, 1), source_rank_index_(0, 0) {
   DLAF_ASSERT(local_size_.isValid(), local_size_);
-  DLAF_ASSERT(!block_size_.isEmpty(), block_size_);
+  DLAF_ASSERT(!tile_size_.isEmpty(), tile_size_);
 
   normalize_source_rank_and_offset();
   size_ = GlobalElementSize{local_size_.rows(), local_size_.cols()};
@@ -34,22 +34,22 @@ Distribution::Distribution(const LocalElementSize& size, const TileElementSize& 
   local_nr_tiles_ = LocalTileSize{nr_tiles_.rows(), nr_tiles_.cols()};
 }
 
-Distribution::Distribution(const GlobalElementSize& size, const TileElementSize& block_size,
+Distribution::Distribution(const GlobalElementSize& size, const TileElementSize& tile_size,
                            const comm::Size2D& grid_size, const comm::Index2D& rank_index,
                            const comm::Index2D& source_rank_index,
                            const GlobalElementIndex& element_offset)
-    : Distribution(size, block_size, block_size, grid_size, rank_index, source_rank_index,
-                   element_offset) {}
+    : Distribution(size, {tile_size.rows(), tile_size.cols()}, tile_size, grid_size, rank_index,
+                   source_rank_index, element_offset) {}
 
-Distribution::Distribution(const GlobalElementSize& size, const TileElementSize& block_size,
+Distribution::Distribution(const GlobalElementSize& size, const TileElementSize& tile_size,
                            const comm::Size2D& grid_size, const comm::Index2D& rank_index,
                            const comm::Index2D& source_rank_index, const GlobalTileIndex& tile_offset,
                            const GlobalElementIndex& element_offset)
-    : Distribution(size, block_size, grid_size, rank_index, source_rank_index,
-                   GlobalElementIndex(tile_offset.row() * block_size.rows() + element_offset.row(),
-                                      tile_offset.col() * block_size.cols() + element_offset.col())) {}
+    : Distribution(size, tile_size, grid_size, rank_index, source_rank_index,
+                   GlobalElementIndex(tile_offset.row() * tile_size.rows() + element_offset.row(),
+                                      tile_offset.col() * tile_size.cols() + element_offset.col())) {}
 
-Distribution::Distribution(const GlobalElementSize& size, const TileElementSize& block_size,
+Distribution::Distribution(const GlobalElementSize& size, const GlobalElementSize& block_size,
                            const TileElementSize& tile_size, const comm::Size2D& grid_size,
                            const comm::Index2D& rank_index, const comm::Index2D& source_rank_index,
                            const GlobalElementIndex& element_offset)
@@ -70,7 +70,7 @@ Distribution::Distribution(const GlobalElementSize& size, const TileElementSize&
   compute_local_nr_tiles_and_local_size();
 }
 
-Distribution::Distribution(const GlobalElementSize& size, const TileElementSize& block_size,
+Distribution::Distribution(const GlobalElementSize& size, const GlobalElementSize& block_size,
                            const TileElementSize& tile_size, const comm::Size2D& grid_size,
                            const comm::Index2D& rank_index, const comm::Index2D& source_rank_index,
                            const GlobalTileIndex& tile_offset, const GlobalElementIndex& element_offset)

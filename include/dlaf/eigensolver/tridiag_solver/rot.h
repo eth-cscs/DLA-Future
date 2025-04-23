@@ -165,7 +165,7 @@ void applyGivensRotationsToMatrixColumns(const SizeType i_begin, const SizeType 
   namespace di = dlaf::internal;
 
   const SizeType n = problemSize(i_begin, i_end, mat.distribution());
-  const SizeType nb = mat.distribution().blockSize().rows();
+  const SizeType nb = mat.distribution().tile_size().rows();
 
   auto givens_rots_fn = [n, nb](const auto& rots, const auto& tiles, [[maybe_unused]] auto&&... ts) {
     // Distribution of the merged subproblems
@@ -234,7 +234,7 @@ void applyGivensRotationsToMatrixColumns(
 
   const matrix::Distribution& dist = mat.distribution();
 
-  const SizeType mb = dist.blockSize().rows();
+  const SizeType mb = dist.tile_size().rows();
   const SizeType range_size_limit = std::min(dist.size().rows(), i_end * mb);
   const SizeType range_size = range_size_limit - i_begin * mb;
 
@@ -261,7 +261,7 @@ void applyGivensRotationsToMatrixColumns(
   // This is the distribution that will be used inside the task. Differently from the original one,
   // this targets just the range defined by [i_begin, i_end), but keeping the same distribution over
   // ranks.
-  const matrix::Distribution dist_sub({range_size, range_size}, dist.blockSize(), dist.commGridSize(),
+  const matrix::Distribution dist_sub({range_size, range_size}, dist.tile_size(), dist.commGridSize(),
                                       dist.rankIndex(), dist.rankGlobalTile({i_begin, i_begin}));
 
   auto givens_rots_fn = [comm_row_chain = comm_row_chain.sub_pipeline(), tag, dist_sub,
@@ -383,7 +383,7 @@ void applyGivensRotationsToMatrixColumns(
   // Note:
   // Using a combination of shrinked distribution and an offset given to the panel, the workspace
   // is allocated just for the part strictly needed by the range [i_begin, i_end)
-  const matrix::Distribution dist_ws({range_size_limit, 1}, dist.blockSize(), dist.commGridSize(),
+  const matrix::Distribution dist_ws({range_size_limit, 1}, dist.tile_size(), dist.commGridSize(),
                                      dist.rankIndex(), dist.sourceRankIndex());
   matrix::Panel<Coord::Col, T, D> workspace(dist_ws, GlobalTileIndex(i_begin, i_begin));
 

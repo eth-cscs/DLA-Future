@@ -1095,7 +1095,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   matrix::Distribution dist({1, size}, {1, nb_band}, {1, ranks}, {0, rank}, {0, 0});
 
   // Maximum block_size / (2b-1) sweeps per block can be executed in parallel + 1 communication buffer.
-  const auto workers_per_block = 1 + ceilDiv(dist.blockSize().cols(), 2 * b - 1);
+  const auto workers_per_block = 1 + ceilDiv(dist.tile_size().cols(), 2 * b - 1);
 
   // Point to point communication happens in four ways:
   // - when copying the band matrix in compact form             -> compute_copy_tag

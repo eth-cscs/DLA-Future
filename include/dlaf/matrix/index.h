@@ -21,6 +21,8 @@ struct GlobalElement_TAG;
 struct LocalElement_TAG;
 struct GlobalTile_TAG;
 struct LocalTile_TAG;
+struct GlobalBlock_TAG;
+struct LocalBlock_TAG;
 struct TileElement_TAG;
 }
 
@@ -34,6 +36,12 @@ using GlobalTileSize = common::Size2D<SizeType, matrix::GlobalTile_TAG>;
 
 using LocalTileIndex = common::Index2D<SizeType, matrix::LocalTile_TAG>;
 using LocalTileSize = common::Size2D<SizeType, matrix::LocalTile_TAG>;
+
+using GlobalBlockIndex = common::Index2D<SizeType, matrix::GlobalBlock_TAG>;
+using GlobalBlockSize = common::Size2D<SizeType, matrix::GlobalBlock_TAG>;
+
+using LocalBlockIndex = common::Index2D<SizeType, matrix::LocalBlock_TAG>;
+using LocalBlockSize = common::Size2D<SizeType, matrix::LocalBlock_TAG>;
 
 using TileElementIndex = common::Index2D<SizeType, matrix::TileElement_TAG>;
 using TileElementSize = common::Size2D<SizeType, matrix::TileElement_TAG>;

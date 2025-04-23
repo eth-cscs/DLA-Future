@@ -93,12 +93,12 @@ TYPED_TEST(RetiledMatrixLocalTest, LocalConstructor) {
   };
 
   for (const auto& [size, tile_size, tiles_per_block] : local_sizes_tests) {
-    const TileElementSize block_size(tile_size.rows() * tiles_per_block.rows(),
-                                     tile_size.cols() * tiles_per_block.cols());
+    const GlobalElementSize block_size(tile_size.rows() * tiles_per_block.rows(),
+                                       tile_size.cols() * tiles_per_block.cols());
     Distribution expected_distribution({size.rows(), size.cols()}, block_size, tile_size, {1, 1}, {0, 0},
                                        {0, 0});
 
-    Matrix<Type, Device::CPU> mat(size, block_size);
+    Matrix<Type, Device::CPU> mat(size, {block_size.rows(), block_size.cols()});
 
     // Non-const retiled matrix
     {
@@ -158,12 +158,12 @@ TYPED_TEST(RetiledMatrixTest, GlobalConstructor) {
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& [size, tile_size, tiles_per_block] : global_sizes_tests) {
-      const TileElementSize block_size(tile_size.rows() * tiles_per_block.rows(),
-                                       tile_size.cols() * tiles_per_block.cols());
+      const GlobalElementSize block_size(tile_size.rows() * tiles_per_block.rows(),
+                                         tile_size.cols() * tiles_per_block.cols());
       Distribution expected_distribution(size, block_size, tile_size, comm_grid.size(), comm_grid.rank(),
                                          {0, 0});
 
-      Matrix<Type, Device::CPU> mat(size, block_size, comm_grid);
+      Matrix<Type, Device::CPU> mat(size, {block_size.rows(), block_size.cols()}, comm_grid);
 
       // Non-const retiled matrix
       {

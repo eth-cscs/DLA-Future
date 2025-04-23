@@ -25,7 +25,7 @@ using namespace testing;
 struct ParametersConstructor {
   // Distribution settings
   GlobalElementSize size;
-  TileElementSize block_size;
+  GlobalElementSize block_size;
   TileElementSize tile_size;
   comm::Index2D rank;
   comm::Size2D grid_size;
@@ -34,74 +34,79 @@ struct ParametersConstructor {
   // Derived params
   GlobalTileSize global_tiles;
   LocalTileSize local_tiles;
+  GlobalBlockSize global_blocks;
+  LocalBlockSize local_blocks;
   LocalElementSize local_size;
 };
 
+// clang-format off
 const std::vector<ParametersConstructor> tests_constructor = {
-    // {size, block_size, tile_size, rank, grid_size, src_rank, offset, global_tiles, local_tiles, local_size}
-    {{0, 0}, {13, 17}, {13, 17}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
-    {{0, 0}, {13, 17}, {13, 17}, {2, 1}, {3, 2}, {0, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
-    {{0, 128}, {12, 11}, {12, 11}, {1, 0}, {3, 1}, {0, 0}, {0, 0}, {0, 12}, {0, 12}, {0, 128}},
-    {{25, 0}, {14, 7}, {14, 7}, {0, 1}, {3, 2}, {1, 1}, {0, 0}, {2, 0}, {0, 0}, {0, 0}},
-    {{0, 0}, {12, 16}, {4, 4}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
-    {{0, 0}, {10, 18}, {5, 9}, {2, 1}, {3, 2}, {0, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
-    {{0, 128}, {12, 18}, {6, 3}, {1, 0}, {3, 1}, {0, 0}, {0, 0}, {0, 43}, {0, 43}, {0, 128}},
-    {{1, 1}, {16, 16}, {16, 16}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {1, 1}, {1, 1}, {1, 1}},
-    {{1, 32}, {13, 21}, {13, 21}, {2, 1}, {3, 2}, {0, 0}, {0, 0}, {1, 2}, {0, 1}, {0, 11}},
-    {{13, 16}, {13, 16}, {13, 16}, {5, 7}, {9, 8}, {2, 3}, {0, 0}, {1, 1}, {0, 0}, {0, 0}},
-    {{523, 111}, {19, 11}, {19, 11}, {2, 5}, {9, 8}, {2, 3}, {0, 0}, {28, 11}, {4, 2}, {67, 12}},
-    {{71, 3750}, {64, 128}, {64, 128}, {1, 3}, {7, 6}, {3, 4}, {0, 0}, {2, 30}, {0, 5}, {0, 550}},
-    {{1020, 34}, {16, 32}, {16, 32}, {0, 0}, {1, 6}, {0, 0}, {0, 0}, {64, 2}, {64, 1}, {1020, 32}},
-    {{1024, 1024}, {32, 32}, {32, 32}, {3, 2}, {6, 4}, {1, 1}, {0, 0}, {32, 32}, {5, 8}, {160, 256}},
-    {{160, 192}, {32, 32}, {32, 32}, {0, 0}, {4, 4}, {0, 0}, {0, 0}, {5, 6}, {2, 2}, {64, 64}},
-    {{1020, 34}, {16, 32}, {16, 32}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {64, 2}, {64, 2}, {1020, 34}},
-    {{160, 192}, {32, 32}, {32, 32}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {5, 6}, {5, 6}, {160, 192}},
-    {{1020, 34}, {16, 32}, {8, 4}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {128, 9}, {128, 9}, {1020, 34}},
-    {{161, 193}, {32, 32}, {8, 4}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {21, 49}, {21, 49}, {161, 193}},
+    // {size, block_size, tile_size, rank, grid_size, src_rank, offset, global_tiles, local_tiles, global_blocks, local_blocks, local_size}
+    {{0, 0}, {13, 17}, {13, 17}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+    {{0, 0}, {13, 17}, {13, 17}, {2, 1}, {3, 2}, {0, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+    {{0, 128}, {12, 11}, {12, 11}, {1, 0}, {3, 1}, {0, 0}, {0, 0}, {0, 12}, {0, 12}, {0, 12}, {0, 12}, {0, 128}},
+    {{25, 0}, {14, 7}, {14, 7}, {0, 1}, {3, 2}, {1, 1}, {0, 0}, {2, 0}, {0, 0}, {2, 0}, {0, 0}, {0, 0}},
+    {{0, 0}, {12, 16}, {4, 4}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+    {{0, 0}, {10, 18}, {5, 9}, {2, 1}, {3, 2}, {0, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+    {{0, 128}, {12, 18}, {6, 3}, {1, 0}, {3, 1}, {0, 0}, {0, 0}, {0, 43}, {0, 43}, {0, 8}, {0, 8}, {0, 128}},
+    {{1, 1}, {16, 16}, {16, 16}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {1, 1}, {1, 1}, {1, 1}, {1, 1}, {1, 1}},
+    {{1, 32}, {13, 21}, {13, 21}, {2, 1}, {3, 2}, {0, 0}, {0, 0}, {1, 2}, {0, 1}, {1, 2}, {0, 1}, {0, 11}},
+    {{13, 16}, {13, 16}, {13, 16}, {5, 7}, {9, 8}, {2, 3}, {0, 0}, {1, 1}, {0, 0}, {1, 1}, {0, 0}, {0, 0}},
+    {{523, 111}, {19, 11}, {19, 11}, {2, 5}, {9, 8}, {2, 3}, {0, 0}, {28, 11}, {4, 2}, {28, 11}, {4, 2}, {67, 12}},
+    {{71, 3750}, {64, 128}, {64, 128}, {1, 3}, {7, 6}, {3, 4}, {0, 0}, {2, 30}, {0, 5}, {2, 30}, {0, 5}, {0, 550}},
+    {{1020, 34}, {16, 32}, {16, 32}, {0, 0}, {1, 6}, {0, 0}, {0, 0}, {64, 2}, {64, 1}, {64, 2}, {64, 1}, {1020, 32}},
+    {{1024, 1024}, {32, 32}, {32, 32}, {3, 2}, {6, 4}, {1, 1}, {0, 0}, {32, 32}, {5, 8}, {32, 32}, {5, 8}, {160, 256}},
+    {{160, 192}, {32, 32}, {32, 32}, {0, 0}, {4, 4}, {0, 0}, {0, 0}, {5, 6}, {2, 2}, {5, 6}, {2, 2}, {64, 64}},
+    {{1020, 34}, {16, 32}, {16, 32}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {64, 2}, {64, 2}, {64, 2}, {64, 2}, {1020, 34}},
+    {{160, 192}, {32, 32}, {32, 32}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {5, 6}, {5, 6}, {5, 6}, {5, 6}, {160, 192}},
+    {{1020, 34}, {16, 32}, {8, 4}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {128, 9}, {128, 9}, {64, 2}, {64, 2}, {1020, 34}},
+    {{161, 193}, {32, 32}, {8, 4}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {21, 49}, {21, 49}, {6, 7}, {6, 7}, {161, 193}},
 
     // offset != {0, 0}
-    {{0, 0}, {13, 17}, {13, 17}, {0, 0}, {1, 1}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {0, 0}},
-    {{0, 0}, {3, 3}, {3, 3}, {2, 1}, {3, 2}, {1, 1}, {4, 1}, {0, 0}, {0, 0}, {0, 0}},
-    {{0, 0}, {13, 17}, {13, 17}, {2, 1}, {3, 2}, {0, 1}, {2, 1}, {0, 0}, {0, 0}, {0, 0}},
-    {{0, 128}, {12, 11}, {12, 11}, {1, 0}, {3, 1}, {0, 0}, {2, 3}, {0, 12}, {0, 12}, {0, 128}},
-    {{25, 0}, {14, 7}, {14, 7}, {0, 1}, {3, 2}, {1, 1}, {3, 3}, {2, 0}, {0, 0}, {0, 0}},
-    {{1, 1}, {16, 16}, {16, 16}, {0, 0}, {1, 1}, {0, 0}, {17, 17}, {1, 1}, {1, 1}, {1, 1}},
-    {{1, 32}, {13, 21}, {13, 21}, {2, 1}, {3, 2}, {0, 0}, {1, 1}, {1, 2}, {0, 1}, {0, 12}},
-    {{1, 32}, {13, 21}, {13, 21}, {2, 1}, {3, 2}, {2, 1}, {1, 1}, {1, 2}, {1, 1}, {1, 20}},
-    {{10, 15}, {5, 5}, {5, 5}, {1, 1}, {2, 2}, {1, 0}, {3, 7}, {3, 4}, {2, 2}, {5, 8}},
-    {{13, 16}, {13, 16}, {13, 16}, {4, 5}, {9, 8}, {2, 3}, {32, 32}, {2, 1}, {1, 1}, {7, 16}},
-    {{13, 16}, {13, 16}, {13, 16}, {5, 5}, {9, 8}, {2, 3}, {32, 32}, {2, 1}, {1, 1}, {6, 16}},
-    {{13, 16}, {13, 16}, {13, 16}, {5, 7}, {9, 8}, {2, 3}, {32, 32}, {2, 1}, {1, 0}, {6, 0}},
-    {{523, 111}, {19, 11}, {19, 11}, {2, 5}, {9, 8}, {2, 3}, {10, 10}, {29, 11}, {4, 2}, {66, 22}},
-    {{71, 3750}, {64, 128}, {64, 128}, {1, 3}, {7, 6}, {3, 4}, {1, 1}, {2, 30}, {0, 5}, {0, 551}},
-    {{71, 3750}, {64, 128}, {64, 128}, {1, 3}, {7, 6}, {3, 4}, {448, 0}, {2, 30}, {0, 5}, {0, 550}},
-    {{71, 3750}, {64, 128}, {64, 128}, {1, 3}, {7, 6}, {3, 4}, {0, 768}, {2, 30}, {0, 5}, {0, 550}},
-    {{1020, 34}, {16, 32}, {16, 32}, {0, 0}, {1, 6}, {0, 0}, {8, 8}, {65, 2}, {65, 1}, {1020, 24}},
-    {{1024, 1024}, {32, 32}, {32, 32}, {3, 2}, {6, 4}, {1, 1}, {48, 48}, {33, 33}, {6, 9}, {192, 256}},
-    {{160, 192}, {32, 32}, {32, 32}, {0, 0}, {4, 4}, {0, 0}, {16, 16}, {6, 7}, {2, 2}, {48, 48}},
-    {{160, 192}, {32, 32}, {32, 32}, {0, 0}, {4, 4}, {0, 0}, {24, 8}, {6, 7}, {2, 2}, {40, 56}},
-    {{160, 192}, {32, 32}, {32, 32}, {1, 1}, {4, 4}, {0, 0}, {24, 8}, {6, 7}, {2, 2}, {56, 64}},
-    {{160, 192}, {32, 32}, {32, 32}, {0, 0}, {4, 4}, {3, 3}, {24, 8}, {6, 7}, {2, 2}, {56, 64}},
-    {{71, 3750}, {64, 128}, {4, 16}, {1, 3}, {7, 6}, {3, 4}, {1, 1}, {18, 235}, {0, 35}, {0, 551}},
-    {{71, 3750}, {64, 128}, {4, 16}, {1, 3}, {7, 6}, {3, 4}, {448, 0}, {18, 235}, {0, 35}, {0, 550}},
-    {{71, 3750}, {64, 128}, {4, 16}, {1, 3}, {7, 6}, {3, 4}, {0, 768}, {18, 235}, {0, 35}, {0, 550}},
-    {{1020, 34}, {16, 32}, {4, 8}, {0, 0}, {1, 6}, {0, 0}, {8, 8}, {255, 5}, {255, 3}, {1020, 24}},
-    {{1024, 1024}, {32, 32}, {8, 32}, {3, 2}, {6, 4}, {1, 1}, {49, 48}, {129, 33}, {24, 9}, {192, 256}},
-    {{160, 192}, {64, 128}, {32, 32}, {0, 0}, {4, 4}, {0, 0}, {16, 16}, {6, 7}, {2, 4}, {48, 112}},
-    {{160, 192}, {64, 128}, {32, 32}, {0, 0}, {4, 4}, {0, 0}, {24, 8}, {6, 7}, {2, 4}, {40, 120}},
-    {{160, 192}, {128, 64}, {32, 32}, {1, 1}, {4, 4}, {0, 0}, {24, 8}, {6, 7}, {2, 2}, {56, 64}},
-    {{160, 192}, {128, 64}, {32, 32}, {0, 0}, {4, 4}, {3, 3}, {24, 8}, {6, 7}, {2, 2}, {56, 64}},
-    {{36, 54}, {14, 39}, {7, 13}, {0, 1}, {3, 4}, {0, 3}, {11, 38}, {6, 6}, {2, 2}, {8, 14}},
-    {{1020, 34}, {16, 32}, {16, 32}, {0, 0}, {1, 1}, {0, 0}, {65, 6}, {64, 2}, {64, 2}, {1020, 34}},
-    {{160, 192}, {32, 32}, {32, 32}, {0, 0}, {1, 1}, {0, 0}, {37, 7}, {6, 7}, {6, 7}, {160, 192}},
-    {{1020, 34}, {16, 32}, {8, 4}, {0, 0}, {1, 1}, {0, 0}, {3, 23}, {128, 10}, {128, 10}, {1020, 34}},
-    {{161, 193}, {32, 32}, {8, 4}, {0, 0}, {1, 1}, {0, 0}, {18, 19}, {21, 49}, {21, 49}, {161, 193}},
+    {{0, 0}, {13, 17}, {13, 17}, {0, 0}, {1, 1}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+    {{0, 0}, {3, 3}, {3, 3}, {2, 1}, {3, 2}, {1, 1}, {4, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+    {{0, 0}, {13, 17}, {13, 17}, {2, 1}, {3, 2}, {0, 1}, {2, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+    {{0, 128}, {12, 11}, {12, 11}, {1, 0}, {3, 1}, {0, 0}, {2, 3}, {0, 12}, {0, 12}, {0, 12}, {0, 12}, {0, 128}},
+    {{25, 0}, {14, 7}, {14, 7}, {0, 1}, {3, 2}, {1, 1}, {3, 3}, {2, 0}, {0, 0}, {2, 0}, {0, 0}, {0, 0}},
+    {{1, 1}, {16, 16}, {16, 16}, {0, 0}, {1, 1}, {0, 0}, {17, 17}, {1, 1}, {1, 1}, {1, 1}, {1, 1}, {1, 1}},
+    {{1, 32}, {13, 21}, {13, 21}, {2, 1}, {3, 2}, {0, 0}, {1, 1}, {1, 2}, {0, 1}, {1, 2}, {0, 1}, {0, 12}},
+    {{1, 32}, {13, 21}, {13, 21}, {2, 1}, {3, 2}, {2, 1}, {1, 1}, {1, 2}, {1, 1}, {1, 2}, {1, 1}, {1, 20}},
+    {{10, 15}, {5, 5}, {5, 5}, {1, 1}, {2, 2}, {1, 0}, {3, 7}, {3, 4}, {2, 2}, {3, 4}, {2, 2}, {5, 8}},
+    {{13, 16}, {13, 16}, {13, 16}, {4, 5}, {9, 8}, {2, 3}, {32, 32}, {2, 1}, {1, 1}, {2, 1}, {1, 1}, {7, 16}},
+    {{13, 16}, {13, 16}, {13, 16}, {5, 5}, {9, 8}, {2, 3}, {32, 32}, {2, 1}, {1, 1}, {2, 1}, {1, 1}, {6, 16}},
+    {{13, 16}, {13, 16}, {13, 16}, {5, 7}, {9, 8}, {2, 3}, {32, 32}, {2, 1}, {1, 0}, {2, 1}, {1, 0}, {6, 0}},
+    {{523, 111}, {19, 11}, {19, 11}, {2, 5}, {9, 8}, {2, 3}, {10, 10}, {29, 11}, {4, 2}, {29, 11}, {4, 2}, {66, 22}},
+    {{71, 3750}, {64, 128}, {64, 128}, {1, 3}, {7, 6}, {3, 4}, {1, 1}, {2, 30}, {0, 5}, {2, 30}, {0, 5}, {0, 551}},
+    {{71, 3750}, {64, 128}, {64, 128}, {1, 3}, {7, 6}, {3, 4}, {448, 0}, {2, 30}, {0, 5}, {2, 30}, {0, 5}, {0, 550}},
+    {{71, 3750}, {64, 128}, {64, 128}, {1, 3}, {7, 6}, {3, 4}, {0, 768}, {2, 30}, {0, 5}, {2, 30}, {0, 5}, {0, 550}},
+    {{1020, 34}, {16, 32}, {16, 32}, {0, 0}, {1, 6}, {0, 0}, {8, 8}, {65, 2}, {65, 1}, {65, 2}, {65, 1}, {1020, 24}},
+    {{1024, 1024}, {32, 32}, {32, 32}, {3, 2}, {6, 4}, {1, 1}, {48, 48}, {33, 33}, {6, 9}, {33, 33}, {6, 9}, {192, 256}},
+    {{160, 192}, {32, 32}, {32, 32}, {0, 0}, {4, 4}, {0, 0}, {16, 16}, {6, 7}, {2, 2}, {6, 7}, {2, 2}, {48, 48}},
+    {{160, 192}, {32, 32}, {32, 32}, {0, 0}, {4, 4}, {0, 0}, {24, 8}, {6, 7}, {2, 2}, {6, 7}, {2, 2}, {40, 56}},
+    {{160, 192}, {32, 32}, {32, 32}, {1, 1}, {4, 4}, {0, 0}, {24, 8}, {6, 7}, {2, 2}, {6, 7}, {2, 2}, {56, 64}},
+    {{160, 192}, {32, 32}, {32, 32}, {0, 0}, {4, 4}, {3, 3}, {24, 8}, {6, 7}, {2, 2}, {6, 7}, {2, 2}, {56, 64}},
+    {{71, 3750}, {64, 128}, {4, 16}, {1, 3}, {7, 6}, {3, 4}, {1, 1}, {18, 235}, {0, 35}, {2, 30}, {0, 5}, {0, 551}},
+    {{71, 3750}, {64, 128}, {4, 16}, {1, 3}, {7, 6}, {3, 4}, {448, 0}, {18, 235}, {0, 35}, {2, 30}, {0, 5}, {0, 550}},
+    {{71, 3750}, {64, 128}, {4, 16}, {1, 3}, {7, 6}, {3, 4}, {0, 768}, {18, 235}, {0, 35}, {2, 30}, {0, 5}, {0, 550}},
+    {{1020, 34}, {16, 32}, {4, 8}, {0, 0}, {1, 6}, {0, 0}, {8, 8}, {255, 5}, {255, 3}, {65, 2}, {65, 1}, {1020, 24}},
+    {{1024, 1024}, {32, 32}, {8, 32}, {3, 2}, {6, 4}, {1, 1}, {49, 48}, {129, 33}, {24, 9}, {33, 33}, {6, 9}, {192, 256}},
+    {{160, 192}, {64, 128}, {32, 32}, {0, 0}, {4, 4}, {0, 0}, {16, 16}, {6, 7}, {2, 4}, {3, 2}, {1, 1}, {48, 112}},
+    {{160, 192}, {64, 128}, {32, 32}, {0, 0}, {4, 4}, {0, 0}, {24, 8}, {6, 7}, {2, 4}, {3, 2}, {1, 1}, {40, 120}},
+    {{160, 192}, {128, 64}, {32, 32}, {1, 1}, {4, 4}, {0, 0}, {24, 8}, {6, 7}, {2, 2}, {2, 4}, {1, 1}, {56, 64}},
+    {{160, 192}, {128, 64}, {32, 32}, {0, 0}, {4, 4}, {3, 3}, {24, 8}, {6, 7}, {2, 2}, {2, 4}, {1, 1}, {56, 64}},
+    {{36, 54}, {14, 39}, {7, 13}, {0, 1}, {3, 4}, {0, 3}, {11, 38}, {6, 6}, {2, 2}, {4, 3}, {2, 1}, {8, 14}},
+    {{1020, 34}, {16, 32}, {16, 32}, {0, 0}, {1, 1}, {0, 0}, {65, 6}, {64, 2}, {64, 2}, {64, 2}, {64, 2}, {1020, 34}},
+    {{160, 192}, {32, 32}, {32, 32}, {0, 0}, {1, 1}, {0, 0}, {37, 7}, {6, 7}, {6, 7}, {6, 7}, {6, 7}, {160, 192}},
+    {{1020, 34}, {16, 32}, {8, 4}, {0, 0}, {1, 1}, {0, 0}, {3, 23}, {128, 10}, {128, 10}, {64, 2}, {64, 2}, {1020, 34}},
+    {{161, 193}, {32, 32}, {8, 4}, {0, 0}, {1, 1}, {0, 0}, {18, 19}, {21, 49}, {21, 49}, {6, 7}, {6, 7}, {161, 193}},
 };
+// clang-format on
 
-void check_constructor(const Distribution& obj, GlobalElementSize size, TileElementSize block_size,
+void check_constructor(const Distribution& obj, GlobalElementSize size, GlobalElementSize block_size,
                        TileElementSize tile_size, comm::Index2D rank, comm::Size2D grid_size,
                        comm::Index2D src_rank, GlobalElementIndex offset, GlobalTileSize global_tiles,
-                       LocalTileSize local_tiles, LocalElementSize local_size) {
+                       LocalTileSize local_tiles, GlobalBlockSize global_blocks,
+                       LocalBlockSize local_blocks, LocalElementSize local_size) {
   EXPECT_EQ(size, obj.size());
   EXPECT_EQ(block_size, obj.block_size());
   EXPECT_EQ(tile_size, obj.tile_size());
@@ -119,32 +124,40 @@ void check_constructor(const Distribution& obj, GlobalElementSize size, TileElem
   EXPECT_EQ(expected_offset, obj.offset());
 
   EXPECT_EQ(global_tiles, obj.nr_tiles());
+  EXPECT_EQ(global_blocks, obj.nr_blocks());
   EXPECT_EQ(local_size, obj.local_size());
   EXPECT_EQ(local_tiles, obj.local_nr_tiles());
+  EXPECT_EQ(local_blocks, obj.local_nr_blocks());
 }
 template <class Test>
 void check_constructor(const Distribution& obj, const Test& test) {
   check_constructor(obj, test.size, test.block_size, test.tile_size, test.rank, test.grid_size,
-                    test.src_rank, test.offset, test.global_tiles, test.local_tiles, test.local_size);
+                    test.src_rank, test.offset, test.global_tiles, test.local_tiles, test.global_blocks,
+                    test.local_blocks, test.local_size);
+}
+
+bool block_is_equal_tile(const ParametersConstructor& test) noexcept {
+  return test.tile_size.rows() == test.block_size.rows() &&
+         test.tile_size.cols() == test.block_size.cols();
 }
 
 TEST(DistributionTest, DefaultConstructor) {
   Distribution obj;
 
-  check_constructor(obj, GlobalElementSize(0, 0), TileElementSize(1, 1), TileElementSize(1, 1),
+  check_constructor(obj, GlobalElementSize(0, 0), GlobalElementSize(1, 1), TileElementSize(1, 1),
                     comm::Index2D(0, 0), comm::Size2D(1, 1), comm::Index2D(0, 0),
                     GlobalElementIndex(0, 0), GlobalTileSize(0, 0), LocalTileSize(0, 0),
-                    LocalElementSize(0, 0));
+                    GlobalBlockSize(0, 0), LocalBlockSize(0, 0), LocalElementSize(0, 0));
 }
 
 TEST(DistributionTest, ConstructorLocal) {
   for (const auto& test : tests_constructor) {
-    if (test.grid_size == comm::Size2D(1, 1) && test.tile_size == test.block_size) {
+    if (test.grid_size == comm::Size2D(1, 1) && block_is_equal_tile(test)) {
       if (test.offset == GlobalElementIndex{0, 0}) {
-        Distribution obj(test.local_size, test.block_size);
+        Distribution obj(test.local_size, test.tile_size);
         check_constructor(obj, test);
       }
-      Distribution obj(test.local_size, test.block_size, test.offset);
+      Distribution obj(test.local_size, test.tile_size, test.offset);
       check_constructor(obj, test);
     }
   }
@@ -157,19 +170,19 @@ TEST(DistributionTest, Constructor) {
     GlobalElementIndex tile_element_offset{test.offset.row() % test.tile_size.rows(),
                                            test.offset.col() % test.tile_size.cols()};
 
-    if (test.tile_size == test.block_size) {
+    if (block_is_equal_tile(test)) {
       if (test.offset == GlobalElementIndex{0, 0}) {
-        Distribution obj1(test.size, test.block_size, test.grid_size, test.rank, test.src_rank);
+        Distribution obj1(test.size, test.tile_size, test.grid_size, test.rank, test.src_rank);
         check_constructor(obj1, test);
       }
 
-      Distribution obj2(test.size, test.block_size, test.grid_size, test.rank, test.src_rank,
+      Distribution obj2(test.size, test.tile_size, test.grid_size, test.rank, test.src_rank,
                         test.offset);
       check_constructor(obj2, test);
 
       // An offset split into tile and element offsets should produce the same distribution
-      Distribution obj3(test.size, test.block_size, test.grid_size, test.rank, test.src_rank,
-                        tile_offset, tile_element_offset);
+      Distribution obj3(test.size, test.tile_size, test.grid_size, test.rank, test.src_rank, tile_offset,
+                        tile_element_offset);
       check_constructor(obj3, test);
     }
 
@@ -341,8 +354,10 @@ TEST(DistributionTest, ComparisonOperator) {
 
 TEST(DistributionTest, CopyConstructor) {
   for (const auto& test : tests_constructor) {
-    Distribution obj0(test.size, test.block_size, test.grid_size, test.rank, test.src_rank, test.offset);
-    Distribution obj(test.size, test.block_size, test.grid_size, test.rank, test.src_rank, test.offset);
+    Distribution obj0(test.size, test.block_size, test.tile_size, test.grid_size, test.rank,
+                      test.src_rank, test.offset);
+    Distribution obj(test.size, test.block_size, test.tile_size, test.grid_size, test.rank,
+                     test.src_rank, test.offset);
     EXPECT_EQ(obj0, obj);
 
     Distribution obj_copy(obj);
@@ -353,8 +368,10 @@ TEST(DistributionTest, CopyConstructor) {
 
 TEST(DistributionTest, MoveConstructor) {
   for (const auto& test : tests_constructor) {
-    Distribution obj0(test.size, test.block_size, test.grid_size, test.rank, test.src_rank, test.offset);
-    Distribution obj(test.size, test.block_size, test.grid_size, test.rank, test.src_rank, test.offset);
+    Distribution obj0(test.size, test.block_size, test.tile_size, test.grid_size, test.rank,
+                      test.src_rank, test.offset);
+    Distribution obj(test.size, test.block_size, test.tile_size, test.grid_size, test.rank,
+                     test.src_rank, test.offset);
     EXPECT_EQ(obj0, obj);
 
     Distribution obj_move(std::move(obj));
@@ -365,8 +382,10 @@ TEST(DistributionTest, MoveConstructor) {
 
 TEST(DistributionTest, CopyAssignment) {
   for (const auto& test : tests_constructor) {
-    Distribution obj0(test.size, test.block_size, test.grid_size, test.rank, test.src_rank, test.offset);
-    Distribution obj(test.size, test.block_size, test.grid_size, test.rank, test.src_rank, test.offset);
+    Distribution obj0(test.size, test.block_size, test.tile_size, test.grid_size, test.rank,
+                      test.src_rank, test.offset);
+    Distribution obj(test.size, test.block_size, test.tile_size, test.grid_size, test.rank,
+                     test.src_rank, test.offset);
     EXPECT_EQ(obj0, obj);
 
     Distribution obj_copy;
@@ -378,8 +397,10 @@ TEST(DistributionTest, CopyAssignment) {
 
 TEST(DistributionTest, MoveAssignment) {
   for (const auto& test : tests_constructor) {
-    Distribution obj0(test.size, test.block_size, test.grid_size, test.rank, test.src_rank, test.offset);
-    Distribution obj(test.size, test.block_size, test.grid_size, test.rank, test.src_rank, test.offset);
+    Distribution obj0(test.size, test.block_size, test.tile_size, test.grid_size, test.rank,
+                      test.src_rank, test.offset);
+    Distribution obj(test.size, test.block_size, test.tile_size, test.grid_size, test.rank,
+                     test.src_rank, test.offset);
     EXPECT_EQ(obj0, obj);
 
     Distribution obj_move;
@@ -392,7 +413,7 @@ TEST(DistributionTest, MoveAssignment) {
 struct ParametersIndices {
   // Distribution settings
   GlobalElementSize size;
-  TileElementSize block_size;
+  GlobalElementSize block_size;
   TileElementSize tile_size;
   comm::Index2D rank;
   comm::Size2D grid_size;

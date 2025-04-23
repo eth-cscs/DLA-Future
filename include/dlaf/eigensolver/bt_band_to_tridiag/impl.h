@@ -448,7 +448,7 @@ private:
 struct DistIndexing {
   DistIndexing(const TileAccessHelper& helper, const matrix::Distribution& dist_hh, const SizeType b,
                const GlobalTileIndex& ij, const SizeType& ij_b_row)
-      : dist_hh(dist_hh), b(b), mb(dist_hh.blockSize().rows()), helper(helper), ij(ij),
+      : dist_hh(dist_hh), b(b), mb(dist_hh.tile_size().rows()), helper(helper), ij(ij),
         ij_b_row(ij_b_row) {
     rank = dist_hh.rankIndex();
     rankHH = dist_hh.rankGlobalTile(ij);

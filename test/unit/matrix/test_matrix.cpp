@@ -61,8 +61,8 @@ TYPED_TEST_SUITE(MatrixTest, MatrixElementTypes);
 struct TestSizes {
   SizeType m;
   SizeType n;
+  GlobalElementSize block_size;
   TileElementSize tile_size;
-  TileElementSize retile_size;
 };
 
 const std::vector<TestSizes> sizes_tests({
@@ -398,7 +398,7 @@ TYPED_TEST(MatrixTest, Constructor) {
       {
         const comm::Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
                                            std::min(1, comm_grid.size().cols() - 1));
-        const Distribution dist(size, test.tile_size, test.tile_size, comm_grid.size(), comm_grid.rank(),
+        const Distribution dist(size, test.tile_size, comm_grid.size(), comm_grid.rank(),
                                 src_rank_index);
 
         Matrix<Type, Device::CPU> mat(dist);
@@ -444,12 +444,10 @@ TYPED_TEST(MatrixTest, ConstructorColMajor) {
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
-      const Distribution dist0(size, test.tile_size, test.tile_size, comm_grid.size(), comm_grid.rank(),
-                               {0, 0});
+      const Distribution dist0(size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
       const comm::Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
                                          std::min(1, comm_grid.size().cols() - 1));
-      const Distribution dist(size, test.tile_size, test.tile_size, comm_grid.size(), comm_grid.rank(),
-                              src_rank_index);
+      const Distribution dist(size, test.tile_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
 
       {
         Matrix<Type, Device::CPU> mat(size, test.tile_size, comm_grid, alloc);
@@ -519,12 +517,10 @@ TYPED_TEST(MatrixTest, ConstructorTiles) {
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
-      const Distribution dist0(size, test.tile_size, test.tile_size, comm_grid.size(), comm_grid.rank(),
-                               {0, 0});
+      const Distribution dist0(size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
       const comm::Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
                                          std::min(1, comm_grid.size().cols() - 1));
-      const Distribution dist(size, test.tile_size, test.tile_size, comm_grid.size(), comm_grid.rank(),
-                              src_rank_index);
+      const Distribution dist(size, test.tile_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
       {
         Matrix<Type, Device::CPU> mat(size, test.tile_size, comm_grid, alloc);
         EXPECT_EQ(dist0, mat.distribution());
@@ -800,7 +796,7 @@ TYPED_TEST(MatrixTest, ConstructorExisting) {
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
-      Distribution distribution(size, test.tile_size, test.retile_size, comm_grid.size(),
+      Distribution distribution(size, test.block_size, test.tile_size, comm_grid.size(),
                                 comm_grid.rank(), {0, 0});
 
       SizeType ld = std::max<SizeType>(1, distribution.localSize().rows());
@@ -830,7 +826,7 @@ TYPED_TEST(MatrixTest, ConstructorExistingConst) {
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
-      Distribution distribution(size, test.tile_size, test.retile_size, comm_grid.size(),
+      Distribution distribution(size, test.block_size, test.tile_size, comm_grid.size(),
                                 comm_grid.rank(), {0, 0});
 
       SizeType ld = std::max<SizeType>(1, distribution.localSize().rows());
@@ -1129,7 +1125,7 @@ TYPED_TEST(MatrixTest, DependenciesConstSubPipelineConst) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
 
-      Distribution distribution(size, test.tile_size, test.retile_size, comm_grid.size(),
+      Distribution distribution(size, test.block_size, test.tile_size, comm_grid.size(),
                                 comm_grid.rank(), {0, 0});
       Matrix<Type, Device::CPU> mat(std::move(distribution), MatrixAllocation::Tiles, compact_ld);
       Matrix<const Type, Device::CPU>& const_mat = mat;
@@ -1353,14 +1349,14 @@ TYPED_TEST(MatrixTest, TileSize) {
       auto mat_sub_const = mat.subPipelineConst();
 
       for (SizeType i = 0; i < mat.nrTiles().rows(); ++i) {
-        SizeType mb = mat.blockSize().rows();
+        SizeType mb = mat.tile_size().rows();
         SizeType ib = std::min(mb, mat.size().rows() - i * mb);
         for (SizeType j = 0; j < mat.nrTiles().cols(); ++j) {
-          SizeType nb = mat.blockSize().cols();
+          SizeType nb = mat.tile_size().cols();
           SizeType jb = std::min(nb, mat.size().cols() - j * nb);
-          EXPECT_EQ(TileElementSize(ib, jb), mat.tileSize({i, j}));
-          EXPECT_EQ(TileElementSize(ib, jb), mat_sub.tileSize({i, j}));
-          EXPECT_EQ(TileElementSize(ib, jb), mat_sub_const.tileSize({i, j}));
+          EXPECT_EQ(TileElementSize(ib, jb), mat.tile_size_of({i, j}));
+          EXPECT_EQ(TileElementSize(ib, jb), mat_sub.tile_size_of({i, j}));
+          EXPECT_EQ(TileElementSize(ib, jb), mat_sub_const.tile_size_of({i, j}));
         }
       }
     }

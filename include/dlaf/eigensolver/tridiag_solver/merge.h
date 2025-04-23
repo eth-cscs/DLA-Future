@@ -805,7 +805,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
   using pika::execution::thread_priority;
 
   const SizeType n = problemSize(i_begin, i_end, evals.distribution());
-  const SizeType nb = evals.distribution().blockSize().rows();
+  const SizeType nb = evals.distribution().tile_size().rows();
 
   TileCollector tc{i_begin, i_end};
 

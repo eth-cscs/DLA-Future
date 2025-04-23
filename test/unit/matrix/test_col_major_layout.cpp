@@ -9,6 +9,7 @@
 //
 
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include <dlaf/matrix/col_major_layout.h>

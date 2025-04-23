@@ -133,14 +133,14 @@ TYPED_TEST(RetiledMatrixRefLocalTest, LocalConstructor) {
   };
 
   for (const auto& [size, tile_size, tiles_per_block, dist_origin, dist_size] : local_sizes_tests) {
-    const TileElementSize block_size(tile_size.rows() * tiles_per_block.rows(),
-                                     tile_size.cols() * tiles_per_block.cols());
+    const GlobalElementSize block_size(tile_size.rows() * tiles_per_block.rows(),
+                                       tile_size.cols() * tiles_per_block.cols());
 
     // Expected distribution of the retiled matrix should match the distribution of the matrix reference
     Distribution expected_distribution({dist_size.rows(), dist_size.cols()}, block_size, tile_size,
                                        {1, 1}, {0, 0}, {0, 0});
 
-    Matrix<Type, Device::CPU> mat(size, block_size);
+    Matrix<Type, Device::CPU> mat(size, {block_size.rows(), block_size.cols()});
 
     // Matrix ref
     SubDistributionSpec spec{dist_origin, dist_size};
@@ -209,14 +209,14 @@ TYPED_TEST(RetiledMatrixRefTest, GlobalConstructor) {
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& [size, tile_size, tiles_per_block, dist_origin, dist_size] : global_sizes_tests) {
-      const TileElementSize block_size(tile_size.rows() * tiles_per_block.rows(),
-                                       tile_size.cols() * tiles_per_block.cols());
+      const GlobalElementSize block_size(tile_size.rows() * tiles_per_block.rows(),
+                                         tile_size.cols() * tiles_per_block.cols());
 
       // Expected distribution of the retiled matrix should match the distribution of the matrix reference
       Distribution expected_distribution({dist_size.rows(), dist_size.cols()}, block_size, tile_size,
                                          comm_grid.size(), comm_grid.rank(), {0, 0});
 
-      Matrix<Type, Device::CPU> mat(size, block_size, comm_grid);
+      Matrix<Type, Device::CPU> mat(size, {block_size.rows(), block_size.cols()}, comm_grid);
 
       // Matrix ref
       SubDistributionSpec spec{dist_origin, dist_size};

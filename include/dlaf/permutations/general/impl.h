@@ -137,7 +137,7 @@ template <class TileType>
 MatrixLayout getMatrixLayout(const matrix::Distribution& distr, const std::vector<TileType>& tiles) {
   LocalTileSize tile_sz = distr.localNrTiles();
   MatrixLayout layout;
-  layout.nb = distr.blockSize().rows();
+  layout.nb = distr.tile_size().rows();
   using dlaf::common::internal::unwrap;
   layout.ld = unwrap(tiles[0]).ld();
   layout.row_offset = (tile_sz.rows() > 1) ? unwrap(tiles[1]).ptr() - unwrap(tiles[0]).ptr() : 0;
@@ -566,7 +566,7 @@ void permuteOnCPU(
 
   // Local size and index of subproblem [i_begin, i_end)
   const SizeType offset_sub = dist.globalElementFromGlobalTileAndTileElement<C>(i_begin, 0);
-  const TileElementSize blk = dist.blockSize();
+  const TileElementSize blk = dist.tile_size();
 
   const LocalTileIndex i_loc_begin{dist.nextLocalTileFromGlobalTile<Coord::Row>(i_begin),
                                    dist.nextLocalTileFromGlobalTile<Coord::Col>(i_begin)};

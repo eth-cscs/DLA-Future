@@ -131,9 +131,10 @@ void gemmTrailingMatrix(pika::execution::thread_priority priority, PanelTileSend
 // G. H. Golub and C. F. Van Loan, Matrix Computations, chapter 5, The Johns Hopkins University Press
 
 template <Backend backend, Device device, class T>
-void BackTransformationReductionToBand<backend, device, T>::call(
-    const SizeType b, MatrixRef<T, device>& mat_c, Matrix<const T, device>& mat_v,
-    Matrix<const T, Device::CPU>& mat_taus) {
+void BackTransformationReductionToBand<backend, device, T>::call(const SizeType b,
+                                                                 MatrixRef<T, device>& mat_c,
+                                                                 Matrix<const T, device>& mat_v,
+                                                                 Matrix<const T, device>& mat_taus) {
   using namespace bt_red_band;
   using dlaf::factorization::internal::computeTFactor;
 
@@ -253,7 +254,7 @@ void BackTransformationReductionToBand<backend, device, T>::call(
 template <Backend B, Device D, class T>
 void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid& grid, const SizeType b,
                                                       MatrixRef<T, D>& mat_c, Matrix<const T, D>& mat_v,
-                                                      Matrix<const T, Device::CPU>& mat_taus) {
+                                                      Matrix<const T, D>& mat_taus) {
   namespace ex = pika::execution::experimental;
   using namespace bt_red_band;
   using dlaf::factorization::internal::computeTFactor;

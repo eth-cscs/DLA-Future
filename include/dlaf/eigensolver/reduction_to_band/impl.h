@@ -470,8 +470,6 @@ void gemmUpdateX(matrix::Panel<Coord::Col, T, D>& x, matrix::Matrix<const T, D>&
 template <Backend B, Device D, class T>
 void hemmComputeX(matrix::Panel<Coord::Col, T, D>& x, const matrix::SubMatrixView& view,
                   matrix::Matrix<const T, D>& a, matrix::Panel<Coord::Col, const T, D>& w) {
-  namespace ex = pika::execution::experimental;
-
   using pika::execution::thread_priority;
 
   const auto dist = a.distribution();
@@ -869,7 +867,7 @@ struct ComputePanelHelper;
 
 template <class T>
 struct ComputePanelHelper<Backend::MC, Device::CPU, T> {
-  ComputePanelHelper(const std::size_t, matrix::Distribution) {}
+  ComputePanelHelper(const std::size_t, matrix::Distribution, matrix::Distribution) {}
 
   void call(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_taus, const SizeType j_sub,
             const matrix::SubPanelView& panel_view) {
@@ -891,48 +889,59 @@ struct ComputePanelHelper<Backend::MC, Device::CPU, T> {
 #ifdef DLAF_WITH_GPU
 template <class T>
 struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
-  ComputePanelHelper(const std::size_t n_workspaces, matrix::Distribution dist_a)
-      : panels_v(n_workspaces, dist_a) {}
+  ComputePanelHelper(const std::size_t n_workspaces, matrix::Distribution dist_a,
+                     matrix::Distribution dist_taus)
+      : panels_v(n_workspaces, dist_a), mat_taus_cpu(dist_taus) {}
 
-  void call(Matrix<T, Device::GPU>& mat_a, Matrix<T, Device::CPU>& mat_taus, const SizeType j_sub,
+  void call(Matrix<T, Device::GPU>& mat_a, Matrix<T, Device::GPU>& mat_taus, const SizeType j_sub,
             const matrix::SubPanelView& panel_view) {
     using red2band::local::computePanelReflectors;
-
-    namespace ex = pika::execution::experimental;
 
     // Note:
     // - copy panel_view from GPU to CPU
     // - computePanelReflectors on CPU (on a matrix like, with just a panel)
+    // - copy back taus from CPU to GPU
     // - copy back matrix "panel" from CPU to GPU
 
     auto& v = panels_v.nextResource();
 
     copyToCPU(panel_view, mat_a, v);
-    computePanelReflectors(v, mat_taus, j_sub, panel_view);
+
+    computePanelReflectors(v, mat_taus_cpu, j_sub, panel_view);
+
+    copyFromCPU(mat_taus_cpu.read(GlobalTileIndex(j_sub, 0)),
+                mat_taus.readwrite(GlobalTileIndex(j_sub, 0)));
     copyFromCPU(panel_view, v, mat_a);
   }
 
   template <Device D, class CommSender, class TriggerSender>
   void call(TriggerSender&& trigger, comm::IndexT_MPI rank_v0, CommSender&& mpi_col_chain_panel,
-            Matrix<T, D>& mat_a, Matrix<T, Device::CPU>& mat_taus, SizeType j_sub,
+            Matrix<T, D>& mat_a, Matrix<T, D>& mat_taus, SizeType j_sub,
             const matrix::SubPanelView& panel_view) {
+    using red2band::distributed::computePanelReflectors;
+
+    // Note:
+    // - copy panel_view from GPU to CPU
+    // - computePanelReflectors on CPU (on a matrix like, with just a panel)
+    // - copy back taus from CPU to GPU
+    // - copy back matrix "panel" from CPU to GPU
+
     auto& v = panels_v.nextResource();
 
-    // copy to CPU
     copyToCPU(panel_view, mat_a, v);
 
-    // compute on CPU
-    using dlaf::eigensolver::internal::red2band::distributed::computePanelReflectors;
     computePanelReflectors(std::forward<TriggerSender>(trigger), rank_v0,
-                           std::forward<CommSender>(mpi_col_chain_panel), v, mat_taus, j_sub,
+                           std::forward<CommSender>(mpi_col_chain_panel), v, mat_taus_cpu, j_sub,
                            panel_view);
 
-    // copy back to GPU
+    copyFromCPU(mat_taus_cpu.read(GlobalTileIndex(j_sub, 0)),
+                mat_taus.readwrite(GlobalTileIndex(j_sub, 0)));
     copyFromCPU(panel_view, v, mat_a);
   }
 
 protected:
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panels_v;
+  matrix::Matrix<T, Device::CPU> mat_taus_cpu;
 
   void copyToCPU(const matrix::SubPanelView panel_view, matrix::Matrix<T, Device::GPU>& mat_a,
                  matrix::Panel<Coord::Col, T, Device::CPU>& v) {
@@ -955,6 +964,15 @@ protected:
 
   void copyFromCPU(const matrix::SubPanelView panel_view, matrix::Panel<Coord::Col, T, Device::CPU>& v,
                    matrix::Matrix<T, Device::GPU>& mat_a) {
+    for (const auto& i : panel_view.iteratorLocal()) {
+      auto spec = panel_view(i);
+      auto tile_a = mat_a.readwrite(i);
+      copyFromCPU(splitTile(v.read(i), spec), splitTile(std::move(tile_a), spec));
+    }
+  }
+
+  void copyFromCPU(matrix::ReadOnlyTileSender<T, Device::CPU> src,
+                   matrix::ReadWriteTileSender<T, Device::GPU> dst) {
     namespace ex = pika::execution::experimental;
 
     using dlaf::internal::Policy;
@@ -962,13 +980,9 @@ protected:
     using pika::execution::thread_priority;
     using pika::execution::thread_stacksize;
 
-    for (const auto& i : panel_view.iteratorLocal()) {
-      auto spec = panel_view(i);
-      auto tile_a = mat_a.readwrite(i);
-      ex::start_detached(ex::when_all(splitTile(v.read(i), spec), splitTile(std::move(tile_a), spec)) |
-                         matrix::copy(Policy<CopyBackend_v<Device::CPU, Device::GPU>>(
-                             thread_priority::high, thread_stacksize::nostack)));
-    }
+    ex::start_detached(ex::when_all(std::move(src), std::move(dst)) |
+                       dlaf::matrix::copy(Policy<CopyBackend_v<Device::CPU, Device::GPU>>(
+                           thread_priority::high, thread_stacksize::nostack)));
   }
 };
 #endif
@@ -977,7 +991,7 @@ protected:
 
 // Local implementation of reduction to band
 template <Backend B, Device D, class T>
-Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const SizeType band_size) {
+Matrix<T, D> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const SizeType band_size) {
   using dlaf::matrix::Matrix;
   using dlaf::matrix::Panel;
 
@@ -998,16 +1012,16 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
 
   // Row-vector that is distributed over columns, but exists locally on all rows of the grid
   DLAF_ASSERT(mat_a.blockSize().cols() % band_size == 0, mat_a.blockSize().cols(), band_size);
-  Matrix<T, Device::CPU> mat_taus(matrix::Distribution(GlobalElementSize(nrefls, 1),
-                                                       TileElementSize(mat_a.blockSize().cols(), 1),
-                                                       comm::Size2D(mat_a.commGridSize().cols(), 1),
-                                                       comm::Index2D(mat_a.rankIndex().col(), 0),
-                                                       comm::Index2D(mat_a.sourceRankIndex().col(), 0)));
+  Matrix<T, D> mat_taus(matrix::Distribution(GlobalElementSize(nrefls, 1),
+                                             TileElementSize(mat_a.blockSize().cols(), 1),
+                                             comm::Size2D(mat_a.commGridSize().cols(), 1),
+                                             comm::Index2D(mat_a.rankIndex().col(), 0),
+                                             comm::Index2D(mat_a.sourceRankIndex().col(), 0)));
 
   if (nrefls == 0)
     return mat_taus;
 
-  Matrix<T, Device::CPU> mat_taus_retiled =
+  Matrix<T, D> mat_taus_retiled =
       mat_taus.retiledSubPipeline(LocalTileSize(mat_a.blockSize().cols() / band_size, 1));
 
   const SizeType ntiles = (nrefls - 1) / band_size + 1;
@@ -1035,7 +1049,8 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
   //
   // It is a bit hacky usage, because SubPanelView is not meant to be used with Panel, but just with
   // Matrix. This results in a variable waste of memory, depending no the ratio band_size/nb.
-  red2band::ComputePanelHelper<B, D, T> compute_panel_helper(n_workspaces, dist_a);
+  red2band::ComputePanelHelper<B, D, T> compute_panel_helper(n_workspaces, dist_a,
+                                                             mat_taus_retiled.distribution());
 
   for (SizeType j_sub = 0; j_sub < ntiles; ++j_sub) {
     const auto i_sub = j_sub + 1;
@@ -1133,8 +1148,8 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
 
 // Distributed implementation of reduction to band
 template <Backend B, Device D, class T>
-Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, D>& mat_a,
-                                                      const SizeType band_size) {
+Matrix<T, D> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, D>& mat_a,
+                                            const SizeType band_size) {
   using namespace red2band::distributed;
 
   using common::iterate_range2d;
@@ -1179,11 +1194,11 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
 
   // Row-vector that is distributed over columns, but exists locally on all rows of the grid
   DLAF_ASSERT(mat_a.blockSize().cols() % band_size == 0, mat_a.blockSize().cols(), band_size);
-  Matrix<T, Device::CPU> mat_taus(matrix::Distribution(GlobalElementSize(nrefls, 1),
-                                                       TileElementSize(mat_a.blockSize().cols(), 1),
-                                                       comm::Size2D(mat_a.commGridSize().cols(), 1),
-                                                       comm::Index2D(mat_a.rankIndex().col(), 0),
-                                                       comm::Index2D(mat_a.sourceRankIndex().col(), 0)));
+  Matrix<T, D> mat_taus(matrix::Distribution(GlobalElementSize(nrefls, 1),
+                                             TileElementSize(mat_a.blockSize().cols(), 1),
+                                             comm::Size2D(mat_a.commGridSize().cols(), 1),
+                                             comm::Index2D(mat_a.rankIndex().col(), 0),
+                                             comm::Index2D(mat_a.sourceRankIndex().col(), 0)));
 
   if (nrefls == 0) {
 #ifdef DLAF_WITH_HDF5
@@ -1197,7 +1212,7 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
     return mat_taus;
   }
 
-  Matrix<T, Device::CPU> mat_taus_retiled =
+  Matrix<T, D> mat_taus_retiled =
       mat_taus.retiledSubPipeline(LocalTileSize(mat_a.blockSize().cols() / band_size, 1));
 
   const SizeType ntiles = (nrefls - 1) / band_size + 1;
@@ -1226,7 +1241,8 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
   }();
   common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panels_ws(n_workspaces, dist_ws);
 
-  red2band::ComputePanelHelper<B, D, T> compute_panel_helper(n_workspaces, dist);
+  red2band::ComputePanelHelper<B, D, T> compute_panel_helper(n_workspaces, dist,
+                                                             mat_taus_retiled.distribution());
 
   ex::unique_any_sender<> trigger_panel{ex::just()};
   for (SizeType j_sub = 0; j_sub < ntiles; ++j_sub) {

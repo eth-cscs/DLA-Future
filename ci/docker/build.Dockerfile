@@ -33,18 +33,6 @@ RUN apt-get -yqq update && \
     ${EXTRA_APTGET} && \
     rm -rf /var/lib/apt/lists/*
 
-# Install MKL and remove static libs (to keep image smaller)
-# ARG USE_MKL=ON
-# ARG MKL_VERSION=2024.0
-# ARG MKL_SPEC=2024.0.0
-# RUN if [ "$USE_MKL" = "ON" ]; then \
-#       wget -qO - https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB 2>/dev/null > /etc/apt/trusted.gpg.d/intel.asc  && \
-#       apt-add-repository 'deb https://apt.repos.intel.com/oneapi all main' && \
-#       apt-get install -y -qq --no-install-recommends intel-oneapi-mkl-devel-${MKL_VERSION} && \
-#       rm -rf /var/lib/apt/lists/* && \
-#       find "/opt/intel/oneapi" -name "*.a" -delete ; \
-#     fi
-
 # This is the spack version we want to have
 ARG SPACK_SHA
 ENV SPACK_SHA=$SPACK_SHA
@@ -76,10 +64,6 @@ RUN spack external find \
     pkg-config \
     python \
     xz
-    # && \
-    # if [ "$USE_MKL" = "ON" ]; then \
-    #   echo -e "  intel-oneapi-mkl:\n    externals:\n    - spec: \"intel-oneapi-mkl@$MKL_SPEC mpi_family=mpich\"\n      prefix: /opt/intel/oneapi\n    buildable: False" >> ~/.spack/packages.yaml ; \
-    # fi
 
 # Add our custom spack repo from here
 ARG SPACK_DLAF_REPO

@@ -84,8 +84,8 @@ public:
   /// @pre @p !tile_size.isEmpty(),
   /// @pre <tt> ld == compact_ld || ld == padded_ld || ld >= ld_min, </tt>
   ///      where <tt> ld_min = max(1, size.rows()) </tt> for @p MatrixAllocation::ColMajor or
-  ///      <tt> ld_min = tile_size.rows() </tt>
-  ///        for @p MatrixAllocation::Blocks and @p MatrixAllocation::Tiles.
+  ///      <tt> ld_min = block_size.rows() </tt> for @p MatrixAllocation::Blocks or
+  ///      <tt> ld_min = tile_size.rows() </tt> for @p MatrixAllocation::Tiles.
   Matrix(const GlobalElementSize& size, const TileElementSize& tile_size,
          MatrixAllocation alloc = MatrixAllocation::ColMajor, SizeType ld = padded_ld)
       : Matrix<T, D>(Distribution(size, tile_size, {1, 1}, {0, 0}, {0, 0}), alloc, ld) {}
@@ -111,8 +111,8 @@ public:
   /// @pre @p !tile_size.isEmpty(),
   /// @pre <tt> ld == compact_ld || ld == padded_ld || ld >= ld_min, </tt>
   ///      where <tt> ld_min = max(1, local_size.rows()) </tt> for @p MatrixAllocation::ColMajor or
-  ///      <tt> ld_min = tile_size.rows() </tt>
-  ///        for @p MatrixAllocation::Blocks and @p MatrixAllocation::Tiles.
+  ///      <tt> ld_min = block_size.rows() </tt> for @p MatrixAllocation::Blocks or
+  ///      <tt> ld_min = tile_size.rows() </tt> for @p MatrixAllocation::Tiles.
   Matrix(const GlobalElementSize& size, const TileElementSize& tile_size,
          const comm::CommunicatorGrid& comm, MatrixAllocation alloc = MatrixAllocation::ColMajor,
          SizeType ld = padded_ld)
@@ -126,8 +126,8 @@ public:
   ///
   /// @pre <tt> ld == compact_ld || ld == padded_ld || ld >= ld_min, </tt>
   ///      where <tt> ld_min = max(1, local_size.rows()) </tt> for @p MatrixAllocation::ColMajor or
-  ///      <tt> ld_min = tile_size.rows() </tt>
-  ///        for @p MatrixAllocation::Blocks and @p MatrixAllocation::Tiles.
+  ///      <tt> ld_min = block_size.rows() </tt> for @p MatrixAllocation::Blocks or
+  ///      <tt> ld_min = tile_size.rows() </tt> for @p MatrixAllocation::Tiles.
   Matrix(Distribution distribution, MatrixAllocation alloc = MatrixAllocation::ColMajor,
          SizeType ld = padded_ld)
       : Matrix<const T, D>(std::move(distribution)) {
@@ -272,28 +272,51 @@ void Matrix<T, D>::set_up_non_preallocated_tiles(MatrixAllocation alloc, SizeTyp
     }
   }
   else if (alloc == MatrixAllocation::Blocks) {
-    /*
-    const SizeType i_offset = dist.local_tile_offset<Coord::Row>();
-    const SizeType j_offset = dist.local_tile_offset<Coord::Col>();
-    const SizeType i_per_block = dist.block_size().rows() / dist.tile_size().rows();
-    const SizeType j_per_block = dist.block_size().cols() / dist.tile_size().cols();
+    // To be able to reuse tile methods for blocks we create a distribution with a single tile per block
+    Distribution single_tile_dist(dist.size(), {dist.block_size().rows(), dist.block_size().cols()},
+                                  dist.grid_size(), dist.rank_index(), dist.source_rank_index(),
+                                  dist.offset());
 
-    std::vector<MemView> mem_views;
-    mem_views.reserve()
+    LocalBlockSize local_nr_blocks = single_tile_dist.local_nr_blocks();
+    DLAF_ASSERT(dist.local_nr_blocks() == local_nr_blocks, dist.local_nr_blocks(), local_nr_blocks);
 
-    for (SizeType j = -j_offset; j < local_nr_tiles.cols(); ++j) {
-      for (SizeType i = -i_offset; i < local_nr_tiles.rows(); ++i) {
-        LocalTileIndex ij(i, j);
-        TileElementSize tile_size = dist.tile_size_of(ij);
-        DLAF_ASSERT_HEAVY(!tile_size.isEmpty(), tile_size);
+    common::internal::vector<MemView> mem_views;
+    mem_views.reserve(local_nr_blocks.rows());
 
-        SizeType tile_ld = compute_ld(tile_size.rows(), ld);
-        SizeType nr_elements = tile_ld * local_size.cols();
+    // Notation for the next loops:
+    // size of the current block: mb x nb
+    // size of the current tile: mt x nt
+    // Loop over the columns of blocks and then loop over all the columns of tiles needed to fill the block.
+    for (SizeType j_bl = 0, j = 0; j_bl < local_nr_blocks.cols(); ++j_bl) {
+      SizeType nb = single_tile_dist.local_tile_size_of<Coord::Col>(j_bl);
 
-        tile_managers_.emplace_back(TileDataType(tile_size, MemView(nr_elements), tile_ld));
+      for (SizeType j_el_bl = 0; j_el_bl < nb;) {
+        SizeType nt = dist.local_tile_size_of<Coord::Col>(j);
+        // Loop over the block rows and then loop over all the rows of tiles needed to fill the block.
+        for (SizeType i_bl = 0, i = 0; i_bl < local_nr_blocks.rows(); ++i_bl) {
+          SizeType mb = single_tile_dist.local_tile_size_of<Coord::Row>(i_bl);
+          SizeType block_ld = compute_ld(mb, ld);
+          if (j_el_bl == 0) {
+            // Create a MemView for each block in the block column.
+            mem_views.emplace_back(block_ld * nb);
+          }
+          for (SizeType i_el_bl = 0; i_el_bl < mb;) {
+            // Create the tile using the correct MemView
+            SizeType mt = dist.local_tile_size_of<Coord::Row>(i);
+            DLAF_ASSERT_HEAVY(!TileElementSize{mt, nt}.isEmpty(), mt, nt);
+            SizeType offset = i_el_bl + block_ld * j_el_bl;
+            SizeType view_size = (nt - 1) * block_ld + mt;
+            tile_managers_.emplace_back(
+                TileDataType({mt, nt}, MemView(mem_views[i_bl], offset, view_size), block_ld));
+            ++i;
+            i_el_bl += mt;
+          }
+        }
+        ++j;
+        j_el_bl += nt;
       }
+      mem_views.clear();
     }
-    */
   }
   else if (alloc == MatrixAllocation::Tiles) {
     for (SizeType j = 0; j < local_nr_tiles.cols(); ++j) {

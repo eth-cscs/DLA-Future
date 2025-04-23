@@ -89,13 +89,13 @@ public:
   MemoryView(const MemoryView& memory_view, SizeType offset, SizeType size)
       : memory_(size > 0 ? memory_view.memory_ : nullptr),
         offset_(size > 0 ? offset + memory_view.offset_ : 0), size_(size) {
-    DLAF_ASSERT(offset + size <= memory_view.size_, offset + size, memory_view.size_);
+    DLAF_ASSERT(offset + size <= memory_view.size_, offset, size, memory_view.size_);
   }
   template <class U = T, class = typename std::enable_if_t<std::is_const_v<U> && std::is_same_v<T, U>>>
   MemoryView(const MemoryView<ElementType, D>& memory_view, SizeType offset, SizeType size)
       : memory_(size > 0 ? memory_view.memory_ : nullptr),
         offset_(size > 0 ? offset + memory_view.offset_ : 0), size_(size) {
-    DLAF_ASSERT(offset + size <= memory_view.size_, offset + size, memory_view.size_);
+    DLAF_ASSERT(offset + size <= memory_view.size_, offset, size, memory_view.size_);
   }
 
   MemoryView& operator=(const MemoryView&) = default;

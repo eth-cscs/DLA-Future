@@ -1,0 +1,29 @@
+#
+# Distributed Linear Algebra with Future (DLAF)
+#
+# Copyright (c) ETH Zurich
+# All rights reserved.
+#
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+include:
+  - local: 'ci/common-ci.yml'
+
+test_mi200:
+  image: docker.io/rocm/dev-ubuntu-22.04:6.0.2
+  stage: build_deps
+  extends: .dlaf-container-runner-beverin-mi200
+  variables:
+    FF_TIMESTAMPS: true
+    SLURM_EXCLUSIVE: ''
+    SLURM_EXACT: ''
+    MPICH_MAX_THREAD_SAFETY: multiple
+    SLURM_NTASKS: 1
+    SLURM_TIMELIMIT: '0:30:00'
+    SLURM_UNBUFFEREDIO: 1
+    SLURM_WAIT: 0
+    PULL_IMAGE: 'YES'
+    USE_MPI: 'YES'
+    DISABLE_AFTER_SCRIPT: 'YES'
+  script: rocm-smi

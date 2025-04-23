@@ -74,6 +74,11 @@ variables:
   variables:
     COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
 
+.build_deps_common_amdgpu:
+  extends: .build_deps_common
+  variables:
+    COMMON_SPACK_ENVIRONMENT: ci/docker/common-amdgpu.yaml
+
 .build_deps_common_gh200:
   timeout: 6 hours
   extends:
@@ -92,7 +97,7 @@ variables:
     - 'echo $DOCKERHUB_TOKEN | podman login docker.io -u $DOCKERHUB_USERNAME --password-stdin'
     - 'echo "INFO: Using NUM_CORES_BUILD_DLAF=$NUM_CORES_BUILD_DLAF"'
   after_script:
-    - podman run -v $PWD/ci/ctest_to_gitlab.sh:/ctest_to_gitlab.sh $DLAF_IMAGE /ctest_to_gitlab.sh "$DLAF_IMAGE" "$USE_CODECOV" "$THREADS_MAX_PER_TASK" "$THREADS_PER_NODE" "$SLURM_CONSTRAINT" "$RUNNER" > pipeline.yml
+    - podman run -v $PWD/ci/ctest_to_gitlab.sh:/ctest_to_gitlab.sh $DLAF_IMAGE /ctest_to_gitlab.sh "$DLAF_IMAGE" "$USE_CODECOV" "$THREADS_MAX_PER_TASK" "$THREADS_PER_NODE" "$RUNNER" > pipeline.yml
   variables:
     PERSIST_IMAGE_NAME: $DLAF_IMAGE
     DOCKER_BUILD_ARGS: '[
@@ -116,7 +121,6 @@ variables:
   variables:
     DLAF_LD_PRELOAD: "/lib/x86_64-linux-gnu/libSegFault.so"
 
-
 .build_common_gh200:
   timeout: 6 hours
   extends:
@@ -128,15 +132,19 @@ variables:
 
 .build_for_eiger:
   variables:
-    RUNNER: ".container-runner-eiger"
-    SLURM_CONSTRAINT: mc
+    RUNNER: ".dlaf-container-runner-eiger"
     THREADS_MAX_PER_TASK: 32
+    THREADS_PER_NODE: 256
+
+.build_for_beverin_mi200:
+  variables:
+    RUNNER: ".dlaf-container-runner-beverin-mi200"
+    THREADS_MAX_PER_TASK: 16
     THREADS_PER_NODE: 256
 
 .build_for_alps_gh200:
   variables:
     RUNNER: ".dlaf-container-runner-daint-gh200"
-    SLURM_CONSTRAINT: gpu
     # 64 / 2 to avoid ranks on multiple sockets for RANK6
     THREADS_MAX_PER_TASK: 32
     THREADS_PER_NODE: 256

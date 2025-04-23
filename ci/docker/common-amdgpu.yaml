@@ -1,0 +1,52 @@
+#
+# Distributed Linear Algebra with Future (DLAF)
+#
+# Copyright (c) ETH Zurich
+# All rights reserved.
+#
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+
+packages:
+  all:
+    target: [x86_64]
+  # Set intel MKL as default blas, lapack and scalapack provider.
+  # Can be overwritten in environments if needed.
+  blas:
+    require: 'intel-oneapi-mkl'
+  lapack:
+    require: 'intel-oneapi-mkl'
+  scalapack:
+    require: 'intel-oneapi-mkl'
+  mpi:
+    ### Workaround until CE provides full MPI substitution.
+    require: 'cray-mpich'
+  blaspp:
+    variants:
+      - '~cuda'
+      - '~openmp'
+      - '~rocm'
+  intel-oneapi-mkl:
+    require:
+      - 'threads=openmp'
+  openblas:
+    variants:
+      - 'threads=openmp'
+  openssl:
+    # without version spack concretizes openssl@3.3.1 that doesn't build due to deprecation
+    require:
+      - '@3.3.2'
+  libfabric:
+    require:
+      - '@1.15.2'
+  hwloc:
+    variants:
+      - '~libxml2'
+  git:
+    # Force git as non-buildable to allow deprecated versions in environments
+    # https://github.com/spack/spack/pull/30040
+    buildable: false
+  stdexec:
+    require:
+      - '@git.nvhpc-25.03.rc1=25.03'

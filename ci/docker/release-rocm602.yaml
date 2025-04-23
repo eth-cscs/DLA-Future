@@ -39,6 +39,11 @@ spack:
       externals:
       - spec: llvm-amdgpu@6.0.2 ~rocm-device-libs
         prefix: /opt/rocm-6.0.2/llvm
+        extra_attributes:
+          compilers:
+            c: /opt/rocm-6.0.2/llvm/bin/amdclang
+            cxx: /opt/rocm-6.0.2/llvm/bin/amdclang++
+            fortran: /opt/rocm-6.0.2/llvm/bin/amdflang
       buildable: false
     rocm-device-libs:
       externals:

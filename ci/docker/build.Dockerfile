@@ -34,16 +34,16 @@ RUN apt-get -yqq update && \
     rm -rf /var/lib/apt/lists/*
 
 # Install MKL and remove static libs (to keep image smaller)
-ARG USE_MKL=ON
-ARG MKL_VERSION=2024.0
-ARG MKL_SPEC=2024.0.0
-RUN if [ "$USE_MKL" = "ON" ]; then \
-      wget -qO - https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB 2>/dev/null > /etc/apt/trusted.gpg.d/intel.asc  && \
-      apt-add-repository 'deb https://apt.repos.intel.com/oneapi all main' && \
-      apt-get install -y -qq --no-install-recommends intel-oneapi-mkl-devel-${MKL_VERSION} && \
-      rm -rf /var/lib/apt/lists/* && \
-      find "/opt/intel/oneapi" -name "*.a" -delete ; \
-    fi
+# ARG USE_MKL=ON
+# ARG MKL_VERSION=2024.0
+# ARG MKL_SPEC=2024.0.0
+# RUN if [ "$USE_MKL" = "ON" ]; then \
+#       wget -qO - https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB 2>/dev/null > /etc/apt/trusted.gpg.d/intel.asc  && \
+#       apt-add-repository 'deb https://apt.repos.intel.com/oneapi all main' && \
+#       apt-get install -y -qq --no-install-recommends intel-oneapi-mkl-devel-${MKL_VERSION} && \
+#       rm -rf /var/lib/apt/lists/* && \
+#       find "/opt/intel/oneapi" -name "*.a" -delete ; \
+#     fi
 
 # This is the spack version we want to have
 ARG SPACK_SHA
@@ -53,11 +53,12 @@ ENV SPACK_SHA=$SPACK_SHA
 RUN mkdir -p /opt/spack && \
     curl -Ls "https://api.github.com/repos/spack/spack/tarball/$SPACK_SHA" | tar --strip-components=1 -xz -C /opt/spack
 
-# Find compilers + Add gfortran to clang specs + Define which compiler we want to use
+# Find compilers + Define which compiler we want to use
 ARG COMPILER
-RUN spack compiler find && \
-    gawk -i inplace '$0 ~ "compiler:" {flag=0} $0 ~ "spec:.*clang" {flag=1} flag == 1 && $1 ~ "^f[c7]" && $2 ~ "null" {gsub("null","/usr/bin/gfortran",$0)} {print $0}' /root/.spack/linux/compilers.yaml && \
-    spack config add "packages:all:require:[\"%${COMPILER}\"]"
+RUN spack external find gcc llvm && \
+    spack config add "packages:cxx:require:'${COMPILER}'" && \
+    spack config add "packages:c:require:'${COMPILER}'" && \
+    spack config add "packages:fortran:require:gcc"
 
 RUN spack external find \
     autoconf \
@@ -74,10 +75,11 @@ RUN spack external find \
     perl \
     pkg-config \
     python \
-    xz && \
-    if [ "$USE_MKL" = "ON" ]; then \
-      echo -e "  intel-oneapi-mkl:\n    externals:\n    - spec: \"intel-oneapi-mkl@$MKL_SPEC mpi_family=mpich\"\n      prefix: /opt/intel/oneapi\n    buildable: False" >> ~/.spack/packages.yaml ; \
-    fi
+    xz
+    # && \
+    # if [ "$USE_MKL" = "ON" ]; then \
+    #   echo -e "  intel-oneapi-mkl:\n    externals:\n    - spec: \"intel-oneapi-mkl@$MKL_SPEC mpi_family=mpich\"\n      prefix: /opt/intel/oneapi\n    buildable: False" >> ~/.spack/packages.yaml ; \
+    # fi
 
 # Add our custom spack repo from here
 ARG SPACK_DLAF_REPO
@@ -88,7 +90,9 @@ RUN spack repo add --scope site /user_repo
 ### Workaround until CE provides full MPI substitution.
 # Add ~/site/repo if it exists in the base image
 RUN if [ -d ~/site/repo ]; then \
-      spack repo add --scope site ~/site/repo; \
+      # spack repo add --scope site ~/site/repo; \
+      git clone -b dlaf-pika-0.33.0-ci --single-branch https://github.com/eth-cscs/alps-cluster-config ~/custom-site && \
+      spack repo add --scope site ~/custom-site/site/repo; \
     fi
 
 # Set this to a spack.yaml file which contains a spec
@@ -107,6 +111,7 @@ ARG CXXSTD=17
 RUN spack -e ci config add "packages:dla-future:variants:cxxstd=${CXXSTD}"
 # 3. Concretize environment
 RUN spack -e ci concretize
+RUN spack -e ci spec -lI --cover edges
 # 4. Install only the dependencies of this (top level is our package)
 ARG NUM_PROCS
 RUN spack -e ci install --jobs ${NUM_PROCS} --fail-fast --only=dependencies

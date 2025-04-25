@@ -246,7 +246,7 @@ public:
     return local_nr_tiles_;
   }
 
-  /// Returns the number of tiles of the global matrix (2D size).
+  /// Returns the number of blocks of the global matrix (2D size).
   const GlobalBlockSize nr_blocks() const noexcept {
     return {util::ceilDiv(nr_tiles_.rows() + global_tile_offset<Coord::Row>(),
                           tiles_per_block<Coord::Row>()),
@@ -254,7 +254,7 @@ public:
                           tiles_per_block<Coord::Col>())};
   }
 
-  /// Returns the number of tiles stored locally (2D size).
+  /// Returns the number of blocks stored locally (2D size).
   const LocalBlockSize local_nr_blocks() const noexcept {
     return {util::ceilDiv(local_nr_tiles_.rows() + local_tile_offset<Coord::Row>(),
                           tiles_per_block<Coord::Row>()),

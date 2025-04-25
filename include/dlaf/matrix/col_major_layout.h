@@ -24,7 +24,7 @@ namespace dlaf::matrix {
 /// stored in memory.
 class ColMajorLayout {
 public:
-  /// Construct a column major layout of a matrix eith distribution @p distribution
+  /// Construct a column major layout of a matrix with distribution @p distribution
   ///
   /// @pre leading_dimension >= max(1, distribution.local_size().rows())
   ColMajorLayout(const Distribution& distribution, SizeType leading_dimension)

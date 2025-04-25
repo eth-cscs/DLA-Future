@@ -137,5 +137,6 @@ bool is_allocated_as(MatrixLike& mat, MatrixAllocation alloc) {
     case MatrixAllocation::Tiles:
       return is_allocated_as_tiles(mat);
   }
+  return false;
 }
 }

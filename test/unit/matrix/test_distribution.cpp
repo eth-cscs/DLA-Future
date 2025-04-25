@@ -232,8 +232,9 @@ TEST(DistributionTest, TileSizeOf) {
         size_row = size_row_last;
       EXPECT_EQ(size_row, obj.global_tile_size_of<Coord::Row>(i));
       SizeType i_lc = obj.local_tile_from_global_tile<Coord::Row>(i);
-      if (i_lc >= 0)
+      if (i_lc >= 0) {
         EXPECT_EQ(size_row, obj.local_tile_size_of<Coord::Row>(i_lc));
+      }
     }
 
     for (SizeType j = 0; j < obj.nr_tiles().cols(); ++j) {
@@ -244,8 +245,9 @@ TEST(DistributionTest, TileSizeOf) {
         size_col = size_col_last;
       EXPECT_EQ(size_col, obj.global_tile_size_of<Coord::Col>(j));
       SizeType j_lc = obj.local_tile_from_global_tile<Coord::Col>(j);
-      if (j_lc >= 0)
+      if (j_lc >= 0) {
         EXPECT_EQ(size_col, obj.local_tile_size_of<Coord::Col>(j_lc));
+      }
     }
   }
 }

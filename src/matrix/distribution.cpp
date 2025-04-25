@@ -22,7 +22,7 @@ Distribution::Distribution() noexcept
 Distribution::Distribution(const LocalElementSize& size, const TileElementSize& tile_size,
                            const GlobalElementIndex& element_offset)
     : offset_(element_offset.row(), element_offset.col()), size_(0, 0), local_size_(size),
-      nr_tiles_(0, 0), local_nr_tiles_(0, 0), block_size_({tile_size.rows(), tile_size.cols()}),
+      nr_tiles_(0, 0), local_nr_tiles_(0, 0), block_size_(tile_size.rows(), tile_size.cols()),
       tile_size_(tile_size), rank_index_(0, 0), grid_size_(1, 1), source_rank_index_(0, 0) {
   DLAF_ASSERT(local_size_.isValid(), local_size_);
   DLAF_ASSERT(!tile_size_.isEmpty(), tile_size_);

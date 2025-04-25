@@ -13,8 +13,7 @@
 
 #include <dlaf/matrix/distribution.h>
 
-namespace dlaf {
-namespace matrix {
+namespace dlaf::matrix {
 Distribution::Distribution() noexcept
     : offset_(0, 0), size_(0, 0), local_size_(0, 0), nr_tiles_(0, 0), local_nr_tiles_(0, 0),
       block_size_(1, 1), tile_size_(1, 1), rank_index_(0, 0), grid_size_(1, 1),
@@ -175,5 +174,15 @@ void Distribution::set_default_sizes() noexcept {
   source_rank_index_ = {0, 0};
 }
 
+namespace internal {
+Distribution get_single_tile_per_block_distribution(const Distribution& dist) {
+  Distribution ret = dist;
+  ret.tile_size_ = {dist.block_size_.rows(), dist.block_size_.cols()};
+  auto nr_blocks = dist.nr_blocks();
+  ret.nr_tiles_ = {nr_blocks.rows(), nr_blocks.cols()};
+  auto local_nr_blocks = dist.local_nr_blocks();
+  ret.local_nr_tiles_ = {local_nr_blocks.rows(), local_nr_blocks.cols()};
+  return ret;
+}
 }
 }

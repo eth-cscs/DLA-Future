@@ -26,10 +26,14 @@
 #define DLAF_DISTRIBUTION_DEPRECATED(x)
 #endif
 
-// TODO remove forward declarations when removing deprecated.
 namespace dlaf::matrix {
 class Distribution;
+namespace internal {
+// returns a copy of dist with tile_size set to block_size.
+Distribution get_single_tile_per_block_distribution(const Distribution& dist);
+}
 
+// TODO remove forward declarations when removing deprecated.
 namespace internal::distribution {
 template <Coord rc>
 SizeType distance_to_adjacent_tile(const Distribution& dist, SizeType global_element) noexcept;
@@ -109,6 +113,8 @@ tile_element_index       O <-- I
 */
 
 class Distribution {
+  friend Distribution internal::get_single_tile_per_block_distribution(const Distribution& dist);
+
 public:
   /// Constructs a distribution for a non distributed matrix of size {0, 0} and block size {1, 1}.
   Distribution() noexcept;
@@ -633,7 +639,7 @@ public:
 
   /// Returns if block_size is equal to tile_size
   bool single_tile_per_block() const noexcept {
-    return block_size_.rows() / tile_size_.rows() && block_size_.cols() / tile_size_.cols();
+    return block_size_.rows() == tile_size_.rows() && block_size_.cols() == tile_size_.cols();
   }
 
 private:

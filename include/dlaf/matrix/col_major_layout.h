@@ -72,7 +72,6 @@ public:
   ///
   /// @pre index.isIn(nr_tiles()).
   SizeType ld_tile(const LocalTileIndex&) const noexcept {
-    DLAF_ASSERT_HEAVY(index.isIn(nr_tiles_), index, nr_tiles_);
     return ld_;
   }
 
@@ -80,7 +79,7 @@ public:
   ///
   /// @pre index.isIn(nr_tiles()).
   SizeType min_tile_mem_size(const LocalTileIndex& index) const noexcept {
-    DLAF_ASSERT_HEAVY(index.isIn(nr_tiles_), index, nr_tiles_);
+    DLAF_ASSERT_HEAVY(index.isIn(nr_tiles()), index, nr_tiles());
     const TileElementSize tile_size = tile_size_of(index);
 
     return min_tile_mem_size(tile_size.rows(), tile_size.cols());
@@ -102,7 +101,7 @@ public:
     return dist_;
   }
 
-  constexpr static MatrixAllocation allocation_type() noexcept {
+  constexpr static MatrixAllocation allocation() noexcept {
     return MatrixAllocation::ColMajor;
   }
 

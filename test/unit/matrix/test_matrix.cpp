@@ -19,6 +19,7 @@
 #include <pika/init.hpp>
 
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/matrix/check_allocation.h>
 #include <dlaf/matrix/copy.h>
 #include <dlaf/matrix/create_matrix.h>
 #include <dlaf/matrix/distribution.h>
@@ -212,6 +213,7 @@ TYPED_TEST(MatrixLocalTest, ConstructorColMajor) {
 
       set(mat, el);
       CHECK_MATRIX_EQ(el, mat);
+      EXPECT_TRUE(is_allocated_as_col_major(mat));
     }
     {
       Matrix<Type, Device::CPU> mat(LocalElementSize{test.m, test.n}, test.tile_size, alloc);
@@ -222,6 +224,7 @@ TYPED_TEST(MatrixLocalTest, ConstructorColMajor) {
 
       set(mat, el);
       CHECK_MATRIX_EQ(el, mat);
+      EXPECT_TRUE(is_allocated_as_col_major(mat));
     }
     {
       Matrix<Type, Device::CPU> mat(GlobalElementSize{test.m, test.n}, test.tile_size, alloc);
@@ -232,6 +235,7 @@ TYPED_TEST(MatrixLocalTest, ConstructorColMajor) {
 
       set(mat, el);
       CHECK_MATRIX_EQ(el, mat);
+      EXPECT_TRUE(is_allocated_as_col_major(mat));
     }
 
     const SizeType min_ld = std::max<SizeType>(1, dist.local_size().rows());
@@ -245,6 +249,7 @@ TYPED_TEST(MatrixLocalTest, ConstructorColMajor) {
 
         set(mat, el);
         CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_col_major(mat));
       }
       {
         Matrix<Type, Device::CPU> mat(LocalElementSize{test.m, test.n}, test.tile_size, alloc, ld);
@@ -255,6 +260,7 @@ TYPED_TEST(MatrixLocalTest, ConstructorColMajor) {
 
         set(mat, el);
         CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_col_major(mat));
       }
       {
         Matrix<Type, Device::CPU> mat(GlobalElementSize{test.m, test.n}, test.tile_size, alloc, ld);
@@ -265,9 +271,50 @@ TYPED_TEST(MatrixLocalTest, ConstructorColMajor) {
 
         set(mat, el);
         CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_col_major(mat));
       }
     }
   }
+}
+
+namespace blocks {
+
+SizeType rows_of_block_containing_tile(const LocalTileIndex& ij, const Distribution& dist) {
+  Distribution helper_dist = dlaf::matrix::internal::get_single_tile_per_block_distribution(dist);
+
+  SizeType i_el_local = dist.local_element_from_local_tile_and_tile_element<Coord::Row>(ij.row(), 0);
+  SizeType i_bl_local = helper_dist.local_tile_from_local_element<Coord::Row>(i_el_local);
+
+  return helper_dist.local_tile_size_of<Coord::Row>(i_bl_local);
+}
+
+template <class MatrixLike>
+void check_compact_ld(MatrixLike& mat) {
+  for (auto& ij : iterate_range2d(mat.distribution().local_nr_tiles())) {
+    auto tile = tt::sync_wait(mat.read(ij));
+    SizeType block_rows = rows_of_block_containing_tile(ij, mat.distribution());
+    EXPECT_EQ(block_rows, tile.get().ld());
+  }
+}
+
+template <class MatrixLike>
+void check_ld(MatrixLike& mat) {
+  for (auto& ij : iterate_range2d(mat.distribution().local_nr_tiles())) {
+    auto tile = tt::sync_wait(mat.read(ij));
+    SizeType block_rows = rows_of_block_containing_tile(ij, mat.distribution());
+    EXPECT_LE(block_rows, tile.get().ld());
+  }
+}
+
+template <class MatrixLike>
+void check_ld(MatrixLike& mat, const SizeType ld) {
+  if (ld == compact_ld)
+    check_compact_ld(mat);
+  else if (ld == padded_ld)
+    check_ld(mat);
+  else
+    check_const_ld(mat, ld);
+}
 }
 
 namespace tiles {
@@ -298,6 +345,86 @@ void check_ld(MatrixLike& mat, const SizeType ld) {
 }
 }
 
+TYPED_TEST(MatrixLocalTest, ConstructorBlocks) {
+  using namespace blocks;
+  constexpr auto alloc = MatrixAllocation::Blocks;
+  using Type = TypeParam;
+  BaseType<Type> c = 0.0;
+  auto el = [&](const GlobalElementIndex& index) {
+    SizeType i = index.row();
+    SizeType j = index.col();
+    return TypeUtilities<Type>::element(i + j / 1024. + c, j - i / 128.);
+  };
+
+  for (const auto& test : sizes_tests) {
+    const Distribution dist = Distribution(LocalElementSize{test.m, test.n}, test.tile_size);
+    {
+      Matrix<Type, Device::CPU> mat({test.m, test.n}, test.tile_size, alloc);
+      EXPECT_EQ(dist, mat.distribution());
+
+      check_ld(mat);
+
+      set(mat, el);
+      CHECK_MATRIX_EQ(el, mat);
+      EXPECT_TRUE(is_allocated_as_blocks(mat));
+    }
+    {
+      Matrix<Type, Device::CPU> mat(LocalElementSize{test.m, test.n}, test.tile_size, alloc);
+      EXPECT_EQ(dist, mat.distribution());
+
+      check_ld(mat);
+
+      set(mat, el);
+      CHECK_MATRIX_EQ(el, mat);
+      EXPECT_TRUE(is_allocated_as_blocks(mat));
+    }
+    {
+      Matrix<Type, Device::CPU> mat(GlobalElementSize{test.m, test.n}, test.tile_size, alloc);
+      EXPECT_EQ(dist, mat.distribution());
+
+      check_ld(mat);
+
+      set(mat, el);
+      CHECK_MATRIX_EQ(el, mat);
+      EXPECT_TRUE(is_allocated_as_blocks(mat));
+    }
+
+    const SizeType min_ld = std::max<SizeType>(1, dist.tile_size().rows());
+    for (const auto ld : {compact_ld, padded_ld, min_ld, min_ld + 20}) {
+      {
+        Matrix<Type, Device::CPU> mat({test.m, test.n}, test.tile_size, alloc, ld);
+        EXPECT_EQ(dist, mat.distribution());
+
+        check_ld(mat, ld);
+
+        set(mat, el);
+        CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_blocks(mat));
+      }
+      {
+        Matrix<Type, Device::CPU> mat(LocalElementSize{test.m, test.n}, test.tile_size, alloc, ld);
+        EXPECT_EQ(dist, mat.distribution());
+
+        check_ld(mat, ld);
+
+        set(mat, el);
+        CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_blocks(mat));
+      }
+      {
+        Matrix<Type, Device::CPU> mat(GlobalElementSize{test.m, test.n}, test.tile_size, alloc, ld);
+        EXPECT_EQ(dist, mat.distribution());
+
+        check_ld(mat, ld);
+
+        set(mat, el);
+        CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_blocks(mat));
+      }
+    }
+  }
+}
+
 TYPED_TEST(MatrixLocalTest, ConstructorTiles) {
   using namespace tiles;
   constexpr auto alloc = MatrixAllocation::Tiles;
@@ -319,6 +446,7 @@ TYPED_TEST(MatrixLocalTest, ConstructorTiles) {
 
       set(mat, el);
       CHECK_MATRIX_EQ(el, mat);
+      EXPECT_TRUE(is_allocated_as_tiles(mat));
     }
     {
       Matrix<Type, Device::CPU> mat(LocalElementSize{test.m, test.n}, test.tile_size, alloc);
@@ -328,6 +456,7 @@ TYPED_TEST(MatrixLocalTest, ConstructorTiles) {
 
       set(mat, el);
       CHECK_MATRIX_EQ(el, mat);
+      EXPECT_TRUE(is_allocated_as_tiles(mat));
     }
     {
       Matrix<Type, Device::CPU> mat(GlobalElementSize{test.m, test.n}, test.tile_size, alloc);
@@ -337,6 +466,7 @@ TYPED_TEST(MatrixLocalTest, ConstructorTiles) {
 
       set(mat, el);
       CHECK_MATRIX_EQ(el, mat);
+      EXPECT_TRUE(is_allocated_as_tiles(mat));
     }
 
     const SizeType min_ld = std::max<SizeType>(1, dist.tile_size().rows());
@@ -349,6 +479,7 @@ TYPED_TEST(MatrixLocalTest, ConstructorTiles) {
 
         set(mat, el);
         CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_tiles(mat));
       }
       {
         Matrix<Type, Device::CPU> mat(LocalElementSize{test.m, test.n}, test.tile_size, alloc, ld);
@@ -358,6 +489,7 @@ TYPED_TEST(MatrixLocalTest, ConstructorTiles) {
 
         set(mat, el);
         CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_tiles(mat));
       }
       {
         Matrix<Type, Device::CPU> mat(GlobalElementSize{test.m, test.n}, test.tile_size, alloc, ld);
@@ -367,6 +499,7 @@ TYPED_TEST(MatrixLocalTest, ConstructorTiles) {
 
         set(mat, el);
         CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_tiles(mat));
       }
     }
   }
@@ -460,6 +593,7 @@ TYPED_TEST(MatrixTest, ConstructorColMajor) {
 
         set(mat, el);
         CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_col_major(mat));
       }
       {
         Matrix<Type, Device::CPU> mat(dist, alloc);
@@ -470,6 +604,7 @@ TYPED_TEST(MatrixTest, ConstructorColMajor) {
 
         set(mat, el);
         CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_col_major(mat));
       }
 
       // Note: min_ld is different as src_rank_index impacts the local matrix sizes.
@@ -484,6 +619,7 @@ TYPED_TEST(MatrixTest, ConstructorColMajor) {
 
           set(mat, el);
           CHECK_MATRIX_EQ(el, mat);
+          EXPECT_TRUE(is_allocated_as_col_major(mat));
         }
       }
 
@@ -498,6 +634,7 @@ TYPED_TEST(MatrixTest, ConstructorColMajor) {
 
           set(mat, el);
           CHECK_MATRIX_EQ(el, mat);
+          EXPECT_TRUE(is_allocated_as_col_major(mat));
         }
       }
     }
@@ -505,7 +642,7 @@ TYPED_TEST(MatrixTest, ConstructorColMajor) {
 }
 
 TYPED_TEST(MatrixTest, ConstructorBlocks) {
-  using namespace tiles;
+  using namespace blocks;
   constexpr auto alloc = MatrixAllocation::Blocks;
   using Type = TypeParam;
   BaseType<Type> c = 0.0;
@@ -531,6 +668,7 @@ TYPED_TEST(MatrixTest, ConstructorBlocks) {
 
         set(mat, el);
         CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_blocks(mat));
       }
       {
         Matrix<Type, Device::CPU> mat(dist, alloc);
@@ -540,6 +678,7 @@ TYPED_TEST(MatrixTest, ConstructorBlocks) {
 
         set(mat, el);
         CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_blocks(mat));
       }
 
       const SizeType min_ld = test.block_size.rows();
@@ -552,6 +691,7 @@ TYPED_TEST(MatrixTest, ConstructorBlocks) {
 
           set(mat, el);
           CHECK_MATRIX_EQ(el, mat);
+          EXPECT_TRUE(is_allocated_as_blocks(mat));
         }
         {
           Matrix<Type, Device::CPU> mat(dist, alloc, ld);
@@ -561,6 +701,7 @@ TYPED_TEST(MatrixTest, ConstructorBlocks) {
 
           set(mat, el);
           CHECK_MATRIX_EQ(el, mat);
+          EXPECT_TRUE(is_allocated_as_blocks(mat));
         }
       }
     }
@@ -594,6 +735,7 @@ TYPED_TEST(MatrixTest, ConstructorTiles) {
 
         set(mat, el);
         CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_tiles(mat));
       }
       {
         Matrix<Type, Device::CPU> mat(dist, alloc);
@@ -603,6 +745,7 @@ TYPED_TEST(MatrixTest, ConstructorTiles) {
 
         set(mat, el);
         CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_tiles(mat));
       }
 
       const SizeType min_ld = test.tile_size.rows();
@@ -615,6 +758,7 @@ TYPED_TEST(MatrixTest, ConstructorTiles) {
 
           set(mat, el);
           CHECK_MATRIX_EQ(el, mat);
+          EXPECT_TRUE(is_allocated_as_tiles(mat));
         }
         {
           Matrix<Type, Device::CPU> mat(dist, alloc, ld);
@@ -624,6 +768,7 @@ TYPED_TEST(MatrixTest, ConstructorTiles) {
 
           set(mat, el);
           CHECK_MATRIX_EQ(el, mat);
+          EXPECT_TRUE(is_allocated_as_tiles(mat));
         }
       }
     }

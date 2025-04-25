@@ -130,7 +130,7 @@ public:
   ///      <tt> ld_min = tile_size.rows() </tt> for @p MatrixAllocation::Tiles.
   Matrix(Distribution distribution, MatrixAllocation alloc = MatrixAllocation::ColMajor,
          SizeType ld = padded_ld)
-      : Matrix<const T, D>(std::move(distribution)) {
+      : Matrix<const T, D>(std::move(distribution), alloc) {
     set_up_non_preallocated_tiles(alloc, ld);
   }
 
@@ -273,11 +273,9 @@ void Matrix<T, D>::set_up_non_preallocated_tiles(MatrixAllocation alloc, SizeTyp
   }
   else if (alloc == MatrixAllocation::Blocks) {
     // To be able to reuse tile methods for blocks we create a distribution with a single tile per block
-    Distribution single_tile_dist(dist.size(), {dist.block_size().rows(), dist.block_size().cols()},
-                                  dist.grid_size(), dist.rank_index(), dist.source_rank_index(),
-                                  dist.offset());
+    Distribution helper_dist = internal::get_single_tile_per_block_distribution(dist);
 
-    LocalBlockSize local_nr_blocks = single_tile_dist.local_nr_blocks();
+    LocalBlockSize local_nr_blocks = helper_dist.local_nr_blocks();
     DLAF_ASSERT(dist.local_nr_blocks() == local_nr_blocks, dist.local_nr_blocks(), local_nr_blocks);
 
     common::internal::vector<MemView> mem_views;
@@ -288,13 +286,13 @@ void Matrix<T, D>::set_up_non_preallocated_tiles(MatrixAllocation alloc, SizeTyp
     // size of the current tile: mt x nt
     // Loop over the columns of blocks and then loop over all the columns of tiles needed to fill the block.
     for (SizeType j_bl = 0, j = 0; j_bl < local_nr_blocks.cols(); ++j_bl) {
-      SizeType nb = single_tile_dist.local_tile_size_of<Coord::Col>(j_bl);
+      SizeType nb = helper_dist.local_tile_size_of<Coord::Col>(j_bl);
 
       for (SizeType j_el_bl = 0; j_el_bl < nb;) {
         SizeType nt = dist.local_tile_size_of<Coord::Col>(j);
         // Loop over the block rows and then loop over all the rows of tiles needed to fill the block.
         for (SizeType i_bl = 0, i = 0; i_bl < local_nr_blocks.rows(); ++i_bl) {
-          SizeType mb = single_tile_dist.local_tile_size_of<Coord::Row>(i_bl);
+          SizeType mb = helper_dist.local_tile_size_of<Coord::Row>(i_bl);
           SizeType block_ld = compute_ld(mb, ld);
           if (j_el_bl == 0) {
             // Create a MemView for each block in the block column.
@@ -303,7 +301,7 @@ void Matrix<T, D>::set_up_non_preallocated_tiles(MatrixAllocation alloc, SizeTyp
           for (SizeType i_el_bl = 0; i_el_bl < mb;) {
             // Create the tile using the correct MemView
             SizeType mt = dist.local_tile_size_of<Coord::Row>(i);
-            DLAF_ASSERT_HEAVY(!TileElementSize{mt, nt}.isEmpty(), mt, nt);
+            DLAF_ASSERT_HEAVY(!(TileElementSize{mt, nt}.isEmpty()), mt, nt);
             SizeType offset = i_el_bl + block_ld * j_el_bl;
             SizeType view_size = (nt - 1) * block_ld + mt;
             tile_managers_.emplace_back(
@@ -351,7 +349,8 @@ public:
   friend internal::MatrixRef<const ElementType, D>;
 
   template <class Layout>
-  Matrix(const Layout& layout, ElementType* ptr) noexcept : MatrixBase(layout.distribution()) {
+  Matrix(const Layout& layout, ElementType* ptr) noexcept
+      : MatrixBase(layout.distribution()), allocation_(layout.allocation()) {
     memory::MemoryView<ElementType, D> mem(ptr, layout.min_mem_size());
     set_up_preallocated_tiles(mem, layout);
   }
@@ -365,6 +364,10 @@ public:
 
   Matrix& operator=(const Matrix& rhs) = delete;
   Matrix& operator=(Matrix&& rhs) = default;
+
+  const MatrixAllocation& allocation() const noexcept {
+    return allocation_;
+  }
 
   /// Returns a read-only sender of the Tile with local index @p index.
   ///
@@ -435,7 +438,8 @@ public:
   }
 
 protected:
-  Matrix(Distribution distribution) : internal::MatrixBase{std::move(distribution)} {
+  Matrix(Distribution distribution, MatrixAllocation alloc)
+      : internal::MatrixBase{std::move(distribution)}, allocation_(alloc) {
     DLAF_ASSERT((distribution.offset() == GlobalElementIndex{0, 0}), "not supported",
                 distribution.offset());
   }
@@ -447,7 +451,12 @@ protected:
 
   template <template <class, Device> class MatrixLike>
   Matrix(MatrixLike<const T, D>& mat, const LocalTileSize& tiles_per_block) noexcept
-      : MatrixBase(mat.distribution(), tiles_per_block) {
+      : MatrixBase(mat.distribution(), tiles_per_block), allocation_(mat.allocation()) {
+    // Adjust allocation_ when retiling the first time a tile allocated matrix.
+    if (allocation_ == MatrixAllocation::Tiles && mat.distribution().single_tile_per_block() &&
+        !distribution().single_tile_per_block())
+      allocation_ = MatrixAllocation::Blocks;
+
     set_up_retiled_sub_pipelines(mat, tiles_per_block);
   }
 
@@ -460,6 +469,7 @@ protected:
                                     const LocalTileSize& tiles_per_block) noexcept;
 
   std::vector<internal::TilePipeline<T, D>> tile_managers_;
+  MatrixAllocation allocation_;
 
 private:
   ReadWriteSenderType readwrite(const LocalTileIndex& index) noexcept {

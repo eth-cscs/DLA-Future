@@ -13,6 +13,7 @@
 #include <vector>
 
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/matrix/check_allocation.h>
 #include <dlaf/matrix/matrix.h>
 
 #include <gtest/gtest.h>
@@ -52,6 +53,7 @@ const std::vector<std::tuple<LocalElementSize, TileElementSize, LocalTileSize>> 
     {{0, 0}, {2, 3}, {2, 2}},
     {{3, 0}, {5, 2}, {1, 3}},
     {{0, 1}, {4, 6}, {1, 1}},
+    {{15, 18}, {2, 3}, {1, 1}},
     {{15, 18}, {2, 3}, {2, 2}},
     {{6, 6}, {2, 1}, {1, 2}},
     {{3, 4}, {2, 3}, {2, 2}},
@@ -63,6 +65,7 @@ const std::vector<std::tuple<GlobalElementSize, TileElementSize, LocalTileSize>>
     {{0, 0}, {2, 3}, {2, 2}},
     {{3, 0}, {5, 2}, {1, 3}},
     {{0, 1}, {4, 6}, {1, 1}},
+    {{45, 32}, {2, 3}, {1, 1}},
     {{45, 32}, {2, 3}, {2, 2}},
     {{6, 15}, {2, 1}, {1, 2}},
     {{3, 14}, {2, 3}, {2, 2}},
@@ -93,51 +96,62 @@ TYPED_TEST(RetiledMatrixLocalTest, LocalConstructor) {
   };
 
   for (const auto& [size, tile_size, tiles_per_block] : local_sizes_tests) {
-    const GlobalElementSize block_size(tile_size.rows() * tiles_per_block.rows(),
-                                       tile_size.cols() * tiles_per_block.cols());
-    Distribution expected_distribution({size.rows(), size.cols()}, block_size, tile_size, {1, 1}, {0, 0},
-                                       {0, 0});
+    for (const auto& alloc :
+         {MatrixAllocation::ColMajor, MatrixAllocation::Blocks, MatrixAllocation::Tiles}) {
+      const MatrixAllocation exp_alloc =
+          alloc == MatrixAllocation::Tiles && tiles_per_block != LocalTileSize{1, 1}
+              ? MatrixAllocation::Blocks
+              : alloc;
+      const GlobalElementSize block_size(tile_size.rows() * tiles_per_block.rows(),
+                                         tile_size.cols() * tiles_per_block.cols());
+      Distribution expected_distribution({size.rows(), size.cols()}, block_size, tile_size, {1, 1},
+                                         {0, 0}, {0, 0});
 
-    Matrix<Type, Device::CPU> mat(size, {block_size.rows(), block_size.cols()});
+      Matrix<Type, Device::CPU> mat(size, {block_size.rows(), block_size.cols()}, alloc);
+      ASSERT_TRUE(is_allocated_as(mat, alloc));
 
-    // Non-const retiled matrix
-    {
-      set(mat, el1);
-
+      // Non-const retiled matrix
       {
-        Matrix<Type, Device::CPU> rt_mat = mat.retiledSubPipeline(tiles_per_block);
-        EXPECT_EQ(expected_distribution, rt_mat.distribution());
-        CHECK_MATRIX_EQ(el1, rt_mat);
+        set(mat, el1);
 
-        set(rt_mat, el2);
-        CHECK_MATRIX_EQ(el2, rt_mat);
+        {
+          Matrix<Type, Device::CPU> rt_mat = mat.retiledSubPipeline(tiles_per_block);
+          EXPECT_EQ(expected_distribution, rt_mat.distribution());
+          CHECK_MATRIX_EQ(el1, rt_mat);
+
+          set(rt_mat, el2);
+          CHECK_MATRIX_EQ(el2, rt_mat);
+          EXPECT_TRUE(is_allocated_as(rt_mat, exp_alloc));
+        }
+        CHECK_MATRIX_EQ(el2, mat);
       }
-      CHECK_MATRIX_EQ(el2, mat);
-    }
 
-    // Const retiled matrix from non-const matrix
-    {
-      set(mat, el1);
-
+      // Const retiled matrix from non-const matrix
       {
-        Matrix<const Type, Device::CPU> rt_mat = mat.retiledSubPipelineConst(tiles_per_block);
-        EXPECT_EQ(expected_distribution, rt_mat.distribution());
-        CHECK_MATRIX_EQ(el1, rt_mat);
+        set(mat, el1);
+
+        {
+          Matrix<const Type, Device::CPU> rt_mat = mat.retiledSubPipelineConst(tiles_per_block);
+          EXPECT_EQ(expected_distribution, rt_mat.distribution());
+          CHECK_MATRIX_EQ(el1, rt_mat);
+          EXPECT_TRUE(is_allocated_as(rt_mat, exp_alloc));
+        }
+        CHECK_MATRIX_EQ(el1, mat);
       }
-      CHECK_MATRIX_EQ(el1, mat);
-    }
 
-    // Const retiled matrix from const matrix
-    {
-      set(mat, el1);
-      Matrix<const Type, Device::CPU>& mat_const = mat;
-
+      // Const retiled matrix from const matrix
       {
-        Matrix<const Type, Device::CPU> rt_mat = mat_const.retiledSubPipelineConst(tiles_per_block);
-        EXPECT_EQ(expected_distribution, rt_mat.distribution());
-        CHECK_MATRIX_EQ(el1, rt_mat);
+        set(mat, el1);
+        Matrix<const Type, Device::CPU>& mat_const = mat;
+
+        {
+          Matrix<const Type, Device::CPU> rt_mat = mat_const.retiledSubPipelineConst(tiles_per_block);
+          EXPECT_EQ(expected_distribution, rt_mat.distribution());
+          CHECK_MATRIX_EQ(el1, rt_mat);
+          EXPECT_TRUE(is_allocated_as(rt_mat, exp_alloc));
+        }
+        CHECK_MATRIX_EQ(el1, mat);
       }
-      CHECK_MATRIX_EQ(el1, mat);
     }
   }
 }
@@ -158,51 +172,62 @@ TYPED_TEST(RetiledMatrixTest, GlobalConstructor) {
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& [size, tile_size, tiles_per_block] : global_sizes_tests) {
-      const GlobalElementSize block_size(tile_size.rows() * tiles_per_block.rows(),
-                                         tile_size.cols() * tiles_per_block.cols());
-      Distribution expected_distribution(size, block_size, tile_size, comm_grid.size(), comm_grid.rank(),
-                                         {0, 0});
+      for (const auto& alloc :
+           {MatrixAllocation::ColMajor, MatrixAllocation::Blocks, MatrixAllocation::Tiles}) {
+        const MatrixAllocation exp_alloc =
+            alloc == MatrixAllocation::Tiles && tiles_per_block != LocalTileSize{1, 1}
+                ? MatrixAllocation::Blocks
+                : alloc;
+        const GlobalElementSize block_size(tile_size.rows() * tiles_per_block.rows(),
+                                           tile_size.cols() * tiles_per_block.cols());
+        Distribution expected_distribution(size, block_size, tile_size, comm_grid.size(),
+                                           comm_grid.rank(), {0, 0});
 
-      Matrix<Type, Device::CPU> mat(size, {block_size.rows(), block_size.cols()}, comm_grid);
+        Matrix<Type, Device::CPU> mat(size, {block_size.rows(), block_size.cols()}, comm_grid, alloc);
+        ASSERT_TRUE(is_allocated_as(mat, alloc));
 
-      // Non-const retiled matrix
-      {
-        set(mat, el1);
-
+        // Non-const retiled matrix
         {
-          Matrix<Type, Device::CPU> rt_mat = mat.retiledSubPipeline(tiles_per_block);
-          EXPECT_EQ(expected_distribution, rt_mat.distribution());
-          CHECK_MATRIX_EQ(el1, rt_mat);
+          set(mat, el1);
 
-          set(rt_mat, el2);
-          CHECK_MATRIX_EQ(el2, rt_mat);
+          {
+            Matrix<Type, Device::CPU> rt_mat = mat.retiledSubPipeline(tiles_per_block);
+            EXPECT_EQ(expected_distribution, rt_mat.distribution());
+            CHECK_MATRIX_EQ(el1, rt_mat);
+            EXPECT_TRUE(is_allocated_as(rt_mat, exp_alloc));
+
+            set(rt_mat, el2);
+            CHECK_MATRIX_EQ(el2, rt_mat);
+          }
+          CHECK_MATRIX_EQ(el2, mat);
         }
-        CHECK_MATRIX_EQ(el2, mat);
-      }
 
-      // Const retiled matrix from non-const matrix
-      {
-        set(mat, el1);
-
+        // Const retiled matrix from non-const matrix
         {
-          Matrix<const Type, Device::CPU> rt_mat = mat.retiledSubPipelineConst(tiles_per_block);
-          EXPECT_EQ(expected_distribution, rt_mat.distribution());
-          CHECK_MATRIX_EQ(el1, rt_mat);
+          set(mat, el1);
+
+          {
+            Matrix<const Type, Device::CPU> rt_mat = mat.retiledSubPipelineConst(tiles_per_block);
+            EXPECT_EQ(expected_distribution, rt_mat.distribution());
+            CHECK_MATRIX_EQ(el1, rt_mat);
+            EXPECT_TRUE(is_allocated_as(rt_mat, exp_alloc));
+          }
+          CHECK_MATRIX_EQ(el1, mat);
         }
-        CHECK_MATRIX_EQ(el1, mat);
-      }
 
-      // Const retiled matrix from const matrix
-      {
-        set(mat, el1);
-        Matrix<const Type, Device::CPU>& mat_const = mat;
-
+        // Const retiled matrix from const matrix
         {
-          Matrix<const Type, Device::CPU> rt_mat = mat_const.retiledSubPipelineConst(tiles_per_block);
-          EXPECT_EQ(expected_distribution, rt_mat.distribution());
-          CHECK_MATRIX_EQ(el1, rt_mat);
+          set(mat, el1);
+          Matrix<const Type, Device::CPU>& mat_const = mat;
+
+          {
+            Matrix<const Type, Device::CPU> rt_mat = mat_const.retiledSubPipelineConst(tiles_per_block);
+            EXPECT_EQ(expected_distribution, rt_mat.distribution());
+            CHECK_MATRIX_EQ(el1, rt_mat);
+            EXPECT_TRUE(is_allocated_as(rt_mat, exp_alloc));
+          }
+          CHECK_MATRIX_EQ(el1, mat);
         }
-        CHECK_MATRIX_EQ(el1, mat);
       }
     }
   }

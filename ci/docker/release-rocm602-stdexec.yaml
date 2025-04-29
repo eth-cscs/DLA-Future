@@ -10,7 +10,7 @@
 
 spack:
   include:
-  - /spack_environment/common.yaml
+  - /spack_environment/common-amdgpu.yaml
 
   view: false
   concretizer:
@@ -33,11 +33,9 @@ spack:
       require:: openblas
     lapack:
       require:: openblas
-    mpich:
+    cray-mpich:
       require:
         - '~rocm'
-        - 'device=ch3'
-        - 'netmod=tcp'
     llvm-amdgpu:
       externals:
       - spec: llvm-amdgpu@6.0.2 ~rocm-device-libs

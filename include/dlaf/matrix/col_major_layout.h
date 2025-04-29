@@ -27,6 +27,7 @@ public:
   /// Construct a column major layout of a matrix with distribution @p distribution
   ///
   /// @pre leading_dimension >= max(1, distribution.local_size().rows())
+  /// @pre distribution.offset() == {0, 0}
   ColMajorLayout(const Distribution& distribution, SizeType leading_dimension)
       : dist_(distribution), ld_(leading_dimension) {
     if (dist_.local_size().isEmpty()) {

@@ -10,8 +10,30 @@
 include:
   - remote: 'https://gitlab.com/cscs-ci/recipes/-/raw/master/templates/v2/.ci-ext.yml'
 
-# Need custom definition as remote adds SLURM_MPI_TYPE: pmi2
+.dlaf-container-runner-eiger:
+  extends: .container-runner-eiger
+  variables:
+    SLURM_CONSTRAINT: mc
+
 .dlaf-container-runner-daint-gh200:
   extends: .container-runner-daint-gh200
   variables:
+    CSCS_CUDA_MPS: 1
+    # Need to reset as remote adds SLURM_MPI_TYPE: pmi2
     SLURM_MPI_TYPE: cray_shasta
+
+# TDS needs different credentials
+.dlaf-container-runner-beverin:
+  variables:
+    F7T_CLIENT_ID: $F7T_TDS_CLIENT_ID
+    F7T_CLIENT_SECRET: $F7T_TDS_CLIENT_SECRET
+
+.dlaf-container-runner-beverin-mi300:
+  extends:
+    - .container-runner-beverin-mi300
+    - .dlaf-container-runner-beverin
+
+.dlaf-container-runner-beverin-mi200:
+  extends:
+    - .container-runner-beverin-mi200
+    - .dlaf-container-runner-beverin

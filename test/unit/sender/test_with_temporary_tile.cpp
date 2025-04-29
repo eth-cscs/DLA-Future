@@ -28,7 +28,7 @@ namespace tt = pika::this_thread::experimental;
 template <class T, Device D>
 auto newBlockMatrixContiguous() {
   auto dist = matrix::Distribution({13, 13}, {13, 13});
-  auto matrix = matrix::Matrix<T, D>(dist, matrix::MatrixAllocation::ColMajor, matrix::compact_ld);
+  auto matrix = matrix::Matrix<T, D>(dist, matrix::MatrixAllocation::ColMajor, matrix::Ld::Compact);
 
   EXPECT_TRUE(
       data_iscontiguous(common::make_data(tt::sync_wait(matrix.read(LocalTileIndex(0, 0))).get())));

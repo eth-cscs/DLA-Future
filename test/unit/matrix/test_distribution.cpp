@@ -629,6 +629,6 @@ TEST(DistributionInternalTest, SingleTilePerBlockDistribution) {
                               test.rank, test.src_rank, test.offset);
     Distribution obj(test.size, test.block_size, test.tile_size, test.grid_size, test.rank,
                      test.src_rank, test.offset);
-    EXPECT_EQ(expected_obj, dlaf::matrix::internal::get_single_tile_per_block_distribution(obj));
+    EXPECT_EQ(expected_obj, dlaf::matrix::internal::create_single_tile_per_block_distribution(obj));
   }
 }

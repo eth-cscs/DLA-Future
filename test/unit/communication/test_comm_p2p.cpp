@@ -102,7 +102,7 @@ TEST_F(P2PTestMC, SendRecv) {
   auto dist = matrix::Distribution({13, 13}, {13, 13});
 
   // single tile matrix whose columns are stored in contiguous memory
-  testSendRecv(world, MatrixT(dist, matrix::MatrixAllocation::Tiles, matrix::compact_ld));
+  testSendRecv(world, MatrixT(dist, matrix::MatrixAllocation::Tiles, matrix::Ld::Compact));
 
   // single tile matrix whose columns are stored in non-contiguous memory
   testSendRecv(world, MatrixT(dist, matrix::MatrixAllocation::ColMajor, 26));
@@ -113,7 +113,7 @@ TEST_F(P2PTestGPU, SendRecv) {
   auto dist = matrix::Distribution({13, 13}, {13, 13});
 
   // single tile matrix whose columns are stored in contiguous memory
-  testSendRecv(world, MatrixT(dist, matrix::MatrixAllocation::Tiles, matrix::compact_ld));
+  testSendRecv(world, MatrixT(dist, matrix::MatrixAllocation::Tiles, matrix::Ld::Compact));
 
   // single tile matrix whose columns are stored in non-contiguous memory
   testSendRecv(world, MatrixT(dist, matrix::MatrixAllocation::ColMajor, 26));
@@ -175,7 +175,7 @@ TEST_F(P2PTestMC, SendRecvMixTags) {
   const auto dist = matrix::Distribution({10, 10}, {3, 3});
 
   // each tile is stored in contiguous memory (i.e. ld == blocksize.rows())
-  testSendRecvMixTags(world, MatrixT(dist, matrix::MatrixAllocation::Tiles, matrix::compact_ld));
+  testSendRecvMixTags(world, MatrixT(dist, matrix::MatrixAllocation::Tiles, matrix::Ld::Compact));
 
   // tiles are stored in non-contiguous memory
   testSendRecvMixTags(world, MatrixT(dist, matrix::MatrixAllocation::ColMajor, 16));
@@ -214,7 +214,7 @@ TEST_F(P2PTestMC, AllSum) {
   auto dist = matrix::Distribution({13, 13}, {13, 13});
 
   // single tile matrix whose columns are stored in contiguous memory
-  testSendRecv(world, MatrixT(dist, matrix::MatrixAllocation::Tiles, matrix::compact_ld));
+  testSendRecv(world, MatrixT(dist, matrix::MatrixAllocation::Tiles, matrix::Ld::Compact));
 
   // single tile matrix whose columns are stored in non-contiguous memory
   testSendRecv(world, MatrixT(dist, matrix::MatrixAllocation::ColMajor, 26));
@@ -225,7 +225,7 @@ TEST_F(P2PTestGPU, AllSum) {
   auto dist = matrix::Distribution({13, 13}, {13, 13});
 
   // single tile matrix whose columns are stored in contiguous memory
-  testSendRecv(world, MatrixT(dist, matrix::MatrixAllocation::Tiles, matrix::compact_ld));
+  testSendRecv(world, MatrixT(dist, matrix::MatrixAllocation::Tiles, matrix::Ld::Compact));
 
   // single tile matrix whose columns are stored in non-contiguous memory
   testSendRecv(world, MatrixT(dist, matrix::MatrixAllocation::ColMajor, 26));
@@ -291,7 +291,7 @@ TEST_F(P2PTestMC, AllSumMixTags) {
   const auto dist = matrix::Distribution({10, 10}, {3, 3});
 
   // each tile is stored in contiguous memory (i.e. ld == blocksize.rows())
-  testSendRecvMixTags(world, MatrixT(dist, matrix::MatrixAllocation::Tiles, matrix::compact_ld));
+  testSendRecvMixTags(world, MatrixT(dist, matrix::MatrixAllocation::Tiles, matrix::Ld::Compact));
 
   // tiles are stored in non-contiguous memory
   testSendRecvMixTags(world, MatrixT(dist, matrix::MatrixAllocation::ColMajor, 16));

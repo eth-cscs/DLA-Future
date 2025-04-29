@@ -12,14 +12,17 @@
 
 /// @file
 
+#include <variant>
+
 #include <dlaf/types.h>
 
 namespace dlaf::matrix {
 
 enum class MatrixAllocation { ColMajor, Blocks, Tiles };
 
-constexpr SizeType padded_ld =
-    -10;  // leading dimension is set to an optimal value that might introduce padding.
-constexpr SizeType compact_ld = -11;  // leading dimension is set to the minimum value
+enum class Ld { Compact, Padded };
+// Ld::Padded: leading dimension is set to an optimal value that might introduce padding.
+// Ld::Compact: leading dimension is set to the minimum value.
 
+using LdSpec = std::variant<Ld, SizeType>;
 }

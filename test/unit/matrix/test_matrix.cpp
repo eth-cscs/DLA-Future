@@ -173,21 +173,30 @@ void check_const_ld(MatrixLike& mat, SizeType ld) {
 
 namespace col_major {
 template <class MatrixLike>
-SizeType expected_ld(MatrixLike& mat, SizeType ld) {
+SizeType expected_ld(MatrixLike& mat, LdSpec ld) {
   const Distribution& dist = mat.distribution();
   const SizeType min_ld =
       dist.local_nr_tiles().isEmpty() ? 1 : std::max<SizeType>(1, dist.local_size().rows());
-  if (ld == compact_ld) {
-    return min_ld;
-  }
-  if (ld == padded_ld) {
-    ld = expected_ld_from_00(mat);
-    EXPECT_GE(ld, min_ld);
-    return ld;
+  SizeType ret = 0;
+
+  if (std::holds_alternative<Ld>(ld)) {
+    switch (std::get<Ld>(ld)) {
+      case Ld::Compact:
+        return min_ld;
+      case Ld::Padded: {
+        ret = expected_ld_from_00(mat);
+        EXPECT_GE(ret, min_ld);
+        return ret;
+      }
+      default:
+        DLAF_UNIMPLEMENTED("Invalid Ld");
+    }
   }
 
-  EXPECT_GE(ld, min_ld);
-  return ld;
+  ret = std::get<SizeType>(ld);
+
+  EXPECT_GE(ret, min_ld);
+  return ret;
 }
 }
 
@@ -239,7 +248,8 @@ TYPED_TEST(MatrixLocalTest, ConstructorColMajor) {
     }
 
     const SizeType min_ld = std::max<SizeType>(1, dist.local_size().rows());
-    for (const auto ld : {compact_ld, padded_ld, min_ld, min_ld + 20}) {
+    std::initializer_list<LdSpec> lds{Ld::Compact, Ld::Padded, min_ld, min_ld + 20};
+    for (const auto& ld : lds) {
       {
         Matrix<Type, Device::CPU> mat({test.m, test.n}, test.tile_size, alloc, ld);
         EXPECT_EQ(dist, mat.distribution());
@@ -280,7 +290,7 @@ TYPED_TEST(MatrixLocalTest, ConstructorColMajor) {
 namespace blocks {
 
 SizeType rows_of_block_containing_tile(const LocalTileIndex& ij, const Distribution& dist) {
-  Distribution helper_dist = dlaf::matrix::internal::get_single_tile_per_block_distribution(dist);
+  Distribution helper_dist = dlaf::matrix::internal::create_single_tile_per_block_distribution(dist);
 
   SizeType i_el_local = dist.local_element_from_local_tile_and_tile_element<Coord::Row>(ij.row(), 0);
   SizeType i_bl_local = helper_dist.local_tile_from_local_element<Coord::Row>(i_el_local);
@@ -307,41 +317,20 @@ void check_ld(MatrixLike& mat) {
 }
 
 template <class MatrixLike>
-void check_ld(MatrixLike& mat, const SizeType ld) {
-  if (ld == compact_ld)
-    check_compact_ld(mat);
-  else if (ld == padded_ld)
-    check_ld(mat);
-  else
-    check_const_ld(mat, ld);
-}
-}
-
-namespace tiles {
-template <class MatrixLike>
-void check_compact_ld(MatrixLike& mat) {
-  for (auto& ij : iterate_range2d(mat.distribution().local_nr_tiles())) {
-    auto tile = tt::sync_wait(mat.read(ij));
-    EXPECT_EQ(tile.get().size().rows(), tile.get().ld());
+void check_ld(MatrixLike& mat, const LdSpec ld) {
+  if (std::holds_alternative<Ld>(ld)) {
+    switch (std::get<Ld>(ld)) {
+      case Ld::Compact:
+        return check_compact_ld(mat);
+      case Ld::Padded: {
+        return check_ld(mat);
+      }
+      default:
+        DLAF_UNIMPLEMENTED("Invalid Ld");
+    }
   }
-}
 
-template <class MatrixLike>
-void check_ld(MatrixLike& mat) {
-  for (auto& ij : iterate_range2d(mat.distribution().local_nr_tiles())) {
-    auto tile = tt::sync_wait(mat.read(ij));
-    EXPECT_LE(tile.get().size().rows(), tile.get().ld());
-  }
-}
-
-template <class MatrixLike>
-void check_ld(MatrixLike& mat, const SizeType ld) {
-  if (ld == compact_ld)
-    check_compact_ld(mat);
-  else if (ld == padded_ld)
-    check_ld(mat);
-  else
-    check_const_ld(mat, ld);
+  check_const_ld(mat, std::get<SizeType>(ld));
 }
 }
 
@@ -390,7 +379,8 @@ TYPED_TEST(MatrixLocalTest, ConstructorBlocks) {
     }
 
     const SizeType min_ld = std::max<SizeType>(1, dist.tile_size().rows());
-    for (const auto ld : {compact_ld, padded_ld, min_ld, min_ld + 20}) {
+    std::initializer_list<LdSpec> lds{Ld::Compact, Ld::Padded, min_ld, min_ld + 20};
+    for (const auto& ld : lds) {
       {
         Matrix<Type, Device::CPU> mat({test.m, test.n}, test.tile_size, alloc, ld);
         EXPECT_EQ(dist, mat.distribution());
@@ -423,6 +413,41 @@ TYPED_TEST(MatrixLocalTest, ConstructorBlocks) {
       }
     }
   }
+}
+
+namespace tiles {
+template <class MatrixLike>
+void check_compact_ld(MatrixLike& mat) {
+  for (auto& ij : iterate_range2d(mat.distribution().local_nr_tiles())) {
+    auto tile = tt::sync_wait(mat.read(ij));
+    EXPECT_EQ(tile.get().size().rows(), tile.get().ld());
+  }
+}
+
+template <class MatrixLike>
+void check_ld(MatrixLike& mat) {
+  for (auto& ij : iterate_range2d(mat.distribution().local_nr_tiles())) {
+    auto tile = tt::sync_wait(mat.read(ij));
+    EXPECT_LE(tile.get().size().rows(), tile.get().ld());
+  }
+}
+
+template <class MatrixLike>
+void check_ld(MatrixLike& mat, const LdSpec ld) {
+  if (std::holds_alternative<Ld>(ld)) {
+    switch (std::get<Ld>(ld)) {
+      case Ld::Compact:
+        return check_compact_ld(mat);
+      case Ld::Padded: {
+        return check_ld(mat);
+      }
+      default:
+        DLAF_UNIMPLEMENTED("Invalid Ld");
+    }
+  }
+
+  check_const_ld(mat, std::get<SizeType>(ld));
+}
 }
 
 TYPED_TEST(MatrixLocalTest, ConstructorTiles) {
@@ -470,7 +495,8 @@ TYPED_TEST(MatrixLocalTest, ConstructorTiles) {
     }
 
     const SizeType min_ld = std::max<SizeType>(1, dist.tile_size().rows());
-    for (const auto ld : {compact_ld, padded_ld, min_ld, min_ld + 20}) {
+    std::initializer_list<LdSpec> lds{Ld::Compact, Ld::Padded, min_ld, min_ld + 20};
+    for (const auto& ld : lds) {
       {
         Matrix<Type, Device::CPU> mat({test.m, test.n}, test.tile_size, alloc, ld);
         EXPECT_EQ(dist, mat.distribution());
@@ -610,7 +636,8 @@ TYPED_TEST(MatrixTest, ConstructorColMajor) {
       // Note: min_ld is different as src_rank_index impacts the local matrix sizes.
       {
         const SizeType min_ld = std::max<SizeType>(1, dist0.local_size().rows());
-        for (const auto ld : {compact_ld, padded_ld, min_ld, min_ld + 20}) {
+        std::initializer_list<LdSpec> lds{Ld::Compact, Ld::Padded, min_ld, min_ld + 20};
+        for (const auto& ld : lds) {
           Matrix<Type, Device::CPU> mat(size, test.tile_size, comm_grid, alloc, ld);
           EXPECT_EQ(dist0, mat.distribution());
 
@@ -625,7 +652,8 @@ TYPED_TEST(MatrixTest, ConstructorColMajor) {
 
       {
         const SizeType min_ld = std::max<SizeType>(1, dist.local_size().rows());
-        for (const auto ld : {compact_ld, padded_ld, min_ld, min_ld + 20}) {
+        std::initializer_list<LdSpec> lds{Ld::Compact, Ld::Padded, min_ld, min_ld + 20};
+        for (const auto& ld : lds) {
           Matrix<Type, Device::CPU> mat(dist, alloc, ld);
           EXPECT_EQ(dist, mat.distribution());
 
@@ -682,7 +710,8 @@ TYPED_TEST(MatrixTest, ConstructorBlocks) {
       }
 
       const SizeType min_ld = test.block_size.rows();
-      for (const auto ld : {compact_ld, padded_ld, min_ld, min_ld + 20}) {
+      std::initializer_list<LdSpec> lds{Ld::Compact, Ld::Padded, min_ld, min_ld + 20};
+      for (const auto& ld : lds) {
         {
           Matrix<Type, Device::CPU> mat(size, test.tile_size, comm_grid, alloc, ld);
           EXPECT_EQ(dist0, mat.distribution());
@@ -749,7 +778,8 @@ TYPED_TEST(MatrixTest, ConstructorTiles) {
       }
 
       const SizeType min_ld = test.tile_size.rows();
-      for (const auto ld : {compact_ld, padded_ld, min_ld, min_ld + 20}) {
+      std::initializer_list<LdSpec> lds{Ld::Compact, Ld::Padded, min_ld, min_ld + 20};
+      for (const auto& ld : lds) {
         {
           Matrix<Type, Device::CPU> mat(size, test.tile_size, comm_grid, alloc, ld);
           EXPECT_EQ(dist0, mat.distribution());
@@ -904,7 +934,7 @@ TYPED_TEST(MatrixTest, LocalGlobalAccessOperatorCall) {
       Distribution distribution(size, test.tile_size, comm_grid.size(), comm_grid.rank(),
                                 src_rank_index);
 
-      Matrix<TypeParam, Device::CPU> mat(std::move(distribution), MatrixAllocation::Tiles, compact_ld);
+      Matrix<TypeParam, Device::CPU> mat(std::move(distribution), MatrixAllocation::Tiles, Ld::Compact);
       const Distribution& dist = mat.distribution();
 
       for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
@@ -950,7 +980,7 @@ TYPED_TEST(MatrixTest, LocalGlobalAccessRead) {
                                    std::max(0, comm_grid.size().cols() - 1));
       Distribution distribution(size, test.tile_size, comm_grid.size(), comm_grid.rank(),
                                 src_rank_index);
-      Matrix<TypeParam, Device::CPU> mat(std::move(distribution), MatrixAllocation::Tiles, compact_ld);
+      Matrix<TypeParam, Device::CPU> mat(std::move(distribution), MatrixAllocation::Tiles, Ld::Compact);
 
       const Distribution& dist = mat.distribution();
 
@@ -1316,7 +1346,7 @@ TYPED_TEST(MatrixTest, DependenciesConst) {
       GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
 
       Distribution distribution(size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      Matrix<Type, Device::CPU> mat(std::move(distribution), MatrixAllocation::Tiles, compact_ld);
+      Matrix<Type, Device::CPU> mat(std::move(distribution), MatrixAllocation::Tiles, Ld::Compact);
       Matrix<const Type, Device::CPU>& const_mat = mat;
 
       auto rosenders1 = getReadSendersUsingGlobalIndex(const_mat);
@@ -1337,7 +1367,7 @@ TYPED_TEST(MatrixTest, DependenciesConstSubPipelineConst) {
 
       Distribution distribution(size, test.block_size, test.tile_size, comm_grid.size(),
                                 comm_grid.rank(), {0, 0});
-      Matrix<Type, Device::CPU> mat(std::move(distribution), MatrixAllocation::Tiles, compact_ld);
+      Matrix<Type, Device::CPU> mat(std::move(distribution), MatrixAllocation::Tiles, Ld::Compact);
       Matrix<const Type, Device::CPU>& const_mat = mat;
 
       auto rosenders1 = getReadSendersUsingGlobalIndex(const_mat);
@@ -1832,7 +1862,7 @@ TEST_F(MatrixGenericTest, SelectTilesReadonly) {
       GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
 
       Distribution distribution(size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      MatrixT mat{distribution, MatrixAllocation::Tiles, compact_ld};
+      MatrixT mat{distribution, MatrixAllocation::Tiles, Ld::Compact};
 
       // if this rank has no tiles locally, there's nothing interesting to do...
       if (distribution.localNrTiles().isEmpty())
@@ -1876,7 +1906,7 @@ TEST_F(MatrixGenericTest, SelectTilesReadonlySubPipeline) {
       GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
 
       Distribution distribution(size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      MatrixT mat(std::move(distribution), MatrixAllocation::Tiles, compact_ld);
+      MatrixT mat(std::move(distribution), MatrixAllocation::Tiles, Ld::Compact);
       auto mat_sub = mat.subPipeline();
 
       // if this rank has no tiles locally, there's nothing interesting to do...
@@ -1921,7 +1951,7 @@ TEST_F(MatrixGenericTest, SelectTilesReadwrite) {
       GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
 
       Distribution distribution(size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      MatrixT mat(std::move(distribution), MatrixAllocation::Tiles, compact_ld);
+      MatrixT mat(std::move(distribution), MatrixAllocation::Tiles, Ld::Compact);
 
       // if this rank has no tiles locally, there's nothing interesting to do...
       if (distribution.localNrTiles().isEmpty())
@@ -1965,7 +1995,7 @@ TEST_F(MatrixGenericTest, SelectTilesReadwriteSubPipeline) {
       GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
 
       Distribution distribution(size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      MatrixT mat(std::move(distribution), MatrixAllocation::Tiles, compact_ld);
+      MatrixT mat(std::move(distribution), MatrixAllocation::Tiles, Ld::Compact);
       auto mat_sub = mat.subPipeline();
 
       // if this rank has no tiles locally, there's nothing interesting to do...
@@ -2307,7 +2337,7 @@ TEST_F(MatrixGenericTest, SyncBarrier) {
       GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
 
       Distribution distribution(size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      MatrixT matrix{distribution, MatrixAllocation::Tiles, compact_ld};
+      MatrixT matrix{distribution, MatrixAllocation::Tiles, Ld::Compact};
 
       const auto local_size = distribution.localNrTiles();
       const LocalTileIndex tile_tl(0, 0);

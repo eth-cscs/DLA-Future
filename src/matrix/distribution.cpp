@@ -175,7 +175,7 @@ void Distribution::set_default_sizes() noexcept {
 }
 
 namespace internal {
-Distribution get_single_tile_per_block_distribution(const Distribution& dist) {
+Distribution create_single_tile_per_block_distribution(const Distribution& dist) {
   Distribution ret = dist;
   ret.tile_size_ = {dist.block_size_.rows(), dist.block_size_.cols()};
   auto nr_blocks = dist.nr_blocks();

@@ -71,7 +71,7 @@ bool is_allocated_as_blocks(MatrixLike& mat) {
     return false;
 
   const Distribution& dist = mat.distribution();
-  Distribution helper_dist = dlaf::matrix::internal::get_single_tile_per_block_distribution(dist);
+  Distribution helper_dist = dlaf::matrix::internal::create_single_tile_per_block_distribution(dist);
   LocalBlockSize local_nr_blocks = helper_dist.local_nr_blocks();
 
   if (dist.local_nr_tiles().isEmpty())

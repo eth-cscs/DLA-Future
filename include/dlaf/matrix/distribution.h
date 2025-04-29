@@ -30,7 +30,7 @@ namespace dlaf::matrix {
 class Distribution;
 namespace internal {
 // returns a copy of dist with tile_size set to block_size.
-Distribution get_single_tile_per_block_distribution(const Distribution& dist);
+Distribution create_single_tile_per_block_distribution(const Distribution& dist);
 }
 
 // TODO remove forward declarations when removing deprecated.
@@ -113,7 +113,7 @@ tile_element_index       O <-- I
 */
 
 class Distribution {
-  friend Distribution internal::get_single_tile_per_block_distribution(const Distribution& dist);
+  friend Distribution internal::create_single_tile_per_block_distribution(const Distribution& dist);
 
 public:
   /// Constructs a distribution for a non distributed matrix of size {0, 0} and block size {1, 1}.
@@ -361,15 +361,15 @@ public:
 
   /// Returns the size of the Tile with global index @p index.
   ///
-  /// @pre global_element.isIn(size()).
+  /// @pre index.isIn(nr_tiles()).
   TileElementSize tile_size_of(const GlobalTileIndex& index) const noexcept {
     DLAF_ASSERT_HEAVY(index.isIn(nr_tiles()), index, nr_tiles());
     return {global_tile_size_of<Coord::Row>(index.row()), global_tile_size_of<Coord::Col>(index.col())};
   }
 
-  /// Returns the size of the Tile with global index @p index.
+  /// Returns the size of the Tile with local index @p index.
   ///
-  /// @pre global_element.isIn(size()).
+  /// @pre index.isIn(local_nr_tiles()).
   TileElementSize tile_size_of(const LocalTileIndex& index) const noexcept {
     DLAF_ASSERT_HEAVY(index.isIn(local_nr_tiles()), index, local_nr_tiles());
     return {local_tile_size_of<Coord::Row>(index.row()), local_tile_size_of<Coord::Col>(index.col())};
@@ -622,9 +622,9 @@ public:
     return std::min(nb, n + global_tile_element_offset<rc>() - global_tile * nb);
   }
 
-  /// Returns the size of the tile with global index @p global_tile.
+  /// Returns the size of the tile with local index @p local_tile.
   ///
-  /// @pre 0 <= global_tile < nr_tiles().get<rc>().
+  /// @pre 0 <= local_tile < local_nr_tiles().get<rc>().
   template <Coord rc>
   SizeType local_tile_size_of(SizeType local_tile) const noexcept {
     DLAF_ASSERT_HEAVY(0 <= local_tile && local_tile < local_nr_tiles_.get<rc>(), local_tile,

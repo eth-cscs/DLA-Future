@@ -598,8 +598,8 @@ void permuteOnCPU(
   // Local matrices used for packing data for communication. Both matrices are in column-major order.
   // The particular constructor is used on purpose to guarantee that columns are stored contiguosly,
   // such that there is no padding and gaps between them.
-  Matrix<T, D> mat_send(sz_loc, blk, MatrixAllocation::ColMajor, matrix::compact_ld);
-  Matrix<T, D> mat_recv(sz_loc, blk, MatrixAllocation::ColMajor, matrix::compact_ld);
+  Matrix<T, D> mat_send(sz_loc, blk, MatrixAllocation::ColMajor, matrix::Ld::Compact);
+  Matrix<T, D> mat_recv(sz_loc, blk, MatrixAllocation::ColMajor, matrix::Ld::Compact);
 
   // Initialize the unpacking index
   copyLocalPartsFromGlobalIndex<D, C>(i_loc_begin.get<C>(), dist, perms, local2global_index);

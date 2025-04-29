@@ -1095,7 +1095,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   matrix::Distribution dist({1, size}, {1, nb_band}, {1, ranks}, {0, rank}, {0, 0});
 
   // Maximum block_size / (2b-1) sweeps per block can be executed in parallel + 1 communication buffer.
-  const auto workers_per_block = 1 + ceilDiv(dist.tile_size().cols(), 2 * b - 1);
+  const auto workers_per_tile = 1 + ceilDiv(dist.tile_size().cols(), 2 * b - 1);
 
   // Point to point communication happens in four ways:
   // - when copying the band matrix in compact form             -> compute_copy_tag
@@ -1144,15 +1144,15 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
       offset_col_tag + (ranks == 2 ? compute_col_tag(dist.nrTiles().cols() - 1, true) + 1 : 0);
   ;
 
-  auto compute_worker_tag = [offset_worker_tag, workers_per_block, ranks](SizeType sweep,
-                                                                          SizeType id_block) {
-    // As only workers_per_block are available a dependency is introduced by reusing it, therefore
+  auto compute_worker_tag = [offset_worker_tag, workers_per_tile, ranks](SizeType sweep,
+                                                                         SizeType id_block) {
+    // As only workers_per_tile are available a dependency is introduced by reusing it, therefore
     // a different tag for all sweeps is not needed.
     // Moreover id_block is divided by the number of ranks as only the local index is needed.
     // Note: Passing the id_block_local is not an option as the sender local index might be different
     //       from the receiver index.
-    return offset_worker_tag + static_cast<comm::IndexT_MPI>(sweep % workers_per_block +
-                                                             id_block / ranks * workers_per_block);
+    return offset_worker_tag +
+           static_cast<comm::IndexT_MPI>(sweep % workers_per_tile + id_block / ranks * workers_per_tile);
   };
 
   // Need shared pointer to keep the allocation until all the tasks are executed.
@@ -1264,8 +1264,8 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
 
   vector<vector<Pipeline<SweepWorkerDist<T>>>> workers(dist.localNrTiles().cols());
   for (auto& workers_block : workers) {
-    workers_block.reserve(workers_per_block);
-    for (SizeType i = 0; i < workers_per_block; ++i)
+    workers_block.reserve(workers_per_tile);
+    for (SizeType i = 0; i < workers_per_tile; ++i)
       workers_block.emplace_back(SweepWorkerDist<T>(size, b));
   }
 
@@ -1363,7 +1363,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
         const auto id_block_local = dist.localTileIndex(id_block).col();
         auto& a_block = a_ws[id_block_local];
         auto& sem = sems[id_block_local];
-        auto& w_pipeline = workers[id_block_local][sweep % workers_per_block];
+        auto& w_pipeline = workers[id_block_local][sweep % workers_per_tile];
         auto& dep_block = deps[id_block_local];
         auto& tile_v = tiles_v[id_block_local];
 

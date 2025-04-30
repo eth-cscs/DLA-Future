@@ -45,8 +45,8 @@ void inverse_from_cholesky_factor(blas::Uplo uplo, Matrix<T, device>& mat_a) {
     inverse::internal::AssembleCholeskyInverse<backend, device, T>::call_L(mat_a);
   }
   else {
-    // inverse::internal::Triangular<backend, device, T>::call_U(blas::Diag::NonUnit, mat_a);
-    // inverse::internal::AssembleCholeskyInverse<backend, device, T>::call_U(mat_a);
+    inverse::internal::Triangular<backend, device, T>::call_U(blas::Diag::NonUnit, mat_a);
+    inverse::internal::AssembleCholeskyInverse<backend, device, T>::call_U(mat_a);
   }
 }
 

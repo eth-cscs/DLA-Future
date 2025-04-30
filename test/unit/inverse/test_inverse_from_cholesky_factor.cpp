@@ -102,8 +102,6 @@ void test_inverse_from_cholesky_factor(comm::CommunicatorGrid& grid, const blas:
 
 TYPED_TEST(InverseFromCholeskyFactorTestMC, CorrectnessLocal) {
   for (auto uplo : blas_uplos) {
-    if (uplo == blas::Uplo::Upper)
-      continue;
     for (const auto& [m, mb] : sizes) {
       test_inverse_from_cholesky_factor<TypeParam, Backend::MC, Device::CPU>(uplo, m, mb);
     }

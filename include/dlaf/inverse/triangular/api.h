@@ -18,9 +18,9 @@ namespace dlaf::inverse::internal {
 template <Backend backend, Device device, class T>
 struct Triangular {
   static void call_L(blas::Diag diag, Matrix<T, device>& mat_a);
-  // static void call_U(blas::Diag diag, Matrix<T, device>& mat_a);
-  // static void call_L(comm::CommunicatorGrid& grid, blas::Diag diag, Matrix<T, device>& mat_a);
-  // static void call_U(comm::CommunicatorGrid& grid, blas::Diag diag, Matrix<T, device>& mat_a);
+  static void call_U(blas::Diag diag, Matrix<T, device>& mat_a);
+  static void call_L(comm::CommunicatorGrid& grid, blas::Diag diag, Matrix<T, device>& mat_a);
+  static void call_U(comm::CommunicatorGrid& grid, blas::Diag diag, Matrix<T, device>& mat_a);
 };
 
 // ETI

@@ -42,8 +42,8 @@ void triangular_inverse(blas::Uplo uplo, blas::Diag diag, Matrix<T, device>& mat
 
   if (uplo == blas::Uplo::Lower)
     inverse::internal::Triangular<backend, device, T>::call_L(diag, mat_a);
-  // else
-  //   inverse::internal::Triangular<backend, device, T>::call_U(diag, mat_a);
+  else
+    inverse::internal::Triangular<backend, device, T>::call_U(diag, mat_a);
 }
 
 /// Invert a non-singular triangular matrix in-place.

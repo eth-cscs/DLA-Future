@@ -112,25 +112,27 @@ TYPED_TEST(TriangularInverseTestMC, CorrectnessLocal) {
   }
 }
 
-// TYPED_TEST(TriangularInverseTestMC, CorrectnessDistributed) {
-//   for (auto& comm_grid : this->commGrids()) {
-//     for (auto uplo : blas_uplos) {
-//       for (auto diag : blas_diags) {
-//         for (const auto& [m, mb] : sizes) {
-//           test_triangular_inverse<TypeParam, Backend::MC, Device::CPU>(comm_grid, uplo, m, mb);
-//           pika::wait();
-//         }
-//       }
-//     }
-//   }
-// }
+TYPED_TEST(TriangularInverseTestMC, CorrectnessDistributed) {
+  for (auto& comm_grid : this->commGrids()) {
+    for (auto uplo : blas_uplos) {
+      if (uplo == blas::Uplo::Upper)
+        continue;
+      for (auto diag : blas_diags) {
+        for (const auto& [m, mb] : sizes) {
+          test_triangular_inverse<TypeParam, Backend::MC, Device::CPU>(comm_grid, uplo, diag, m, mb);
+          pika::wait();
+        }
+      }
+    }
+  }
+}
 
 #ifdef DLAF_WITH_GPU
 // TYPED_TEST(TriangularInverseTestGPU, CorrectnessLocal) {
 //   for (auto uplo : blas_uplos) {
 //     for (auto diag : blas_diags) {
 //       for (const auto& [m, mb] : sizes) {
-//         test_triangular_inverse<TypeParam, Backend::GPU, Device::GPU>(uplo, m, mb);
+//         test_triangular_inverse<TypeParam, Backend::GPU, Device::GPU>(uplo, diag, m, mb);
 //       }
 //     }
 //   }
@@ -141,7 +143,7 @@ TYPED_TEST(TriangularInverseTestMC, CorrectnessLocal) {
 //     for (auto uplo : blas_uplos) {
 //       for (auto diag : blas_diags) {
 //         for (const auto& [m, mb] : sizes) {
-//           test_triangular_inverse<TypeParam, Backend::GPU, Device::GPU>(comm_grid, uplo, m, mb);
+//           test_triangular_inverse<TypeParam, Backend::GPU, Device::GPU>(comm_grid, uplo, diag, m, mb);
 //           pika::wait();
 //         }
 //       }

@@ -71,8 +71,8 @@ void inverse_from_cholesky_factor(comm::CommunicatorGrid& grid, blas::Uplo uplo,
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
 
   if (uplo == blas::Uplo::Lower) {
-    // inverse::internal::Triangular<backend, device, T>::call_L(grid, blas::Diag::NonUnit, mat_a);
-    // inverse::internal::AssembleCholeskyInverse<backend, device, T>::call_L(grid, mat_a);
+    inverse::internal::Triangular<backend, device, T>::call_L(grid, blas::Diag::NonUnit, mat_a);
+    inverse::internal::AssembleCholeskyInverse<backend, device, T>::call_L(grid, mat_a);
   }
   else {
     // inverse::internal::Triangular<backend, device, T>::call_U(grid, blas::Diag::NonUnit, mat_a);

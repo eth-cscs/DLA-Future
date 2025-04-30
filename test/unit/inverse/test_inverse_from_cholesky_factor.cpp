@@ -108,16 +108,18 @@ TYPED_TEST(InverseFromCholeskyFactorTestMC, CorrectnessLocal) {
   }
 }
 
-// TYPED_TEST(InverseFromCholeskyFactorTestMC, CorrectnessDistributed) {
-//   for (auto& comm_grid : this->commGrids()) {
-//     for (auto uplo : blas_uplos) {
-//       for (const auto& [m, mb] : sizes) {
-//         test_inverse_from_cholesky_factor<TypeParam, Backend::MC, Device::CPU>(comm_grid, uplo, m,
-//         mb); pika::wait();
-//       }
-//     }
-//   }
-// }
+TYPED_TEST(InverseFromCholeskyFactorTestMC, CorrectnessDistributed) {
+  for (auto& comm_grid : this->commGrids()) {
+    for (auto uplo : blas_uplos) {
+      if (uplo == blas::Uplo::Upper)
+        continue;
+      for (const auto& [m, mb] : sizes) {
+        test_inverse_from_cholesky_factor<TypeParam, Backend::MC, Device::CPU>(comm_grid, uplo, m, mb);
+        pika::wait();
+      }
+    }
+  }
+}
 
 #ifdef DLAF_WITH_GPU
 // TYPED_TEST(InverseFromCholeskyFactorTestGPU, CorrectnessLocal) {

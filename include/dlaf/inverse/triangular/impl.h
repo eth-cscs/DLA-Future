@@ -178,19 +178,20 @@ void Triangular<backend, device, T>::call_L(blas::Diag diag, Matrix<T, device>& 
   }
 }
 
-/*template <Backend backend, Device device, class T>
-void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid& grid, Matrix<T, device>& mat_a) {
-  using namespace cholesky_l;
+template <Backend backend, Device device, class T>
+void Triangular<backend, device, T>::call_L(comm::CommunicatorGrid& grid, blas::Diag diag,
+                                            Matrix<T, device>& mat_a) {
+  using namespace triangular_inv_l;
   using pika::execution::thread_priority;
 
 #ifdef DLAF_WITH_HDF5
-  static std::atomic<size_t> num_cholesky_calls = 0;
+  static std::atomic<size_t> num_triangular_inv_calls = 0;
   std::stringstream fname;
-  fname << "cholesky-factorization-" << matrix::internal::TypeToString_v<T> << "-"
-        << std::to_string(num_cholesky_calls) << ".h5";
+  fname << "triangular-inverse-" << matrix::internal::TypeToString_v<T> << "-"
+        << std::to_string(num_triangular_inv_calls) << ".h5";
   std::optional<matrix::internal::FileHDF5> file;
 
-  if (getTuneParameters().debug_dump_cholesky_factorization_data) {
+  if (getTuneParameters().debug_dump_triangular_inverse_data) {
     file = matrix::internal::FileHDF5(grid.fullCommunicator(), fname.str());
     file->write(mat_a, "/input");
   }
@@ -202,106 +203,106 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid& grid, Matrix<T
 
   const comm::Index2D this_rank = grid.rank();
 
-  const matrix::Distribution& distr = mat_a.distribution();
-  const SizeType nrtile = mat_a.nrTiles().cols();
+  const matrix::Distribution& dist = mat_a.distribution();
+  const SizeType nrtiles = mat_a.nr_tiles().cols();
 
   constexpr std::size_t n_workspaces = 2;
-  common::RoundRobin<matrix::Panel<Coord::Col, T, device>> panels(n_workspaces, distr);
-  common::RoundRobin<matrix::Panel<Coord::Row, T, device, matrix::StoreTransposed::Yes>> panelsT(
-      n_workspaces, distr);
+  common::RoundRobin<matrix::Panel<Coord::Col, T, device>> col_panels(n_workspaces, dist);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, device>> row_panels(n_workspaces, dist);
 
-  for (SizeType k = 0; k < nrtile; ++k) {
-    const GlobalTileIndex kk_idx(k, k);
-    const comm::Index2D kk_rank = distr.rankGlobalTile(kk_idx);
+  const SizeType i_local_end = dist.local_nr_tiles().rows();
 
-    // Factorization of diagonal tile and broadcast it along the k-th column
-    if (kk_rank == this_rank)
-      potrfDiagTile<backend>(thread_priority::high, mat_a.readwrite(kk_idx));
+  for (SizeType k = nrtiles - 1; k >= 0; --k) {
+    const GlobalTileIndex kk(k, k);
+    const comm::Index2D kk_rank = dist.rank_global_tile(kk);
 
-    // If there is no trailing matrix
-    const SizeType kt = k + 1;
-    if (kt == nrtile)
-      continue;
+    const SizeType k_local_row = dist.next_local_tile_from_global_tile<Coord::Row>(k);
+    const SizeType k1_local_row = dist.next_local_tile_from_global_tile<Coord::Row>(k + 1);
+    const SizeType k_local_col = dist.next_local_tile_from_global_tile<Coord::Col>(k);
+    const SizeType k1_local_col = dist.next_local_tile_from_global_tile<Coord::Col>(k + 1);
 
-    auto& panel = panels.nextResource();
-    auto& panelT = panelsT.nextResource();
+    auto& col_panel = col_panels.nextResource();
+    auto& row_panel = row_panels.nextResource();
 
-    panel.setRangeStart(GlobalTileIndex(kt, kt));
+    if (k < nrtiles - 1) {
+      row_panel.setRange({0, 0}, {k + 1, k + 1});
+      if (k == 0)
+        row_panel.setHeight(mat_a.tile_size_of(kk).rows());
+
+      if (kk_rank.row() == this_rank.row()) {
+        for (SizeType j_local = 0; j_local < k1_local_col; ++j_local) {
+          const LocalTileIndex kj_panel(Coord::Col, j_local);
+          const LocalTileIndex kj(k_local_row, j_local);
+
+          row_panel.setTile(kj_panel, mat_a.read(kj));
+        }
+      }
+      broadcast(kk_rank.row(), row_panel, mpi_col_task_chain);
+    }
 
     if (kk_rank.col() == this_rank.col()) {
-      const LocalTileIndex diag_wp_idx{0, distr.localTileFromGlobalTile<Coord::Col>(k)};
-
-      // Note:
-      // panelT shrinked to a single tile for temporarly storing and communicating the diagonal
-      // tile used for the column update
-      panelT.setRange({k, k}, {kt, kt});
-
-      if (kk_rank.row() == this_rank.row())
-        panelT.setTile(diag_wp_idx, mat_a.read(kk_idx));
-      broadcast(kk_rank.row(), panelT, mpi_col_task_chain);
-
-      // COLUMN UPDATE
-      for (SizeType i = distr.nextLocalTileFromGlobalTile<Coord::Row>(kt);
-           i < distr.localNrTiles().rows(); ++i) {
-        const LocalTileIndex local_idx(Coord::Row, i);
-        const LocalTileIndex ik_idx(i, distr.localTileFromGlobalTile<Coord::Col>(k));
-
-        trsmPanelTile<backend>(thread_priority::high, panelT.read(diag_wp_idx), mat_a.readwrite(ik_idx));
-
-        panel.setTile(local_idx, mat_a.read(ik_idx));
-      }
-
-      // row panel has been used for temporary storage of diagonal panel for column update
-      panelT.reset();
-    }
-
-    panelT.setRange({kt, kt}, indexFromOrigin(distr.nrTiles()));
-
-    broadcast(kk_rank.col(), panel, panelT, mpi_row_task_chain, mpi_col_task_chain);
-
-    // TRAILING MATRIX
-    for (SizeType jt_idx = kt; jt_idx < nrtile; ++jt_idx) {
-      const auto owner = distr.rankGlobalTile({jt_idx, jt_idx});
-
-      if (owner.col() != this_rank.col())
-        continue;
-
-      const auto j = distr.localTileFromGlobalTile<Coord::Col>(jt_idx);
-      const auto trailing_matrix_priority =
-          (jt_idx == kt) ? thread_priority::high : thread_priority::normal;
-      if (this_rank.row() == owner.row()) {
-        const auto i = distr.localTileFromGlobalTile<Coord::Row>(jt_idx);
-
-        herkTrailingDiagTile<backend>(trailing_matrix_priority, panel.read({Coord::Row, i}),
-                                      mat_a.readwrite(LocalTileIndex{i, j}));
-      }
-
-      for (SizeType i_idx = jt_idx + 1; i_idx < nrtile; ++i_idx) {
-        const auto owner_row = distr.rankGlobalTile<Coord::Row>(i_idx);
-
-        if (owner_row != this_rank.row())
-          continue;
-
-        const auto i = distr.localTileFromGlobalTile<Coord::Row>(i_idx);
-        gemmTrailingMatrixTile<backend>(trailing_matrix_priority, panel.read({Coord::Row, i}),
-                                        panelT.read({Coord::Col, j}),
-                                        mat_a.readwrite(LocalTileIndex{i, j}));
+      for (SizeType i_local = k1_local_row; i_local < i_local_end; ++i_local) {
+        const LocalTileIndex kk_local_panel{Coord::Col, k_local_col};
+        const LocalTileIndex ik_local{i_local, k_local_col};
+        trsm_col_panel_tile<backend>(thread_priority::high, diag, row_panel.read(kk_local_panel),
+                                     mat_a.readwrite(ik_local));
       }
     }
 
-    panel.reset();
-    panelT.reset();
+    if (k > 0) {
+      col_panel.setRangeStart(kk);
+      if (k == nrtiles - 1)
+        col_panel.setWidth(mat_a.tile_size_of(kk).cols());
+
+      if (kk_rank.col() == this_rank.col()) {
+        for (SizeType i_local = k_local_row; i_local < i_local_end; ++i_local) {
+          const LocalTileIndex ik_panel(Coord::Row, i_local);
+          const LocalTileIndex ik(i_local, k_local_col);
+
+          col_panel.setTile(ik_panel, mat_a.read(ik));
+        }
+      }
+      broadcast(kk_rank.col(), col_panel, mpi_row_task_chain);
+    }
+
+    for (SizeType i_local = k1_local_row; i_local < i_local_end; ++i_local) {
+      for (SizeType j_local = 0; j_local < k_local_col; ++j_local) {
+        const LocalTileIndex ik_local_panel{Coord::Row, i_local};
+        const LocalTileIndex kj_local_panel{Coord::Col, j_local};
+        const LocalTileIndex ij_local{i_local, j_local};
+
+        const auto trailing_matrix_priority =
+            (j_local == k_local_col - 1) ? thread_priority::high : thread_priority::normal;
+
+        gemm_matrix_tile<backend>(trailing_matrix_priority, col_panel.read(ik_local_panel),
+                                  row_panel.read(kj_local_panel), mat_a.readwrite(ij_local));
+      }
+    }
+
+    if (kk_rank.row() == this_rank.row()) {
+      for (SizeType j_local = 0; j_local < k_local_col; ++j_local) {
+        const LocalTileIndex kk_local_panel{Coord::Row, k_local_row};
+        const LocalTileIndex kj_local{k_local_row, j_local};
+        trsm_row_panel_tile<backend>(thread_priority::high, diag, col_panel.read(kk_local_panel),
+                                     mat_a.readwrite(kj_local));
+      }
+    }
+
+    col_panel.reset();
+    row_panel.reset();
+
+    if (kk_rank == this_rank)
+      inverse_diag_tile<backend>(thread_priority::high, diag, mat_a.readwrite(kk));
   }
 
 #ifdef DLAF_WITH_HDF5
-  if (getTuneParameters().debug_dump_cholesky_factorization_data) {
-    file->write(mat_a, "/cholesky");
+  if (getTuneParameters().debug_dump_triangular_inverse_data) {
+    file->write(mat_a, "/triangular_inverse");
   }
 
-  num_cholesky_calls++;
+  num_triangular_inv_calls++;
 #endif
 }
-*/
 
 template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_U(blas::Diag diag, Matrix<T, device>& mat_a) {

@@ -104,8 +104,6 @@ void test_triangular_inverse(comm::CommunicatorGrid& grid, const blas::Uplo uplo
 
 TYPED_TEST(TriangularInverseTestMC, CorrectnessLocal) {
   for (auto uplo : blas_uplos) {
-    if (uplo == blas::Uplo::Upper)
-      continue;
     for (auto diag : blas_diags) {
       for (const auto& [m, mb] : sizes) {
         test_triangular_inverse<TypeParam, Backend::MC, Device::CPU>(uplo, diag, m, mb);

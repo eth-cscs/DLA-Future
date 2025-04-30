@@ -93,8 +93,58 @@ void gemm_matrix_tile(pika::execution::thread_priority priority, ColPanelTileSen
       tile::gemm(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
 }
 }
+namespace triangular_inv_u {
+template <Backend backend, class MatrixTileSender>
+void inverse_diag_tile(pika::execution::thread_priority priority, blas::Diag diag,
+                       MatrixTileSender&& matrix_tile) {
+  using pika::execution::thread_stacksize;
 
-// Local implementation of Lower Cholesky factorization.
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Uplo::Upper, diag, std::forward<MatrixTileSender>(matrix_tile)) |
+      tile::trtri(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
+}
+
+template <Backend backend, class KKTileSender, class MatrixTileSender>
+void trsm_col_panel_tile(pika::execution::thread_priority priority, blas::Diag diag,
+                         KKTileSender&& kk_tile, MatrixTileSender&& matrix_tile) {
+  using ElementType = dlaf::internal::SenderElementType<KKTileSender>;
+  using pika::execution::thread_stacksize;
+
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Upper, blas::Op::NoTrans, diag,
+                                  ElementType(1.0), std::forward<KKTileSender>(kk_tile),
+                                  std::forward<MatrixTileSender>(matrix_tile)) |
+      tile::trsm(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
+}
+
+template <Backend backend, class KKTileSender, class MatrixTileSender>
+void trsm_row_panel_tile(pika::execution::thread_priority priority, blas::Diag diag,
+                         KKTileSender&& kk_tile, MatrixTileSender&& matrix_tile) {
+  using ElementType = dlaf::internal::SenderElementType<KKTileSender>;
+  using pika::execution::thread_stacksize;
+
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, blas::Op::NoTrans, diag,
+                                  ElementType(-1.0), std::forward<KKTileSender>(kk_tile),
+                                  std::forward<MatrixTileSender>(matrix_tile)) |
+      tile::trsm(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
+}
+
+template <Backend backend, class ColPanelTileSender, class RowPanelTileSender, class MatrixTileSender>
+void gemm_matrix_tile(pika::execution::thread_priority priority, ColPanelTileSender&& col_tile,
+                      RowPanelTileSender&& row_tile, MatrixTileSender&& matrix_tile) {
+  using ElementType = dlaf::internal::SenderElementType<MatrixTileSender>;
+  using pika::execution::thread_stacksize;
+
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, ElementType(1.0),
+                                  std::forward<ColPanelTileSender>(col_tile),
+                                  std::forward<RowPanelTileSender>(row_tile), ElementType(1.0),
+                                  std::forward<MatrixTileSender>(matrix_tile)) |
+      tile::gemm(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
+}
+}
+
 template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_L(blas::Diag diag, Matrix<T, device>& mat_a) {
   using namespace triangular_inv_l;
@@ -252,4 +302,37 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid& grid, Matrix<T
 #endif
 }
 */
+
+template <Backend backend, Device device, class T>
+void Triangular<backend, device, T>::call_U(blas::Diag diag, Matrix<T, device>& mat_a) {
+  using namespace triangular_inv_u;
+  using pika::execution::thread_priority;
+
+  // Number of tile (rows = cols)
+  SizeType nrtiles = mat_a.nr_tiles().cols();
+
+  for (SizeType k = nrtiles - 1; k >= 0; --k) {
+    auto kk = LocalTileIndex{k, k};
+
+    for (SizeType j = k + 1; j < nrtiles; ++j) {
+      trsm_row_panel_tile<backend>(thread_priority::high, diag, mat_a.read(kk),
+                                   mat_a.readwrite(LocalTileIndex{k, j}));
+      for (SizeType i = 0; i < k; ++i) {
+        const auto trailing_matrix_priority =
+            (i == k - 1) ? thread_priority::high : thread_priority::normal;
+
+        gemm_matrix_tile<backend>(trailing_matrix_priority, mat_a.read(LocalTileIndex{i, k}),
+                                  mat_a.read(LocalTileIndex{k, j}),
+                                  mat_a.readwrite(LocalTileIndex{i, j}));
+      }
+    }
+
+    for (SizeType i = 0; i < k; ++i) {
+      trsm_col_panel_tile<backend>(thread_priority::high, diag, mat_a.read(kk),
+                                   mat_a.readwrite(LocalTileIndex{i, k}));
+    }
+
+    inverse_diag_tile<backend>(thread_priority::high, diag, mat_a.readwrite(kk));
+  }
+}
 }

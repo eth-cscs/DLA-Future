@@ -94,7 +94,58 @@ void gemm_matrix_tile(pika::execution::thread_priority priority, RowPanelTileSen
 }
 }
 
-// Local implementation of Lower Cholesky factorization.
+namespace assemble_cholesky_inv_u {
+template <Backend backend, class MatrixTileSender>
+void assemble_diag_tile(pika::execution::thread_priority priority, MatrixTileSender&& matrix_tile) {
+  using pika::execution::thread_stacksize;
+
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Uplo::Upper, std::forward<MatrixTileSender>(matrix_tile)) |
+      tile::lauum(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
+}
+
+template <Backend backend, class KKTileSender, class MatrixTileSender>
+void trmm_col_panel_tile(pika::execution::thread_priority priority, KKTileSender&& kk_tile,
+                         MatrixTileSender&& matrix_tile) {
+  using ElementType = dlaf::internal::SenderElementType<KKTileSender>;
+  using pika::execution::thread_stacksize;
+
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Upper, blas::Op::ConjTrans,
+                                  blas::Diag::NonUnit, ElementType(1.0),
+                                  std::forward<KKTileSender>(kk_tile),
+                                  std::forward<MatrixTileSender>(matrix_tile)) |
+      tile::trmm(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
+}
+
+template <Backend backend, class PanelTileSender, class MatrixTileSender>
+void herk_matrix_tile(pika::execution::thread_priority priority, PanelTileSender&& panel_tile,
+                      MatrixTileSender&& matrix_tile) {
+  using BaseElementType = BaseType<dlaf::internal::SenderElementType<MatrixTileSender>>;
+  using pika::execution::thread_stacksize;
+
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Uplo::Upper, blas::Op::NoTrans, BaseElementType(1.0),
+                                  std::forward<PanelTileSender>(panel_tile), BaseElementType(1.0),
+                                  std::forward<MatrixTileSender>(matrix_tile)) |
+      tile::herk(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
+}
+
+template <Backend backend, class RowPanelTileSender, class ColPanelTileSender, class MatrixTileSender>
+void gemm_matrix_tile(pika::execution::thread_priority priority, RowPanelTileSender&& row_tile,
+                      ColPanelTileSender&& col_tile, MatrixTileSender&& matrix_tile) {
+  using ElementType = dlaf::internal::SenderElementType<MatrixTileSender>;
+  using pika::execution::thread_stacksize;
+
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, ElementType(1.0),
+                                  std::forward<RowPanelTileSender>(row_tile),
+                                  std::forward<ColPanelTileSender>(col_tile), ElementType(1.0),
+                                  std::forward<MatrixTileSender>(matrix_tile)) |
+      tile::gemm(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
+}
+}
+
 template <Backend backend, Device device, class T>
 void AssembleCholeskyInverse<backend, device, T>::call_L(Matrix<T, device>& mat_a) {
   using namespace assemble_cholesky_inv_l;
@@ -250,4 +301,36 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid& grid, Matrix<T
 #endif
 }
 */
+
+template <Backend backend, Device device, class T>
+void AssembleCholeskyInverse<backend, device, T>::call_U(Matrix<T, device>& mat_a) {
+  using namespace assemble_cholesky_inv_u;
+  using pika::execution::thread_priority;
+
+  // Number of tile (rows = cols)
+  SizeType nrtiles = mat_a.nr_tiles().cols();
+
+  for (SizeType k = 0; k < nrtiles; ++k) {
+    auto kk = LocalTileIndex{k, k};
+
+    for (SizeType j = 0; j < k; ++j) {
+      for (SizeType i = 0; i < j; ++i) {
+        gemm_matrix_tile<backend>(thread_priority::normal, mat_a.read(LocalTileIndex{i, k}),
+                                  mat_a.read(LocalTileIndex{j, k}),
+                                  mat_a.readwrite(LocalTileIndex{i, j}));
+      }
+
+      herk_matrix_tile<backend>(thread_priority::normal, mat_a.read(LocalTileIndex{j, k}),
+                                mat_a.readwrite(LocalTileIndex{j, j}));
+    }
+
+    for (SizeType i = 0; i < k; ++i) {
+      trmm_col_panel_tile<backend>(thread_priority::high, mat_a.read(kk),
+                                   mat_a.readwrite(LocalTileIndex{i, k}));
+    }
+
+    assemble_diag_tile<backend>(thread_priority::high, mat_a.readwrite(kk));
+  }
+}
+
 }

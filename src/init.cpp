@@ -293,8 +293,10 @@ void updateConfiguration(const pika::program_options::variables_map& vm, configu
   updateConfigurationValue(vm, param.debug_dump_generalized_eigensolver_data, "DEBUG_DUMP_GENERALIZED_EIGENSOLVER_DATA", "");
   updateConfigurationValue(vm, param.debug_dump_generalized_to_standard_data, "DEBUG_DUMP_GENERALIZED_TO_STANDARD_DATA", "");
   updateConfigurationValue(vm, param.debug_dump_eigensolver_data, "DEBUG_DUMP_EIGENSOLVER_DATA", "");
+  updateConfigurationValue(vm, param.debug_dump_inverse_from_cholesky_factor_data, "DEBUG_DUMP_INVERSE_FROM_CHOLESKY_FACTOR_DATA", "");
   updateConfigurationValue(vm, param.debug_dump_reduction_to_band_data, "DEBUG_DUMP_REDUCTION_TO_BAND_DATA", "");
   updateConfigurationValue(vm, param.debug_dump_band_to_tridiagonal_data, "DEBUG_DUMP_BAND_TO_TRIDIAGONAL_DATA", "");
+  updateConfigurationValue(vm, param.debug_dump_triangular_inverse_data, "DEBUG_DUMP_TRIANGULAR_INVERSE_DATA", "");
   updateConfigurationValue(vm, param.debug_dump_tridiag_solver_data, "DEBUG_DUMP_TRIDIAG_SOLVER_DATA", "");
 
   updateConfigurationValue(vm, param.tridiag_rank1_num_threads, "TRIDIAG_RANK1_NUM_THREADS", "tridiag-rank1-num-threads");

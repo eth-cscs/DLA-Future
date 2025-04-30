@@ -67,8 +67,8 @@ void triangular_inverse(comm::CommunicatorGrid& grid, blas::Uplo uplo, blas::Dia
   DLAF_ASSERT(matrix::square_tile_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
 
-  // if (uplo == blas::Uplo::Lower)
-  //   inverse::internal::Triangular<backend, device, T>::call_L(grid, diag, mat_a);
+  if (uplo == blas::Uplo::Lower)
+    inverse::internal::Triangular<backend, device, T>::call_L(grid, diag, mat_a);
   // else
   //   inverse::internal::Triangular<backend, device, T>::call_U(grid, diag, mat_a);
 }

@@ -69,8 +69,8 @@ void triangular_inverse(comm::CommunicatorGrid& grid, blas::Uplo uplo, blas::Dia
 
   if (uplo == blas::Uplo::Lower)
     inverse::internal::Triangular<backend, device, T>::call_L(grid, diag, mat_a);
-  // else
-  //   inverse::internal::Triangular<backend, device, T>::call_U(grid, diag, mat_a);
+  else
+    inverse::internal::Triangular<backend, device, T>::call_U(grid, diag, mat_a);
 }
 
 }

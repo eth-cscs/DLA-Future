@@ -422,7 +422,7 @@ void lauum(const blas::Uplo uplo, const Tile<T, Device::CPU>& a) {
 
   common::internal::SingleThreadedBlasScope single;
   auto info = lapack::lauum(uplo, a.size().rows(), a.ptr(), a.ld());
-  DLAF_ASSERT_HEAVY(info == 0, info);
+  DLAF_ASSERT(info == 0, info);
 }
 
 template <class T>

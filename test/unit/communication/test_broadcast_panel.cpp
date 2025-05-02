@@ -122,7 +122,7 @@ std::vector<ParamsBcastTranspose> test_params_bcast_transpose{
     {{0, 0}, {1, 1}, {0, 0}, {0, 0}},      // empty matrix
     {{10, 10}, {2, 2}, {5, 5}, {5, 5}},    // empty panel (due to offset)
     {{20, 20}, {2, 2}, {9, 9}, {10, 10}},  // just last tile (communicate without transpose)
-    {{25, 25}, {5, 5}, {1, 1}, {1, 1}},
+    {{25, 25}, {5, 5}, {1, 1}, {1, 1}},    //
     {{25, 25}, {5, 5}, {1, 1}, {3, 3}},
 };
 

@@ -115,8 +115,6 @@ TYPED_TEST(TriangularInverseTestMC, CorrectnessLocal) {
 TYPED_TEST(TriangularInverseTestMC, CorrectnessDistributed) {
   for (auto& comm_grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
-      if (uplo == blas::Uplo::Upper)
-        continue;
       for (auto diag : blas_diags) {
         for (const auto& [m, mb] : sizes) {
           test_triangular_inverse<TypeParam, Backend::MC, Device::CPU>(comm_grid, uplo, diag, m, mb);

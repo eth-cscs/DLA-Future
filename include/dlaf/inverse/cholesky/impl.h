@@ -186,7 +186,7 @@ void AssembleCholeskyInverse<backend, device, T>::call_L(comm::CommunicatorGrid&
 #ifdef DLAF_WITH_HDF5
   static std::atomic<size_t> num_cholesky_inv_calls = 0;
   std::stringstream fname;
-  fname << "inverse-from-cholesky-factor-" << matrix::internal::TypeToString_v<T> << "-"
+  fname << "inverse-from-cholesky-factor-L-" << matrix::internal::TypeToString_v<T> << "-"
         << std::to_string(num_cholesky_inv_calls) << ".h5";
   std::optional<matrix::internal::FileHDF5> file;
 
@@ -325,4 +325,120 @@ void AssembleCholeskyInverse<backend, device, T>::call_U(Matrix<T, device>& mat_
   }
 }
 
+template <Backend backend, Device device, class T>
+void AssembleCholeskyInverse<backend, device, T>::call_U(comm::CommunicatorGrid& grid,
+                                                         Matrix<T, device>& mat_a) {
+  using namespace assemble_cholesky_inv_u;
+  using pika::execution::thread_priority;
+
+#ifdef DLAF_WITH_HDF5
+  static std::atomic<size_t> num_cholesky_inv_calls = 0;
+  std::stringstream fname;
+  fname << "inverse-from-cholesky-factor-U-" << matrix::internal::TypeToString_v<T> << "-"
+        << std::to_string(num_cholesky_inv_calls) << ".h5";
+  std::optional<matrix::internal::FileHDF5> file;
+
+  if (getTuneParameters().debug_dump_inverse_from_cholesky_factor_data) {
+    file = matrix::internal::FileHDF5(grid.fullCommunicator(), fname.str());
+    file->write(mat_a, "/input");
+  }
+#endif
+
+  // Set up MPI executor pipelines
+  auto mpi_row_task_chain = grid.row_communicator_pipeline();
+  auto mpi_col_task_chain = grid.col_communicator_pipeline();
+
+  const comm::Index2D this_rank = grid.rank();
+
+  const matrix::Distribution& dist = mat_a.distribution();
+  const SizeType nrtiles = mat_a.nr_tiles().rows();
+
+  constexpr std::size_t n_workspaces = 2;
+  common::RoundRobin<matrix::Panel<Coord::Col, T, device>> panels(n_workspaces, dist);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, device, matrix::StoreTransposed::Yes>> panelsT(
+      n_workspaces, dist);
+
+  for (SizeType k = 0; k < nrtiles; ++k) {
+    const GlobalTileIndex kk(k, k);
+    const comm::Index2D kk_rank = dist.rank_global_tile(kk);
+
+    const SizeType k_local_row = dist.next_local_tile_from_global_tile<Coord::Row>(k);
+    const SizeType k_local_col = dist.next_local_tile_from_global_tile<Coord::Col>(k);
+    const SizeType k1_local_row = dist.next_local_tile_from_global_tile<Coord::Row>(k + 1);
+
+    if (k > 0) {
+      auto& panel = panels.nextResource();
+      auto& panelT = panelsT.nextResource();
+
+      panel.setRange({0, 0}, {k + 1, k + 1});
+      panelT.setRange({0, 0}, {k + 1, k + 1});
+
+      if (k == nrtiles - 1) {
+        panel.setWidth(mat_a.tile_size_of(kk).cols());
+        panelT.setHeight(mat_a.tile_size_of(kk).rows());
+      }
+
+      if (kk_rank.col() == this_rank.col()) {
+        for (SizeType i_local = 0; i_local < k1_local_row; ++i_local) {
+          const LocalTileIndex ik_panel_local(Coord::Row, i_local);
+          const LocalTileIndex ik_local(i_local, k_local_col);
+          panel.setTile(ik_panel_local, mat_a.read(ik_local));
+        }
+      }
+      broadcast(kk_rank.col(), panel, panelT, mpi_row_task_chain, mpi_col_task_chain);
+
+      for (SizeType j = 0; j < k; ++j) {
+        const auto jj_rank = dist.rank_global_tile({j, j});
+        if (jj_rank.col() != this_rank.col())
+          continue;
+        const auto j_local = dist.local_tile_from_global_tile<Coord::Col>(j);
+
+        for (SizeType i = 0; i < j; ++i) {
+          const auto i_rank = dist.rank_global_tile<Coord::Row>(i);
+          if (i_rank != this_rank.row())
+            continue;
+          const auto i_local = dist.local_tile_from_global_tile<Coord::Row>(i);
+
+          const LocalTileIndex ik_local_panel{Coord::Row, i_local};
+          const LocalTileIndex kj_local_panel{Coord::Col, j_local};
+          const LocalTileIndex ij_local{i_local, j_local};
+
+          gemm_matrix_tile<backend>(thread_priority::normal, panel.read(ik_local_panel),
+                                    panelT.read(kj_local_panel), mat_a.readwrite(ij_local));
+        }
+
+        if (jj_rank == this_rank) {
+          const auto j_local_row = dist.local_tile_from_global_tile<Coord::Row>(j);
+          const LocalTileIndex jk_local_panel{Coord::Row, j_local_row};
+          const LocalTileIndex jj_local{j_local_row, j_local};
+          herk_matrix_tile<backend>(thread_priority::normal, panel.read(jk_local_panel),
+                                    mat_a.readwrite(jj_local));
+        }
+      }
+
+      if (kk_rank.col() == this_rank.col()) {
+        for (SizeType i_local = 0; i_local < k_local_row; ++i_local) {
+          const LocalTileIndex kk_local_panel{Coord::Col, k_local_col};
+          const LocalTileIndex ik_local{i_local, k_local_col};
+          trmm_col_panel_tile<backend>(thread_priority::high, panelT.read(kk_local_panel),
+                                       mat_a.readwrite(ik_local));
+        }
+      }
+
+      panel.reset();
+      panelT.reset();
+    }
+
+    if (kk_rank == this_rank)
+      assemble_diag_tile<backend>(thread_priority::high, mat_a.readwrite(kk));
+  }
+
+#ifdef DLAF_WITH_HDF5
+  if (getTuneParameters().debug_dump_inverse_from_cholesky_factor_data) {
+    file->write(mat_a, "/inverse_from_cholesky_factor");
+  }
+
+  num_cholesky_inv_calls++;
+#endif
+}
 }

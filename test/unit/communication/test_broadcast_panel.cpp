@@ -43,19 +43,19 @@ struct PanelBcastTest : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(PanelBcastTest, MatrixElementTypes);
 
-struct config_t {
+struct ParamsBcast {
   const GlobalElementSize sz;
   const TileElementSize blocksz;
   const GlobalTileIndex offset;
 };
 
-std::vector<config_t> test_params{
+std::vector<ParamsBcast> test_params{
     {{0, 0}, {3, 3}, {0, 0}},  // empty matrix
     {{26, 13}, {3, 3}, {1, 2}},
 };
 
 template <class TypeParam, Coord panel_axis, StoreTransposed Storage>
-void testBroadcast(const config_t& cfg, comm::CommunicatorGrid& comm_grid) {
+void testBroadcast(const ParamsBcast& cfg, comm::CommunicatorGrid& comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
 
   const matrix::Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
@@ -111,15 +111,23 @@ TYPED_TEST(PanelBcastTest, BroadcastRowStoreTransposed) {
       testBroadcast<TypeParam, Coord::Row, StoreTransposed::Yes>(cfg, comm_grid);
 }
 
-std::vector<config_t> test_params_bcast_transpose{
-    {{0, 0}, {1, 1}, {0, 0}},    // empty matrix
-    {{10, 10}, {2, 2}, {5, 5}},  // empty panel (due to offset)
-    {{20, 20}, {2, 2}, {9, 9}},  // just last tile (communicate without transpose)
-    {{25, 25}, {5, 5}, {1, 1}},
+struct ParamsBcastTranspose {
+  const GlobalElementSize sz;
+  const TileElementSize blocksz;
+  const GlobalTileIndex offset;
+  const GlobalTileIndex offsetT;
+};
+
+std::vector<ParamsBcastTranspose> test_params_bcast_transpose{
+    {{0, 0}, {1, 1}, {0, 0}, {0, 0}},      // empty matrix
+    {{10, 10}, {2, 2}, {5, 5}, {5, 5}},    // empty panel (due to offset)
+    {{20, 20}, {2, 2}, {9, 9}, {10, 10}},  // just last tile (communicate without transpose)
+    {{25, 25}, {5, 5}, {1, 1}, {1, 1}},
+    {{25, 25}, {5, 5}, {1, 1}, {3, 3}},
 };
 
 template <class TypeParam, Coord AxisSrc, StoreTransposed storageT>
-void testBroadcastTranspose(const config_t& cfg, comm::CommunicatorGrid& comm_grid) {
+void testBroadcastTranspose(const ParamsBcastTranspose& cfg, comm::CommunicatorGrid& comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
 
   const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
@@ -128,7 +136,7 @@ void testBroadcastTranspose(const config_t& cfg, comm::CommunicatorGrid& comm_gr
   // It is important to keep the order of initialization to avoid deadlocks!
   constexpr Coord AxisDst = orthogonal(AxisSrc);
   Panel<AxisSrc, TypeParam, dlaf::Device::CPU> panel_src(dist, cfg.offset);
-  Panel<AxisDst, TypeParam, dlaf::Device::CPU, storageT> panel_dst(dist, cfg.offset);
+  Panel<AxisDst, TypeParam, dlaf::Device::CPU, storageT> panel_dst(dist, cfg.offsetT);
 
   for (const auto i_w : panel_src.iteratorLocal()) {
     start_detached(panel_src.readwrite(i_w) |
@@ -146,16 +154,11 @@ void testBroadcastTranspose(const config_t& cfg, comm::CommunicatorGrid& comm_gr
 
   // Note:
   // all source panels will have access to the same data available on the root rank,
-  // while the destination panels will have access to the corresponding "transposed" tile, except
-  // for the last global tile in the range.
+  // while the destination panels will have access to the corresponding "transposed" tile
   for (const auto idx : panel_src.iteratorLocal())
     CHECK_TILE_EQ(TypeUtil::element(owner, 26), sync_wait(panel_src.read(idx)).get());
 
   for (const auto idx : panel_dst.iteratorLocal()) {
-    constexpr auto CT = decltype(panel_dst)::coord;
-    const auto i = dist.template globalTileFromLocalTile<CT>(idx.get(CT));
-    if (i == panel_dst.rangeEnd() - 1)
-      continue;
     CHECK_TILE_EQ(TypeUtil::element(owner, 26), sync_wait(panel_dst.read(idx)).get());
   }
 }

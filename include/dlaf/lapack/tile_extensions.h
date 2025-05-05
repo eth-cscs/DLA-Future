@@ -139,12 +139,49 @@ void trtri_workspace(const blas::Uplo uplo, const blas::Diag diag, const Tile<T,
 #ifdef DLAF_WITH_GPU
 
 template <class T>
-void lauum_workspace(cusolverDnHandle_t handle, const blas::Uplo uplo,
-                     const matrix::Tile<T, Device::GPU>& a) {}
+void lauum_workspace(cublasHandle_t handle, const blas::Uplo uplo, const matrix::Tile<T, Device::GPU>& a,
+                     const matrix::Tile<T, Device::GPU>& ws) {
+  DLAF_ASSERT(square_size(a), a);
+
+  whip::stream_t stream;
+  DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
+
+  const auto ws_sub = ws.subTileReference({{0, 0}, a.size()});
+
+  const blas::Side side = uplo == blas::Uplo::Lower ? blas::Side::Left : blas::Side::Right;
+  set0(ws_sub, stream);
+  gpulapack::lacpy(uplo, a.size().rows(), a.size().cols(), a.ptr(), a.ld(), ws_sub.ptr(), ws_sub.ld(),
+                   stream);
+  trmm(handle, side, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, static_cast<T>(1.), a, ws_sub);
+  gpulapack::lacpy(uplo, a.size().rows(), a.size().cols(), ws_sub.ptr(), ws_sub.ld(), a.ptr(), a.ld(),
+                   stream);
+}
 
 template <class T>
-void trtri_workspace(cusolverDnHandle_t handle, const blas::Uplo uplo, const ::blas::Diag diag,
-                     const matrix::Tile<T, Device::GPU>& a) {}
+void trtri_workspace(cublasHandle_t handle, const blas::Uplo uplo, const blas::Diag diag,
+                     const matrix::Tile<T, Device::GPU>& a, const matrix::Tile<T, Device::GPU>& ws) {
+  DLAF_ASSERT(square_size(a), a);
+
+  if (a.size().rows() == 0 || (a.size().rows() == 1 && diag == blas::Diag::Unit))
+    return;
+
+  whip::stream_t stream;
+  DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
+
+  const auto ws_sub = ws.subTileReference({{0, 0}, a.size()});
+
+  laset(blas::Uplo::General, static_cast<T>(0.0), static_cast<T>(1.0), ws_sub, stream);
+  trsm(handle, blas::Side::Left, uplo, blas::Op::NoTrans, diag, static_cast<T>(1.), a, ws_sub);
+  if (diag == blas::Diag::Unit) {
+    TileElementIndex offset =
+        uplo == blas::Uplo::Lower ? TileElementIndex{1, 0} : TileElementIndex{0, 1};
+    gpulapack::lacpy(uplo, a.size().rows() - 1, a.size().cols() - 1, ws_sub.ptr(offset), ws_sub.ld(),
+                     a.ptr(offset), a.ld(), stream);
+  }
+  else
+    gpulapack::lacpy(uplo, a.size().rows(), a.size().cols(), ws_sub.ptr(), ws_sub.ld(), a.ptr(), a.ld(),
+                     stream);
+}
 
 #endif
 
@@ -152,9 +189,9 @@ DLAF_MAKE_CALLABLE_OBJECT(lauum_workspace);
 DLAF_MAKE_CALLABLE_OBJECT(trtri_workspace);
 }
 
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, lauum_workspace,
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Blas, lauum_workspace,
                                      internal::lauum_workspace_o)
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, trtri_workspace,
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Blas, trtri_workspace,
                                      internal::trtri_workspace_o)
 #endif
 }

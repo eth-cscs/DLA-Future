@@ -14,12 +14,13 @@
 
 #include <whip.hpp>
 
-#define DLAF_DECLARE_CUSOLVER_ASSERT_INFO(func) void assertInfo##func(whip::stream_t stream, int* info)
+#define DLAF_DECLARE_CUSOLVER_ASSERT_INFO(func) void assert_info_##func(whip::stream_t stream, int* info)
 
 namespace dlaf::gpulapack::internal {
 
-DLAF_DECLARE_CUSOLVER_ASSERT_INFO(Potrf);
-DLAF_DECLARE_CUSOLVER_ASSERT_INFO(Hegst);
+DLAF_DECLARE_CUSOLVER_ASSERT_INFO(potrf);
+DLAF_DECLARE_CUSOLVER_ASSERT_INFO(hegst);
+DLAF_DECLARE_CUSOLVER_ASSERT_INFO(trtri);
 
 }
 

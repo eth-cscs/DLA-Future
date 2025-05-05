@@ -222,7 +222,17 @@ TYPED_TEST(TileOperationsTestMC, Lauum) {
   }
 }
 
-// TODO GPU
+#ifdef DLAF_WITH_HIP
+TYPED_TEST(TileOperationsTestGPU, Lauum) {
+  using Type = TypeParam;
+
+  for (const auto uplo : blas_uplos) {
+    for (const auto& [n, extra_lda] : lauum_sizes) {
+      test_lauum<Type, Device::GPU>(uplo, n, extra_lda);
+    }
+  }
+}
+#endif
 
 // Tuple elements:  n, extra_lda
 std::vector<std::tuple<SizeType, SizeType>> trtri_sizes = {
@@ -246,7 +256,23 @@ TYPED_TEST(TileOperationsTestMC, Trtri) {
   }
 }
 
-// TODO GPU
+#ifdef DLAF_WITH_HIP
+TYPED_TEST(TileOperationsTestGPU, Trtri) {
+  using Type = TypeParam;
+
+  for (const auto uplo : blas_uplos) {
+    for (const auto diag : blas_diags) {
+      for (const auto& [n, extra_lda] : trtri_sizes) {
+        // Test version non returning info
+        test_trtri<Type, Device::GPU, false>(uplo, diag, n, extra_lda);
+
+        // Test version returning info
+        test_trtri<Type, Device::GPU, true>(uplo, diag, n, extra_lda);
+      }
+    }
+  }
+}
+#endif
 
 TYPED_TEST(TileOperationsTestMC, TrtriSingular) {
   using Type = TypeParam;
@@ -263,7 +289,22 @@ TYPED_TEST(TileOperationsTestMC, TrtriSingular) {
   }
 }
 
-// TODO GPU
+#ifdef DLAF_WITH_HIP
+TYPED_TEST(TileOperationsTestGPU, TrtriSingular) {
+  using Type = TypeParam;
+
+  for (const auto uplo : blas_uplos) {
+    for (const auto& [n, extra_lda] : trtri_sizes) {
+      if (n == 0)
+        continue;
+
+      // Only test version returning info
+      // Note: Only NonDiag can lead to a singular matrix.
+      test_trtri_singular<Type, Device::GPU>(uplo, blas::Diag::NonUnit, n, extra_lda);
+    }
+  }
+}
+#endif
 
 TYPED_TEST(TileOperationsTestMC, Lacpy) {
   using Scalar = TypeParam;

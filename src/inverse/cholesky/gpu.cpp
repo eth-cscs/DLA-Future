@@ -16,10 +16,10 @@ namespace dlaf {
 namespace inverse {
 namespace internal {
 
-// DLAF_INVERSE_CHOLESKY_ETI(, Backend::GPU, Device::GPU, float)
-// DLAF_INVERSE_CHOLESKY_ETI(, Backend::GPU, Device::GPU, double)
-// DLAF_INVERSE_CHOLESKY_ETI(, Backend::GPU, Device::GPU, std::complex<float>)
-// DLAF_INVERSE_CHOLESKY_ETI(, Backend::GPU, Device::GPU, std::complex<double>)
+DLAF_INVERSE_CHOLESKY_ETI(, Backend::GPU, Device::GPU, float)
+DLAF_INVERSE_CHOLESKY_ETI(, Backend::GPU, Device::GPU, double)
+DLAF_INVERSE_CHOLESKY_ETI(, Backend::GPU, Device::GPU, std::complex<float>)
+DLAF_INVERSE_CHOLESKY_ETI(, Backend::GPU, Device::GPU, std::complex<double>)
 }
 }
 }

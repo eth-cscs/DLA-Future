@@ -120,22 +120,22 @@ TYPED_TEST(InverseFromCholeskyFactorTestMC, CorrectnessDistributed) {
 }
 
 #ifdef DLAF_WITH_GPU
-// TYPED_TEST(InverseFromCholeskyFactorTestGPU, CorrectnessLocal) {
-//   for (auto uplo : blas_uplos) {
-//     for (const auto& [m, mb] : sizes) {
-//       test_inverse_from_cholesky_factor<TypeParam, Backend::GPU, Device::GPU>(uplo, m, mb);
-//     }
-//   }
-// }
-//
-// TYPED_TEST(InverseFromCholeskyFactorTestGPU, CorrectnessDistributed) {
-//   for (auto& comm_grid : this->commGrids()) {
-//     for (auto uplo : blas_uplos) {
-//       for (const auto& [m, mb] : sizes) {
-//         test_inverse_from_cholesky_factor<TypeParam, Backend::GPU, Device::GPU>(comm_grid, uplo, m,
-//         mb); pika::wait();
-//       }
-//     }
-//   }
-// }
+TYPED_TEST(InverseFromCholeskyFactorTestGPU, CorrectnessLocal) {
+  for (auto uplo : blas_uplos) {
+    for (const auto& [m, mb] : sizes) {
+      test_inverse_from_cholesky_factor<TypeParam, Backend::GPU, Device::GPU>(uplo, m, mb);
+    }
+  }
+}
+
+TYPED_TEST(InverseFromCholeskyFactorTestGPU, CorrectnessDistributed) {
+  for (auto& comm_grid : this->commGrids()) {
+    for (auto uplo : blas_uplos) {
+      for (const auto& [m, mb] : sizes) {
+        test_inverse_from_cholesky_factor<TypeParam, Backend::GPU, Device::GPU>(comm_grid, uplo, m, mb);
+        pika::wait();
+      }
+    }
+  }
+}
 #endif

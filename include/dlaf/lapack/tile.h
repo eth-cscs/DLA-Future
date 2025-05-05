@@ -540,6 +540,9 @@ DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<double>, Zpotrf);
 
 #elif defined(DLAF_WITH_HIP)
 
+DLAF_DECLARE_GPULAPACK_OP(Lauum);
+DLAF_DECLARE_GPULAPACK_OP(Trtri);
+
 #define DLAF_GET_ROCSOLVER_WORKSPACE(f)                                                               \
   [&]() {                                                                                             \
     std::size_t workspace_size;                                                                       \
@@ -578,11 +581,20 @@ DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, double, dsygst);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, std::complex<float>, chegst);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, std::complex<double>, zhegst);
 
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Lauum, float, slauum);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Lauum, double, dlauum);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Lauum, std::complex<float>, clauum);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Lauum, std::complex<double>, zlauum);
+
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, float, spotrf);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, double, dpotrf);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<float>, cpotrf);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<double>, zpotrf);
 
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Trtri, float, strtri);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Trtri, double, dtrtri);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Trtri, std::complex<float>, ctrtri);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Trtri, std::complex<double>, ztrtri);
 #endif
 }
 
@@ -670,11 +682,25 @@ void hegst(cusolverDnHandle_t handle, const int itype, const blas::Uplo uplo,
                                    util::blasToCublasCast(b.ptr()), to_int(b.ld()),
                                    util::blasToCublasCast(info.workspace()), info.info());
 
-  assertExtendInfo(dlaf::gpulapack::internal::assertInfoHegst, handle, std::move(info));
+  assertExtendInfo(dlaf::gpulapack::internal::assert_info_hegst, handle, std::move(info));
 #elif defined(DLAF_WITH_HIP)
   internal::CusolverHegst<T>::call(handle, util::blasToRocblas(itype), util::blasToRocblas(uplo),
                                    to_int(n), util::blasToRocblasCast(a.ptr()), to_int(a.ld()),
                                    util::blasToRocblasCast(b.ptr()), to_int(b.ld()));
+#endif
+}
+
+template <class T>
+void lauum(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<T, Device::GPU>& a) {
+  DLAF_ASSERT(square_size(a), a);
+  const auto n = a.size().rows();
+
+#ifdef DLAF_WITH_CUDA
+  DLAF_STATIC_UNIMPLEMENTED(T);
+  dlaf::internal::silenceUnusedWarningFor(handle, uplo, a);
+#elif defined(DLAF_WITH_HIP)
+  internal::CusolverLauum<T>::call(handle, util::blasToRocblas(uplo), to_int(n),
+                                   util::blasToRocblasCast(a.ptr()), to_int(a.ld()));
 #endif
 }
 
@@ -706,9 +732,35 @@ internal::CusolverInfo<T> potrfInfo(cusolverDnHandle_t handle, const blas::Uplo 
 template <class T>
 void potrf(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<T, Device::GPU>& a) {
   auto info = potrfInfo(handle, uplo, a);
-  assertExtendInfo(dlaf::gpulapack::internal::assertInfoPotrf, handle, std::move(info));
+  assertExtendInfo(dlaf::gpulapack::internal::assert_info_potrf, handle, std::move(info));
 }
 
+template <class T>
+internal::CusolverInfo<T> trtri_info(cusolverDnHandle_t handle, const blas::Uplo uplo,
+                                     const blas::Diag diag, const matrix::Tile<T, Device::GPU>& a) {
+  DLAF_ASSERT(square_size(a), a);
+  const auto n = a.size().rows();
+
+  internal::CusolverInfo<T> info{};
+#ifdef DLAF_WITH_CUDA
+  DLAF_STATIC_UNIMPLEMENTED(T);
+  dlaf::internal::silenceUnusedWarningFor(handle, uplo, diag, a);
+
+#elif defined(DLAF_WITH_HIP)
+  internal::CusolverTrtri<T>::call(handle, util::blasToRocblas(uplo), util::blasToRocblas(diag),
+                                   to_int(n), util::blasToRocblasCast(a.ptr()), to_int(a.ld()),
+                                   info.info());
+#endif
+
+  return info;
+}
+
+template <class T>
+void trtri(cusolverDnHandle_t handle, const blas::Uplo uplo, const blas::Diag diag,
+           const matrix::Tile<T, Device::GPU>& a) {
+  auto info = trtri_info(handle, uplo, diag, a);
+  assertExtendInfo(dlaf::gpulapack::internal::assert_info_trtri, handle, std::move(info));
+}
 #endif
 
 DLAF_MAKE_CALLABLE_OBJECT(lange);

@@ -31,6 +31,7 @@
 #include <dlaf/communication/kernels.h>
 #include <dlaf/inverse/cholesky/api.h>
 #include <dlaf/lapack/tile.h>
+#include <dlaf/lapack/tile_extensions.h>
 #include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/hdf5.h>
 #include <dlaf/matrix/index.h>
@@ -50,6 +51,17 @@ void assemble_diag_tile(pika::execution::thread_priority priority, MatrixTileSen
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(blas::Uplo::Lower, std::forward<MatrixTileSender>(matrix_tile)) |
       tile::lauum(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
+}
+
+template <Backend backend, class MatrixTileSender, class WsTileSender>
+void assemble_diag_tile_workspace(pika::execution::thread_priority priority,
+                                  MatrixTileSender&& matrix_tile, WsTileSender&& ws_tile) {
+  using pika::execution::thread_stacksize;
+
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Uplo::Lower, std::forward<MatrixTileSender>(matrix_tile),
+                                  std::forward<WsTileSender>(ws_tile)) |
+      tile::lauum_workspace(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
 }
 
 template <Backend backend, class KKTileSender, class MatrixTileSender>
@@ -104,6 +116,17 @@ void assemble_diag_tile(pika::execution::thread_priority priority, MatrixTileSen
       tile::lauum(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
 }
 
+template <Backend backend, class MatrixTileSender, class WsTileSender>
+void assemble_diag_tile_workspace(pika::execution::thread_priority priority,
+                                  MatrixTileSender&& matrix_tile, WsTileSender&& ws_tile) {
+  using pika::execution::thread_stacksize;
+
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Uplo::Upper, std::forward<MatrixTileSender>(matrix_tile),
+                                  std::forward<WsTileSender>(ws_tile)) |
+      tile::lauum_workspace(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
+}
+
 template <Backend backend, class KKTileSender, class MatrixTileSender>
 void trmm_col_panel_tile(pika::execution::thread_priority priority, KKTileSender&& kk_tile,
                          MatrixTileSender&& matrix_tile) {
@@ -146,13 +169,32 @@ void gemm_matrix_tile(pika::execution::thread_priority priority, RowPanelTileSen
 }
 }
 
-template <Backend backend, Device device, class T>
-void AssembleCholeskyInverse<backend, device, T>::call_L(Matrix<T, device>& mat_a) {
+template <Device D>
+constexpr bool replace_lauum() {
+  if constexpr (D == Device::CPU)
+    return 0;
+#ifdef DLAF_WITH_CUDA
+  return 1;
+#else  // DLAF_WITH_HIP
+  return 0;
+#endif
+}
+
+template <Backend backend, Device D, class T>
+void AssembleCholeskyInverse<backend, D, T>::call_L(Matrix<T, D>& mat_a) {
   using namespace assemble_cholesky_inv_l;
   using pika::execution::thread_priority;
 
   // Number of tile (rows = cols)
   SizeType nrtiles = mat_a.nr_tiles().cols();
+
+  if (nrtiles == 0)
+    return;
+
+  auto tile_size = mat_a.tile_size();
+  std::optional<Matrix<T, D>> ws;
+  if constexpr (replace_lauum<D>())
+    ws.emplace({tile_size.rows(), tile_size.cols()}, tile_size);
 
   for (SizeType k = 0; k < nrtiles; ++k) {
     auto kk = LocalTileIndex{k, k};
@@ -173,13 +215,19 @@ void AssembleCholeskyInverse<backend, device, T>::call_L(Matrix<T, device>& mat_
                                    mat_a.readwrite(LocalTileIndex{k, j}));
     }
 
-    assemble_diag_tile<backend>(thread_priority::high, mat_a.readwrite(kk));
+    if constexpr (replace_lauum<D>()) {
+      LocalTileIndex ws_index{0, 0};
+      assemble_diag_tile_workspace<backend>(thread_priority::high, mat_a.readwrite(kk),
+                                            ws->readwrite(ws_index));
+    }
+    else {
+      assemble_diag_tile<backend>(thread_priority::high, mat_a.readwrite(kk));
+    }
   }
 }
 
-template <Backend backend, Device device, class T>
-void AssembleCholeskyInverse<backend, device, T>::call_L(comm::CommunicatorGrid& grid,
-                                                         Matrix<T, device>& mat_a) {
+template <Backend backend, Device D, class T>
+void AssembleCholeskyInverse<backend, D, T>::call_L(comm::CommunicatorGrid& grid, Matrix<T, D>& mat_a) {
   using namespace assemble_cholesky_inv_l;
   using pika::execution::thread_priority;
 
@@ -206,9 +254,9 @@ void AssembleCholeskyInverse<backend, device, T>::call_L(comm::CommunicatorGrid&
   const SizeType nrtiles = mat_a.nr_tiles().cols();
 
   constexpr std::size_t n_workspaces = 2;
-  common::RoundRobin<matrix::Panel<Coord::Row, T, device>> panels(n_workspaces, dist);
-  common::RoundRobin<matrix::Panel<Coord::Col, T, device, matrix::StoreTransposed::Yes>> panelsT(
-      n_workspaces, dist);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, D>> panels(n_workspaces, dist);
+  common::RoundRobin<matrix::Panel<Coord::Col, T, D, matrix::StoreTransposed::Yes>> panelsT(n_workspaces,
+                                                                                            dist);
 
   for (SizeType k = 0; k < nrtiles; ++k) {
     const GlobalTileIndex kk(k, k);
@@ -217,8 +265,8 @@ void AssembleCholeskyInverse<backend, device, T>::call_L(comm::CommunicatorGrid&
     const SizeType k_local_row = dist.next_local_tile_from_global_tile<Coord::Row>(k);
     const SizeType k_local_col = dist.next_local_tile_from_global_tile<Coord::Col>(k);
 
+    auto& panel = panels.nextResource();
     if (k > 0) {
-      auto& panel = panels.nextResource();
       auto& panelT = panelsT.nextResource();
 
       panel.setRange({0, 0}, kk);
@@ -231,9 +279,9 @@ void AssembleCholeskyInverse<backend, device, T>::call_L(comm::CommunicatorGrid&
 
       if (kk_rank.row() == this_rank.row()) {
         for (SizeType j_local = 0; j_local < k_local_col; ++j_local) {
-          const LocalTileIndex kj_panel_local(Coord::Col, j_local);
+          const LocalTileIndex kj_local_panel(Coord::Col, j_local);
           const LocalTileIndex kj_local(k_local_row, j_local);
-          panel.setTile(kj_panel_local, mat_a.read(kj_local));
+          panel.setTile(kj_local_panel, mat_a.read(kj_local));
         }
       }
       broadcast(kk_rank.row(), panel, panelT, mpi_row_task_chain, mpi_col_task_chain);
@@ -250,19 +298,19 @@ void AssembleCholeskyInverse<backend, device, T>::call_L(comm::CommunicatorGrid&
             continue;
           const auto j_local = dist.local_tile_from_global_tile<Coord::Col>(j);
 
-          const LocalTileIndex ik_panel_local{Coord::Row, i_local};
-          const LocalTileIndex kj_panel_local{Coord::Col, j_local};
+          const LocalTileIndex ik_local_panel{Coord::Row, i_local};
+          const LocalTileIndex kj_local_panel{Coord::Col, j_local};
           const LocalTileIndex ij_local{i_local, j_local};
 
-          gemm_matrix_tile<backend>(thread_priority::normal, panelT.read(ik_panel_local),
-                                    panel.read(kj_panel_local), mat_a.readwrite(ij_local));
+          gemm_matrix_tile<backend>(thread_priority::normal, panelT.read(ik_local_panel),
+                                    panel.read(kj_local_panel), mat_a.readwrite(ij_local));
         }
 
         if (ii_rank == this_rank) {
           const auto i_local_col = dist.local_tile_from_global_tile<Coord::Col>(i);
-          const LocalTileIndex ki_panel_local{Coord::Col, i_local_col};
+          const LocalTileIndex ki_local_panel{Coord::Col, i_local_col};
           const LocalTileIndex ii_local{i_local, i_local_col};
-          herk_matrix_tile<backend>(thread_priority::normal, panel.read(ki_panel_local),
+          herk_matrix_tile<backend>(thread_priority::normal, panel.read(ki_local_panel),
                                     mat_a.readwrite(ii_local));
         }
       }
@@ -272,26 +320,36 @@ void AssembleCholeskyInverse<backend, device, T>::call_L(comm::CommunicatorGrid&
 
       if (kk_rank.row() == this_rank.row()) {
         panelT.setRange(kk, {k + 1, k + 1});
-        const LocalTileIndex kk_panel_local{Coord::Row, k_local_row};
+        const LocalTileIndex kk_local_panel{Coord::Row, k_local_row};
         if (k == nrtiles - 1)
           panelT.setWidth(mat_a.tile_size_of(kk).cols());
 
         if (kk_rank.col() == this_rank.col())
-          panelT.setTile(kk_panel_local, mat_a.read(kk));
+          panelT.setTile(kk_local_panel, mat_a.read(kk));
 
         broadcast(kk_rank.col(), panelT, mpi_row_task_chain);
 
         for (SizeType j_local = 0; j_local < k_local_col; ++j_local) {
           const LocalTileIndex kj_local{k_local_row, j_local};
-          trmm_row_panel_tile<backend>(thread_priority::high, panelT.read(kk_panel_local),
+          trmm_row_panel_tile<backend>(thread_priority::high, panelT.read(kk_local_panel),
                                        mat_a.readwrite(kj_local));
         }
         panelT.reset();
       }
     }
 
-    if (kk_rank == this_rank)
-      assemble_diag_tile<backend>(thread_priority::high, mat_a.readwrite(kk));
+    if (kk_rank == this_rank) {
+      if constexpr (replace_lauum<D>()) {
+        panel.setRange(kk, {k + 1, k + 1});
+        const LocalTileIndex kk_local_panel{Coord::Col, k_local_col};
+        assemble_diag_tile_workspace<backend>(thread_priority::high, mat_a.readwrite(kk),
+                                              panel.readwrite(kk_local_panel));
+        panel.reset();
+      }
+      else {
+        assemble_diag_tile<backend>(thread_priority::high, mat_a.readwrite(kk));
+      }
+    }
   }
 
 #ifdef DLAF_WITH_HDF5
@@ -303,13 +361,21 @@ void AssembleCholeskyInverse<backend, device, T>::call_L(comm::CommunicatorGrid&
 #endif
 }
 
-template <Backend backend, Device device, class T>
-void AssembleCholeskyInverse<backend, device, T>::call_U(Matrix<T, device>& mat_a) {
+template <Backend backend, Device D, class T>
+void AssembleCholeskyInverse<backend, D, T>::call_U(Matrix<T, D>& mat_a) {
   using namespace assemble_cholesky_inv_u;
   using pika::execution::thread_priority;
 
   // Number of tile (rows = cols)
   SizeType nrtiles = mat_a.nr_tiles().cols();
+
+  if (nrtiles == 0)
+    return;
+
+  auto tile_size = mat_a.tile_size();
+  std::optional<Matrix<T, D>> ws;
+  if constexpr (replace_lauum<D>())
+    ws.emplace({tile_size.rows(), tile_size.cols()}, tile_size);
 
   for (SizeType k = 0; k < nrtiles; ++k) {
     auto kk = LocalTileIndex{k, k};
@@ -330,13 +396,19 @@ void AssembleCholeskyInverse<backend, device, T>::call_U(Matrix<T, device>& mat_
                                    mat_a.readwrite(LocalTileIndex{i, k}));
     }
 
-    assemble_diag_tile<backend>(thread_priority::high, mat_a.readwrite(kk));
+    if constexpr (replace_lauum<D>()) {
+      LocalTileIndex ws_index{0, 0};
+      assemble_diag_tile_workspace<backend>(thread_priority::high, mat_a.readwrite(kk),
+                                            ws->readwrite(ws_index));
+    }
+    else {
+      assemble_diag_tile<backend>(thread_priority::high, mat_a.readwrite(kk));
+    }
   }
 }
 
-template <Backend backend, Device device, class T>
-void AssembleCholeskyInverse<backend, device, T>::call_U(comm::CommunicatorGrid& grid,
-                                                         Matrix<T, device>& mat_a) {
+template <Backend backend, Device D, class T>
+void AssembleCholeskyInverse<backend, D, T>::call_U(comm::CommunicatorGrid& grid, Matrix<T, D>& mat_a) {
   using namespace assemble_cholesky_inv_u;
   using pika::execution::thread_priority;
 
@@ -363,9 +435,9 @@ void AssembleCholeskyInverse<backend, device, T>::call_U(comm::CommunicatorGrid&
   const SizeType nrtiles = mat_a.nr_tiles().rows();
 
   constexpr std::size_t n_workspaces = 2;
-  common::RoundRobin<matrix::Panel<Coord::Col, T, device>> panels(n_workspaces, dist);
-  common::RoundRobin<matrix::Panel<Coord::Row, T, device, matrix::StoreTransposed::Yes>> panelsT(
-      n_workspaces, dist);
+  common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panels(n_workspaces, dist);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>> panelsT(n_workspaces,
+                                                                                            dist);
 
   for (SizeType k = 0; k < nrtiles; ++k) {
     const GlobalTileIndex kk(k, k);
@@ -374,8 +446,8 @@ void AssembleCholeskyInverse<backend, device, T>::call_U(comm::CommunicatorGrid&
     const SizeType k_local_row = dist.next_local_tile_from_global_tile<Coord::Row>(k);
     const SizeType k_local_col = dist.next_local_tile_from_global_tile<Coord::Col>(k);
 
+    auto& panel = panels.nextResource();
     if (k > 0) {
-      auto& panel = panels.nextResource();
       auto& panelT = panelsT.nextResource();
 
       panel.setRange({0, 0}, kk);
@@ -388,9 +460,9 @@ void AssembleCholeskyInverse<backend, device, T>::call_U(comm::CommunicatorGrid&
 
       if (kk_rank.col() == this_rank.col()) {
         for (SizeType i_local = 0; i_local < k_local_row; ++i_local) {
-          const LocalTileIndex ik_panel_local(Coord::Row, i_local);
+          const LocalTileIndex ik_local_panel(Coord::Row, i_local);
           const LocalTileIndex ik_local(i_local, k_local_col);
-          panel.setTile(ik_panel_local, mat_a.read(ik_local));
+          panel.setTile(ik_local_panel, mat_a.read(ik_local));
         }
       }
       broadcast(kk_rank.col(), panel, panelT, mpi_row_task_chain, mpi_col_task_chain);
@@ -407,19 +479,19 @@ void AssembleCholeskyInverse<backend, device, T>::call_U(comm::CommunicatorGrid&
             continue;
           const auto i_local = dist.local_tile_from_global_tile<Coord::Row>(i);
 
-          const LocalTileIndex ik_panel_local{Coord::Row, i_local};
-          const LocalTileIndex kj_panel_local{Coord::Col, j_local};
+          const LocalTileIndex ik_local_panel{Coord::Row, i_local};
+          const LocalTileIndex kj_local_panel{Coord::Col, j_local};
           const LocalTileIndex ij_local{i_local, j_local};
 
-          gemm_matrix_tile<backend>(thread_priority::normal, panel.read(ik_panel_local),
-                                    panelT.read(kj_panel_local), mat_a.readwrite(ij_local));
+          gemm_matrix_tile<backend>(thread_priority::normal, panel.read(ik_local_panel),
+                                    panelT.read(kj_local_panel), mat_a.readwrite(ij_local));
         }
 
         if (jj_rank == this_rank) {
           const auto j_local_row = dist.local_tile_from_global_tile<Coord::Row>(j);
-          const LocalTileIndex jk_panel_local{Coord::Row, j_local_row};
+          const LocalTileIndex jk_local_panel{Coord::Row, j_local_row};
           const LocalTileIndex jj_local{j_local_row, j_local};
-          herk_matrix_tile<backend>(thread_priority::normal, panel.read(jk_panel_local),
+          herk_matrix_tile<backend>(thread_priority::normal, panel.read(jk_local_panel),
                                     mat_a.readwrite(jj_local));
         }
       }
@@ -429,27 +501,36 @@ void AssembleCholeskyInverse<backend, device, T>::call_U(comm::CommunicatorGrid&
 
       if (kk_rank.col() == this_rank.col()) {
         panelT.setRange(kk, {k + 1, k + 1});
+        const LocalTileIndex kk_local_panel{Coord::Col, k_local_col};
         if (k == nrtiles - 1)
           panelT.setHeight(mat_a.tile_size_of(kk).rows());
 
-        const LocalTileIndex kk_panel_local{Coord::Col, k_local_col};
-
         if (kk_rank.row() == this_rank.row())
-          panelT.setTile(kk_panel_local, mat_a.read(kk));
+          panelT.setTile(kk_local_panel, mat_a.read(kk));
 
         broadcast(kk_rank.row(), panelT, mpi_col_task_chain);
 
         for (SizeType i_local = 0; i_local < k_local_row; ++i_local) {
           const LocalTileIndex ik_local{i_local, k_local_col};
-          trmm_col_panel_tile<backend>(thread_priority::high, panelT.read(kk_panel_local),
+          trmm_col_panel_tile<backend>(thread_priority::high, panelT.read(kk_local_panel),
                                        mat_a.readwrite(ik_local));
         }
         panelT.reset();
       }
     }
 
-    if (kk_rank == this_rank)
-      assemble_diag_tile<backend>(thread_priority::high, mat_a.readwrite(kk));
+    if (kk_rank == this_rank) {
+      if constexpr (replace_lauum<D>()) {
+        panel.setRange(kk, {k + 1, k + 1});
+        const LocalTileIndex kk_local_panel{Coord::Row, k_local_row};
+        assemble_diag_tile_workspace<backend>(thread_priority::high, mat_a.readwrite(kk),
+                                              panel.readwrite(kk_local_panel));
+        panel.reset();
+      }
+      else {
+        assemble_diag_tile<backend>(thread_priority::high, mat_a.readwrite(kk));
+      }
+    }
   }
 
 #ifdef DLAF_WITH_HDF5

@@ -18,7 +18,7 @@
 
 #include <gtest/gtest.h>
 
-#include <dlaf_test/lapack/invoke.h>
+#include <dlaf_test/blas/invoke.h>
 #include <dlaf_test/matrix/util_generic_lapack.h>
 #include <dlaf_test/matrix/util_tile.h>
 #include <dlaf_test/util_types.h>
@@ -38,7 +38,7 @@ void test_lauum_workspace(const blas::Uplo uplo, const SizeType n, const SizeTyp
   auto a = createTile<T, D>(el_a, size_a, lda);
   auto ws = createTile<T, D>(size_a, lda);
 
-  invokeLapack<D>(tile::internal::lauum_workspace_o, uplo, a, ws);
+  invokeBlas<D>(tile::internal::lauum_workspace_o, uplo, a, ws);
 
   std::stringstream s;
   s << "LAUUM: " << uplo;

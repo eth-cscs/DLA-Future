@@ -18,7 +18,7 @@
 
 #include <gtest/gtest.h>
 
-#include <dlaf_test/lapack/invoke.h>
+#include <dlaf_test/blas/invoke.h>
 #include <dlaf_test/matrix/util_generic_lapack.h>
 #include <dlaf_test/matrix/util_tile.h>
 #include <dlaf_test/util_types.h>
@@ -39,7 +39,7 @@ void test_trtri_workspace(const blas::Uplo uplo, const blas::Diag diag, const Si
   auto a = createTile<T, D>(el_a, size_a, lda);
   auto ws = createTile<T, D>(size_a, lda);
 
-  invokeLapack<D>(tile::internal::trtri_workspace_o, uplo, diag, a, ws);
+  invokeBlas<D>(tile::internal::trtri_workspace_o, uplo, diag, a, ws);
 
   std::stringstream s;
   s << "TRTRI: " << uplo << " " << diag;

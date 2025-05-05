@@ -149,6 +149,50 @@ auto getGenToStdElementSetters(SizeType n, int itype, blas::Uplo uplo, BaseType<
 }
 
 /// Returns a tuple of element generators of two matrices A(n x n) and T(n x n).
+/// such that A = T^H T if @p uplo == Lower
+/// or        A = T T^H if @p uplo == Upper
+///
+/// The tile elements are chosen such that:
+/// t_ij = 1 / 2^(|i-j|) * exp(I*(-i+j)),
+/// where I = 0 for real types or I is the complex unit for complex types.
+/// By definition A should be:
+/// a_lh = Sum_k(res_ik * ConjTrans(res)_kj) =
+///      = Sum_k(1 / 2^(|i-k| + |j-k|) * exp(I*(-i+j))),
+/// where k = 0 .. min(i,j), l = n-1-i, h = n-1-j
+/// Therefore,
+/// a_lh = (4^(min(i,j)+1) - 1) / (3 * 2^(i+j)) * exp(I*(i-j))
+template <class ElementIndex, class T>
+auto get_assemble_cholesky_inverse_setters(SizeType n, blas::Uplo uplo) {
+  using dlaf::test::TypeUtilities;
+
+  std::function<T(const ElementIndex&)> el_t = [uplo](const ElementIndex& index) {
+    if ((uplo == blas::Uplo::Lower && index.row() < index.col()) ||
+        (uplo == blas::Uplo::Upper && index.row() > index.col()))
+      return TypeUtilities<T>::element(-9.9, 0);
+
+    const double i = index.row();
+    const double j = index.col();
+
+    return TypeUtilities<T>::polar(std::exp2(-std::abs(i - j)), -i + j);
+  };
+
+  // Analytical results
+  std::function<T(const ElementIndex&)> el_a = [n, uplo](const ElementIndex& index) {
+    if ((uplo == blas::Uplo::Lower && index.row() < index.col()) ||
+        (uplo == blas::Uplo::Upper && index.row() > index.col()))
+      return TypeUtilities<T>::element(-9.9, 0);
+
+    const double i = n - 1 - index.row();
+    const double j = n - 1 - index.col();
+
+    return TypeUtilities<T>::polar(std::exp2(-(i + j)) / 3 * (std::exp2(2 * (std::min(i, j) + 1)) - 1),
+                                   i - j);
+  };
+
+  return std::make_tuple(el_t, el_a);
+}
+
+/// Returns a tuple of element generators of two matrices A(n x n) and T(n x n).
 /// such that A = inv(T^H) inv(T) if @p uplo == Lower
 /// or        A = inv(T) inv(T^H) if @p uplo == Upper
 ///

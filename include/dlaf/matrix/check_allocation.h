@@ -28,13 +28,13 @@ namespace dlaf::matrix::test {
 
 namespace internal {
 template <class MatrixLike>
-auto* tile_ptr(MatrixLike& mat, const LocalTileIndex& ij) {
+auto* sync_tile_ptr(MatrixLike& mat, const LocalTileIndex& ij) {
   namespace tt = pika::this_thread::experimental;
   return tt::sync_wait(mat.read(ij)).get().ptr();
 }
 
 template <class MatrixLike>
-SizeType tile_ld(MatrixLike& mat, const LocalTileIndex& ij) {
+SizeType sync_tile_ld(MatrixLike& mat, const LocalTileIndex& ij) {
   namespace tt = pika::this_thread::experimental;
   return tt::sync_wait(mat.read(ij)).get().ld();
 }
@@ -50,15 +50,15 @@ bool is_allocated_as_col_major(MatrixLike& mat) {
   if (dist.local_nr_tiles().isEmpty())
     return true;
 
-  auto* ptr_00 = internal::tile_ptr(mat, {0, 0});
-  SizeType ld_00 = internal::tile_ld(mat, {0, 0});
+  auto* ptr_00 = internal::sync_tile_ptr(mat, {0, 0});
+  SizeType ld_00 = internal::sync_tile_ld(mat, {0, 0});
 
   for (auto& ij : iterate_range2d(dist.local_nr_tiles())) {
     SizeType i_el_local = dist.local_element_from_local_tile_and_tile_element<Coord::Row>(ij.row(), 0);
     SizeType j_el_local = dist.local_element_from_local_tile_and_tile_element<Coord::Col>(ij.col(), 0);
     SizeType offset = i_el_local + ld_00 * j_el_local;
-    auto* ptr_ij = internal::tile_ptr(mat, ij);
-    SizeType ld_ij = internal::tile_ld(mat, ij);
+    auto* ptr_ij = internal::sync_tile_ptr(mat, ij);
+    SizeType ld_ij = internal::sync_tile_ld(mat, ij);
     if (ptr_ij - ptr_00 != offset || ld_ij != ld_00)
       return false;
   }
@@ -94,8 +94,8 @@ bool is_allocated_as_blocks(MatrixLike& mat) {
         tiles_in_block_rows = dist.local_nr_tiles().rows();
 
       // pointer and ld of the first element of the block.
-      auto* ptr_bl = internal::tile_ptr(mat, {i, j});
-      SizeType ld_bl = internal::tile_ld(mat, {i, j});
+      auto* ptr_bl = internal::sync_tile_ptr(mat, {i, j});
+      SizeType ld_bl = internal::sync_tile_ld(mat, {i, j});
       SizeType i_el_local_bl = dist.local_element_from_local_tile_and_tile_element<Coord::Row>(i, 0);
       SizeType j_el_local_bl = dist.local_element_from_local_tile_and_tile_element<Coord::Col>(j, 0);
 
@@ -107,8 +107,8 @@ bool is_allocated_as_blocks(MatrixLike& mat) {
           SizeType j_el_local =
               dist.local_element_from_local_tile_and_tile_element<Coord::Col>(ij.col(), 0);
           SizeType offset = (i_el_local - i_el_local_bl) + ld_bl * (j_el_local - j_el_local_bl);
-          auto* ptr_ij = internal::tile_ptr(mat, ij);
-          SizeType ld_ij = internal::tile_ld(mat, ij);
+          auto* ptr_ij = internal::sync_tile_ptr(mat, ij);
+          SizeType ld_ij = internal::sync_tile_ld(mat, ij);
 
           if (ptr_ij - ptr_bl != offset || ld_ij != ld_bl)
             return false;

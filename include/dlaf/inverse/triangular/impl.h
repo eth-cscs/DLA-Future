@@ -31,6 +31,7 @@
 #include <dlaf/communication/kernels.h>
 #include <dlaf/inverse/triangular/api.h>
 #include <dlaf/lapack/tile.h>
+#include <dlaf/lapack/tile_extensions.h>
 #include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/hdf5.h>
 #include <dlaf/matrix/index.h>
@@ -51,6 +52,17 @@ void inverse_diag_tile(pika::execution::thread_priority priority, blas::Diag dia
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(blas::Uplo::Lower, diag, std::forward<MatrixTileSender>(matrix_tile)) |
       tile::trtri(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
+}
+
+template <Backend backend, class MatrixTileSender, class WsTileSender>
+void inverse_diag_tile_workspace(pika::execution::thread_priority priority, blas::Diag diag,
+                                 MatrixTileSender&& matrix_tile, WsTileSender&& ws_tile) {
+  using pika::execution::thread_stacksize;
+
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Uplo::Lower, diag, std::forward<MatrixTileSender>(matrix_tile),
+                                  std::forward<WsTileSender>(ws_tile)) |
+      tile::trtri_workspace(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
 }
 
 template <Backend backend, class KKTileSender, class MatrixTileSender>
@@ -104,6 +116,17 @@ void inverse_diag_tile(pika::execution::thread_priority priority, blas::Diag dia
       tile::trtri(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
 }
 
+template <Backend backend, class MatrixTileSender, class WsTileSender>
+void inverse_diag_tile_workspace(pika::execution::thread_priority priority, blas::Diag diag,
+                                 MatrixTileSender&& matrix_tile, WsTileSender&& ws_tile) {
+  using pika::execution::thread_stacksize;
+
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Uplo::Upper, diag, std::forward<MatrixTileSender>(matrix_tile),
+                                  std::forward<WsTileSender>(ws_tile)) |
+      tile::trtri_workspace(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
+}
+
 template <Backend backend, class KKTileSender, class MatrixTileSender>
 void trsm_col_panel_tile(pika::execution::thread_priority priority, blas::Diag diag,
                          KKTileSender&& kk_tile, MatrixTileSender&& matrix_tile) {
@@ -145,13 +168,32 @@ void gemm_matrix_tile(pika::execution::thread_priority priority, ColPanelTileSen
 }
 }
 
-template <Backend backend, Device device, class T>
-void Triangular<backend, device, T>::call_L(blas::Diag diag, Matrix<T, device>& mat_a) {
+template <Device D>
+constexpr bool replace_trtri() {
+  if constexpr (D == Device::CPU)
+    return 0;
+#ifdef DLAF_WITH_CUDA
+  return 1;
+#else  // DLAF_WITH_HIP
+  return 0;
+#endif
+}
+
+template <Backend backend, Device D, class T>
+void Triangular<backend, D, T>::call_L(blas::Diag diag, Matrix<T, D>& mat_a) {
   using namespace triangular_inv_l;
   using pika::execution::thread_priority;
 
   // Number of tile (rows = cols)
   SizeType nrtiles = mat_a.nr_tiles().cols();
+
+  if (nrtiles == 0)
+    return;
+
+  auto tile_size = mat_a.tile_size();
+  std::optional<Matrix<T, D>> ws;
+  if constexpr (replace_trtri<D>())
+    ws.emplace({tile_size.rows(), tile_size.cols()}, tile_size);
 
   for (SizeType k = nrtiles - 1; k >= 0; --k) {
     auto kk = LocalTileIndex{k, k};
@@ -174,13 +216,20 @@ void Triangular<backend, device, T>::call_L(blas::Diag diag, Matrix<T, device>& 
                                    mat_a.readwrite(LocalTileIndex{k, j}));
     }
 
-    inverse_diag_tile<backend>(thread_priority::high, diag, mat_a.readwrite(kk));
+    if constexpr (replace_trtri<D>()) {
+      LocalTileIndex ws_index{0, 0};
+      inverse_diag_tile_workspace<backend>(thread_priority::high, diag, mat_a.readwrite(kk),
+                                           ws->readwrite(ws_index));
+    }
+    else {
+      inverse_diag_tile<backend>(thread_priority::high, diag, mat_a.readwrite(kk));
+    }
   }
 }
 
-template <Backend backend, Device device, class T>
-void Triangular<backend, device, T>::call_L(comm::CommunicatorGrid& grid, blas::Diag diag,
-                                            Matrix<T, device>& mat_a) {
+template <Backend backend, Device D, class T>
+void Triangular<backend, D, T>::call_L(comm::CommunicatorGrid& grid, blas::Diag diag,
+                                       Matrix<T, D>& mat_a) {
   using namespace triangular_inv_l;
   using pika::execution::thread_priority;
 
@@ -207,8 +256,8 @@ void Triangular<backend, device, T>::call_L(comm::CommunicatorGrid& grid, blas::
   const SizeType nrtiles = mat_a.nr_tiles().cols();
 
   constexpr std::size_t n_workspaces = 2;
-  common::RoundRobin<matrix::Panel<Coord::Col, T, device>> col_panels(n_workspaces, dist);
-  common::RoundRobin<matrix::Panel<Coord::Row, T, device>> row_panels(n_workspaces, dist);
+  common::RoundRobin<matrix::Panel<Coord::Col, T, D>> col_panels(n_workspaces, dist);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, D>> row_panels(n_workspaces, dist);
 
   const SizeType i_local_end = dist.local_nr_tiles().rows();
 
@@ -291,8 +340,18 @@ void Triangular<backend, device, T>::call_L(comm::CommunicatorGrid& grid, blas::
     col_panel.reset();
     row_panel.reset();
 
-    if (kk_rank == this_rank)
-      inverse_diag_tile<backend>(thread_priority::high, diag, mat_a.readwrite(kk));
+    if (kk_rank == this_rank) {
+      if constexpr (replace_trtri<D>()) {
+        row_panel.setRange(kk, {k + 1, k + 1});
+        const LocalTileIndex kk_local_panel{Coord::Col, k_local_col};
+        inverse_diag_tile_workspace<backend>(thread_priority::high, diag, mat_a.readwrite(kk),
+                                             row_panel.readwrite(kk_local_panel));
+        row_panel.reset();
+      }
+      else {
+        inverse_diag_tile<backend>(thread_priority::high, diag, mat_a.readwrite(kk));
+      }
+    }
   }
 
 #ifdef DLAF_WITH_HDF5
@@ -304,13 +363,21 @@ void Triangular<backend, device, T>::call_L(comm::CommunicatorGrid& grid, blas::
 #endif
 }
 
-template <Backend backend, Device device, class T>
-void Triangular<backend, device, T>::call_U(blas::Diag diag, Matrix<T, device>& mat_a) {
+template <Backend backend, Device D, class T>
+void Triangular<backend, D, T>::call_U(blas::Diag diag, Matrix<T, D>& mat_a) {
   using namespace triangular_inv_u;
   using pika::execution::thread_priority;
 
   // Number of tile (rows = cols)
   SizeType nrtiles = mat_a.nr_tiles().cols();
+
+  if (nrtiles == 0)
+    return;
+
+  auto tile_size = mat_a.tile_size();
+  std::optional<Matrix<T, D>> ws;
+  if constexpr (replace_trtri<D>())
+    ws.emplace({tile_size.rows(), tile_size.cols()}, tile_size);
 
   for (SizeType k = nrtiles - 1; k >= 0; --k) {
     auto kk = LocalTileIndex{k, k};
@@ -333,13 +400,20 @@ void Triangular<backend, device, T>::call_U(blas::Diag diag, Matrix<T, device>& 
                                    mat_a.readwrite(LocalTileIndex{i, k}));
     }
 
-    inverse_diag_tile<backend>(thread_priority::high, diag, mat_a.readwrite(kk));
+    if constexpr (replace_trtri<D>()) {
+      LocalTileIndex ws_index{0, 0};
+      inverse_diag_tile_workspace<backend>(thread_priority::high, diag, mat_a.readwrite(kk),
+                                           ws->readwrite(ws_index));
+    }
+    else {
+      inverse_diag_tile<backend>(thread_priority::high, diag, mat_a.readwrite(kk));
+    }
   }
 }
 
-template <Backend backend, Device device, class T>
-void Triangular<backend, device, T>::call_U(comm::CommunicatorGrid& grid, blas::Diag diag,
-                                            Matrix<T, device>& mat_a) {
+template <Backend backend, Device D, class T>
+void Triangular<backend, D, T>::call_U(comm::CommunicatorGrid& grid, blas::Diag diag,
+                                       Matrix<T, D>& mat_a) {
   using namespace triangular_inv_u;
   using pika::execution::thread_priority;
 
@@ -366,8 +440,8 @@ void Triangular<backend, device, T>::call_U(comm::CommunicatorGrid& grid, blas::
   const SizeType nrtiles = mat_a.nr_tiles().cols();
 
   constexpr std::size_t n_workspaces = 2;
-  common::RoundRobin<matrix::Panel<Coord::Col, T, device>> col_panels(n_workspaces, dist);
-  common::RoundRobin<matrix::Panel<Coord::Row, T, device>> row_panels(n_workspaces, dist);
+  common::RoundRobin<matrix::Panel<Coord::Col, T, D>> col_panels(n_workspaces, dist);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, D>> row_panels(n_workspaces, dist);
 
   const SizeType j_local_end = dist.local_nr_tiles().cols();
 
@@ -450,8 +524,18 @@ void Triangular<backend, device, T>::call_U(comm::CommunicatorGrid& grid, blas::
     col_panel.reset();
     row_panel.reset();
 
-    if (kk_rank == this_rank)
-      inverse_diag_tile<backend>(thread_priority::high, diag, mat_a.readwrite(kk));
+    if (kk_rank == this_rank) {
+      if constexpr (replace_trtri<D>()) {
+        col_panel.setRange(kk, {k + 1, k + 1});
+        const LocalTileIndex kk_local_panel{Coord::Row, k_local_row};
+        inverse_diag_tile_workspace<backend>(thread_priority::high, diag, mat_a.readwrite(kk),
+                                             col_panel.readwrite(kk_local_panel));
+        col_panel.reset();
+      }
+      else {
+        inverse_diag_tile<backend>(thread_priority::high, diag, mat_a.readwrite(kk));
+      }
+    }
   }
 
 #ifdef DLAF_WITH_HDF5

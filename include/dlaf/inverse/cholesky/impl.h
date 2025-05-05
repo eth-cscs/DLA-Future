@@ -216,14 +216,13 @@ void AssembleCholeskyInverse<backend, device, T>::call_L(comm::CommunicatorGrid&
 
     const SizeType k_local_row = dist.next_local_tile_from_global_tile<Coord::Row>(k);
     const SizeType k_local_col = dist.next_local_tile_from_global_tile<Coord::Col>(k);
-    const SizeType k1_local_col = dist.next_local_tile_from_global_tile<Coord::Col>(k + 1);
 
     if (k > 0) {
       auto& panel = panels.nextResource();
       auto& panelT = panelsT.nextResource();
 
-      panel.setRange({0, 0}, {k + 1, k + 1});
-      panelT.setRange({0, 0}, {k + 1, k + 1});
+      panel.setRange({0, 0}, kk);
+      panelT.setRange({1, 1}, kk);
 
       if (k == nrtiles - 1) {
         panel.setHeight(mat_a.tile_size_of(kk).rows());
@@ -231,7 +230,7 @@ void AssembleCholeskyInverse<backend, device, T>::call_L(comm::CommunicatorGrid&
       }
 
       if (kk_rank.row() == this_rank.row()) {
-        for (SizeType j_local = 0; j_local < k1_local_col; ++j_local) {
+        for (SizeType j_local = 0; j_local < k_local_col; ++j_local) {
           const LocalTileIndex kj_panel_local(Coord::Col, j_local);
           const LocalTileIndex kj_local(k_local_row, j_local);
           panel.setTile(kj_panel_local, mat_a.read(kj_local));
@@ -251,34 +250,44 @@ void AssembleCholeskyInverse<backend, device, T>::call_L(comm::CommunicatorGrid&
             continue;
           const auto j_local = dist.local_tile_from_global_tile<Coord::Col>(j);
 
-          const LocalTileIndex ik_local_panel{Coord::Row, i_local};
-          const LocalTileIndex kj_local_panel{Coord::Col, j_local};
+          const LocalTileIndex ik_panel_local{Coord::Row, i_local};
+          const LocalTileIndex kj_panel_local{Coord::Col, j_local};
           const LocalTileIndex ij_local{i_local, j_local};
 
-          gemm_matrix_tile<backend>(thread_priority::normal, panelT.read(ik_local_panel),
-                                    panel.read(kj_local_panel), mat_a.readwrite(ij_local));
+          gemm_matrix_tile<backend>(thread_priority::normal, panelT.read(ik_panel_local),
+                                    panel.read(kj_panel_local), mat_a.readwrite(ij_local));
         }
 
         if (ii_rank == this_rank) {
           const auto i_local_col = dist.local_tile_from_global_tile<Coord::Col>(i);
-          const LocalTileIndex ki_local_panel{Coord::Col, i_local_col};
+          const LocalTileIndex ki_panel_local{Coord::Col, i_local_col};
           const LocalTileIndex ii_local{i_local, i_local_col};
-          herk_matrix_tile<backend>(thread_priority::normal, panel.read(ki_local_panel),
+          herk_matrix_tile<backend>(thread_priority::normal, panel.read(ki_panel_local),
                                     mat_a.readwrite(ii_local));
-        }
-      }
-
-      if (kk_rank.row() == this_rank.row()) {
-        for (SizeType j_local = 0; j_local < k_local_col; ++j_local) {
-          const LocalTileIndex kk_local_panel{Coord::Row, k_local_row};
-          const LocalTileIndex kj_local{k_local_row, j_local};
-          trmm_row_panel_tile<backend>(thread_priority::high, panelT.read(kk_local_panel),
-                                       mat_a.readwrite(kj_local));
         }
       }
 
       panel.reset();
       panelT.reset();
+
+      if (kk_rank.row() == this_rank.row()) {
+        panelT.setRange(kk, {k + 1, k + 1});
+        const LocalTileIndex kk_panel_local{Coord::Row, k_local_row};
+        if (k == nrtiles - 1)
+          panelT.setWidth(mat_a.tile_size_of(kk).cols());
+
+        if (kk_rank.col() == this_rank.col())
+          panelT.setTile(kk_panel_local, mat_a.read(kk));
+
+        broadcast(kk_rank.col(), panelT, mpi_row_task_chain);
+
+        for (SizeType j_local = 0; j_local < k_local_col; ++j_local) {
+          const LocalTileIndex kj_local{k_local_row, j_local};
+          trmm_row_panel_tile<backend>(thread_priority::high, panelT.read(kk_panel_local),
+                                       mat_a.readwrite(kj_local));
+        }
+        panelT.reset();
+      }
     }
 
     if (kk_rank == this_rank)
@@ -364,14 +373,13 @@ void AssembleCholeskyInverse<backend, device, T>::call_U(comm::CommunicatorGrid&
 
     const SizeType k_local_row = dist.next_local_tile_from_global_tile<Coord::Row>(k);
     const SizeType k_local_col = dist.next_local_tile_from_global_tile<Coord::Col>(k);
-    const SizeType k1_local_row = dist.next_local_tile_from_global_tile<Coord::Row>(k + 1);
 
     if (k > 0) {
       auto& panel = panels.nextResource();
       auto& panelT = panelsT.nextResource();
 
-      panel.setRange({0, 0}, {k + 1, k + 1});
-      panelT.setRange({0, 0}, {k + 1, k + 1});
+      panel.setRange({0, 0}, kk);
+      panelT.setRange({1, 1}, kk);
 
       if (k == nrtiles - 1) {
         panel.setWidth(mat_a.tile_size_of(kk).cols());
@@ -379,7 +387,7 @@ void AssembleCholeskyInverse<backend, device, T>::call_U(comm::CommunicatorGrid&
       }
 
       if (kk_rank.col() == this_rank.col()) {
-        for (SizeType i_local = 0; i_local < k1_local_row; ++i_local) {
+        for (SizeType i_local = 0; i_local < k_local_row; ++i_local) {
           const LocalTileIndex ik_panel_local(Coord::Row, i_local);
           const LocalTileIndex ik_local(i_local, k_local_col);
           panel.setTile(ik_panel_local, mat_a.read(ik_local));
@@ -399,34 +407,45 @@ void AssembleCholeskyInverse<backend, device, T>::call_U(comm::CommunicatorGrid&
             continue;
           const auto i_local = dist.local_tile_from_global_tile<Coord::Row>(i);
 
-          const LocalTileIndex ik_local_panel{Coord::Row, i_local};
-          const LocalTileIndex kj_local_panel{Coord::Col, j_local};
+          const LocalTileIndex ik_panel_local{Coord::Row, i_local};
+          const LocalTileIndex kj_panel_local{Coord::Col, j_local};
           const LocalTileIndex ij_local{i_local, j_local};
 
-          gemm_matrix_tile<backend>(thread_priority::normal, panel.read(ik_local_panel),
-                                    panelT.read(kj_local_panel), mat_a.readwrite(ij_local));
+          gemm_matrix_tile<backend>(thread_priority::normal, panel.read(ik_panel_local),
+                                    panelT.read(kj_panel_local), mat_a.readwrite(ij_local));
         }
 
         if (jj_rank == this_rank) {
           const auto j_local_row = dist.local_tile_from_global_tile<Coord::Row>(j);
-          const LocalTileIndex jk_local_panel{Coord::Row, j_local_row};
+          const LocalTileIndex jk_panel_local{Coord::Row, j_local_row};
           const LocalTileIndex jj_local{j_local_row, j_local};
-          herk_matrix_tile<backend>(thread_priority::normal, panel.read(jk_local_panel),
+          herk_matrix_tile<backend>(thread_priority::normal, panel.read(jk_panel_local),
                                     mat_a.readwrite(jj_local));
-        }
-      }
-
-      if (kk_rank.col() == this_rank.col()) {
-        for (SizeType i_local = 0; i_local < k_local_row; ++i_local) {
-          const LocalTileIndex kk_local_panel{Coord::Col, k_local_col};
-          const LocalTileIndex ik_local{i_local, k_local_col};
-          trmm_col_panel_tile<backend>(thread_priority::high, panelT.read(kk_local_panel),
-                                       mat_a.readwrite(ik_local));
         }
       }
 
       panel.reset();
       panelT.reset();
+
+      if (kk_rank.col() == this_rank.col()) {
+        panelT.setRange(kk, {k + 1, k + 1});
+        if (k == nrtiles - 1)
+          panelT.setHeight(mat_a.tile_size_of(kk).rows());
+
+        const LocalTileIndex kk_panel_local{Coord::Col, k_local_col};
+
+        if (kk_rank.row() == this_rank.row())
+          panelT.setTile(kk_panel_local, mat_a.read(kk));
+
+        broadcast(kk_rank.row(), panelT, mpi_col_task_chain);
+
+        for (SizeType i_local = 0; i_local < k_local_row; ++i_local) {
+          const LocalTileIndex ik_local{i_local, k_local_col};
+          trmm_col_panel_tile<backend>(thread_priority::high, panelT.read(kk_panel_local),
+                                       mat_a.readwrite(ik_local));
+        }
+        panelT.reset();
+      }
     }
 
     if (kk_rank == this_rank)

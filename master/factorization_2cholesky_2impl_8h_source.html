@@ -348,7 +348,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span>      panelT.reset();</div>
 <div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span>    }</div>
 <div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span> </div>
-<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>    panelT.setRange({kt, kt}, indexFromOrigin(distr.nrTiles()));</div>
+<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>    panelT.setRange({kt, kt}, {nrtile - 1, nrtile - 1});</div>
 <div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span> </div>
 <div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>    <a class="code hl_function" href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">broadcast</a>(kk_rank.col(), panel, panelT, mpi_row_task_chain, mpi_col_task_chain);</div>
 <div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span> </div>
@@ -494,7 +494,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00411" name="l00411"></a><span class="lineno">  411</span>      panelT.reset();</div>
 <div class="line"><a id="l00412" name="l00412"></a><span class="lineno">  412</span>    }</div>
 <div class="line"><a id="l00413" name="l00413"></a><span class="lineno">  413</span> </div>
-<div class="line"><a id="l00414" name="l00414"></a><span class="lineno">  414</span>    panelT.setRange({kt, kt}, indexFromOrigin(distr.nrTiles()));</div>
+<div class="line"><a id="l00414" name="l00414"></a><span class="lineno">  414</span>    panelT.setRange({kt, kt}, {nrtile - 1, nrtile - 1});</div>
 <div class="line"><a id="l00415" name="l00415"></a><span class="lineno">  415</span> </div>
 <div class="line"><a id="l00416" name="l00416"></a><span class="lineno">  416</span>    <a class="code hl_function" href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">broadcast</a>(kk_rank.row(), panel, panelT, mpi_row_task_chain, mpi_col_task_chain);</div>
 <div class="line"><a id="l00417" name="l00417"></a><span class="lineno">  417</span> </div>
@@ -536,7 +536,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00453" name="l00453"></a><span class="lineno">  453</span>}</div>
 <div class="ttc" id="ablas_2tile_8h_html"><div class="ttname"><a href="blas_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="abroadcast__panel_8h_html"><div class="ttname"><a href="broadcast__panel_8h.html">broadcast_panel.h</a></div></div>
-<div class="ttc" id="abroadcast__panel_8h_html_a5e63a7fa440a442aa538d89b580eb3ed"><div class="ttname"><a href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">dlaf::comm::broadcast</a></div><div class="ttdeci">void broadcast(comm::IndexT_MPI rank_root, matrix::Panel&lt; axis, T, D, storage &gt; &amp;panel, comm::CommunicatorPipeline&lt; coord_to_communicator_type(orthogonal(axis))&gt; &amp;serial_comm)</div><div class="ttdef"><b>Definition</b> broadcast_panel.h:61</div></div>
+<div class="ttc" id="abroadcast__panel_8h_html_a5e63a7fa440a442aa538d89b580eb3ed"><div class="ttname"><a href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">dlaf::comm::broadcast</a></div><div class="ttdeci">void broadcast(comm::IndexT_MPI rank_root, matrix::Panel&lt; axis, T, D, storage &gt; &amp;panel, comm::CommunicatorPipeline&lt; coord_to_communicator_type(orthogonal(axis))&gt; &amp;serial_comm)</div><div class="ttdef"><b>Definition</b> broadcast_panel.h:45</div></div>
 <div class="ttc" id="aclassdlaf_1_1internal_1_1_policy_html"><div class="ttname"><a href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a></div><div class="ttdef"><b>Definition</b> policy.h:24</div></div>
 <div class="ttc" id="acommunication_2kernels_8h_html"><div class="ttname"><a href="communication_2kernels_8h.html">kernels.h</a></div></div>
 <div class="ttc" id="acommunicator_8h_html"><div class="ttname"><a href="communicator_8h.html">communicator.h</a></div></div>

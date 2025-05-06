@@ -423,7 +423,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span>    <span class="keyword">auto</span>&amp; a_panel = a_panels.nextResource();</div>
 <div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span>    <span class="keyword">auto</span>&amp; a_panelT = a_panelsT.nextResource();</div>
 <div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>    l_panel.setRangeStart(kk);</div>
-<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>    l_panelT.setRangeStart(kk);</div>
+<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>    l_panelT.setRange(kk, {nrtile - 1, nrtile - 1});</div>
 <div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span>    a_panelT.setRange({0, 0}, kk);</div>
 <div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span> </div>
 <div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span>    <span class="keywordflow">if</span> (k == nrtile - 1) {</div>
@@ -521,7 +521,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00438" name="l00438"></a><span class="lineno">  438</span>      a_panelT.reset();</div>
 <div class="line"><a id="l00439" name="l00439"></a><span class="lineno">  439</span>    }</div>
 <div class="line"><a id="l00440" name="l00440"></a><span class="lineno">  440</span> </div>
-<div class="line"><a id="l00441" name="l00441"></a><span class="lineno">  441</span>    a_panelT.setRange(at, common::indexFromOrigin(distr.nrTiles()));</div>
+<div class="line"><a id="l00441" name="l00441"></a><span class="lineno">  441</span>    a_panelT.setRange(at, {nrtile - 1, nrtile - 1});</div>
 <div class="line"><a id="l00442" name="l00442"></a><span class="lineno">  442</span> </div>
 <div class="line"><a id="l00443" name="l00443"></a><span class="lineno">  443</span>    <a class="code hl_function" href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">broadcast</a>(kk_rank.col(), a_panel, a_panelT, mpi_row_task_chain, mpi_col_task_chain);</div>
 <div class="line"><a id="l00444" name="l00444"></a><span class="lineno">  444</span> </div>
@@ -693,7 +693,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00610" name="l00610"></a><span class="lineno">  610</span>    <span class="keyword">auto</span>&amp; a_panel = a_panels.nextResource();</div>
 <div class="line"><a id="l00611" name="l00611"></a><span class="lineno">  611</span>    <span class="keyword">auto</span>&amp; a_panelT = a_panelsT.nextResource();</div>
 <div class="line"><a id="l00612" name="l00612"></a><span class="lineno">  612</span>    u_panel.setRangeStart(kk);</div>
-<div class="line"><a id="l00613" name="l00613"></a><span class="lineno">  613</span>    u_panelT.setRangeStart(kk);</div>
+<div class="line"><a id="l00613" name="l00613"></a><span class="lineno">  613</span>    u_panelT.setRange(kk, {nrtile - 1, nrtile - 1});</div>
 <div class="line"><a id="l00614" name="l00614"></a><span class="lineno">  614</span>    a_panelT.setRange({0, 0}, kk);</div>
 <div class="line"><a id="l00615" name="l00615"></a><span class="lineno">  615</span> </div>
 <div class="line"><a id="l00616" name="l00616"></a><span class="lineno">  616</span>    <span class="keywordflow">if</span> (k == nrtile - 1) {</div>
@@ -792,7 +792,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00709" name="l00709"></a><span class="lineno">  709</span>      a_panelT.reset();</div>
 <div class="line"><a id="l00710" name="l00710"></a><span class="lineno">  710</span>    }</div>
 <div class="line"><a id="l00711" name="l00711"></a><span class="lineno">  711</span> </div>
-<div class="line"><a id="l00712" name="l00712"></a><span class="lineno">  712</span>    a_panelT.setRange(at, common::indexFromOrigin(distr.nrTiles()));</div>
+<div class="line"><a id="l00712" name="l00712"></a><span class="lineno">  712</span>    a_panelT.setRange(at, {nrtile - 1, nrtile - 1});</div>
 <div class="line"><a id="l00713" name="l00713"></a><span class="lineno">  713</span> </div>
 <div class="line"><a id="l00714" name="l00714"></a><span class="lineno">  714</span>    <a class="code hl_function" href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">broadcast</a>(kk_rank.row(), a_panel, a_panelT, mpi_row_task_chain, mpi_col_task_chain);</div>
 <div class="line"><a id="l00715" name="l00715"></a><span class="lineno">  715</span> </div>
@@ -852,7 +852,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00769" name="l00769"></a><span class="lineno">  769</span>}</div>
 <div class="ttc" id="ablas_2tile_8h_html"><div class="ttname"><a href="blas_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="abroadcast__panel_8h_html"><div class="ttname"><a href="broadcast__panel_8h.html">broadcast_panel.h</a></div></div>
-<div class="ttc" id="abroadcast__panel_8h_html_a5e63a7fa440a442aa538d89b580eb3ed"><div class="ttname"><a href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">dlaf::comm::broadcast</a></div><div class="ttdeci">void broadcast(comm::IndexT_MPI rank_root, matrix::Panel&lt; axis, T, D, storage &gt; &amp;panel, comm::CommunicatorPipeline&lt; coord_to_communicator_type(orthogonal(axis))&gt; &amp;serial_comm)</div><div class="ttdef"><b>Definition</b> broadcast_panel.h:61</div></div>
+<div class="ttc" id="abroadcast__panel_8h_html_a5e63a7fa440a442aa538d89b580eb3ed"><div class="ttname"><a href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">dlaf::comm::broadcast</a></div><div class="ttdeci">void broadcast(comm::IndexT_MPI rank_root, matrix::Panel&lt; axis, T, D, storage &gt; &amp;panel, comm::CommunicatorPipeline&lt; coord_to_communicator_type(orthogonal(axis))&gt; &amp;serial_comm)</div><div class="ttdef"><b>Definition</b> broadcast_panel.h:45</div></div>
 <div class="ttc" id="aclassdlaf_1_1internal_1_1_policy_html"><div class="ttname"><a href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a></div><div class="ttdef"><b>Definition</b> policy.h:24</div></div>
 <div class="ttc" id="acommunicator_8h_html"><div class="ttname"><a href="communicator_8h.html">communicator.h</a></div></div>
 <div class="ttc" id="acommunicator__grid_8h_html"><div class="ttname"><a href="communicator__grid_8h.html">communicator_grid.h</a></div></div>

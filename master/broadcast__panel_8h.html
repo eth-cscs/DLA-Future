@@ -96,18 +96,14 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ac2d56c6ab2ce5b27a1115e549a41a148" id="r_ac2d56c6ab2ce5b27a1115e549a41a148"><td class="memTemplParams" colspan="2"><a id="ac2d56c6ab2ce5b27a1115e549a41a148" name="ac2d56c6ab2ce5b27a1115e549a41a148"></a>
-template&lt;Coord dst_coord&gt; </td></tr>
-<tr class="memitem:ac2d56c6ab2ce5b27a1115e549a41a148"><td class="memTemplItemLeft" align="right" valign="top">std::pair&lt; SizeType, <a class="el" href="communication_2index_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::comm::internal::transposedOwner</b> (const <a class="el" href="classdlaf_1_1matrix_1_1_distribution.html">matrix::Distribution</a> &amp;dist, const <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a> idx)</td></tr>
-<tr class="separator:ac2d56c6ab2ce5b27a1115e549a41a148"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5e63a7fa440a442aa538d89b580eb3ed" id="r_a5e63a7fa440a442aa538d89b580eb3ed"><td class="memTemplParams" colspan="2">template&lt;class T , Device D, Coord axis, matrix::StoreTransposed storage, class  = std::enable_if_t&lt;!std::is_const_v&lt;T&gt;&gt;&gt; </td></tr>
+<tr class="memitem:a5e63a7fa440a442aa538d89b580eb3ed" id="r_a5e63a7fa440a442aa538d89b580eb3ed"><td class="memTemplParams" colspan="2">template&lt;class T , Device D, Coord axis, matrix::StoreTransposed storage, std::enable_if_t&lt;!std::is_const_v&lt; T &gt;, int &gt;  = 0&gt; </td></tr>
 <tr class="memitem:a5e63a7fa440a442aa538d89b580eb3ed"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">dlaf::comm::broadcast</a> (<a class="el" href="communication_2index_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> rank_root, <a class="el" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel</a>&lt; axis, T, D, storage &gt; &amp;panel, <a class="el" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">comm::CommunicatorPipeline</a>&lt; coord_to_communicator_type(<a class="el" href="index2d_8h.html#a9b3be798b052f32def2a280a80e2295c">orthogonal</a>(axis))&gt; &amp;serial_comm)</td></tr>
 <tr class="separator:a5e63a7fa440a442aa538d89b580eb3ed"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a484f6030ff7c3530de17270451d10681" id="r_a484f6030ff7c3530de17270451d10681"><td class="memTemplParams" colspan="2"><a id="a484f6030ff7c3530de17270451d10681" name="a484f6030ff7c3530de17270451d10681"></a>
 template&lt;Coord C&gt; </td></tr>
 <tr class="memitem:a484f6030ff7c3530de17270451d10681"><td class="memTemplItemLeft" align="right" valign="top">auto &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::comm::internal::get_taskchain</b> (<a class="el" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">comm::CommunicatorPipeline</a>&lt; comm::CommunicatorType::Row &gt; &amp;row_task_chain, <a class="el" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">comm::CommunicatorPipeline</a>&lt; comm::CommunicatorType::Col &gt; &amp;col_task_chain)</td></tr>
 <tr class="separator:a484f6030ff7c3530de17270451d10681"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aaf65e45c4589538449b807f37aeb0c96" id="r_aaf65e45c4589538449b807f37aeb0c96"><td class="memTemplParams" colspan="2">template&lt;class T , Device D, Coord axis, matrix::StoreTransposed storage, matrix::StoreTransposed storageT, class  = std::enable_if_t&lt;!std::is_const_v&lt;T&gt;&gt;&gt; </td></tr>
+<tr class="memitem:aaf65e45c4589538449b807f37aeb0c96" id="r_aaf65e45c4589538449b807f37aeb0c96"><td class="memTemplParams" colspan="2">template&lt;class T , Device D, Coord axis, matrix::StoreTransposed storage, matrix::StoreTransposed storageT, std::enable_if_t&lt;!std::is_const_v&lt; T &gt;, int &gt;  = 0&gt; </td></tr>
 <tr class="memitem:aaf65e45c4589538449b807f37aeb0c96"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="broadcast__panel_8h.html#aaf65e45c4589538449b807f37aeb0c96">dlaf::comm::broadcast</a> (<a class="el" href="communication_2index_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> rank_root, <a class="el" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel</a>&lt; axis, T, D, storage &gt; &amp;panel, <a class="el" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel</a>&lt; <a class="el" href="index2d_8h.html#a9b3be798b052f32def2a280a80e2295c">orthogonal</a>(axis), T, D, storageT &gt; &amp;panelT, <a class="el" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">comm::CommunicatorPipeline</a>&lt; comm::CommunicatorType::Row &gt; &amp;row_task_chain, <a class="el" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">comm::CommunicatorPipeline</a>&lt; comm::CommunicatorType::Col &gt; &amp;col_task_chain)</td></tr>
 <tr class="separator:aaf65e45c4589538449b807f37aeb0c96"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
@@ -118,7 +114,7 @@ template&lt;Coord C&gt; </td></tr>
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;class T , Device D, Coord axis, matrix::StoreTransposed storage, class  = std::enable_if_t&lt;!std::is_const_v&lt;T&gt;&gt;&gt; </div>
+template&lt;class T , Device D, Coord axis, matrix::StoreTransposed storage, std::enable_if_t&lt;!std::is_const_v&lt; T &gt;, int &gt;  = 0&gt; </div>
       <table class="memname">
         <tr>
           <td class="memname">void dlaf::comm::broadcast </td>
@@ -166,7 +162,7 @@ template&lt;class T , Device D, Coord axis, matrix::StoreTransposed storage, cla
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;class T , Device D, Coord axis, matrix::StoreTransposed storage, matrix::StoreTransposed storageT, class  = std::enable_if_t&lt;!std::is_const_v&lt;T&gt;&gt;&gt; </div>
+template&lt;class T , Device D, Coord axis, matrix::StoreTransposed storage, matrix::StoreTransposed storageT, std::enable_if_t&lt;!std::is_const_v&lt; T &gt;, int &gt;  = 0&gt; </div>
       <table class="memname">
         <tr>
           <td class="memname">void dlaf::comm::broadcast </td>

@@ -106,8 +106,9 @@ void lauum_workspace(const blas::Uplo uplo, const Tile<T, Device::CPU>& a,
   DLAF_ASSERT(square_size(a), a);
 
   const auto ws_sub = ws.subTileReference({{0, 0}, a.size()});
-
   const blas::Side side = uplo == blas::Uplo::Lower ? blas::Side::Left : blas::Side::Right;
+
+  common::internal::SingleThreadedBlasScope single;
   set0(ws_sub);
   lapack::lacpy(uplo, a.size().rows(), a.size().cols(), a.ptr(), a.ld(), ws_sub.ptr(), ws_sub.ld());
   trmm(side, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, static_cast<T>(1.), a, ws_sub);
@@ -124,6 +125,7 @@ void trtri_workspace(const blas::Uplo uplo, const blas::Diag diag, const Tile<T,
 
   const auto ws_sub = ws.subTileReference({{0, 0}, a.size()});
 
+  common::internal::SingleThreadedBlasScope single;
   laset(blas::Uplo::General, static_cast<T>(0.0), static_cast<T>(1.0), ws_sub);
   trsm(blas::Side::Left, uplo, blas::Op::NoTrans, diag, static_cast<T>(1.), a, ws_sub);
   if (diag == blas::Diag::Unit) {

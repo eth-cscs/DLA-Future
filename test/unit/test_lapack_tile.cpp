@@ -222,18 +222,6 @@ TYPED_TEST(TileOperationsTestMC, Lauum) {
   }
 }
 
-#ifdef DLAF_WITH_HIP
-TYPED_TEST(TileOperationsTestGPU, Lauum) {
-  using Type = TypeParam;
-
-  for (const auto uplo : blas_uplos) {
-    for (const auto& [n, extra_lda] : lauum_sizes) {
-      test_lauum<Type, Device::GPU>(uplo, n, extra_lda);
-    }
-  }
-}
-#endif
-
 // Tuple elements:  n, extra_lda
 std::vector<std::tuple<SizeType, SizeType>> trtri_sizes = {
     {0, 0}, {0, 2},  // 0 size

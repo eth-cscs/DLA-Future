@@ -540,7 +540,6 @@ DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<double>, Zpotrf);
 
 #elif defined(DLAF_WITH_HIP)
 
-DLAF_DECLARE_GPULAPACK_OP(Lauum);
 DLAF_DECLARE_GPULAPACK_OP(Trtri);
 
 #define DLAF_GET_ROCSOLVER_WORKSPACE(f)                                                               \
@@ -580,11 +579,6 @@ DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, float, ssygst);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, double, dsygst);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, std::complex<float>, chegst);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, std::complex<double>, zhegst);
-
-DLAF_DEFINE_CUSOLVER_OP_BUFFER(Lauum, float, slauum);
-DLAF_DEFINE_CUSOLVER_OP_BUFFER(Lauum, double, dlauum);
-DLAF_DEFINE_CUSOLVER_OP_BUFFER(Lauum, std::complex<float>, clauum);
-DLAF_DEFINE_CUSOLVER_OP_BUFFER(Lauum, std::complex<double>, zlauum);
 
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, float, spotrf);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, double, dpotrf);
@@ -695,13 +689,8 @@ void lauum(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<
   DLAF_ASSERT(square_size(a), a);
   const auto n = a.size().rows();
 
-#ifdef DLAF_WITH_CUDA
   DLAF_STATIC_UNIMPLEMENTED(T);
   dlaf::internal::silenceUnusedWarningFor(handle, uplo, a);
-#elif defined(DLAF_WITH_HIP)
-  internal::CusolverLauum<T>::call(handle, util::blasToRocblas(uplo), to_int(n),
-                                   util::blasToRocblasCast(a.ptr()), to_int(a.ld()));
-#endif
 }
 
 template <class T>

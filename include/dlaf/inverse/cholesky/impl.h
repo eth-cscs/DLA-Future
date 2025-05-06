@@ -173,11 +173,7 @@ template <Device D>
 constexpr bool replace_lauum() {
   if constexpr (D == Device::CPU)
     return 0;
-#ifdef DLAF_WITH_CUDA
   return 1;
-#else  // DLAF_WITH_HIP
-  return 0;
-#endif
 }
 
 template <Backend backend, Device D, class T>

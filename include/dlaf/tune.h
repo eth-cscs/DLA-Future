@@ -45,14 +45,21 @@ namespace dlaf {
 /// - debug_dump_reduction_to_band_data:
 ///     Enable dump of reduction_to_band input/output data to "reduction_to_band.h5" file that will be
 ///     created in the working folder (it should not exist before the execution).
-///    environment variable
-///     DLAF_DEBUG_DUMP_EIGENSOLVER_DATA.
+///     Set with environment variable DLAF_DEBUG_DUMP_EIGENSOLVER_DATA.
 /// - debug_dump_band_to_tridiagonal_data:
 ///     Enable dump of band_to_trigiagonal input/output data to "band_to_tridiagonal.h5" file that will
 ///     be created in the working folder (it should not exist before the execution).
-///     environment variable DLAF_DEBUG_DUMP_BAND_TO_TRIDIAGONAL_DATA.
+///     Set with environment variable DLAF_DEBUG_DUMP_BAND_TO_TRIDIAGONAL_DATA.
+/// - debug_dump_inverse_from_cholesky_factor_data:
+///     Enable dump of triangular inverse input/output data to "inverse-from-cholesky-factor-<T>-<id>.h5"
+///     file that will be created in the working folder (it should not exist before the execution).
+///     Set with environment variable DLAF_DEBUG_DUMP_INVERSE_FROM_CHOLESKY_FACTOR_DATA.
+/// - debug_dump_triangular_inverse_data:
+///     Enable dump of inverse from cholesky factor input/output data to "triangular-inverse-<T>-<id>.h5"
+///     file that will be created in the working folder (it should not exist before the execution).
+///     Set with environment variable DLAF_DEBUG_DUMP_TRIANGULAR_INVERSE_DATA.
 /// - debug_dump_tridiag_solver_data:
-///     Enable dump of tridiagonal solver input/output data to "tridiagonal.h5" file that will before
+///     Enable dump of tridiagonal solver input/output data to "tridiagonal.h5" file that will be
 ///     created in the working folder (it should not exist before the execution).
 ///     Set with environment variable DLAF_DEBUG_DUMP_TRIDIAG_SOLVER_DATA.
 /// - tfactor_num_threads:
@@ -129,6 +136,8 @@ struct TuneParameters {
   bool debug_dump_eigensolver_data = false;
   bool debug_dump_reduction_to_band_data = false;
   bool debug_dump_band_to_tridiagonal_data = false;
+  bool debug_dump_inverse_from_cholesky_factor_data = false;
+  bool debug_dump_triangular_inverse_data = false;
   bool debug_dump_tridiag_solver_data = false;
 
   std::size_t tfactor_num_threads = 1;

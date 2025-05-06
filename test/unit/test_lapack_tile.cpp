@@ -18,7 +18,9 @@
 #include "test_lapack_tile/test_lange.h"
 #include "test_lapack_tile/test_lantr.h"
 #include "test_lapack_tile/test_laset.h"
+#include "test_lapack_tile/test_lauum.h"
 #include "test_lapack_tile/test_potrf.h"
+#include "test_lapack_tile/test_trtri.h"
 
 #include <gtest/gtest.h>
 
@@ -199,6 +201,94 @@ TYPED_TEST(TileOperationsTestGPU, PotrfNonPositiveDefinite) {
 
       // Only test version returning info
       testPotrfNonPosDef<Type, Device::GPU>(uplo, n, extra_lda);
+    }
+  }
+}
+#endif
+
+// Tuple elements:  n, extra_lda
+std::vector<std::tuple<SizeType, SizeType>> lauum_sizes = {
+    {0, 0}, {0, 2},  // 0 size
+    {1, 0}, {12, 1}, {17, 3}, {11, 0}, {128, 0},
+};
+
+TYPED_TEST(TileOperationsTestMC, Lauum) {
+  using Type = TypeParam;
+
+  for (const auto uplo : blas_uplos) {
+    for (const auto& [n, extra_lda] : lauum_sizes) {
+      test_lauum<Type, Device::CPU>(uplo, n, extra_lda);
+    }
+  }
+}
+
+// Tuple elements:  n, extra_lda
+std::vector<std::tuple<SizeType, SizeType>> trtri_sizes = {
+    {0, 0}, {0, 2},  // 0 size
+    {1, 0}, {12, 1}, {17, 3}, {11, 0}, {128, 0},
+};
+
+TYPED_TEST(TileOperationsTestMC, Trtri) {
+  using Type = TypeParam;
+
+  for (const auto uplo : blas_uplos) {
+    for (const auto diag : blas_diags) {
+      for (const auto& [n, extra_lda] : trtri_sizes) {
+        // Test version non returning info
+        test_trtri<Type, Device::CPU, false>(uplo, diag, n, extra_lda);
+
+        // Test version returning info
+        test_trtri<Type, Device::CPU, true>(uplo, diag, n, extra_lda);
+      }
+    }
+  }
+}
+
+#ifdef DLAF_WITH_HIP
+TYPED_TEST(TileOperationsTestGPU, Trtri) {
+  using Type = TypeParam;
+
+  for (const auto uplo : blas_uplos) {
+    for (const auto diag : blas_diags) {
+      for (const auto& [n, extra_lda] : trtri_sizes) {
+        // Test version non returning info
+        test_trtri<Type, Device::GPU, false>(uplo, diag, n, extra_lda);
+
+        // Test version returning info
+        test_trtri<Type, Device::GPU, true>(uplo, diag, n, extra_lda);
+      }
+    }
+  }
+}
+#endif
+
+TYPED_TEST(TileOperationsTestMC, TrtriSingular) {
+  using Type = TypeParam;
+
+  for (const auto uplo : blas_uplos) {
+    for (const auto& [n, extra_lda] : trtri_sizes) {
+      if (n == 0)
+        continue;
+
+      // Only test version returning info
+      // Note: Only NonDiag can lead to a singular matrix.
+      test_trtri_singular<Type, Device::CPU>(uplo, blas::Diag::NonUnit, n, extra_lda);
+    }
+  }
+}
+
+#ifdef DLAF_WITH_HIP
+TYPED_TEST(TileOperationsTestGPU, TrtriSingular) {
+  using Type = TypeParam;
+
+  for (const auto uplo : blas_uplos) {
+    for (const auto& [n, extra_lda] : trtri_sizes) {
+      if (n == 0)
+        continue;
+
+      // Only test version returning info
+      // Note: Only NonDiag can lead to a singular matrix.
+      test_trtri_singular<Type, Device::GPU>(uplo, blas::Diag::NonUnit, n, extra_lda);
     }
   }
 }

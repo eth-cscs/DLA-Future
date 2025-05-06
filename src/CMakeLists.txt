@@ -256,6 +256,14 @@ DLAF_addSublibrary(
   LIBRARIES dlaf.core
 )
 
+# Define DLAF's inverse library
+DLAF_addSublibrary(
+  inverse
+  SOURCES inverse/triangular/mc.cpp $<$<BOOL:${DLAF_WITH_GPU}>:inverse/triangular/gpu.cpp>
+  SOURCES inverse/cholesky/mc.cpp $<$<BOOL:${DLAF_WITH_GPU}>:inverse/cholesky/gpu.cpp>
+  LIBRARIES dlaf.core
+)
+
 # Define DLAF's multiplication library
 DLAF_addSublibrary(
   multiplication
@@ -294,6 +302,7 @@ add_library(
   $<TARGET_OBJECTS:dlaf.eigensolver_object>
   $<TARGET_OBJECTS:dlaf.tridiagonal_eigensolver_object>
   $<TARGET_OBJECTS:dlaf.factorization_object>
+  $<TARGET_OBJECTS:dlaf.inverse_object>
   $<TARGET_OBJECTS:dlaf.multiplication_object>
   $<TARGET_OBJECTS:dlaf.permutations_object>
   $<TARGET_OBJECTS:dlaf.solver_object>

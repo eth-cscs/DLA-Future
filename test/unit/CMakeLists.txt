@@ -52,6 +52,13 @@ DLAF_addTest(
   USE_MAIN PIKA
 )
 
+DLAF_addTest(
+  test_lapack_tile_extensions
+  SOURCES test_lapack_tile_extensions.cpp
+  LIBRARIES dlaf.core
+  USE_MAIN PIKA
+)
+
 # Generic libraries
 add_subdirectory(common)
 add_subdirectory(communication)
@@ -65,6 +72,7 @@ add_subdirectory(sender)
 add_subdirectory(auxiliary)
 add_subdirectory(eigensolver)
 add_subdirectory(factorization)
+add_subdirectory(inverse)
 add_subdirectory(multiplication)
 add_subdirectory(permutations)
 add_subdirectory(solver)

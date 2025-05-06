@@ -28,23 +28,7 @@
 #include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 
-namespace dlaf {
-namespace comm {
-namespace internal {
-
-// helper function that identifies the owner of a transposed coordinate,
-// it returns both the component of the rank in the transposed dimension and
-// its global cross coordinate (i.e. row == col in the global frame of reference)
-template <Coord dst_coord>
-std::pair<SizeType, comm::IndexT_MPI> transposedOwner(const matrix::Distribution& dist,
-                                                      const LocalTileIndex idx) {
-  const auto idx_cross = dist.template globalTileFromLocalTile<dst_coord>(idx.get(dst_coord));
-  const auto rank_owner = dist.template rankGlobalTile<orthogonal(dst_coord)>(idx_cross);
-  return std::make_pair(idx_cross, rank_owner);
-}
-
-}
-
+namespace dlaf::comm {
 /// Broadcast
 ///
 /// Given a source panel on a rank, it gets broadcasted to make it available to all other ranks.
@@ -57,7 +41,7 @@ std::pair<SizeType, comm::IndexT_MPI> transposedOwner(const matrix::Distribution
 /// @param serial_comm  where to pipeline the tasks for communications.
 /// @pre Communicator in @p serial_comm must be orthogonal to panel axis
 template <class T, Device D, Coord axis, matrix::StoreTransposed storage,
-          class = std::enable_if_t<!std::is_const_v<T>>>
+          std::enable_if_t<!std::is_const_v<T>, int> = 0>
 void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& panel,
                comm::CommunicatorPipeline<coord_to_communicator_type(orthogonal(axis))>& serial_comm) {
   constexpr auto comm_coord = axis;
@@ -121,15 +105,13 @@ auto& get_taskchain(comm::CommunicatorPipeline<comm::CommunicatorType::Row>& row
 /// @pre both panels parent matrices should be square matrices with square blocksizes
 /// @pre both panels offsets should lay on the main diagonal of the parent matrix
 template <class T, Device D, Coord axis, matrix::StoreTransposed storage,
-          matrix::StoreTransposed storageT, class = std::enable_if_t<!std::is_const_v<T>>>
+          matrix::StoreTransposed storageT, std::enable_if_t<!std::is_const_v<T>, int> = 0>
 void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& panel,
                matrix::Panel<orthogonal(axis), T, D, storageT>& panelT,
                comm::CommunicatorPipeline<comm::CommunicatorType::Row>& row_task_chain,
                comm::CommunicatorPipeline<comm::CommunicatorType::Col>& col_task_chain) {
-  constexpr Coord axisT = orthogonal(axis);
-
-  constexpr Coord coord = std::decay_t<decltype(panel)>::coord;
-  constexpr Coord coordT = std::decay_t<decltype(panelT)>::coord;
+  constexpr Coord coord = orthogonal(axis);
+  constexpr Coord coordT = axis;
 
   // Note:
   // Given a source panel, this communication pattern makes every rank access tiles of both the
@@ -164,50 +146,44 @@ void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& p
   // This algorithm allow to broadcast panel to panelT using as mirror the parent matrix main diagonal.
   // This means that it is possible to broadcast panels with different axes just if their global offset
   // lie on the diagonal.
-  DLAF_ASSERT(panel.rangeStart() == panelT.rangeStart(), panel.rangeStart(), panelT.rangeStart());
-  DLAF_ASSERT_MODERATE(panel.rangeEnd() == panelT.rangeEnd(), panel.rangeEnd(), panelT.rangeEnd());
+  DLAF_ASSERT(panel.rangeStart() <= panelT.rangeStart(), panel.rangeStart(), panelT.rangeStart());
+  DLAF_ASSERT(panel.rangeEnd() >= panelT.rangeEnd(), panel.rangeEnd(), panelT.rangeEnd());
 
   // if no panel tiles, just skip it
   if (panel.rangeStart() == panel.rangeEnd())
     return;
 
   // STEP 1
-  constexpr auto comm_dir_step1 = orthogonal(axis);
-  auto& chain_step1 = internal::get_taskchain<comm_dir_step1>(row_task_chain, col_task_chain);
+  auto& chain_step1 = internal::get_taskchain<coord>(row_task_chain, col_task_chain);
 
   broadcast(rank_root, panel, chain_step1);
 
   // STEP 2
-  constexpr auto comm_dir_step2 = orthogonal(axisT);
-  constexpr auto comm_coord_step2 = axisT;
+  auto& chain_step2 = internal::get_taskchain<coordT>(row_task_chain, col_task_chain);
+  const auto& my_rank = dist.rank_index();
 
-  auto& chain_step2 = internal::get_taskchain<comm_dir_step2>(row_task_chain, col_task_chain);
+  const auto comm_size = dist.commGridSize().template get<coord>();
 
-  const SizeType last_tile = std::max(panelT.rangeStart(), panelT.rangeEnd() - 1);
-  const auto owner = dist.template rankGlobalTile<coordT>(last_tile);
-  const auto range = dist.rankIndex().get(coordT) == owner
-                         ? common::iterate_range2d(*panelT.iteratorLocal().begin(),
-                                                   LocalTileIndex(coordT, panelT.rangeEndLocal() - 1, 1))
-                         : panelT.iteratorLocal();
+  for (SizeType k = panelT.rangeStart(); k < panelT.rangeEnd(); ++k) {
+    const auto kk_rank = dist.rank_global_tile({k, k});
+    if (kk_rank.template get<coordT>() == my_rank.template get<coordT>()) {
+      const auto k_local_T = dist.template local_tile_from_global_tile<coordT>(k);
 
-  for (const auto& indexT : range) {
-    auto [index_diag, owner_diag] = internal::transposedOwner<coordT>(dist, indexT);
+      namespace ex = pika::execution::experimental;
+      if (kk_rank.template get<coord>() == my_rank.template get<coord>()) {
+        const auto k_local = dist.template local_tile_from_global_tile<coord>(k);
+        panelT.setTile({coordT, k_local_T}, panel.read({coord, k_local}));
 
-    namespace ex = pika::execution::experimental;
-    if (dist.rankIndex().get(coord) == owner_diag) {
-      const auto index_diag_local = dist.template localTileFromGlobalTile<coord>(index_diag);
-      panelT.setTile(indexT, panel.read({coord, index_diag_local}));
-
-      if (dist.commGridSize().get(comm_coord_step2) > 1)
-        ex::start_detached(schedule_bcast_send(chain_step2.exclusive(), panelT.read(indexT)));
-    }
-    else {
-      if (dist.commGridSize().get(comm_coord_step2) > 1)
-        ex::start_detached(schedule_bcast_recv(chain_step2.exclusive(), owner_diag,
-                                               panelT.readwrite(indexT)));
+        if (comm_size > 1)
+          ex::start_detached(schedule_bcast_send(chain_step2.exclusive(),
+                                                 panelT.read({coordT, k_local_T})));
+      }
+      else {
+        if (comm_size > 1)
+          ex::start_detached(schedule_bcast_recv(chain_step2.exclusive(), kk_rank.template get<coord>(),
+                                                 panelT.readwrite({coordT, k_local_T})));
+      }
     }
   }
-}
-
 }
 }

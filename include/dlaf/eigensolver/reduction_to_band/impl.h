@@ -1215,8 +1215,9 @@ Matrix<T, D> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix
   Matrix<T, D> mat_taus_retiled =
       mat_taus.retiledSubPipeline(LocalTileSize(mat_a.blockSize().cols() / band_size, 1));
 
-  const SizeType ntiles = (nrefls - 1) / band_size + 1;
-  DLAF_ASSERT(ntiles == mat_taus_retiled.nrTiles().rows(), ntiles, mat_taus_retiled.nrTiles().rows());
+  const SizeType nr_sub_tiles = (nrefls - 1) / band_size + 1;
+  DLAF_ASSERT(nr_sub_tiles == mat_taus_retiled.nrTiles().rows(), nr_sub_tiles,
+              mat_taus_retiled.nrTiles().rows());
 
   const bool is_full_band = (band_size == dist.blockSize().cols());
 
@@ -1232,6 +1233,18 @@ Matrix<T, D> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix
   common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panels_x(n_workspaces, dist);
   common::RoundRobin<matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>> panels_xt(
       n_workspaces, dist);
+  const SizeType nr_tiles = dist.nr_tiles().rows();
+  auto set_range_panelT = [nr_tiles, mb = dist.tile_size().rows()](auto& panelT,
+                                                                   const GlobalElementIndex& at_offset) {
+    const SizeType i = at_offset.row() / mb;
+    if (i == nr_tiles - 1) {
+      panelT.setRange({i, i}, {i, i});
+    }
+    else {
+      panelT.setRangeStart(at_offset);
+      panelT.setRangeEnd({nr_tiles - 1, nr_tiles - 1});
+    }
+  };
 
   const auto dist_ws = [&]() {
     using dlaf::factorization::internal::get_tfactor_num_workers;
@@ -1245,7 +1258,7 @@ Matrix<T, D> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix
                                                              mat_taus_retiled.distribution());
 
   ex::unique_any_sender<> trigger_panel{ex::just()};
-  for (SizeType j_sub = 0; j_sub < ntiles; ++j_sub) {
+  for (SizeType j_sub = 0; j_sub < nr_sub_tiles; ++j_sub) {
     const SizeType i_sub = j_sub + 1;
 
     const GlobalElementIndex ij_offset(i_sub * band_size, j_sub * band_size);
@@ -1268,7 +1281,7 @@ Matrix<T, D> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix
     auto& ws = panels_ws.nextResource();
 
     v.setRangeStart(at_offset);
-    vt.setRangeStart(at_offset);
+    set_range_panelT(vt, at_offset);
 
     ws.setWidth(nrefls_tile);
     v.setWidth(nrefls_tile);
@@ -1313,7 +1326,7 @@ Matrix<T, D> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix
     auto& wt = panels_wt.nextResource();
 
     w.setRangeStart(at_offset);
-    wt.setRangeStart(at_offset);
+    set_range_panelT(wt, at_offset);
 
     w.setWidth(nrefls_tile);
     wt.setHeight(nrefls_tile);
@@ -1328,7 +1341,7 @@ Matrix<T, D> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix
     auto& xt = panels_xt.nextResource();
 
     x.setRangeStart(at_offset);
-    xt.setRangeStart(at_offset);
+    set_range_panelT(xt, at_offset);
 
     x.setWidth(nrefls_tile);
     xt.setHeight(nrefls_tile);
@@ -1369,7 +1382,21 @@ Matrix<T, D> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix
     // xt has been used previously as workspace for hemmComputeX, so it has to be reset, because now it
     // will be used for accessing the broadcasted version of x
     xt.reset();
-    xt.setRangeStart(at_offset);
+
+    // Note:
+    // The last tile of xt is communicated as a workaround for supporting following trigger
+    // when b < mb.
+    // Indeed, if b < mb the last column have (at least) a panel to compute, but differently from
+    // other columns, broadcast transposed doesn't communicate the last tile, which is an assumption
+    // needed to make the following trigger work correctly.
+    const SizeType at_col = dist.template globalTileFromGlobalElement<Coord::Col>(at_offset.col());
+    if (at_col == nr_tiles - 1) {
+      xt.setRangeStart(at_offset);
+      xt.setRangeEnd({nr_tiles, nr_tiles});
+    }
+    else
+      set_range_panelT(xt, at_offset);
+
     xt.setHeight(nrefls_tile);
 
     comm::broadcast(rank_v0.col(), x, xt, mpi_row_chain, mpi_col_chain);
@@ -1428,30 +1455,6 @@ Matrix<T, D> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix
           dist.template nextLocalTileFromGlobalElement<Coord::Row>(at_offset.row()),
           dist.template nextLocalTileFromGlobalElement<Coord::Col>(at_offset.col()),
       };
-
-      // Note:
-      // This additional communication of the last tile is a workaround for supporting following trigger
-      // when b < mb.
-      // Indeed, if b < mb the last column have (at least) a panel to compute, but differently from
-      // other columns, broadcast transposed doesn't communicate the last tile, which is an assumption
-      // needed to make the following trigger work correctly.
-      const SizeType at_tile_col =
-          dist.template globalTileFromGlobalElement<Coord::Col>(at_offset.col());
-
-      if (at_tile_col == dist.nrTiles().cols() - 1) {
-        const comm::IndexT_MPI owner = rank_v0.row();
-        if (rank.row() == owner) {
-          xt.setTile(at, x.read(at));
-
-          if (dist.commGridSize().rows() > 1)
-            ex::start_detached(comm::schedule_bcast_send(mpi_col_chain.exclusive(), xt.read(at)));
-        }
-        else {
-          if (dist.commGridSize().rows() > 1)
-            ex::start_detached(comm::schedule_bcast_recv(mpi_col_chain.exclusive(), owner,
-                                                         xt.readwrite(at)));
-        }
-      }
 
       if constexpr (dlaf::comm::CommunicationDevice_v<D> == D) {
         // Note:

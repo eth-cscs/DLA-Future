@@ -376,7 +376,7 @@ public:
   Matrix& operator=(const Matrix& rhs) = delete;
   Matrix& operator=(Matrix&& rhs) = default;
 
-  const MatrixAllocation& allocation() const noexcept {
+  MatrixAllocation allocation() const noexcept {
     return allocation_;
   }
 

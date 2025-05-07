@@ -14,6 +14,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <tuple>
+#include <utility>
 
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf_c/desc.h>
@@ -32,8 +33,8 @@ struct DLAF_descriptor make_dlaf_descriptor(const int m, const int n, const int 
   return dlaf_desc;
 }
 
-std::tuple<dlaf::matrix::Distribution, dlaf::matrix::LayoutInfo> distribution_and_layout(
-    const struct DLAF_descriptor dlaf_desc, dlaf::comm::CommunicatorGrid& grid) {
+dlaf::matrix::ColMajorLayout make_layout(const struct DLAF_descriptor dlaf_desc,
+                                         dlaf::comm::CommunicatorGrid& grid) {
   dlaf::GlobalElementSize matrix_size(dlaf_desc.m, dlaf_desc.n);
   dlaf::TileElementSize block_size(dlaf_desc.mb, dlaf_desc.nb);
 
@@ -42,9 +43,9 @@ std::tuple<dlaf::matrix::Distribution, dlaf::matrix::LayoutInfo> distribution_an
   dlaf::matrix::Distribution distribution(matrix_size, block_size, grid.size(), grid.rank(),
                                           src_rank_index);
 
-  dlaf::matrix::LayoutInfo layout = colMajorLayout(distribution, dlaf_desc.ld);
+  dlaf::matrix::ColMajorLayout layout{std::move(distribution), dlaf_desc.ld};
 
-  return std::make_tuple(distribution, layout);
+  return layout;
 }
 
 dlaf::common::Ordering char2order(const char order) {

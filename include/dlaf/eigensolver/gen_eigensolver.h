@@ -37,22 +37,22 @@ void hermitian_generalized_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Mat
   DLAF_ASSERT(matrix::local_matrix(eigenvalues), eigenvalues);
   DLAF_ASSERT(matrix::local_matrix(eigenvectors), eigenvectors);
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
-  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
+  DLAF_ASSERT(matrix::square_block_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_size(mat_b), mat_b);
-  DLAF_ASSERT(matrix::square_blocksize(mat_b), mat_b);
-  DLAF_ASSERT(matrix::square_size(eigenvectors), eigenvectors);
-  DLAF_ASSERT(matrix::square_blocksize(eigenvectors), eigenvectors);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);
+  DLAF_ASSERT(matrix::square_block_size(mat_b), mat_b);
   DLAF_ASSERT(mat_a.size() == mat_b.size(), mat_a, mat_b);
-  DLAF_ASSERT(mat_a.blockSize() == mat_b.blockSize(), mat_a, mat_b);
+  DLAF_ASSERT(mat_a.block_size() == mat_b.block_size(), mat_a, mat_b);
   DLAF_ASSERT(eigenvalues.size().rows() == eigenvectors.size().rows(), eigenvalues, eigenvectors);
-  DLAF_ASSERT(eigenvalues.blockSize().rows() == eigenvectors.blockSize().rows(), eigenvalues,
+  DLAF_ASSERT(matrix::single_tile_per_block(eigenvalues), eigenvalues);
+  DLAF_ASSERT(eigenvalues.block_size().rows() == eigenvectors.block_size().rows(), eigenvalues,
               eigenvectors);
   DLAF_ASSERT(eigenvectors.size() == mat_a.size(), eigenvectors, mat_a);
-  DLAF_ASSERT(eigenvectors.blockSize() == mat_a.blockSize(), eigenvectors, mat_a);
-  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
-  DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);
-  DLAF_ASSERT(matrix::single_tile_per_block(eigenvalues), eigenvalues);
+  DLAF_ASSERT(matrix::square_size(eigenvectors), eigenvectors);
   DLAF_ASSERT(matrix::single_tile_per_block(eigenvectors), eigenvectors);
+  DLAF_ASSERT(matrix::square_block_size(eigenvectors), eigenvectors);
+  DLAF_ASSERT(eigenvectors.block_size() == mat_a.block_size(), eigenvectors, mat_a);
   DLAF_ASSERT(eigenvalues_index_begin == 0, eigenvalues_index_begin);
   DLAF_ASSERT(eigenvalues_index_end >= eigenvalues_index_begin, eigenvalues_index_end,
               eigenvalues_index_begin);
@@ -70,11 +70,13 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver(
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
   DLAF_ASSERT(matrix::local_matrix(mat_b), mat_b);
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
-  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
+  DLAF_ASSERT(matrix::square_block_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_size(mat_b), mat_b);
-  DLAF_ASSERT(matrix::square_blocksize(mat_b), mat_b);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);
+  DLAF_ASSERT(matrix::square_block_size(mat_b), mat_b);
   DLAF_ASSERT(mat_a.size() == mat_b.size(), mat_a, mat_b);
-  DLAF_ASSERT(mat_a.blockSize() == mat_b.blockSize(), mat_a, mat_b);
+  DLAF_ASSERT(mat_a.block_size() == mat_b.block_size(), mat_a, mat_b);
   DLAF_ASSERT(eigenvalues_index_begin == 0, eigenvalues_index_begin);
   DLAF_ASSERT(eigenvalues_index_end >= eigenvalues_index_begin, eigenvalues_index_end,
               eigenvalues_index_begin);
@@ -83,8 +85,8 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver(
   const SizeType size = mat_a.size().rows();
 
   matrix::Matrix<BaseType<T>, D> eigenvalues(LocalElementSize(size, 1),
-                                             TileElementSize(mat_a.blockSize().rows(), 1));
-  matrix::Matrix<T, D> eigenvectors(LocalElementSize(size, size), mat_a.blockSize());
+                                             TileElementSize(mat_a.tile_size().rows(), 1));
+  matrix::Matrix<T, D> eigenvectors(LocalElementSize(size, size), mat_a.tile_size());
 
   hermitian_generalized_eigensolver<B, D, T>(uplo, mat_a, mat_b, eigenvalues, eigenvectors,
                                              factorization, eigenvalues_index_begin,
@@ -103,22 +105,22 @@ void hermitian_generalized_eigensolver(
   DLAF_ASSERT(matrix::local_matrix(eigenvalues), eigenvalues);
   DLAF_ASSERT(matrix::equal_process_grid(eigenvectors, grid), eigenvectors, grid);
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
-  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
+  DLAF_ASSERT(matrix::square_block_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_size(mat_b), mat_b);
-  DLAF_ASSERT(matrix::square_blocksize(mat_b), mat_b);
-  DLAF_ASSERT(matrix::square_size(eigenvectors), eigenvectors);
-  DLAF_ASSERT(matrix::square_blocksize(eigenvectors), eigenvectors);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);
+  DLAF_ASSERT(matrix::square_block_size(mat_b), mat_b);
   DLAF_ASSERT(mat_a.size() == mat_b.size(), mat_a, mat_b);
-  DLAF_ASSERT(mat_a.blockSize() == mat_b.blockSize(), mat_a, mat_b);
+  DLAF_ASSERT(mat_a.block_size() == mat_b.block_size(), mat_a, mat_b);
   DLAF_ASSERT(eigenvalues.size().rows() == eigenvectors.size().rows(), eigenvalues, eigenvectors);
-  DLAF_ASSERT(eigenvalues.blockSize().rows() == eigenvectors.blockSize().rows(), eigenvalues,
+  DLAF_ASSERT(matrix::single_tile_per_block(eigenvalues), eigenvalues);
+  DLAF_ASSERT(eigenvalues.block_size().rows() == eigenvectors.block_size().rows(), eigenvalues,
               eigenvectors);
   DLAF_ASSERT(eigenvectors.size() == mat_a.size(), eigenvectors, mat_a);
-  DLAF_ASSERT(eigenvectors.blockSize() == mat_a.blockSize(), eigenvectors, mat_a);
-  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
-  DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);
-  DLAF_ASSERT(matrix::single_tile_per_block(eigenvalues), eigenvalues);
+  DLAF_ASSERT(matrix::square_size(eigenvectors), eigenvectors);
   DLAF_ASSERT(matrix::single_tile_per_block(eigenvectors), eigenvectors);
+  DLAF_ASSERT(matrix::square_block_size(eigenvectors), eigenvectors);
+  DLAF_ASSERT(eigenvectors.block_size() == mat_a.block_size(), eigenvectors, mat_a);
   DLAF_ASSERT(eigenvalues_index_begin == 0, eigenvalues_index_begin);
   DLAF_ASSERT(eigenvalues_index_end >= eigenvalues_index_begin, eigenvalues_index_end,
               eigenvalues_index_begin);
@@ -138,11 +140,13 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver(comm::CommunicatorGrid
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_b, grid), mat_b, grid);
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
-  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
+  DLAF_ASSERT(matrix::square_block_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_size(mat_b), mat_b);
-  DLAF_ASSERT(matrix::square_blocksize(mat_b), mat_b);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);
+  DLAF_ASSERT(matrix::square_block_size(mat_b), mat_b);
   DLAF_ASSERT(mat_a.size() == mat_b.size(), mat_a, mat_b);
-  DLAF_ASSERT(mat_a.blockSize() == mat_b.blockSize(), mat_a, mat_b);
+  DLAF_ASSERT(mat_a.block_size() == mat_b.block_size(), mat_a, mat_b);
   DLAF_ASSERT(eigenvalues_index_begin == 0, eigenvalues_index_begin);
   DLAF_ASSERT(eigenvalues_index_end >= eigenvalues_index_begin, eigenvalues_index_end,
               eigenvalues_index_begin);
@@ -151,8 +155,8 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver(comm::CommunicatorGrid
   const SizeType size = mat_a.size().rows();
 
   matrix::Matrix<BaseType<T>, D> eigenvalues(LocalElementSize(size, 1),
-                                             TileElementSize(mat_a.blockSize().rows(), 1));
-  matrix::Matrix<T, D> eigenvectors(GlobalElementSize(size, size), mat_a.blockSize(), grid);
+                                             TileElementSize(mat_a.tile_size().rows(), 1));
+  matrix::Matrix<T, D> eigenvectors(GlobalElementSize(size, size), mat_a.tile_size(), grid);
 
   hermitian_generalized_eigensolver<B, D, T>(grid, uplo, mat_a, mat_b, eigenvalues, eigenvectors,
                                              factorization, eigenvalues_index_begin,
@@ -200,26 +204,26 @@ void hermitian_generalized_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Mat
 /// @param mat_a contains the Hermitian matrix A
 /// @pre @p mat_a is not distributed
 /// @pre @p mat_a has size (N x N)
-/// @pre @p mat_a has blocksize (NB x NB)
-/// @pre @p mat_a has tilesize (NB x NB)
+/// @pre @p mat_a has block size (NB x NB)
+/// @pre @p mat_a has tile size (NB x NB)
 ///
 /// @param mat_b contains the Hermitian positive definite matrix B
 /// @pre @p mat_b is not distributed
 /// @pre @p mat_b has size (N x N)
-/// @pre @p mat_b has blocksize (NB x NB)
-/// @pre @p mat_b has tilesize (NB x NB)
+/// @pre @p mat_b has block size (NB x NB)
+/// @pre @p mat_b has tile size (NB x NB)
 ///
 /// @param[out] eigenvalues contains the eigenvalues
 /// @pre @p eigenvalues is not distributed
 /// @pre @p eigenvalues has size (N x 1)
-/// @pre @p eigenvalues has blocksize (NB x NB)
-/// @pre @p eigenvalues has tilesize (NB x NB)
+/// @pre @p eigenvalues has block size (NB x NB)
+/// @pre @p eigenvalues has tile size (NB x NB)
 ///
 /// @param[out] eigenvectors contains the eigenvectors
 /// @pre @p eigenvectors is not distributed
 /// @pre @p eigenvectors has size (N x N)
-/// @pre @p eigenvectors has blocksize (NB x NB)
-/// @pre @p eigenvectors has tilesize (NB x NB)
+/// @pre @p eigenvectors has block size (NB x NB)
+/// @pre @p eigenvectors has tile size (NB x NB)
 template <Backend B, Device D, class T>
 void hermitian_generalized_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
                                        Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors) {
@@ -262,14 +266,14 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver(blas::Uplo uplo, Matri
 /// @param mat_a contains the Hermitian matrix A
 /// @pre @p mat_a is not distributed
 /// @pre @p mat_a has size (N x N)
-/// @pre @p mat_a has blocksize (NB x NB)
-/// @pre @p mat_a has tilesize (NB x NB)
+/// @pre @p mat_a has block size (NB x NB)
+/// @pre @p mat_a has tile size (NB x NB)
 ///
 /// @param mat_b contains the Hermitian positive definite matrix B
 /// @pre @p mat_b is not distributed
 /// @pre @p mat_b has size (N x N)
-/// @pre @p mat_b has blocksize (NB x NB)
-/// @pre @p mat_b has tilesize (NB x NB)
+/// @pre @p mat_b has block size (NB x NB)
+/// @pre @p mat_b has tile size (NB x NB)
 ///
 /// @param eigenvalues_index_begin is the index of the first eigenvalue to compute
 /// @pre @p eigenvalues_index_begin >= 0
@@ -319,27 +323,27 @@ void hermitian_generalized_eigensolver_factorized(
 /// @param mat_a contains the Hermitian matrix A
 /// @pre @p mat_a is not distributed
 /// @pre @p mat_a has size (N x N)
-/// @pre @p mat_a has blocksize (NB x NB)
-/// @pre @p mat_a has tilesize (NB x NB)
+/// @pre @p mat_a has block size (NB x NB)
+/// @pre @p mat_a has tile size (NB x NB)
 ///
 /// @param mat_b contains the Cholesky factorisation of the Hermitian positive definite matrix B
 /// @pre @p mat_b is not distributed
 /// @pre @p mat_b has size (N x N)
-/// @pre @p mat_b has blocksize (NB x NB)
-/// @pre @p mat_b has tilesize (NB x NB)
+/// @pre @p mat_b has block size (NB x NB)
+/// @pre @p mat_b has tile size (NB x NB)
 /// @pre @p mat_b is the result of a Cholesky factorization
 ///
 /// @param[out] eigenvalues contains the eigenvalues
 /// @pre @p eigenvalues is not distributed
 /// @pre @p eigenvalues has size (N x 1)
-/// @pre @p eigenvalues has blocksize (NB x NB)
-/// @pre @p eigenvalues has tilesize (NB x NB)
+/// @pre @p eigenvalues has block size (NB x NB)
+/// @pre @p eigenvalues has tile size (NB x NB)
 ///
 /// @param[out] eigenvectors contains the eigenvectors
 /// @pre @p eigenvectors is not distributed
 /// @pre @p eigenvectors has size (N x N)
-/// @pre @p eigenvectors has blocksize (NB x NB)
-/// @pre @p eigenvectors has tilesize (NB x NB)
+/// @pre @p eigenvectors has block size (NB x NB)
+/// @pre @p eigenvectors has tile size (NB x NB)
 template <Backend B, Device D, class T>
 void hermitian_generalized_eigensolver_factorized(blas::Uplo uplo, Matrix<T, D>& mat_a,
                                                   Matrix<T, D>& mat_b,
@@ -383,14 +387,14 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver_factorized(
 /// @param mat_a contains the Hermitian matrix A
 /// @pre @p mat_a is not distributed
 /// @pre @p mat_a has size (N x N)
-/// @pre @p mat_a has blocksize (NB x NB)
-/// @pre @p mat_a has tilesize (NB x NB)
+/// @pre @p mat_a has block size (NB x NB)
+/// @pre @p mat_a has tile size (NB x NB)
 ///
 /// @param mat_b contains the Cholesky factorisation of the Hermitian positive definite matrix B
 /// @pre @p mat_b is not distributed
 /// @pre @p mat_b has size (N x N)
-/// @pre @p mat_b has blocksize (NB x NB)
-/// @pre @p mat_b has tilesize (NB x NB)
+/// @pre @p mat_b has block size (NB x NB)
+/// @pre @p mat_b has tile size (NB x NB)
 /// @pre @p mat_b is the result of a Cholesky factorization
 template <Backend B, Device D, class T>
 EigensolverResult<T, D> hermitian_generalized_eigensolver_factorized(blas::Uplo uplo,
@@ -439,26 +443,26 @@ void hermitian_generalized_eigensolver(comm::CommunicatorGrid& grid, blas::Uplo 
 /// @param mat_a contains the Hermitian matrix A
 /// @pre @p mat_a is distributed according to @p grid
 /// @pre @p mat_a has size (N x N)
-/// @pre @p mat_a has blocksize (NB x NB)
-/// @pre @p mat_a has tilesize (NB x NB)
+/// @pre @p mat_a has block size (NB x NB)
+/// @pre @p mat_a has tile size (NB x NB)
 ///
 /// @param mat_b contains the Hermitian positive definite matrix B
 /// @pre @p mat_b is distributed according to @p grid
 /// @pre @p mat_b has size (N x N)
-/// @pre @p mat_b has blocksize (NB x NB)
-/// @pre @p mat_b has tilesize (NB x NB)
+/// @pre @p mat_b has block size (NB x NB)
+/// @pre @p mat_b has tile size (NB x NB)
 ///
 /// @param eigenvalues is a N x 1 matrix which on output contains the eigenvalues
 /// @pre @p eigenvalues is not distributed
 /// @pre @p eigenvalues has size (N x 1)
-/// @pre @p eigenvalues has blocksize (NB x 1)
-/// @pre @p eigenvalues has tilesize (NB x 1)
+/// @pre @p eigenvalues has block size (NB x 1)
+/// @pre @p eigenvalues has tile size (NB x 1)
 ///
 /// @param[out] eigenvectors contains the eigenvectors
 /// @pre @p eigenvectors is distributed according to @p grid
 /// @pre @p eigenvectors has size (N x N)
-/// @pre @p eigenvectors has blocksize (NB x NB)
-/// @pre @p eigenvectors has tilesize (NB x NB)
+/// @pre @p eigenvectors has block size (NB x NB)
+/// @pre @p eigenvectors has tile size (NB x NB)
 template <Backend B, Device D, class T>
 void hermitian_generalized_eigensolver(comm::CommunicatorGrid& grid, blas::Uplo uplo,
                                        Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
@@ -504,14 +508,14 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver(comm::CommunicatorGrid
 /// @param mat_a contains the Hermitian matrix A
 /// @pre @p mat_a is distributed according to @p grid
 /// @pre @p mat_a has size (N x N)
-/// @pre @p mat_a has blocksize (NB x NB)
-/// @pre @p mat_a has tilesize (NB x NB)
+/// @pre @p mat_a has block size (NB x NB)
+/// @pre @p mat_a has tile size (NB x NB)
 ///
 /// @param mat_b contains the Hermitian positive definite matrix B
 /// @pre @p mat_b is distributed according to @p grid
 /// @pre @p mat_b has size (N x N)
-/// @pre @p mat_b has blocksize (NB x NB)
-/// @pre @p mat_b has tilesize (NB x NB)
+/// @pre @p mat_b has block size (NB x NB)
+/// @pre @p mat_b has tile size (NB x NB)
 template <Backend B, Device D, class T>
 EigensolverResult<T, D> hermitian_generalized_eigensolver(comm::CommunicatorGrid& grid, blas::Uplo uplo,
                                                           Matrix<T, D>& mat_a, Matrix<T, D>& mat_b) {
@@ -555,27 +559,27 @@ void hermitian_generalized_eigensolver_factorized(
 /// @param mat_a contains the Hermitian matrix A
 /// @pre @p mat_a is distributed according to @p grid
 /// @pre @p mat_a has size (N x N)
-/// @pre @p mat_a has blocksize (NB x NB)
-/// @pre @p mat_a has tilesize (NB x NB)
+/// @pre @p mat_a has block size (NB x NB)
+/// @pre @p mat_a has tile size (NB x NB)
 ///
 /// @param mat_b contains the Cholesky factorisation of the Hermitian positive definite matrix B
 /// @pre @p mat_b is distributed according to @p grid
 /// @pre @p mat_b has size (N x N)
-/// @pre @p mat_b has blocksize (NB x NB)
-/// @pre @p mat_b has tilesize (NB x NB)
+/// @pre @p mat_b has block size (NB x NB)
+/// @pre @p mat_b has tile size (NB x NB)
 /// @pre @p mat_b is the result of a Cholesky factorization
 ///
 /// @param eigenvalues is a N x 1 matrix which on output contains the eigenvalues
 /// @pre @p eigenvalues is not distributed
 /// @pre @p eigenvalues has size (N x 1)
-/// @pre @p eigenvalues has blocksize (NB x 1)
-/// @pre @p eigenvalues has tilesize (NB x 1)
+/// @pre @p eigenvalues has block size (NB x 1)
+/// @pre @p eigenvalues has tile size (NB x 1)
 ///
 /// @param[out] eigenvectors contains the eigenvectors
 /// @pre @p eigenvectors is distributed according to @p grid
 /// @pre @p eigenvectors has size (N x N)
-/// @pre @p eigenvectors has blocksize (NB x NB)
-/// @pre @p eigenvectors has tilesize (NB x NB)
+/// @pre @p eigenvectors has block size (NB x NB)
+/// @pre @p eigenvectors has tile size (NB x NB)
 template <Backend B, Device D, class T>
 void hermitian_generalized_eigensolver_factorized(comm::CommunicatorGrid& grid, blas::Uplo uplo,
                                                   Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
@@ -621,14 +625,14 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver_factorized(
 /// @param mat_a contains the Hermitian matrix A
 /// @pre @p mat_a is distributed according to @p grid
 /// @pre @p mat_a has size (N x N)
-/// @pre @p mat_a has blocksize (NB x NB)
-/// @pre @p mat_a has tilesize (NB x NB)
+/// @pre @p mat_a has block size (NB x NB)
+/// @pre @p mat_a has tile size (NB x NB)
 ///
 /// @param mat_b contains the Cholesky factorisation of the Hermitian positive definite matrix B
 /// @pre @p mat_b is distributed according to @p grid
 /// @pre @p mat_b has size (N x N)
-/// @pre @p mat_b has blocksize (NB x NB)
-/// @pre @p mat_b has tilesize (NB x NB)
+/// @pre @p mat_b has block size (NB x NB)
+/// @pre @p mat_b has tile size (NB x NB)
 /// @pre @p mat_b is the result of a Cholesky factorization
 template <Backend B, Device D, class T>
 EigensolverResult<T, D> hermitian_generalized_eigensolver_factorized(

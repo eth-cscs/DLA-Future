@@ -142,14 +142,14 @@ struct SubPanelView : public internal::View {
   /// @param offset_e is the top left corner where the view starts in the global matrix
   /// @param ncols is the number of columns composing this panel
   ///
-  /// @pre offset_e.col() + ncols <= dist.blockSize().cols()
+  /// @pre offset_e.col() + ncols <= dist.tile_size().cols()
   SubPanelView(Distribution dist, GlobalElementIndex offset_e, const SizeType ncols)
       : View(dist, offset_e), cols_(ncols) {
-    i_sub_offset_ = offset_e_.row() % dist_.blockSize().rows();
-    j_sub_offset_ = offset_e_.col() % dist_.blockSize().cols();
+    i_sub_offset_ = offset_e_.row() % dist_.tile_size().rows();
+    j_sub_offset_ = offset_e_.col() % dist_.tile_size().cols();
 
-    DLAF_ASSERT(j_sub_offset_ + cols_ <= dist_.blockSize().cols(), j_sub_offset_ + cols_,
-                dist_.blockSize().cols());
+    DLAF_ASSERT(j_sub_offset_ + cols_ <= dist_.tile_size().cols(), j_sub_offset_ + cols_,
+                dist_.tile_size().cols());
 
     if (dist.size().isEmpty())
       return;

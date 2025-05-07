@@ -72,9 +72,8 @@ TYPED_TEST(MatrixUtilsTest, Set0) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
       Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
-      memory::MemoryView<TypeParam, Device::CPU> mem(layout.minMemSize());
-      Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), layout, mem());
+      Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), MatrixAllocation::Tiles,
+                                            Ld::Compact);
 
       auto null_matrix = [](const GlobalElementIndex&) { return TypeParam(0); };
 
@@ -90,9 +89,8 @@ TYPED_TEST(MatrixUtilsTest, Set) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
       Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
-      memory::MemoryView<TypeParam, Device::CPU> mem(layout.minMemSize());
-      Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), layout, mem());
+      Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), MatrixAllocation::Tiles,
+                                            Ld::Compact);
 
       auto linear_matrix = [size = matrix.size()](const GlobalElementIndex& index) {
         auto linear_index = common::computeLinearIndex<int>(common::Ordering::RowMajor, index, size);
@@ -113,9 +111,8 @@ TYPED_TEST(MatrixUtilsTest, SetRandom) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
       Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
-      memory::MemoryView<TypeParam, Device::CPU> mem(layout.minMemSize());
-      Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), layout, mem());
+      Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), MatrixAllocation::Tiles,
+                                            Ld::Compact);
 
       matrix::util::set_random(matrix);
 
@@ -191,9 +188,8 @@ TYPED_TEST(MatrixUtilsTest, SetRandomHermitianPositiveDefinite) {
     for (const auto& test : square_blocks_configs) {
       GlobalElementSize size = globalSquareTestSize(test.size, comm_grid.size());
       Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
-      memory::MemoryView<TypeParam, Device::CPU> mem(layout.minMemSize());
-      Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), layout, mem());
+      Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), MatrixAllocation::Tiles,
+                                            Ld::Compact);
 
       auto N = matrix.size().rows();
       auto identity_2N = [N](const GlobalElementIndex& index) {
@@ -225,9 +221,8 @@ TYPED_TEST(MatrixUtilsTest, SetRandomNonZeroDiagonal) {
     for (const auto& test : square_blocks_configs) {
       GlobalElementSize size = globalSquareTestSize(test.size, comm_grid.size());
       Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
-      memory::MemoryView<TypeParam, Device::CPU> mem(layout.minMemSize());
-      Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), layout, mem());
+      Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), MatrixAllocation::Tiles,
+                                            Ld::Compact);
 
       matrix::util::set_random_non_zero_diagonal(matrix);
 

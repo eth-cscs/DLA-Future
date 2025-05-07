@@ -23,7 +23,6 @@
 #include <dlaf/common/range2d.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/matrix/distribution.h>
-#include <dlaf/matrix/layout_info.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_ref.h>
 #include <dlaf/util_math.h>
@@ -287,15 +286,16 @@ void checkMatrixDistribution(const Distribution& distribution, const MatrixType&
   ASSERT_EQ(distribution, matrix.distribution());
 
   EXPECT_EQ(distribution.size(), matrix.size());
-  EXPECT_EQ(distribution.blockSize(), matrix.blockSize());
-  EXPECT_EQ(distribution.nrTiles(), matrix.nrTiles());
-  EXPECT_EQ(distribution.rankIndex(), matrix.rankIndex());
-  EXPECT_EQ(distribution.commGridSize(), matrix.commGridSize());
+  EXPECT_EQ(distribution.block_size(), matrix.block_size());
+  EXPECT_EQ(distribution.tile_size(), matrix.tile_size());
+  EXPECT_EQ(distribution.nr_tiles(), matrix.nr_tiles());
+  EXPECT_EQ(distribution.rank_index(), matrix.rank_index());
+  EXPECT_EQ(distribution.grid_size(), matrix.grid_size());
 
   for (SizeType j = 0; j < distribution.nrTiles().cols(); ++j) {
     for (SizeType i = 0; i < distribution.nrTiles().rows(); ++i) {
       GlobalTileIndex index(i, j);
-      EXPECT_EQ(distribution.rankGlobalTile(index), matrix.rankGlobalTile(index));
+      EXPECT_EQ(distribution.rank_global_tile(index), matrix.rank_global_tile(index));
     }
   }
 }

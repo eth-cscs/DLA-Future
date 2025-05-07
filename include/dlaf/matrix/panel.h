@@ -169,7 +169,7 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
 
     start_ = start_idx.get(coord);
     start_local_ = dist_matrix_.nextLocalTileFromGlobalTile<coord>(start_);
-    offset_element_ = start_ * dist_matrix_.blockSize().template get<coord>();
+    offset_element_ = start_ * dist_matrix_.tile_size().template get<coord>();
 
     DLAF_ASSERT(rangeStartLocal() >= bias_ && rangeStart() <= rangeEnd(), rangeStart(), rangeEnd(),
                 bias_);
@@ -251,8 +251,8 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
   void setWidth(SizeType width) noexcept {
     DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
     DLAF_ASSERT(width > 0, width);
-    DLAF_ASSERT(width <= parentDistribution().blockSize().cols(), width,
-                parentDistribution().blockSize().cols());
+    DLAF_ASSERT(width <= parentDistribution().tile_size().cols(), width,
+                parentDistribution().tile_size().cols());
 
     dim_ = width;
   }
@@ -268,8 +268,8 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
   void setHeight(SizeType height) noexcept {
     DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
     DLAF_ASSERT(height > 0, height);
-    DLAF_ASSERT(height <= parentDistribution().blockSize().rows(), height,
-                parentDistribution().blockSize().rows());
+    DLAF_ASSERT(height <= parentDistribution().tile_size().rows(), height,
+                parentDistribution().tile_size().rows());
 
     dim_ = height;
   }
@@ -277,13 +277,13 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
   /// Get the current width of the col panel.
   template <Coord A = axis, std::enable_if_t<A == axis && Coord::Col == axis, int> = 0>
   SizeType getWidth() const noexcept {
-    return dim_ < 0 ? dist_matrix_.blockSize().template get<axis>() : dim_;
+    return dim_ < 0 ? dist_matrix_.tile_size().template get<axis>() : dim_;
   }
 
   /// Get the current height of the row panel.
   template <Coord A = axis, std::enable_if_t<A == axis && Coord::Row == axis, int> = 0>
   SizeType getHeight() const noexcept {
-    return dim_ < 0 ? dist_matrix_.blockSize().template get<axis>() : dim_;
+    return dim_ < 0 ? dist_matrix_.tile_size().template get<axis>() : dim_;
   }
 
   /// Reset the internal usage status of the panel.
@@ -324,7 +324,7 @@ protected:
   void initRange(GlobalTileIndex start_idx, GlobalTileIndex end_idx) {
     start_ = start_idx.get(coord);
     start_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<coord>(start_);
-    offset_element_ = start_ * dist_matrix_.blockSize().template get<coord>();
+    offset_element_ = start_ * dist_matrix_.tile_size().template get<coord>();
 
     end_ = end_idx.get(coord);
     end_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<coord>(end_);
@@ -343,7 +343,7 @@ protected:
     const bool is_first_global_tile = isFirstGlobalTile(index);
     const auto size_coord = dist_matrix_.tileSize(panel_index).template get<coord>() -
                             (is_first_global_tile ? start_offset_ : 0);
-    const auto size_axis = dim_ < 0 ? dist_matrix_.blockSize().template get<axis>() : dim_;
+    const auto size_axis = dim_ < 0 ? dist_matrix_.tile_size().template get<axis>() : dim_;
 
     return {axis, size_axis, size_coord};
   }
@@ -378,7 +378,7 @@ protected:
 
     const LocalTileIndex start_loc(CT, dist.template nextLocalTileFromGlobalTile<CT>(start.get(CT)));
 
-    auto panel_size = computePanelSize(dist.localSize(), dist.blockSize(), start_loc);
+    auto panel_size = computePanelSize(dist.localSize(), dist.tile_size(), start_loc);
 
     // Note:
     // Account for the offset during allocation, otherwise tiles would be "shifted" wrt to the
@@ -388,9 +388,8 @@ protected:
       panel_size =
           LocalElementSize(CT, panel_size.get<CT>() + dist.offset().get<CT>(), panel_size.get<axis>());
 
-    Distribution dist_internal{panel_size, dist.blockSize()};
-    auto layout = tileLayout(dist_internal);
-    return {std::move(dist_internal), layout};
+    Distribution dist_internal{panel_size, dist.tile_size()};
+    return {std::move(dist_internal), MatrixAllocation::Tiles};
   }
 
   /// Create a Panel related to Matrix represented by given Distribution.
@@ -409,8 +408,8 @@ protected:
       : dist_matrix_(dist_matrix), data_(setupInternalMatrix(dist_matrix, start)) {
     DLAF_ASSERT_HEAVY(data_.nrTiles().get(axis) == 1, data_.nrTiles());
 
-    DLAF_ASSERT(dist_matrix_.block_size() == dist_matrix_.tile_size(), "not supported",
-                dist_matrix_.block_size(), dist_matrix_.tile_size());
+    DLAF_ASSERT(dist_matrix_.single_tile_per_block(), "not supported", dist_matrix_.block_size(),
+                dist_matrix_.tile_size());
 
     bias_ = dist_matrix_.template nextLocalTileFromGlobalTile<coord>(start.get(coord));
 
@@ -488,7 +487,7 @@ private:
   using BaseT = Panel<orthogonal(axis), const T, D, StoreTransposed::No>;
 
   static matrix::Distribution transposeDist(const matrix::Distribution& dist) {
-    return {common::transposed(dist.size()), common::transposed(dist.blockSize()),
+    return {common::transposed(dist.size()), common::transposed(dist.tile_size()),
             common::transposed(dist.commGridSize()), common::transposed(dist.rankIndex()),
             common::transposed(dist.sourceRankIndex())};
   }

@@ -80,7 +80,7 @@ pika::execution::experimental::unique_any_sender<dlaf::BaseType<T>> Norm<
   const auto& distribution = matrix.distribution();
 
   DLAF_ASSERT(square_size(matrix), matrix);
-  DLAF_ASSERT(square_blocksize(matrix), matrix);
+  DLAF_ASSERT(square_tile_size(matrix), matrix);
 
   vector<ex::unique_any_sender<NormT>> tiles_max;
   tiles_max.reserve(distribution.localNrTiles().rows() * distribution.localNrTiles().cols());

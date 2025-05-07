@@ -44,7 +44,7 @@ T value_preset(const GlobalElementIndex& index) {
 
 struct TestSizes {
   GlobalElementSize size;
-  TileElementSize block_size;
+  GlobalElementSize block_size;
   TileElementSize tile_size;
 };
 

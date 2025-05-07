@@ -41,7 +41,7 @@ public:
                                       distribution.block_size().cols() / tiles_per_block.cols()},
                       distribution.grid_size(), distribution.rank_index(),
                       distribution.source_rank_index()) {
-    DLAF_ASSERT(distribution.block_size() == distribution.tile_size(),
+    DLAF_ASSERT(distribution.single_tile_per_block(),
                 "distribution should be the distribution of the original Matrix.",
                 distribution.block_size(), distribution.tile_size());
     DLAF_ASSERT(distribution.block_size() == distribution_.block_size(), distribution.block_size(),
@@ -57,7 +57,7 @@ public:
   }
 
   /// Returns the complete block size of the matrix.
-  const TileElementSize& block_size() const noexcept {
+  const GlobalElementSize& block_size() const noexcept {
     return distribution_.block_size();
   }
 
@@ -103,9 +103,9 @@ public:
     return distribution_;
   }
 
-  DLAF_MATRIX_DEPRECATED("method has been renamed in snake case")
+  DLAF_MATRIX_DEPRECATED("Use tile_size or block_size method")
   const TileElementSize& blockSize() const noexcept {
-    return distribution_.blockSize();
+    return distribution_.tile_size();
   }
 
   DLAF_MATRIX_DEPRECATED("Use tile_size method")

@@ -72,8 +72,8 @@ TYPED_TEST_SUITE(ReductionToBandTestGPU, MatrixElementTypes);
 
 struct config_t {
   LocalElementSize size;
-  TileElementSize block_size;
-  SizeType band_size = block_size.rows();
+  TileElementSize tile_size;
+  SizeType band_size = tile_size.rows();
 };
 
 // Structure of the input matrix
@@ -127,9 +127,9 @@ void mirrorLowerOnDiag(const Tile<T, Device::CPU>& tile) {
 
 template <class T>
 void setupHermitianBand(MatrixLocal<T>& matrix, const SizeType band_size) {
-  DLAF_ASSERT(matrix.blockSize().rows() % band_size == 0, band_size, matrix.blockSize().rows());
+  DLAF_ASSERT(matrix.tile_size().rows() % band_size == 0, band_size, matrix.tile_size().rows());
 
-  DLAF_ASSERT(square_blocksize(matrix), matrix.blockSize());
+  DLAF_ASSERT(square_tile_size(matrix), matrix.tile_size());
   DLAF_ASSERT(square_size(matrix), matrix.size());
 
   dlaf::common::internal::SingleThreadedBlasScope single;
@@ -312,18 +312,18 @@ auto checkResult(const SizeType k, const SizeType band_size, Matrix<const T, Dev
 }
 
 template <class T, Backend B, Device D>
-void testReductionToBandLocal(const LocalElementSize size, const TileElementSize block_size,
+void testReductionToBandLocal(const LocalElementSize size, const TileElementSize tile_size,
                               const SizeType band_size,
                               const InputMatrixStructure input_matrix_structure) {
   const SizeType k_reflectors = std::max(SizeType(0), size.rows() - band_size - 1);
-  DLAF_ASSERT(block_size.rows() % band_size == 0, block_size.rows(), band_size);
+  DLAF_ASSERT(tile_size.rows() % band_size == 0, tile_size.rows(), band_size);
 
-  Distribution distribution({size.rows(), size.cols()}, block_size);
+  Distribution distribution({size.rows(), size.cols()}, tile_size);
 
   // setup the reference input matrix
-  Matrix<const T, Device::CPU> reference = [size = size, block_size = block_size, band_size,
+  Matrix<const T, Device::CPU> reference = [size = size, tile_size = tile_size, band_size,
                                             input_matrix_structure]() {
-    Matrix<T, Device::CPU> reference(size, block_size);
+    Matrix<T, Device::CPU> reference(size, tile_size);
     if (input_matrix_structure == InputMatrixStructure::banded)
       // Matrix already in band form, with band smaller than band_size
       matrix::util::set_random_hermitian_banded(reference, band_size - 1);
@@ -342,7 +342,7 @@ void testReductionToBandLocal(const LocalElementSize size, const TileElementSize
 
   MatrixMirror<const T, Device::CPU, D> mat_local_taus_h(mat_local_taus);
 
-  ASSERT_EQ(mat_local_taus.blockSize().rows(), block_size.rows());
+  ASSERT_EQ(mat_local_taus.blockSize().rows(), tile_size.rows());
 
   checkUpperPartUnchanged(reference, mat_a_h);
 
@@ -358,20 +358,20 @@ void testReductionToBandLocal(const LocalElementSize size, const TileElementSize
 
 TYPED_TEST(ReductionToBandTestMC, CorrectnessLocal) {
   for (const auto& config : configs) {
-    const auto& [size, block_size, band_size] = config;
+    const auto& [size, tile_size, band_size] = config;
 
     for (auto input_matrix_structure : {InputMatrixStructure::full, InputMatrixStructure::banded})
-      testReductionToBandLocal<TypeParam, Backend::MC, Device::CPU>(size, block_size, band_size,
+      testReductionToBandLocal<TypeParam, Backend::MC, Device::CPU>(size, tile_size, band_size,
                                                                     input_matrix_structure);
   }
 }
 
 TYPED_TEST(ReductionToBandTestMC, CorrectnessLocalSubBand) {
   for (const auto& config : configs_subband) {
-    const auto& [size, block_size, band_size] = config;
+    const auto& [size, tile_size, band_size] = config;
 
     for (auto input_matrix_structure : {InputMatrixStructure::full, InputMatrixStructure::banded}) {
-      testReductionToBandLocal<TypeParam, Backend::MC, Device::CPU>(size, block_size, band_size,
+      testReductionToBandLocal<TypeParam, Backend::MC, Device::CPU>(size, tile_size, band_size,
                                                                     input_matrix_structure);
     }
   }
@@ -380,10 +380,10 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessLocalSubBand) {
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(ReductionToBandTestGPU, CorrectnessLocal) {
   for (const auto& config : configs) {
-    const auto& [size, block_size, band_size] = config;
+    const auto& [size, tile_size, band_size] = config;
 
     for (auto input_matrix_structure : {InputMatrixStructure::full, InputMatrixStructure::banded}) {
-      testReductionToBandLocal<TypeParam, Backend::GPU, Device::GPU>(size, block_size, band_size,
+      testReductionToBandLocal<TypeParam, Backend::GPU, Device::GPU>(size, tile_size, band_size,
                                                                      input_matrix_structure);
     }
   }
@@ -391,10 +391,10 @@ TYPED_TEST(ReductionToBandTestGPU, CorrectnessLocal) {
 
 TYPED_TEST(ReductionToBandTestGPU, CorrectnessLocalSubBand) {
   for (const auto& config : configs_subband) {
-    const auto& [size, block_size, band_size] = config;
+    const auto& [size, tile_size, band_size] = config;
 
     for (auto input_matrix_structure : {InputMatrixStructure::full, InputMatrixStructure::banded}) {
-      testReductionToBandLocal<TypeParam, Backend::GPU, Device::GPU>(size, block_size, band_size,
+      testReductionToBandLocal<TypeParam, Backend::GPU, Device::GPU>(size, tile_size, band_size,
                                                                      input_matrix_structure);
     }
   }
@@ -403,12 +403,12 @@ TYPED_TEST(ReductionToBandTestGPU, CorrectnessLocalSubBand) {
 
 template <class T, Device D, Backend B>
 void testReductionToBand(comm::CommunicatorGrid& grid, const LocalElementSize size,
-                         const TileElementSize block_size, const SizeType band_size,
+                         const TileElementSize tile_size, const SizeType band_size,
                          const InputMatrixStructure input_matrix_structure) {
   const SizeType k_reflectors = std::max(SizeType(0), size.rows() - band_size - 1);
-  DLAF_ASSERT(block_size.rows() % band_size == 0, block_size.rows(), band_size);
+  DLAF_ASSERT(tile_size.rows() % band_size == 0, tile_size.rows(), band_size);
 
-  Distribution distribution({size.rows(), size.cols()}, block_size, grid.size(), grid.rank(), {0, 0});
+  Distribution distribution({size.rows(), size.cols()}, tile_size, grid.size(), grid.rank(), {0, 0});
 
   // setup the reference input matrix
   Matrix<const T, Device::CPU> reference = [&]() {
@@ -431,7 +431,7 @@ void testReductionToBand(comm::CommunicatorGrid& grid, const LocalElementSize si
 
   MatrixMirror<const T, Device::CPU, D> mat_local_taus_h(mat_local_taus);
 
-  ASSERT_EQ(mat_local_taus.blockSize().rows(), block_size.rows());
+  ASSERT_EQ(mat_local_taus.blockSize().rows(), tile_size.rows());
 
   checkUpperPartUnchanged(reference, matrix_a_h);
 
@@ -450,9 +450,9 @@ void testReductionToBand(comm::CommunicatorGrid& grid, const LocalElementSize si
 
 TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributed) {
   for (auto&& comm_grid : this->commGrids()) {
-    for (const auto& [size, block_size, band_size] : configs) {
+    for (const auto& [size, tile_size, band_size] : configs) {
       for (auto input_matrix_structure : {InputMatrixStructure::full, InputMatrixStructure::banded}) {
-        testReductionToBand<TypeParam, Device::CPU, Backend::MC>(comm_grid, size, block_size, band_size,
+        testReductionToBand<TypeParam, Device::CPU, Backend::MC>(comm_grid, size, tile_size, band_size,
                                                                  input_matrix_structure);
       }
     }
@@ -461,9 +461,9 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributed) {
 
 TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributedSubBand) {
   for (auto&& comm_grid : this->commGrids()) {
-    for (const auto& [size, block_size, band_size] : configs_subband) {
+    for (const auto& [size, tile_size, band_size] : configs_subband) {
       for (auto input_matrix_structure : {InputMatrixStructure::full, InputMatrixStructure::banded}) {
-        testReductionToBand<TypeParam, Device::CPU, Backend::MC>(comm_grid, size, block_size, band_size,
+        testReductionToBand<TypeParam, Device::CPU, Backend::MC>(comm_grid, size, tile_size, band_size,
                                                                  input_matrix_structure);
       }
     }
@@ -473,9 +473,9 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributedSubBand) {
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(ReductionToBandTestGPU, CorrectnessDistributed) {
   for (auto&& comm_grid : this->commGrids()) {
-    for (const auto& [size, block_size, band_size] : configs) {
+    for (const auto& [size, tile_size, band_size] : configs) {
       for (auto input_matrix_structure : {InputMatrixStructure::full, InputMatrixStructure::banded}) {
-        testReductionToBand<TypeParam, Device::GPU, Backend::GPU>(comm_grid, size, block_size, band_size,
+        testReductionToBand<TypeParam, Device::GPU, Backend::GPU>(comm_grid, size, tile_size, band_size,
                                                                   input_matrix_structure);
       }
     }
@@ -484,9 +484,9 @@ TYPED_TEST(ReductionToBandTestGPU, CorrectnessDistributed) {
 
 TYPED_TEST(ReductionToBandTestGPU, CorrectnessDistributedSubBand) {
   for (auto&& comm_grid : this->commGrids()) {
-    for (const auto& [size, block_size, band_size] : configs_subband) {
+    for (const auto& [size, tile_size, band_size] : configs_subband) {
       for (auto input_matrix_structure : {InputMatrixStructure::full, InputMatrixStructure::banded}) {
-        testReductionToBand<TypeParam, Device::GPU, Backend::GPU>(comm_grid, size, block_size, band_size,
+        testReductionToBand<TypeParam, Device::GPU, Backend::GPU>(comm_grid, size, tile_size, band_size,
                                                                   input_matrix_structure);
       }
     }

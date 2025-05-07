@@ -102,8 +102,9 @@ void copy(MatrixRef<const T, Source>& src, MatrixRef<T, Destination>& dst) {
   if (src.nr_tiles().isEmpty())
     return;
 
-  DLAF_ASSERT(src.distribution().tile_size_of({0, 0}) == dst.distribution().tile_size_of({0, 0}),
-              src.distribution().tile_size_of({0, 0}), dst.distribution().tile_size_of({0, 0}));
+  [[maybe_unused]] GlobalTileIndex i_00{0, 0};
+  DLAF_ASSERT(src.distribution().tile_size_of(i_00) == dst.distribution().tile_size_of(i_00),
+              src.distribution().tile_size_of(i_00), dst.distribution().tile_size_of(i_00));
 
   const dlaf::internal::Policy<matrix::internal::CopyBackend_v<Source, Destination>> policy;
   for (SizeType j = 0; j < src.distribution().local_nr_tiles().cols(); ++j) {

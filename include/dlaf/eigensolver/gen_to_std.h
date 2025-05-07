@@ -35,8 +35,8 @@ namespace dlaf::eigensolver::internal {
 /// Only the tiles of the matrix which contain the lower triangular or the upper triangular part are accessed.
 /// @pre @p mat_a is not distributed
 /// @pre @p mat_a has size (N x N)
-/// @pre @p mat_a has blocksize (NB x NB)
-/// @pre @p mat_a has tilesize (NB x NB)
+/// @pre @p mat_a has block size (NB x NB)
+/// @pre @p mat_a has tile size (NB x NB)
 ///
 /// @param mat_b contains the Cholesky factorisation of the Hermitian positive definite matrix B
 /// The triangular matrix can be lower (L) or upper (U). Only the tiles of
@@ -44,14 +44,14 @@ namespace dlaf::eigensolver::internal {
 /// Note: B should be modifiable as the diagonal tiles might be temporarily modified during the calculation.
 /// @pre @p mat_b is not distributed
 /// @pre @p mat_b has size (N x N)
-/// @pre @p mat_b has blocksize (NB x NB)
-/// @pre @p mat_b has tilesize (NB x NB)
+/// @pre @p mat_b has block size (NB x NB)
+/// @pre @p mat_b has tile size (NB x NB)
 template <Backend backend, Device device, class T>
 void generalized_to_standard(blas::Uplo uplo, Matrix<T, device>& mat_a, Matrix<T, device>& mat_b) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
-  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(matrix::square_block_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_size(mat_b), mat_b);
-  DLAF_ASSERT(matrix::square_blocksize(mat_b), mat_b);
+  DLAF_ASSERT(matrix::square_block_size(mat_b), mat_b);
   DLAF_ASSERT(mat_a.size() == mat_b.size(), mat_a, mat_b);
   DLAF_ASSERT(mat_a.blockSize() == mat_b.blockSize(), mat_a, mat_b);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
@@ -87,23 +87,23 @@ void generalized_to_standard(blas::Uplo uplo, Matrix<T, device>& mat_a, Matrix<T
 /// Only the tiles of the matrix which contain the lower triangular or the upper triangular part are accessed.
 /// @pre @p mat_a is distributed according to @p grid
 /// @pre @p mat_a has size (N x N)
-/// @pre @p mat_a has blocksize (NB x NB)
-/// @pre @p mat_a has tilesize (NB x NB)
+/// @pre @p mat_a has block size (NB x NB)
+/// @pre @p mat_a has tile size (NB x NB)
 ///
 /// @param mat_b contains the triangular matrix. It can be lower (L) or upper (U). Only the tiles of
 /// the matrix which contain the lower triangular or the upper triangular part are accessed.
 /// Note: B should be modifiable as the diagonal tiles might be temporarily modified during the calculation.
 /// @pre @p mat_b is distributed according to @p grid
 /// @pre @p mat_b has size (N x N)
-/// @pre @p mat_b has blocksize (NB x NB)
-/// @pre @p mat_b has tilesize (NB x NB)
+/// @pre @p mat_b has block size (NB x NB)
+/// @pre @p mat_b has tile size (NB x NB)
 template <Backend backend, Device device, class T>
 void generalized_to_standard(comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix<T, device>& mat_a,
                              Matrix<T, device>& mat_b) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
-  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(matrix::square_block_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_size(mat_b), mat_b);
-  DLAF_ASSERT(matrix::square_blocksize(mat_b), mat_b);
+  DLAF_ASSERT(matrix::square_block_size(mat_b), mat_b);
   DLAF_ASSERT(mat_a.size() == mat_b.size(), mat_a, mat_b);
   DLAF_ASSERT(mat_a.blockSize() == mat_b.blockSize(), mat_a, mat_b);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);

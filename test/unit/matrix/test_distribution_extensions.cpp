@@ -24,7 +24,7 @@ using namespace testing;
 struct ParametersIndices {
   // Distribution settings
   GlobalElementSize size;
-  TileElementSize block_size;
+  GlobalElementSize block_size;
   TileElementSize tile_size;
   comm::Index2D rank;
   comm::Size2D grid_size;

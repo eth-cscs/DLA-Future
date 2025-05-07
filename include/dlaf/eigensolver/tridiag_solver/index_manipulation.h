@@ -29,8 +29,8 @@ namespace dlaf::eigensolver::internal {
 // Calculates the problem size in the tile range [i_begin, i_end)
 inline SizeType problemSize(const SizeType i_begin, const SizeType i_end,
                             const matrix::Distribution& distr) {
-  const SizeType nb = distr.blockSize().rows();
-  const SizeType nbr = distr.tileSize(GlobalTileIndex(i_end - 1, 0)).rows();
+  const SizeType nb = distr.tile_size().rows();
+  const SizeType nbr = distr.tile_size_of(GlobalTileIndex(i_end - 1, 0)).rows();
   return (i_end - i_begin - 1) * nb + nbr;
 }
 
@@ -39,7 +39,7 @@ template <Device D>
 void initIndex(const SizeType i_begin, const SizeType i_end, Matrix<SizeType, D>& index) {
   namespace di = dlaf::internal;
 
-  const SizeType nb = index.distribution().blockSize().rows();
+  const SizeType nb = index.distribution().tile_size().rows();
   for (SizeType i = i_begin; i < i_end; ++i) {
     const GlobalTileIndex tile_idx(i, 0);
     const SizeType tile_row = (i - i_begin) * nb;

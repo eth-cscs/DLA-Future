@@ -35,7 +35,6 @@
 #include <dlaf/matrix/copy_tile.h>
 #include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/index.h>
-#include <dlaf/matrix/layout_info.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_ref.h>
 #include <dlaf/matrix/panel.h>

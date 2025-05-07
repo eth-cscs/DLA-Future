@@ -13,11 +13,11 @@
 #include <tuple>
 
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/matrix/col_major_layout.h>
 #include <dlaf/matrix/distribution.h>
-#include <dlaf/matrix/layout_info.h>
 
-std::tuple<dlaf::matrix::Distribution, dlaf::matrix::LayoutInfo> distribution_and_layout(
-    const struct DLAF_descriptor dlaf_desc, dlaf::comm::CommunicatorGrid& grid);
+dlaf::matrix::ColMajorLayout make_layout(const struct DLAF_descriptor dlaf_desc,
+                                         dlaf::comm::CommunicatorGrid& grid);
 
 dlaf::common::Ordering char2order(const char order);
 

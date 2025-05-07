@@ -30,7 +30,7 @@ void hermitian_multiplication(comm::CommunicatorGrid& grid, blas::Side side, bla
                               const T alpha, Matrix<const T, D>& mat_a, MatrixRef<const T, D>& mat_b,
                               const T beta, Matrix<T, D>& mat_c) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
-  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(matrix::square_block_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_c), mat_c);
@@ -75,26 +75,26 @@ void hermitian_multiplication(comm::CommunicatorGrid& grid, blas::Side side, bla
 /// are accessed in read-only mode (the elements are not modified),
 /// @pre @p mat_a is not distributed
 /// @pre @p mat_a has size (N x M)
-/// @pre @p mat_a has blocksize (NB x NB)
-/// @pre @p mat_a has tilesize (NB x NB)
+/// @pre @p mat_a has block size (NB x NB)
+/// @pre @p mat_a has tile size (NB x NB)
 ///
 /// @param mat_b contains the matrix B accessed in read-only mode (the elements are not modified),
 /// @pre @p mat_b is not distributed
 /// @pre @p mat_b has size (M x K)
-/// @pre @p mat_b has blocksize (NB x NB)
-/// @pre @p mat_b has tilesize (NB x NB)
+/// @pre @p mat_b has block size (NB x NB)
+/// @pre @p mat_b has tile size (NB x NB)
 ///
 /// @param mat_c on entry it contains the matrix C, on exit the matrix elements are overwritten with the
 /// elements of the result.
 /// @pre @p mat_c is not distributed
 /// @pre @p mat_c has size (N x K)
-/// @pre @p mat_c has blocksize (NB x NB)
-/// @pre @p mat_c has tilesize (NB x NB)
+/// @pre @p mat_c has block size (NB x NB)
+/// @pre @p mat_c has tile size (NB x NB)
 template <Backend B, Device D, class T>
 void hermitian_multiplication(blas::Side side, blas::Uplo uplo, const T alpha, Matrix<const T, D>& mat_a,
                               Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
-  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(matrix::square_block_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_c), mat_c);
@@ -136,21 +136,21 @@ void hermitian_multiplication(blas::Side side, blas::Uplo uplo, const T alpha, M
 /// are accessed in read-only mode (the elements are not modified),
 /// @pre @p mat_a is distributed according to @p grid
 /// @pre @p mat_a has size (N x M)
-/// @pre @p mat_a has blocksize (NB x NB)
-/// @pre @p mat_a has tilesize (NB x NB)
+/// @pre @p mat_a has block size (NB x NB)
+/// @pre @p mat_a has tile size (NB x NB)
 ///
 /// @param mat_b contains the matrix B accessed in read-only mode (the elements are not modified),
 /// @pre @p mat_b is distributed according to @p grid
 /// @pre @p mat_b has size (M x K)
-/// @pre @p mat_b has blocksize (NB x NB)
-/// @pre @p mat_b has tilesize (NB x NB)
+/// @pre @p mat_b has block size (NB x NB)
+/// @pre @p mat_b has tile size (NB x NB)
 ///
 /// @param mat_c on entry it contains the matrix C, on exit the matrix elements are overwritten with the
 /// elements of the result.
 /// @pre @p mat_c is distributed according to @p grid
 /// @pre @p mat_c has size (N x K)
-/// @pre @p mat_c has blocksize (NB x NB)
-/// @pre @p mat_c has tilesize (NB x NB)
+/// @pre @p mat_c has block size (NB x NB)
+/// @pre @p mat_c has tile size (NB x NB)
 template <Backend B, Device D, class T>
 void hermitian_multiplication(comm::CommunicatorGrid& grid, blas::Side side, blas::Uplo uplo,
                               const T alpha, Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b,

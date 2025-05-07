@@ -15,7 +15,7 @@
 #include <vector>
 
 #include <dlaf/common/range2d.h>
-#include <dlaf/matrix/layout_info.h>
+#include <dlaf/matrix/col_major_layout.h>
 #include <dlaf/matrix/tile.h>
 #include <dlaf/memory/memory_view.h>
 #include <dlaf/types.h>
@@ -47,7 +47,7 @@ struct MatrixLocal;
 ///
 /// About its semantic, it is similar to a std::unique_ptr.
 template <class T>
-struct MatrixLocal<const T> {
+struct MatrixLocal<const T> : public ::dlaf::matrix::internal::MatrixBase {
   using MemoryT = memory::MemoryView<T, Device::CPU>;
   using ConstTileT = Tile<const T, Device::CPU>;
 
@@ -55,20 +55,19 @@ struct MatrixLocal<const T> {
   //
   /// @pre !sz.isEmpty()
   /// @pre !blocksize.isEmpty()
-  MatrixLocal(GlobalElementSize sz, TileElementSize blocksize) noexcept
-      : layout_{colMajorLayout({sz.rows(), sz.cols()}, blocksize, std::max(sz.rows(), SizeType(1)))} {
-    DLAF_ASSERT(!blocksize.isEmpty(), blocksize);
-
+  MatrixLocal(GlobalElementSize sz, TileElementSize tile_size) noexcept
+      : MatrixBase(Distribution{sz, tile_size, {1, 1}, {0, 0}, {0, 0}}),
+        ld_(std::max<SizeType>(1, sz.rows())) {
     if (sz.isEmpty())
       return;
 
-    memory_ = MemoryT{layout_.minMemSize()};
+    ColMajorLayout layout(distribution(), ld_);
+    memory_ = MemoryT{layout.min_mem_size()};
 
-    for (const auto& tile_index : iterate_range2d(layout_.nrTiles()))
-      tiles_.emplace_back(layout_.tileSize(tile_index),
-                          MemoryT{memory_, layout_.tileOffset(tile_index),
-                                  layout_.minTileMemSize(tile_index)},
-                          layout_.ldTile());
+    for (const auto& tile_index : iterate_range2d(layout.nr_tiles()))
+      tiles_.emplace_back(
+          layout.tile_size_of(tile_index),
+          MemoryT{memory_, layout.tile_offset(tile_index), layout.min_tile_mem_size(tile_index)}, ld_);
   }
 
   MatrixLocal(const MatrixLocal&) = delete;
@@ -78,7 +77,7 @@ struct MatrixLocal<const T> {
 
   /// Access elements
   const T* ptr(const GlobalElementIndex& index = {0, 0}) const noexcept {
-    return memory_(elementLinearIndex(index));
+    return memory_(element_linear_index(index));
   }
 
   /// Access elements
@@ -88,48 +87,21 @@ struct MatrixLocal<const T> {
 
   /// Access tiles
   const ConstTileT& tile_read(const GlobalTileIndex& index) const noexcept {
-    return tiles_[tileLinearIndex(index)];
+    return tiles_[tile_linear_index(LocalTileIndex{index.row(), index.col()})];
   }
 
   SizeType ld() const noexcept {
-    return layout_.size().rows();
-  }
-
-  GlobalElementSize size() const noexcept {
-    return GlobalElementSize{layout_.size().rows(), layout_.size().cols()};
-  }
-
-  TileElementSize tile_size() const noexcept {
-    return layout_.blockSize();
-  }
-
-  TileElementSize block_size() const noexcept {
-    return layout_.blockSize();
-  }
-
-  TileElementSize blockSize() const noexcept {
-    return layout_.blockSize();
-  }
-
-  GlobalTileSize nrTiles() const noexcept {
-    return GlobalTileSize{layout_.nrTiles().rows(), layout_.nrTiles().cols()};
+    return ld_;
   }
 
 protected:
-  SizeType elementLinearIndex(const GlobalElementIndex& index) const noexcept {
+  SizeType element_linear_index(const GlobalElementIndex& index) const noexcept {
     DLAF_ASSERT(index.isIn(size()), index, size());
 
-    return index.row() + index.col() * layout_.ldTile();
+    return index.row() + index.col() * ld_;
   }
 
-  std::size_t tileLinearIndex(const GlobalTileIndex& index) const noexcept {
-    DLAF_ASSERT(LocalTileIndex(index.row(), index.col()).isIn(layout_.nrTiles()), index,
-                layout_.nrTiles());
-
-    return to_sizet(index.row() + index.col() * layout_.nrTiles().rows());
-  }
-
-  dlaf::matrix::LayoutInfo layout_;
+  SizeType ld_;
   MemoryT memory_;
 
   // Note: this is non-const so that it can be used also by the inheriting class
@@ -153,7 +125,7 @@ struct MatrixLocal : public MatrixLocal<const T> {
 
   /// Access elements
   T* ptr(const GlobalElementIndex& index = {0, 0}) const noexcept {
-    return memory_(elementLinearIndex(index));
+    return memory_(element_linear_index(index));
   }
 
   /// Access elements
@@ -163,15 +135,14 @@ struct MatrixLocal : public MatrixLocal<const T> {
 
   /// Access tiles
   const TileT& tile(const GlobalTileIndex& index) const noexcept {
-    return tiles_[tileLinearIndex(index)];
+    return tiles_[tile_linear_index(LocalTileIndex{index.row(), index.col()})];
   }
 
 protected:
   using BaseT = MatrixLocal<const T>;
-  using BaseT::elementLinearIndex;
-  using BaseT::layout_;
+  using BaseT::element_linear_index;
   using BaseT::memory_;
-  using BaseT::tileLinearIndex;
+  using BaseT::tile_linear_index;
   using BaseT::tiles_;
 };
 

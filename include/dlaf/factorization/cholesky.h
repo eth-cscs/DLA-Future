@@ -34,12 +34,12 @@ namespace dlaf {
 /// which contain the upper or the lower triangular part (depending on the value of uplo),
 /// @pre @p mat_a is not distributed
 /// @pre @p mat_a has size (N x N)
-/// @pre @p mat_a has blocksize (NB x NB)
-/// @pre @p mat_a has tilesize (NB x NB)
+/// @pre @p mat_a has block size (NB x NB)
+/// @pre @p mat_a has tile size (NB x NB)
 template <Backend backend, Device device, class T>
 void cholesky_factorization(blas::Uplo uplo, Matrix<T, device>& mat_a) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
-  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(matrix::square_block_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
 
@@ -62,12 +62,12 @@ void cholesky_factorization(blas::Uplo uplo, Matrix<T, device>& mat_a) {
 /// which contain the upper or the lower triangular part (depending on the value of uplo),
 /// @pre @p mat_a is distributed according to @p grid
 /// @pre @p mat_a has size (N x N)
-/// @pre @p mat_a has blocksize (NB x NB)
-/// @pre @p mat_a has tilesize (NB x NB)
+/// @pre @p mat_a has block size (NB x NB)
+/// @pre @p mat_a has tile size (NB x NB)
 template <Backend backend, Device device, class T>
 void cholesky_factorization(comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix<T, device>& mat_a) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
-  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(matrix::square_block_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
 

@@ -29,8 +29,8 @@ namespace dlaf::eigensolver::internal {
 /// triangular part will be used.
 /// @pre @p mat_a is not distributed
 /// @pre @p mat_a has size (N x N)
-/// @pre @p mat_a has blocksize (NB x NB)
-/// @pre @p mat_a has tilesize (NB x NB)
+/// @pre @p mat_a has block size (NB x NB)
+/// @pre @p mat_a has tile size (NB x NB)
 ///
 /// @param band_size size of the band of the resulting matrix (main diagonal + band_size sub-diagonals)
 /// @pre @p `mat_a.blockSize().rows() % band_size == 0`
@@ -40,7 +40,7 @@ namespace dlaf::eigensolver::internal {
 template <Backend B, Device D, class T>
 Matrix<T, D> reduction_to_band(Matrix<T, D>& mat_a, const SizeType band_size) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
-  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(matrix::square_block_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
 
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
@@ -65,7 +65,7 @@ Matrix<T, D> reduction_to_band(Matrix<T, D>& mat_a, const SizeType band_size) {
 /// which are stored, together with the resulting band-diagonal matrix, in-place in the lower triangular
 /// part of @p mat_a.
 ///
-/// In particular, @p mat_a will look like this (tile representation) if band_size == blocksize
+/// In particular, @p mat_a will look like this (tile representation) if band_size == block_size
 ///
 /** @verbatim
 B ~ ~ ~ ~ ~
@@ -82,7 +82,7 @@ v v v v * B
 /// of the band (upper triangular diagonal included) and of the elementary reflectors (lower triangular
 /// diagonal excluded).
 ///
-/// In case band_size < blocksize:
+/// In case band_size < block_size:
 /** @verbatim
 * ~ ~ ~ ~ ~
 * * ~ ~ ~ ~
@@ -99,8 +99,8 @@ v v v v * *
 /// the lower triangular part will be used.
 /// @pre @p mat_a is distributed according to @p grid
 /// @pre @p mat_a has size (N x N)
-/// @pre @p mat_a has blocksize (NB x NB)
-/// @pre @p mat_a has tilesize (NB x NB)
+/// @pre @p mat_a has block size (NB x NB)
+/// @pre @p mat_a has tile size (NB x NB)
 ///
 /// @param band_size size of the band of the resulting matrix (main diagonal + band_size sub-diagonals)
 /// @pre `mat_a.blockSize().rows() % band_size == 0`
@@ -110,7 +110,7 @@ template <Backend B, Device D, class T>
 Matrix<T, D> reduction_to_band(comm::CommunicatorGrid& grid, Matrix<T, D>& mat_a,
                                const SizeType band_size) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
-  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(matrix::square_block_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
 

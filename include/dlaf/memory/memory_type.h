@@ -22,7 +22,7 @@ enum class MemoryType { Host, Device, Managed, Unified };
 
 #ifdef DLAF_WITH_CUDA
 inline MemoryType get_memory_type(const void* p) {
-  cudaPointerAttribute_t attributes{};
+  cudaPointerAttributes attributes{};
   cudaError_t status = cudaPointerGetAttributes(&attributes, p);
   if (status == cudaErrorInvalidValue) {
     // If Cuda returns cudaErrorInvalidValue we assume it's due
@@ -44,7 +44,7 @@ inline MemoryType get_memory_type(const void* p) {
     case cudaMemoryTypeManaged:
       return MemoryType::Managed;
     default:
-      DLAF_UNREACHABLE_PLAIN;
+      return DLAF_UNREACHABLE(MemoryType);
   }
 }
 #elif defined(DLAF_WITH_HIP)
@@ -79,7 +79,7 @@ inline MemoryType get_memory_type(const void* p) {
     case hipMemoryTypeManaged:
       return MemoryType::Managed;
     default:
-      DLAF_UNREACHABLE_PLAIN;
+      return DLAF_UNREACHABLE(MemoryType);
   }
 }
 #else

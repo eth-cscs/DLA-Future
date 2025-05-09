@@ -40,9 +40,9 @@ using namespace testing;
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksCAPIEnvironment);
 
 template <class T>
-struct InverseFromCholeskyFactorTestMC : public TestWithCommGrids {};
+struct InverseFromCholeskyFactorTestCapi : public TestWithCommGrids {};
 
-TYPED_TEST_SUITE(InverseFromCholeskyFactorTestMC, MatrixElementTypes);
+TYPED_TEST_SUITE(InverseFromCholeskyFactorTestCapi, MatrixElementTypes);
 
 #ifdef DLAF_WITH_GPU
 template <class T>
@@ -59,7 +59,7 @@ const std::vector<std::tuple<SizeType, SizeType>> sizes = {
     {4, 3}, {16, 10}, {34, 13}, {32, 5}  // m > mb
 };
 
-template <class T, Backend B, Device D, API api>
+template <class T, API api>
 void test_inverse_from_cholesky_factor(comm::CommunicatorGrid& grid, const blas::Uplo uplo,
                                        const SizeType m, const SizeType mb) {
   auto dlaf_context = c_api_test_initialize<api>(pika_argc, pika_argv, dlaf_argc, dlaf_argv, grid);
@@ -154,54 +154,24 @@ void test_inverse_from_cholesky_factor(comm::CommunicatorGrid& grid, const blas:
   c_api_test_finalize<api>(dlaf_context);
 }
 
-TYPED_TEST(InverseFromCholeskyFactorTestMC, CorrectnessDistributedDLAF) {
+TYPED_TEST(InverseFromCholeskyFactorTestCapi, CorrectnessDistributedDLAF) {
   for (auto& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
-        test_inverse_from_cholesky_factor<TypeParam, Backend::MC, Device::CPU, API::dlaf>(grid, uplo, m,
-                                                                                          mb);
+        test_inverse_from_cholesky_factor<TypeParam, API::dlaf>(grid, uplo, m, mb);
       }
     }
   }
 }
 
 #ifdef DLAF_WITH_SCALAPACK
-TYPED_TEST(InverseFromCholeskyFactorTestMC, CorrectnessDistributedScaLAPACK) {
+TYPED_TEST(InverseFromCholeskyFactorTestCapi, CorrectnessDistributedScaLAPACK) {
   for (auto& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
-        test_inverse_from_cholesky_factor<TypeParam, Backend::MC, Device::CPU, API::scalapack>(grid,
-                                                                                               uplo, m,
-                                                                                               mb);
+        test_inverse_from_cholesky_factor<TypeParam, API::scalapack>(grid, uplo, m, mb);
       }
     }
   }
 }
-#endif
-
-#ifdef DLAF_WITH_GPU
-TYPED_TEST(InverseFromCholeskyFactorTestGPU, CorrectnessDistributedDLAF) {
-  for (auto& grid : this->commGrids()) {
-    for (auto uplo : blas_uplos) {
-      for (const auto& [m, mb] : sizes) {
-        test_inverse_from_cholesky_factor<TypeParam, Backend::GPU, Device::GPU, API::dlaf>(grid, uplo, m,
-                                                                                           mb);
-      }
-    }
-  }
-}
-
-#ifdef DLAF_WITH_SCALAPACK
-TYPED_TEST(InverseFromCholeskyFactorTestGPU, CorrectnessDistributedScaLapack) {
-  for (auto& grid : this->commGrids()) {
-    for (auto uplo : blas_uplos) {
-      for (const auto& [m, mb] : sizes) {
-        test_inverse_from_cholesky_factor<TypeParam, Backend::GPU, Device::GPU, API::scalapack>(grid,
-                                                                                                uplo, m,
-                                                                                                mb);
-      }
-    }
-  }
-}
-#endif
 #endif

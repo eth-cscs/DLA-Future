@@ -15,7 +15,7 @@
 #include <dlaf_c/desc.h>
 #include <dlaf_c/utils.h>
 
-/// Inverse of a positiv definite matrix given its Cholesky factor.
+/// Inversion of a positive definite matrix given its Cholesky factor.
 ///
 /// @pre The matrix \f$\mathbf{A}\f$ is assumed to be distributed and in host memory. Moving to and from
 /// GPU memory is handled internally.
@@ -28,7 +28,7 @@
 /// \f$\mathbf{A}\f$ is referenced
 /// @param a Local part of the global matrix \f$\mathbf{A}\f$
 /// @param dlaf_desca DLA-Future descriptor of the global matrix \f$\mathbf{A}\f$
-/// @return 0 if the factorization completed normally
+/// @return 0 if the inversion completed normally
 DLAF_EXTERN_C int dlaf_inverse_from_cholesky_factor_s(
     const int dlaf_context, const char uplo, float* a,
     const struct DLAF_descriptor dlaf_desca) DLAF_NOEXCEPT;
@@ -50,7 +50,7 @@ DLAF_EXTERN_C int dlaf_inverse_from_cholesky_factor_z(
 
 #ifdef DLAF_WITH_SCALAPACK
 
-/// Inverse of a positiv definite matrix given its Cholesky factor.
+/// Inversion of a positive definite matrix given its Cholesky factor.
 ///
 /// @remark This function is only available when DLAF_WITH_SCALAPACK=ON.
 ///
@@ -72,7 +72,7 @@ DLAF_EXTERN_C int dlaf_inverse_from_cholesky_factor_z(
 /// @param ja column index of the global matrix \f$\mathbf{A}\f$ identifying the first column of the
 /// submatrix \f$\mathbf{A}\f$, has to be 1
 /// @param desca ScaLAPACK array descriptor of the global matrix \f$\mathbf{A}\f$
-/// @param[out] info 0 if the factorization completed normally
+/// @param[out] info 0 if the inversion completed normally
 DLAF_EXTERN_C void dlaf_pspotri(const char uplo, const int n, float* a, const int ia, const int ja,
                                 const int desca[9], int* info) DLAF_NOEXCEPT;
 

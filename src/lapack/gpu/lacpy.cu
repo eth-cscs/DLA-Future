@@ -142,8 +142,7 @@ static whip::memcpy_kind get_lacpy_memcpy_kind(const void* src, const void* dst)
   }
   else {
     DLAF_ASSERT(false,
-                "Attempting to do a HIP lacpy with unsupported source and destination memory type",
-                src_type, dst_type);
+                "Attempting to do a HIP lacpy with unsupported source and destination memory type");
   }
 #else
   dlaf::internal::silenceUnusedWarningFor(src, dst);

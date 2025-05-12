@@ -20,10 +20,10 @@
 
 #include <umpire/Allocator.hpp>
 
+#include <dlaf/memory/memory_type.h>
 #include <dlaf/types.h>
 
-namespace dlaf {
-namespace memory {
+namespace dlaf::memory {
 
 namespace internal {
 umpire::Allocator& getUmpireHostAllocator();
@@ -88,6 +88,22 @@ public:
   /// @pre @p ptr+i can be dereferenced for 0 <= @c i < @p size.
   MemoryChunk(T* ptr, SizeType size) : size_(size), ptr_(size > 0 ? ptr : nullptr), allocated_(false) {
     DLAF_ASSERT_HEAVY(size == 0 ? ptr_ == nullptr : ptr_ != nullptr, size);
+
+    using dlaf::memory::internal::get_memory_type;
+    using dlaf::memory::internal::MemoryType;
+    auto memory_type = get_memory_type(ptr);
+    switch (memory_type) {
+      case MemoryType::Host:
+        DLAF_ASSERT(D == Device::CPU, "Using a host pointer to construct a device MemoryChunk");
+        break;
+      case MemoryType::Device:
+        DLAF_ASSERT(D == Device::GPU, "Using a device pointer to construct a host MemoryChunk");
+        break;
+      case MemoryType::Managed:
+        break;
+      case MemoryType::Unified:
+        break;
+    }
   }
 
   MemoryChunk(const MemoryChunk&) = delete;
@@ -179,5 +195,4 @@ private:
   bool allocated_;
 };
 
-}  // namespace memory
-}  // namespace dlaf
+}

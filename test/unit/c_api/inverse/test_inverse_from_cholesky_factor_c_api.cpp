@@ -44,13 +44,6 @@ struct InverseFromCholeskyFactorTestCapi : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(InverseFromCholeskyFactorTestCapi, MatrixElementTypes);
 
-#ifdef DLAF_WITH_GPU
-template <class T>
-struct InverseFromCholeskyFactorTestGPU : public TestWithCommGrids {};
-
-TYPED_TEST_SUITE(InverseFromCholeskyFactorTestGPU, MatrixElementTypes);
-#endif
-
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
 
 const std::vector<std::tuple<SizeType, SizeType>> sizes = {

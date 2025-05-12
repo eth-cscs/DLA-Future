@@ -50,12 +50,12 @@ void inverse_from_cholesky_factor(blas::Uplo uplo, Matrix<T, device>& mat_a) {
   }
 }
 
-/// Invert a non-singular triangular matrix in-place.
+/// Compute the inverse of a positive definite matrix given its Cholesky factor.
 ///
 /// @param grid is the communicator grid on which the matrix A has been distributed,
 /// @param uplo specifies if the elements of the Hermitian matrix to be referenced are the elements in
 /// the lower or upper triangular part,
-/// @param mat_a on entry it contains the triangular matrix A, on exit the matrix elements
+/// @param mat_a on entry it contains the Cholesky factor, on exit the matrix elements
 /// are overwritten with the elements of the inverse. Only the tiles of the matrix
 /// which contain the upper or the lower triangular part (depending on the value of uplo),
 /// are accessed and modified.

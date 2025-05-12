@@ -45,7 +45,7 @@ using matrix::Tile;
 
 #ifdef DLAF_DOXYGEN
 
-/// Assemble the cholesky inverse computing L^H L or U U^H for the triangular tile @a.
+/// Assemble the Cholesky inverse computing L^H L or U U^H for the triangular tile @a.
 ///
 /// Only the upper or lower triangular elements are referenced according to @p uplo.
 ///

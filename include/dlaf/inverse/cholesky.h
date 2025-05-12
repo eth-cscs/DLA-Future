@@ -22,11 +22,11 @@
 
 namespace dlaf {
 
-/// Compute the inverse of a positiv definite matrix given its Cholesky factor.
+/// Compute the inverse of a positive definite matrix given its Cholesky factor.
 ///
 /// @param uplo specifies if the elements of the Hermitian matrix to be referenced are the elements in
 /// the lower or upper triangular part,
-/// @param mat_a on entry it contains the cholesky factor, on exit the matrix elements
+/// @param mat_a on entry it contains the Cholesky factor, on exit the matrix elements
 /// are overwritten with the elements of the inverse. Only the tiles of the matrix
 /// which contain the upper or the lower triangular part (depending on the value of uplo),
 /// are accessed and modified.

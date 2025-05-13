@@ -125,7 +125,7 @@ if(DLAF_WITH_CUDA)
   find_package(CUDAToolkit REQUIRED)
   set(DLAF_WITH_GPU ON)
 
-  # Enabling CUDA wilL set CMAKE_CUDA_ARCHITECTURES to the default value, if not set
+  # Enabling CUDA will set CMAKE_CUDA_ARCHITECTURES to the default value, if not set
   # Let the user know if the default value is being used
   if(NOT _DLAF_CUDA_ARCHITECTURES_DEFINED)
     message(WARNING "Using default CMAKE_CUDA_ARCHITECTURES=${CMAKE_CUDA_ARCHITECTURES}.\n"

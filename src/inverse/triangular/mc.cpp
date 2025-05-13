@@ -12,14 +12,10 @@
 
 #include <dlaf/inverse/triangular/impl.h>
 
-namespace dlaf {
-namespace inverse {
-namespace internal {
+namespace dlaf::inverse::internal {
 
 DLAF_INVERSE_TRIANGULAR_ETI(, Backend::MC, Device::CPU, float)
 DLAF_INVERSE_TRIANGULAR_ETI(, Backend::MC, Device::CPU, double)
 DLAF_INVERSE_TRIANGULAR_ETI(, Backend::MC, Device::CPU, std::complex<float>)
 DLAF_INVERSE_TRIANGULAR_ETI(, Backend::MC, Device::CPU, std::complex<double>)
-}
-}
 }

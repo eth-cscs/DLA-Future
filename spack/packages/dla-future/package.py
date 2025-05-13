@@ -168,6 +168,8 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             depends_on(f"pika cuda_arch={arch}", when=f"cuda_arch={arch}")
             depends_on(f"umpire cuda_arch={arch}", when=f"cuda_arch={arch}")
 
+        conflicts("cuda_arch=none")
+
     patch(
         "https://github.com/eth-cscs/DLA-Future/commit/efc9c176a7a8c512b3f37d079dec8c25ac1b7389.patch?full_index=1",
         sha256="f40e4a734650f56c39379717a682d00d6400a7a102d90821542652824a8f64cd",

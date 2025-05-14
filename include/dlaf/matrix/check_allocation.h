@@ -11,7 +11,7 @@
 #pragma once
 
 /// @file
-/// Utilities to check if a matrix is allocated correclty according to the given MatrixAllocation parameter.
+/// Utilities to check if a matrix is allocated correctly according to the given MatrixAllocation parameter.
 ///
 /// These functions are included in DLAF as they can be used by the users to test custom defined layouts.
 /// Note: These functions are blocking and meant only for testing purpose. Do not use them in applications.

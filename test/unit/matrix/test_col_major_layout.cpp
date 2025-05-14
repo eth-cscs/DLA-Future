@@ -21,6 +21,7 @@
 using namespace dlaf;
 using namespace testing;
 
+// size, tile_size, ld, min_memory
 const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, SizeType>> values(
     {{{31, 17}, {7, 11}, 31, 527},   // Scalapack like layout
      {{31, 17}, {32, 11}, 31, 527},  // only one row of tiles
@@ -59,6 +60,7 @@ TEST(ColMajorLayoutTest, Constructor) {
   }
 }
 
+// size, tile_size, ld, is_equal
 const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, bool>> comp_values({
     {{25, 25}, {5, 5}, 50, true},   // Original
     {{23, 25}, {5, 5}, 50, false},  // different size

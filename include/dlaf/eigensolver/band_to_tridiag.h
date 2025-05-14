@@ -67,18 +67,18 @@ namespace dlaf::eigensolver::internal {
 /// @param mat_a contains the Hermitian band matrix A (if A is real, the matrix is symmetric).
 /// @pre @p mat_a is not distributed
 /// @pre @p mat_a has size (N x N)
-/// @pre @p mat_a has blocksize (NB x NB)
-/// @pre @p mat_a has tilesize (NB x NB)
+/// @pre @p mat_a has block size (NB x NB)
+/// @pre @p mat_a has tile size (NB x NB)
 ///
 /// @pre @p band_size is a divisor of `mat_a.blockSize().cols()`, and @p band_size >= 2
 template <Backend B, Device D, class T>
 TridiagResult<T, Device::CPU> band_to_tridiagonal(blas::Uplo uplo, SizeType band_size,
                                                   Matrix<const T, D>& mat_a) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
-  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
+  DLAF_ASSERT(matrix::square_block_size(mat_a), mat_a);
   DLAF_ASSERT(mat_a.blockSize().rows() % band_size == 0, mat_a.blockSize().rows(), band_size);
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
-  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
   DLAF_ASSERT(band_size >= 2, band_size);
 
   switch (uplo) {
@@ -140,17 +140,17 @@ TridiagResult<T, Device::CPU> band_to_tridiagonal(blas::Uplo uplo, SizeType band
 /// @param mat_a contains the Hermitian band matrix A (if A is real, the matrix is symmetric).
 /// @pre @p mat_a is distributed according to @p grid
 /// @pre @p mat_a has size (N x N)
-/// @pre @p mat_a has blocksize (NB x NB)
-/// @pre @p mat_a has tilesize (NB x NB)
+/// @pre @p mat_a has block size (NB x NB)
+/// @pre @p mat_a has tile size (NB x NB)
 ///
-/// @pre @p band_size is a divisor of `mat_a.blockSize().cols()`, and @p band_size >= 2
+/// @pre @p band_size is a divisor of `mat_a.block_size().cols()`, and @p band_size >= 2
 template <Backend backend, Device device, class T>
 TridiagResult<T, Device::CPU> band_to_tridiagonal(comm::CommunicatorGrid& grid, blas::Uplo uplo,
                                                   SizeType band_size, Matrix<const T, device>& mat_a) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
-  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
-  DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
+  DLAF_ASSERT(matrix::square_block_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
   DLAF_ASSERT(band_size >= 2, band_size);
 
   // If the grid contains only one rank force local implementation.

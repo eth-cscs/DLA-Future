@@ -46,14 +46,20 @@ bool square_size(const MatrixLike& m) noexcept {
 
 /// Returns true if the matrix block size is square.
 template <class MatrixLike>
-bool square_blocksize(const MatrixLike& m) noexcept {
+bool square_block_size(const MatrixLike& m) noexcept {
   return m.block_size().rows() == m.block_size().cols();
+}
+
+/// Returns true if the matrix tile size is square.
+template <class MatrixLike>
+bool square_tile_size(const MatrixLike& m) noexcept {
+  return m.tile_size().rows() == m.tile_size().cols();
 }
 
 /// Returns true if the matrix has a single tile per block.
 template <class MatrixLike>
 bool single_tile_per_block(const MatrixLike& m) noexcept {
-  return m.block_size() == m.tile_size();
+  return m.distribution().single_tile_per_block();
 }
 
 /// Returns true if matrices have equal sizes.
@@ -62,10 +68,16 @@ bool equal_size(const MatrixLikeA& lhs, const MatrixLikeB& rhs) noexcept {
   return lhs.size() == rhs.size();
 }
 
-/// Returns true if matrices have equal blocksizes.
+/// Returns true if matrices have equal block sizes.
 template <class T, Device D1, Device D2>
-bool equal_blocksize(const Matrix<const T, D1>& lhs, Matrix<const T, D2>& rhs) noexcept {
+bool equal_block_size(const Matrix<const T, D1>& lhs, Matrix<const T, D2>& rhs) noexcept {
   return lhs.block_size() == rhs.block_size();
+}
+
+/// Returns true if matrices have equal tile sizes.
+template <class T, Device D1, Device D2>
+bool equal_tile_size(const Matrix<const T, D1>& lhs, Matrix<const T, D2>& rhs) noexcept {
+  return lhs.tile_size() == rhs.tile_size();
 }
 
 /// Returns true if the matrix is local to a process.
@@ -393,14 +405,14 @@ void set_lower_and_upper_tile(const Tile<T, Device::CPU>& tile, internal::getter
 /// will be set with the same set of values.
 ///
 /// @pre @param matrix is a square matrix,
-/// @pre @param matrix has a square blocksize.
+/// @pre @param matrix has a square tile_size.
 template <class T>
 void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const SizeType offset_value,
                                       std::optional<SizeType> band_size = std::nullopt) {
   using pika::execution::thread_stacksize;
 
   // note:
-  // By assuming square blocksizes, it is easier to locate elements. In fact:
+  // By assuming square tile_sizes, it is easier to locate elements. In fact:
   // - Elements on the diagonal are stored in the diagonal of the diagonal tiles
   // - Tiles under the diagonal store elements of the lower triangular matrix
   // - Tiles over the diagonal store elements of the upper triangular matrix
@@ -408,9 +420,9 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const Size
   const Distribution& dist = matrix.distribution();
 
   DLAF_ASSERT(square_size(matrix), matrix);
-  DLAF_ASSERT(square_blocksize(matrix), matrix);
+  DLAF_ASSERT(square_tile_size(matrix), matrix);
 
-  auto full_tile_size = matrix.block_size();
+  auto full_tile_size = matrix.tile_size();
 
   for (auto ij_lc : iterate_range2d(dist.local_nr_tiles())) {
     GlobalTileIndex ij = dist.global_tile_index(ij_lc);
@@ -473,7 +485,7 @@ dlaf::matrix::internal::SubMatrixSpec sub_matrix_spec_slice_cols(const Matrix<T,
 /// will be set with the same set of values.
 ///
 /// @pre @param matrix is a square matrix,
-/// @pre @param matrix has a square blocksize.
+/// @pre @param matrix has a square tile_size.
 template <class T>
 void set_random_hermitian(Matrix<T, Device::CPU>& matrix) {
   internal::set_random_hermitian_with_offset(matrix, 0);
@@ -491,7 +503,7 @@ void set_random_hermitian(Matrix<T, Device::CPU>& matrix) {
 /// will be set with the same set of values.
 ///
 /// @pre @param matrix is a square matrix,
-/// @pre @param matrix has a square blocksize.
+/// @pre @param matrix has a square tile_size.
 template <class T>
 void set_random_hermitian_banded(Matrix<T, Device::CPU>& matrix, const SizeType band_size) {
   internal::set_random_hermitian_with_offset(matrix, 0, band_size);
@@ -512,7 +524,7 @@ void set_random_hermitian_banded(Matrix<T, Device::CPU>& matrix, const SizeType 
 /// will be set with the same set of values.
 ///
 /// @pre @param matrix is a square matrix,
-/// @pre @param matrix has a square blocksize.
+/// @pre @param matrix has a square tile_size.
 template <class T>
 void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
   internal::set_random_hermitian_with_offset(matrix, 2 * matrix.size().rows());
@@ -533,13 +545,13 @@ void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
 /// will be set with the same set of values.
 ///
 /// @pre @param matrix is a square matrix,
-/// @pre @param matrix has a square blocksize.
+/// @pre @param matrix has a square tile_size.
 template <class T>
 void set_random_non_zero_diagonal(Matrix<T, Device::CPU>& matrix) {
   using pika::execution::thread_stacksize;
 
   // note:
-  // By assuming square blocksizes, it is easier to locate elements. In fact:
+  // By assuming square tile_sizes, it is easier to locate elements. In fact:
   // - Elements on the diagonal are stored in the diagonal of the diagonal tiles
   // - Tiles under the diagonal store elements of the lower triangular matrix
   // - Tiles over the diagonal store elements of the upper triangular matrix
@@ -547,7 +559,7 @@ void set_random_non_zero_diagonal(Matrix<T, Device::CPU>& matrix) {
   const Distribution& dist = matrix.distribution();
 
   DLAF_ASSERT(square_size(matrix), matrix);
-  DLAF_ASSERT(square_blocksize(matrix), matrix);
+  DLAF_ASSERT(square_tile_size(matrix), matrix);
 
   for (auto ij_lc : iterate_range2d(dist.local_nr_tiles())) {
     GlobalTileIndex ij = dist.global_tile_index(ij_lc);

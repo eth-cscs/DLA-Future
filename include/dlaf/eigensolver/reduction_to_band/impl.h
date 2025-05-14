@@ -391,7 +391,7 @@ void setupReflectorPanelV(bool has_head, const matrix::SubPanelView& panel_view,
 
     // Note:
     // If the number of reflectors are limited by height (|reflector| > 1), the panel is narrower than
-    // the blocksize, leading to just using a part of A (first full nrefls columns)
+    // the block size, leading to just using a part of A (first full nrefls columns)
     spec.size = {spec.size.rows(), std::min(nrefls, spec.size.cols())};
 
     // Note:
@@ -1004,7 +1004,7 @@ Matrix<T, D> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const SizeType 
 
   const auto dist_a = mat_a.distribution();
   const matrix::Distribution dist({mat_a.size().rows(), band_size},
-                                  {dist_a.blockSize().rows(), band_size});
+                                  {dist_a.tile_size().rows(), band_size});
 
   // Note:
   // Reflector of size = 1 is not considered whatever T is (i.e. neither real nor complex)
@@ -1027,7 +1027,7 @@ Matrix<T, D> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const SizeType 
   const SizeType ntiles = (nrefls - 1) / band_size + 1;
   DLAF_ASSERT(ntiles == mat_taus_retiled.nrTiles().rows(), ntiles, mat_taus_retiled.nrTiles().rows());
 
-  const bool is_full_band = (band_size == dist_a.blockSize().cols());
+  const bool is_full_band = (band_size == dist_a.tile_size().cols());
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<Panel<Coord::Col, T, D>> panels_v(n_workspaces, dist);
@@ -1089,7 +1089,7 @@ Matrix<T, D> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const SizeType 
     const LocalTileIndex t_idx(0, 0);
     // TODO used just by the column, maybe we can re-use a panel tile?
     // TODO probably the first one in any panel is ok?
-    Matrix<T, D> t({nrefls_tile, nrefls_tile}, dist.blockSize());
+    Matrix<T, D> t({nrefls_tile, nrefls_tile}, dist.tile_size());
     computeTFactor<B>(v, mat_taus_retiled.read(GlobalTileIndex(j_sub, 0)), t.readwrite(t_idx), ws);
     ws.reset();
 
@@ -1219,7 +1219,7 @@ Matrix<T, D> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix
   DLAF_ASSERT(nr_sub_tiles == mat_taus_retiled.nrTiles().rows(), nr_sub_tiles,
               mat_taus_retiled.nrTiles().rows());
 
-  const bool is_full_band = (band_size == dist.blockSize().cols());
+  const bool is_full_band = (band_size == dist.tile_size().cols());
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panels_v(n_workspaces, dist);
@@ -1290,7 +1290,7 @@ Matrix<T, D> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix
     const LocalTileIndex t_idx(0, 0);
     // TODO used just by the column, maybe we can re-use a panel tile?
     // TODO or we can keep just the sh_future and allocate just inside if (is_panel_rank_col)
-    matrix::Matrix<T, D> t({nrefls_tile, nrefls_tile}, dist.blockSize());
+    matrix::Matrix<T, D> t({nrefls_tile, nrefls_tile}, dist.tile_size());
 
     // PANEL
     const matrix::SubPanelView panel_view(dist, ij_offset, band_size);
@@ -1444,8 +1444,8 @@ Matrix<T, D> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix
     //
     // And in order to not be blocked, it must be ensured that the actual communication task has
     // been scheduled.
-    const SizeType j_tile_current = ij_offset.col() / dist.blockSize().cols();
-    const SizeType j_tile_next = at_offset.col() / dist.blockSize().cols();
+    const SizeType j_tile_current = ij_offset.col() / dist.tile_size().cols();
+    const SizeType j_tile_next = at_offset.col() / dist.tile_size().cols();
     const bool isNextColumnOnSameRank = (j_tile_current == j_tile_next);
     const comm::IndexT_MPI rank_next_col =
         isNextColumnOnSameRank ? rank_v0.col() : (rank_v0.col() + 1) % dist.commGridSize().cols();

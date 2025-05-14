@@ -137,7 +137,7 @@ template <class TileType>
 MatrixLayout getMatrixLayout(const matrix::Distribution& distr, const std::vector<TileType>& tiles) {
   LocalTileSize tile_sz = distr.localNrTiles();
   MatrixLayout layout;
-  layout.nb = distr.blockSize().rows();
+  layout.nb = distr.tile_size().rows();
   using dlaf::common::internal::unwrap;
   layout.ld = unwrap(tiles[0]).ld();
   layout.row_offset = (tile_sz.rows() > 1) ? unwrap(tiles[1]).ptr() - unwrap(tiles[0]).ptr() : 0;
@@ -566,7 +566,7 @@ void permuteOnCPU(
 
   // Local size and index of subproblem [i_begin, i_end)
   const SizeType offset_sub = dist.globalElementFromGlobalTileAndTileElement<C>(i_begin, 0);
-  const TileElementSize blk = dist.blockSize();
+  const TileElementSize blk = dist.tile_size();
 
   const LocalTileIndex i_loc_begin{dist.nextLocalTileFromGlobalTile<Coord::Row>(i_begin),
                                    dist.nextLocalTileFromGlobalTile<Coord::Col>(i_begin)};
@@ -598,12 +598,8 @@ void permuteOnCPU(
   // Local matrices used for packing data for communication. Both matrices are in column-major order.
   // The particular constructor is used on purpose to guarantee that columns are stored contiguosly,
   // such that there is no padding and gaps between them.
-  const LocalElementSize comm_sz = sz_loc;
-  const Distribution comm_dist(comm_sz, blk);
-  const LayoutInfo comm_layout = matrix::colMajorLayout(comm_sz, blk, comm_sz.rows());
-
-  Matrix<T, D> mat_send(comm_dist, comm_layout);
-  Matrix<T, D> mat_recv(comm_dist, comm_layout);
+  Matrix<T, D> mat_send(sz_loc, blk, MatrixAllocation::ColMajor, matrix::Ld::Compact);
+  Matrix<T, D> mat_recv(sz_loc, blk, MatrixAllocation::ColMajor, matrix::Ld::Compact);
 
   // Initialize the unpacking index
   copyLocalPartsFromGlobalIndex<D, C>(i_loc_begin.get<C>(), dist, perms, local2global_index);

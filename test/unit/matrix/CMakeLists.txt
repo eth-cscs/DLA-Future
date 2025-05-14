@@ -16,8 +16,8 @@ DLAF_addTest(
 )
 
 DLAF_addTest(
-  test_layout_info
-  SOURCES test_layout_info.cpp
+  test_col_major_layout
+  SOURCES test_col_major_layout.cpp
   LIBRARIES dlaf.core
   USE_MAIN PLAIN
 )

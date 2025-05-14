@@ -240,7 +240,7 @@ namespace {
 /// Tiles that are not on the diagonal (i.e. row != col) will not be touched or referenced
 template <typename T>
 void setUpperToZeroForDiagonalTiles(Matrix<T, Device::CPU>& matrix) {
-  DLAF_ASSERT(dlaf::matrix::square_blocksize(matrix), matrix);
+  DLAF_ASSERT(dlaf::matrix::square_tile_size(matrix), matrix);
 
   const auto& distribution = matrix.distribution();
 
@@ -290,10 +290,12 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
   };
 
   DLAF_ASSERT(dlaf::matrix::square_size(A), A);
-  DLAF_ASSERT(dlaf::matrix::square_blocksize(A), A);
+  DLAF_ASSERT(dlaf::matrix::square_block_size(A), A);
+  DLAF_ASSERT(dlaf::matrix::single_tile_per_block(A), A);
 
   DLAF_ASSERT(dlaf::matrix::square_size(L), L);
-  DLAF_ASSERT(dlaf::matrix::square_blocksize(L), L);
+  DLAF_ASSERT(dlaf::matrix::square_block_size(L), L);
+  DLAF_ASSERT(dlaf::matrix::single_tile_per_block(L), L);
 
   const auto& distribution = L.distribution();
   const auto current_rank = distribution.rankIndex();

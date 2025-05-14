@@ -220,7 +220,7 @@ void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>&
   // Auxiliary matrix used for the D&C algorithm
   const matrix::Distribution& distr = evecs.distribution();
   const LocalElementSize vec_size(distr.size().rows(), 1);
-  const TileElementSize vec_tile_size(distr.blockSize().rows(), 1);
+  const TileElementSize vec_tile_size(distr.tile_size().rows(), 1);
   WorkSpace<T, D> ws{Matrix<T, D>(distr),                            // e0
                      Matrix<T, D>(distr),                            // e1
                      evecs,                                          // e2

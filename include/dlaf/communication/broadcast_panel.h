@@ -102,7 +102,7 @@ auto& get_taskchain(comm::CommunicatorPipeline<comm::CommunicatorType::Row>& row
 /// @param grid_size shape of the grid of row and col communicators from @p row_task_chain and @p col_task_chain
 ///
 /// @pre both panels are child of a matrix (even not the same) with the same Distribution
-/// @pre both panels parent matrices should be square matrices with square blocksizes
+/// @pre both panels parent matrices should be square matrices with square tile_sizes
 /// @pre both panels offsets should lay on the main diagonal of the parent matrix
 template <class T, Device D, Coord axis, matrix::StoreTransposed storage,
           matrix::StoreTransposed storageT, std::enable_if_t<!std::is_const_v<T>, int> = 0>
@@ -140,7 +140,7 @@ void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& p
   const auto& dist = panel.parentDistribution();
 
   DLAF_ASSERT(square_size(dist), dist.size());
-  DLAF_ASSERT(square_blocksize(dist), dist.blockSize());
+  DLAF_ASSERT(square_tile_size(dist), dist.tile_size());
 
   // Note:
   // This algorithm allow to broadcast panel to panelT using as mirror the parent matrix main diagonal.

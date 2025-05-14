@@ -26,10 +26,14 @@
 #define DLAF_DISTRIBUTION_DEPRECATED(x)
 #endif
 
-// TODO remove forward declarations when removing deprecated.
 namespace dlaf::matrix {
 class Distribution;
+namespace internal {
+// returns a copy of dist with tile_size set to block_size.
+Distribution create_single_tile_per_block_distribution(const Distribution& dist);
+}
 
+// TODO remove forward declarations when removing deprecated.
 namespace internal::distribution {
 template <Coord rc>
 SizeType distance_to_adjacent_tile(const Distribution& dist, SizeType global_element) noexcept;
@@ -109,48 +113,49 @@ tile_element_index       O <-- I
 */
 
 class Distribution {
+  friend Distribution internal::create_single_tile_per_block_distribution(const Distribution& dist);
+
 public:
   /// Constructs a distribution for a non distributed matrix of size {0, 0} and block size {1, 1}.
   Distribution() noexcept;
 
-  /// Constructs a distribution for a non distributed matrix of size @p size and block size @p block_size.
-  ///
-  /// @param[in] element_offset is the element-wise offset of the top left tile of the matrix ,
-  /// @pre size.isValid(),
-  /// @pre !block_size.isEmpty().
-  Distribution(const LocalElementSize& size, const TileElementSize& block_size,
+  /// Constructs a distribution for a non distributed matrix of size @p size and block size @p tile_size
+  /// and tile size @p tile_size.
+  Distribution(const LocalElementSize& size, const TileElementSize& tile_size,
                const GlobalElementIndex& element_offset = {0, 0});
 
-  /// Constructs a distribution for a matrix of size @p size and block size @p block_size,
-  /// distributed on a 2D grid of processes of size @p grid_size.
+  /// Constructs a distribution for a matrix of size @p size, block size @p tile_size and tile size @p
+  /// tile_size, distributed on a 2D grid of processes of size @p grid_size.
   ///
   /// @param[in] rank_index is the rank of the current process,
-  /// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix,
+  /// @param[in] source_rank_index is the rank of the process which contains the top left tile of the
+  /// matrix,
   /// @param[in] element_offset is the element-wise offset of the top left tile of the matrix ,
   /// @pre size.isValid(),
-  /// @pre !block_size.isEmpty(),
+  /// @pre !tile_size.isEmpty(),
   /// @pre !grid_size.isEmpty(),
   /// @pre rank_index.isIn(grid_size),
   /// @pre source_rank_index.isIn(grid_size).
-  Distribution(const GlobalElementSize& size, const TileElementSize& block_size,
+  Distribution(const GlobalElementSize& size, const TileElementSize& tile_size,
                const comm::Size2D& grid_size, const comm::Index2D& rank_index,
                const comm::Index2D& source_rank_index,
                const GlobalElementIndex& element_offset = {0, 0});
 
-  /// Constructs a distribution for a matrix of size @p size and block size @p block_size,
-  /// distributed on a 2D grid of processes of size @p grid_size.
+  /// Constructs a distribution for a matrix of size @p size, block size @p tile_size and tile size @p
+  /// tile_size, distributed on a 2D grid of processes of size @p grid_size.
   ///
   /// @param[in] rank_index is the rank of the current process,
-  /// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix,
+  /// @param[in] source_rank_index is the rank of the process which contains the top left tile of the
+  /// matrix,
   /// @param[in] tile_offset is the tile-wise offset of the top left tile of the matrix,
   /// @param[in] element_offset is the element-wise offset of the top left tile
   ///            of the matrix, used in addition to @p tile_offset,
   /// @pre size.isValid(),
-  /// @pre !block_size.isEmpty(),
+  /// @pre !tile_size.isEmpty(),
   /// @pre !grid_size.isEmpty(),
   /// @pre rank_index.isIn(grid_size),
   /// @pre source_rank_index.isIn(grid_size).
-  Distribution(const GlobalElementSize& size, const TileElementSize& block_size,
+  Distribution(const GlobalElementSize& size, const TileElementSize& tile_size,
                const comm::Size2D& grid_size, const comm::Index2D& rank_index,
                const comm::Index2D& source_rank_index, const GlobalTileIndex& tile_offset,
                const GlobalElementIndex& element_offset = {0, 0});
@@ -169,7 +174,7 @@ public:
   /// @pre !grid_size.isEmpty(),
   /// @pre rank_index.isIn(grid_size),
   /// @pre source_rank_index.isIn(grid_size).
-  Distribution(const GlobalElementSize& size, const TileElementSize& block_size,
+  Distribution(const GlobalElementSize& size, const GlobalElementSize& block_size,
                const TileElementSize& tile_size, const comm::Size2D& grid_size,
                const comm::Index2D& rank_index, const comm::Index2D& source_rank_index,
                const GlobalElementIndex& element_offset = {0, 0});
@@ -190,7 +195,7 @@ public:
   /// @pre !grid_size.isEmpty(),
   /// @pre rank_index.isIn(grid_size),
   /// @pre source_rank_index.isIn(grid_size).
-  Distribution(const GlobalElementSize& size, const TileElementSize& block_size,
+  Distribution(const GlobalElementSize& size, const GlobalElementSize& block_size,
                const TileElementSize& tile_size, const comm::Size2D& grid_size,
                const comm::Index2D& rank_index, const comm::Index2D& source_rank_index,
                const GlobalTileIndex& tile_offset, const GlobalElementIndex& element_offset = {0, 0});
@@ -242,7 +247,23 @@ public:
     return local_nr_tiles_;
   }
 
-  const TileElementSize& block_size() const noexcept {
+  /// Returns the number of blocks of the global matrix (2D size).
+  const GlobalBlockSize nr_blocks() const noexcept {
+    return {util::ceilDiv(nr_tiles_.rows() + global_tile_offset<Coord::Row>(),
+                          tiles_per_block<Coord::Row>()),
+            util::ceilDiv(nr_tiles_.cols() + global_tile_offset<Coord::Col>(),
+                          tiles_per_block<Coord::Col>())};
+  }
+
+  /// Returns the number of blocks stored locally (2D size).
+  const LocalBlockSize local_nr_blocks() const noexcept {
+    return {util::ceilDiv(local_nr_tiles_.rows() + local_tile_offset<Coord::Row>(),
+                          tiles_per_block<Coord::Row>()),
+            util::ceilDiv(local_nr_tiles_.cols() + local_tile_offset<Coord::Col>(),
+                          tiles_per_block<Coord::Col>())};
+  }
+
+  const GlobalElementSize& block_size() const noexcept {
     return block_size_;
   }
 
@@ -270,7 +291,7 @@ public:
   /// which has index @p tile_element in the tile with global index @p global_tile.
   ///
   /// @pre global_tile.isIn(nr_tiles()),
-  /// @pre tile_element.isIn(block_size()).
+  /// @pre tile_element.isIn(tile_size()).
   GlobalElementIndex global_element_index(const GlobalTileIndex& global_tile,
                                           const TileElementIndex& tile_element) const noexcept {
     DLAF_ASSERT_HEAVY(global_tile.isIn(nr_tiles_), global_tile, nr_tiles_);
@@ -341,10 +362,18 @@ public:
 
   /// Returns the size of the Tile with global index @p index.
   ///
-  /// @pre global_element.isIn(size()).
+  /// @pre index.isIn(nr_tiles()).
   TileElementSize tile_size_of(const GlobalTileIndex& index) const noexcept {
     DLAF_ASSERT_HEAVY(index.isIn(nr_tiles()), index, nr_tiles());
-    return {tile_size_of<Coord::Row>(index.row()), tile_size_of<Coord::Col>(index.col())};
+    return {global_tile_size_of<Coord::Row>(index.row()), global_tile_size_of<Coord::Col>(index.col())};
+  }
+
+  /// Returns the size of the Tile with local index @p index.
+  ///
+  /// @pre index.isIn(local_nr_tiles()).
+  TileElementSize tile_size_of(const LocalTileIndex& index) const noexcept {
+    DLAF_ASSERT_HEAVY(index.isIn(local_nr_tiles()), index, local_nr_tiles());
+    return {local_tile_size_of<Coord::Row>(index.row()), local_tile_size_of<Coord::Col>(index.col())};
   }
 
   ///////////////////////////////////
@@ -583,7 +612,7 @@ public:
   ///
   /// @pre 0 <= global_tile < nr_tiles().get<rc>().
   template <Coord rc>
-  SizeType tile_size_of(SizeType global_tile) const noexcept {
+  SizeType global_tile_size_of(SizeType global_tile) const noexcept {
     DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < nr_tiles_.get<rc>(), global_tile,
                       nr_tiles_.get<rc>());
     SizeType n = size_.get<rc>();
@@ -592,6 +621,26 @@ public:
       return std::min(nb - global_tile_element_offset<rc>(), n);
     }
     return std::min(nb, n + global_tile_element_offset<rc>() - global_tile * nb);
+  }
+
+  /// Returns the size of the tile with local index @p local_tile.
+  ///
+  /// @pre 0 <= local_tile < local_nr_tiles().get<rc>().
+  template <Coord rc>
+  SizeType local_tile_size_of(SizeType local_tile) const noexcept {
+    DLAF_ASSERT_HEAVY(0 <= local_tile && local_tile < local_nr_tiles_.get<rc>(), local_tile,
+                      local_nr_tiles_.get<rc>());
+    SizeType n = local_size_.get<rc>();
+    SizeType nb = tile_size_.get<rc>();
+    if (local_tile == 0) {
+      return std::min(nb - local_tile_element_offset<rc>(), n);
+    }
+    return std::min(nb, n + local_tile_element_offset<rc>() - local_tile * nb);
+  }
+
+  /// Returns if block_size is equal to tile_size
+  bool single_tile_per_block() const noexcept {
+    return block_size_.rows() == tile_size_.rows() && block_size_.cols() == tile_size_.cols();
   }
 
 private:
@@ -728,7 +777,7 @@ private:
   LocalElementSize local_size_;
   GlobalTileSize nr_tiles_;
   LocalTileSize local_nr_tiles_;
-  TileElementSize block_size_;
+  GlobalElementSize block_size_;
   TileElementSize tile_size_;
 
   comm::Index2D rank_index_;
@@ -749,11 +798,6 @@ public:
   DLAF_DISTRIBUTION_DEPRECATED("method has been renamed in snake case")
   const LocalTileSize& localNrTiles() const noexcept {
     return local_nr_tiles();
-  }
-
-  DLAF_DISTRIBUTION_DEPRECATED("method has been renamed in snake case")
-  const TileElementSize& blockSize() const noexcept {
-    return block_size();
   }
 
   DLAF_DISTRIBUTION_DEPRECATED("use tile_size method")
@@ -928,9 +972,9 @@ public:
   ///
   /// @pre 0 <= global_tile < nr_tiles().get<rc>().
   template <Coord rc>
-  DLAF_DISTRIBUTION_DEPRECATED("Use tile_size_of method")
+  DLAF_DISTRIBUTION_DEPRECATED("Use global_tile_size_of method")
   SizeType tileSize(SizeType global_tile) const noexcept {
-    return tile_size_of<rc>(global_tile);
+    return global_tile_size_of<rc>(global_tile);
   }
 
   //////////////////////////////////////

@@ -43,10 +43,8 @@ protected:
 
 template <class T, Device D>
 auto newBlockMatrixContiguous() {
-  auto layout = matrix::colMajorLayout({13, 13}, {13, 13}, 13);
   auto dist = matrix::Distribution({13, 13}, {13, 13});
-
-  auto matrix = matrix::Matrix<T, D>(dist, layout);
+  auto matrix = matrix::Matrix<T, D>(dist, matrix::MatrixAllocation::ColMajor, matrix::Ld::Compact);
 
   auto tile = tt::sync_wait(matrix.read(LocalTileIndex(0, 0)));
   EXPECT_TRUE(data_iscontiguous(common::make_data(tile.get())));
@@ -56,10 +54,8 @@ auto newBlockMatrixContiguous() {
 
 template <class T, Device D>
 auto newBlockMatrixStrided() {
-  auto layout = matrix::colMajorLayout({13, 13}, {13, 13}, 26);
   auto dist = matrix::Distribution({13, 13}, {13, 13});
-
-  auto matrix = matrix::Matrix<T, D>(dist, layout);
+  auto matrix = matrix::Matrix<T, D>(dist, matrix::MatrixAllocation::ColMajor, 26);
 
   auto tile = tt::sync_wait(matrix.read(LocalTileIndex(0, 0)));
   EXPECT_FALSE(data_iscontiguous(common::make_data(tile.get())));

@@ -1,8 +1,8 @@
 var searchData=
 [
-  ['range2d_2eh_0',['range2d.h',['../range2d_8h.html',1,'']]],
-  ['rdma_2eh_1',['rdma.h',['../rdma_8h.html',1,'']]],
-  ['reduce_2eh_2',['reduce.h',['../kernels_2reduce_8h.html',1,'(Global Namespace)'],['../sync_2reduce_8h.html',1,'(Global Namespace)']]],
-  ['reduction_5fto_5fband_2eh_3',['reduction_to_band.h',['../reduction__to__band_8h.html',1,'']]],
-  ['round_5frobin_2eh_4',['round_robin.h',['../round__robin_8h.html',1,'']]]
+  ['scal_2eh_0',['scal.h',['../scal_8h.html',1,'']]],
+  ['schedulers_2eh_1',['schedulers.h',['../schedulers_8h.html',1,'']]],
+  ['single_5fthreaded_5fblas_2eh_2',['single_threaded_blas.h',['../single__threaded__blas_8h.html',1,'']]],
+  ['solver_2eh_3',['solver.h',['../solver_8h.html',1,'']]],
+  ['source_5flocation_2eh_4',['source_location.h',['../source__location_8h.html',1,'']]]
 ];

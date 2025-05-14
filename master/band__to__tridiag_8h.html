@@ -156,9 +156,9 @@ template&lt;Backend B, Device D, class T &gt; </div>
 <dd>
 <code>mat_a</code> has size (N x N) </dd>
 <dd>
-<code>mat_a</code> has blocksize (NB x NB) </dd>
+<code>mat_a</code> has block size (NB x NB) </dd>
 <dd>
-<code>mat_a</code> has tilesize (NB x NB)</dd>
+<code>mat_a</code> has tile size (NB x NB)</dd>
 <dd>
 <code>band_size</code> is a divisor of <code>mat_a.blockSize().cols()</code>, and <code>band_size</code> &gt;= 2 </dd></dl>
 
@@ -228,11 +228,11 @@ template&lt;Backend backend, Device device, class T &gt; </div>
 <dd>
 <code>mat_a</code> has size (N x N) </dd>
 <dd>
-<code>mat_a</code> has blocksize (NB x NB) </dd>
+<code>mat_a</code> has block size (NB x NB) </dd>
 <dd>
-<code>mat_a</code> has tilesize (NB x NB)</dd>
+<code>mat_a</code> has tile size (NB x NB)</dd>
 <dd>
-<code>band_size</code> is a divisor of <code>mat_a.blockSize().cols()</code>, and <code>band_size</code> &gt;= 2 </dd></dl>
+<code>band_size</code> is a divisor of <code>mat_a.block_size().cols()</code>, and <code>band_size</code> &gt;= 2 </dd></dl>
 
 </div>
 </div>

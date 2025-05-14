@@ -111,7 +111,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>  DLAF_ASSERT(matrix::local_matrix(mat_c), mat_c);</div>
 <div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>  DLAF_ASSERT(matrix::local_matrix(mat_v), mat_v);</div>
 <div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>  DLAF_ASSERT(square_size(mat_v), mat_v);</div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>  DLAF_ASSERT(square_blocksize(mat_v), mat_v);</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>  DLAF_ASSERT(square_block_size(mat_v), mat_v);</div>
 <div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>  DLAF_ASSERT(mat_c.size().rows() == mat_v.size().rows(), mat_c, mat_v);</div>
 <div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>  DLAF_ASSERT(mat_c.blockSize().rows() == mat_v.blockSize().rows(), mat_c, mat_v);</div>
 <div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>  DLAF_ASSERT(matrix::single_tile_per_block(mat_c), mat_c);</div>
@@ -135,7 +135,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>  DLAF_ASSERT(matrix::equal_process_grid(mat_c, grid), mat_c, grid);</div>
 <div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>  DLAF_ASSERT(matrix::equal_process_grid(mat_v, grid), mat_v, grid);</div>
 <div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>  DLAF_ASSERT(square_size(mat_v), mat_v);</div>
-<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>  DLAF_ASSERT(square_blocksize(mat_v), mat_v);</div>
+<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>  DLAF_ASSERT(square_block_size(mat_v), mat_v);</div>
 <div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>  DLAF_ASSERT(mat_c.size().rows() == mat_v.size().rows(), mat_c, mat_v);</div>
 <div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>  DLAF_ASSERT(mat_c.blockSize().rows() == mat_v.blockSize().rows(), mat_c, mat_v);</div>
 <div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>  DLAF_ASSERT(matrix::single_tile_per_block(mat_c), mat_c);</div>
@@ -156,7 +156,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>}</div>
 <div class="ttc" id="abt__reduction__to__band_8h_html_a10fc819be28481b4760e363685e56553"><div class="ttname"><a href="bt__reduction__to__band_8h.html#a10fc819be28481b4760e363685e56553">dlaf::eigensolver::internal::bt_reduction_to_band</a></div><div class="ttdeci">void bt_reduction_to_band(const SizeType b, MatrixRef&lt; T, device &gt; &amp;mat_c, Matrix&lt; const T, device &gt; &amp;mat_v, Matrix&lt; const T, device &gt; &amp;mat_taus)</div><div class="ttdef"><b>Definition</b> bt_reduction_to_band.h:45</div></div>
 <div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html">dlaf::comm::CommunicatorGrid</a></div><div class="ttdef"><b>Definition</b> communicator_grid.h:37</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1internal_1_1_matrix_ref_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref.html">dlaf::matrix::internal::MatrixRef</a></div><div class="ttdef"><b>Definition</b> matrix_ref.h:172</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1internal_1_1_matrix_ref_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref.html">dlaf::matrix::internal::MatrixRef</a></div><div class="ttdef"><b>Definition</b> matrix_ref.h:176</div></div>
 <div class="ttc" id="acommunicator__grid_8h_html"><div class="ttname"><a href="communicator__grid_8h.html">communicator_grid.h</a></div></div>
 <div class="ttc" id="amatrix_8h_html"><div class="ttname"><a href="matrix_8h.html">matrix.h</a></div></div>
 <div class="ttc" id="amatrix__ref_8h_html"><div class="ttname"><a href="matrix__ref_8h.html">matrix_ref.h</a></div></div>

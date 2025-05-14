@@ -183,55 +183,57 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>    <span class="keyword">auto</span>&amp; panelB = panelsB.nextResource();</div>
 <div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span> </div>
 <div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>    <span class="keywordflow">if</span> (k == 0 || k == mat_a.nr_tiles().cols() - 1) {</div>
-<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>      DLAF_ASSERT_HEAVY(dist_a.tile_size_of&lt;Coord::Col&gt;(k) == dist_b.tile_size_of&lt;Coord::Row&gt;(k),</div>
-<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>                        dist_a.tile_size_of&lt;Coord::Col&gt;(k), dist_b.tile_size_of&lt;Coord::Row&gt;(k));</div>
-<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>      <span class="keyword">const</span> SizeType kSize = dist_a.tile_size_of&lt;Coord::Col&gt;(k);</div>
-<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>      panelA.setWidth(kSize);</div>
-<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>      panelB.setHeight(kSize);</div>
-<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>    }</div>
-<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span> </div>
-<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>    <span class="comment">// Setup the column workspace for the root ranks, i.e. the ones in the current col</span></div>
-<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>    <span class="keyword">const</span> <span class="keyword">auto</span> rank_k_col = dist_a.rank_global_tile&lt;Coord::Col&gt;(k);</div>
-<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>    <span class="keywordflow">if</span> (rank_k_col == rank.col()) {</div>
-<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>      <span class="keyword">const</span> <span class="keyword">auto</span> k_local = dist_a.local_tile_from_global_tile&lt;Coord::Col&gt;(k);</div>
-<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>      <span class="keywordflow">for</span> (SizeType i = 0; i &lt; dist_c.local_nr_tiles().rows(); ++i) {</div>
-<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>        <span class="keyword">const</span> LocalTileIndex ik(i, k_local);</div>
-<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>        panelA.setTile(ik, mat_a.read(ik));</div>
-<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>      }</div>
-<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>    }</div>
-<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>    <span class="comment">// Setup the row workspace for the root ranks, i.e. the ones in the current row</span></div>
-<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>    <span class="keyword">const</span> <span class="keyword">auto</span> rank_k_row = dist_b.rank_global_tile&lt;Coord::Row&gt;(k);</div>
-<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>    <span class="keywordflow">if</span> (rank_k_row == rank.row()) {</div>
-<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>      <span class="keyword">const</span> <span class="keyword">auto</span> k_local = dist_b.local_tile_from_global_tile&lt;Coord::Row&gt;(k);</div>
-<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>      <span class="keywordflow">for</span> (SizeType j = 0; j &lt; dist_c.local_nr_tiles().cols(); ++j) {</div>
-<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>        <span class="keyword">const</span> LocalTileIndex kj(k_local, j);</div>
-<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>        panelB.setTile(kj, mat_b.read(kj));</div>
-<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>      }</div>
-<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>    }</div>
-<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span> </div>
-<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>    <span class="comment">// Broadcast both column and row panel from root to others (row-wise and col-wise, respectively)</span></div>
-<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>    <a class="code hl_function" href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">broadcast</a>(rank_k_col, panelA, row_task_chain);</div>
-<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>    <a class="code hl_function" href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">broadcast</a>(rank_k_row, panelB, col_task_chain);</div>
-<div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span> </div>
-<div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span>    <span class="comment">// This is the core loop where the k step performs the update over the entire local matrix using</span></div>
-<div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span>    <span class="comment">// the col and row workspaces.</span></div>
-<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>    <span class="comment">// Everything needed for the update is available locally thanks to previous broadcasts.</span></div>
-<div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span>    <span class="keywordflow">for</span> (SizeType i = 0; i &lt; dist_c.local_nr_tiles().rows(); ++i) {</div>
-<div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span>      <span class="keywordflow">for</span> (SizeType j = 0; j &lt; dist_c.local_nr_tiles().cols(); ++j) {</div>
-<div class="line"><a id="l00138" name="l00138"></a><span class="lineno">  138</span>        <span class="keyword">const</span> LocalTileIndex ij(i, j);</div>
-<div class="line"><a id="l00139" name="l00139"></a><span class="lineno">  139</span> </div>
-<div class="line"><a id="l00140" name="l00140"></a><span class="lineno">  140</span>        ex::start_detached(dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha,</div>
-<div class="line"><a id="l00141" name="l00141"></a><span class="lineno">  141</span>                                                       panelA.read(ij), panelB.read(ij),</div>
-<div class="line"><a id="l00142" name="l00142"></a><span class="lineno">  142</span>                                                       k == 0 ? beta : T(1), mat_c.readwrite(ij)) |</div>
-<div class="line"><a id="l00143" name="l00143"></a><span class="lineno">  143</span>                           tile::<a class="code hl_function" href="blas_2tile_8h.html#a1de961c6e1c01ee6a5f0039ecf51b162">gemm</a>(dlaf::internal::Policy&lt;B&gt;()));</div>
-<div class="line"><a id="l00144" name="l00144"></a><span class="lineno">  144</span>      }</div>
-<div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span>    }</div>
-<div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span> </div>
-<div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span>    panelA.reset();</div>
-<div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span>    panelB.reset();</div>
-<div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>  }</div>
-<div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>}</div>
-<div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>}</div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>      DLAF_ASSERT_HEAVY(dist_a.global_tile_size_of&lt;Coord::Col&gt;(k) ==</div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>                            dist_b.global_tile_size_of&lt;Coord::Row&gt;(k),</div>
+<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>                        dist_a.global_tile_size_of&lt;Coord::Col&gt;(k),</div>
+<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>                        dist_b.global_tile_size_of&lt;Coord::Row&gt;(k));</div>
+<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>      <span class="keyword">const</span> SizeType kSize = dist_a.global_tile_size_of&lt;Coord::Col&gt;(k);</div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>      panelA.setWidth(kSize);</div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>      panelB.setHeight(kSize);</div>
+<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>    }</div>
+<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span> </div>
+<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>    <span class="comment">// Setup the column workspace for the root ranks, i.e. the ones in the current col</span></div>
+<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>    <span class="keyword">const</span> <span class="keyword">auto</span> rank_k_col = dist_a.rank_global_tile&lt;Coord::Col&gt;(k);</div>
+<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>    <span class="keywordflow">if</span> (rank_k_col == rank.col()) {</div>
+<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>      <span class="keyword">const</span> <span class="keyword">auto</span> k_local = dist_a.local_tile_from_global_tile&lt;Coord::Col&gt;(k);</div>
+<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>      <span class="keywordflow">for</span> (SizeType i = 0; i &lt; dist_c.local_nr_tiles().rows(); ++i) {</div>
+<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>        <span class="keyword">const</span> LocalTileIndex ik(i, k_local);</div>
+<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>        panelA.setTile(ik, mat_a.read(ik));</div>
+<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>      }</div>
+<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>    }</div>
+<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>    <span class="comment">// Setup the row workspace for the root ranks, i.e. the ones in the current row</span></div>
+<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>    <span class="keyword">const</span> <span class="keyword">auto</span> rank_k_row = dist_b.rank_global_tile&lt;Coord::Row&gt;(k);</div>
+<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>    <span class="keywordflow">if</span> (rank_k_row == rank.row()) {</div>
+<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>      <span class="keyword">const</span> <span class="keyword">auto</span> k_local = dist_b.local_tile_from_global_tile&lt;Coord::Row&gt;(k);</div>
+<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>      <span class="keywordflow">for</span> (SizeType j = 0; j &lt; dist_c.local_nr_tiles().cols(); ++j) {</div>
+<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>        <span class="keyword">const</span> LocalTileIndex kj(k_local, j);</div>
+<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>        panelB.setTile(kj, mat_b.read(kj));</div>
+<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>      }</div>
+<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>    }</div>
+<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span> </div>
+<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>    <span class="comment">// Broadcast both column and row panel from root to others (row-wise and col-wise, respectively)</span></div>
+<div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>    <a class="code hl_function" href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">broadcast</a>(rank_k_col, panelA, row_task_chain);</div>
+<div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span>    <a class="code hl_function" href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">broadcast</a>(rank_k_row, panelB, col_task_chain);</div>
+<div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span> </div>
+<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>    <span class="comment">// This is the core loop where the k step performs the update over the entire local matrix using</span></div>
+<div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span>    <span class="comment">// the col and row workspaces.</span></div>
+<div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span>    <span class="comment">// Everything needed for the update is available locally thanks to previous broadcasts.</span></div>
+<div class="line"><a id="l00138" name="l00138"></a><span class="lineno">  138</span>    <span class="keywordflow">for</span> (SizeType i = 0; i &lt; dist_c.local_nr_tiles().rows(); ++i) {</div>
+<div class="line"><a id="l00139" name="l00139"></a><span class="lineno">  139</span>      <span class="keywordflow">for</span> (SizeType j = 0; j &lt; dist_c.local_nr_tiles().cols(); ++j) {</div>
+<div class="line"><a id="l00140" name="l00140"></a><span class="lineno">  140</span>        <span class="keyword">const</span> LocalTileIndex ij(i, j);</div>
+<div class="line"><a id="l00141" name="l00141"></a><span class="lineno">  141</span> </div>
+<div class="line"><a id="l00142" name="l00142"></a><span class="lineno">  142</span>        ex::start_detached(dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha,</div>
+<div class="line"><a id="l00143" name="l00143"></a><span class="lineno">  143</span>                                                       panelA.read(ij), panelB.read(ij),</div>
+<div class="line"><a id="l00144" name="l00144"></a><span class="lineno">  144</span>                                                       k == 0 ? beta : T(1), mat_c.readwrite(ij)) |</div>
+<div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span>                           tile::<a class="code hl_function" href="blas_2tile_8h.html#a1de961c6e1c01ee6a5f0039ecf51b162">gemm</a>(dlaf::internal::Policy&lt;B&gt;()));</div>
+<div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span>      }</div>
+<div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span>    }</div>
+<div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span> </div>
+<div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>    panelA.reset();</div>
+<div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>    panelB.reset();</div>
+<div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>  }</div>
+<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>}</div>
+<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>}</div>
 <div class="ttc" id="ablas_2tile_8h_html"><div class="ttname"><a href="blas_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="ablas_2tile_8h_html_a1de961c6e1c01ee6a5f0039ecf51b162"><div class="ttname"><a href="blas_2tile_8h.html#a1de961c6e1c01ee6a5f0039ecf51b162">dlaf::tile::gemm</a></div><div class="ttdeci">void gemm(const blas::Op op_a, const blas::Op op_b, const T alpha, const Tile&lt; const T, D &gt; &amp;a, const Tile&lt; const T, D &gt; &amp;b, const T beta, const Tile&lt; T, D &gt; &amp;c)</div></div>
 <div class="ttc" id="abroadcast__panel_8h_html"><div class="ttname"><a href="broadcast__panel_8h.html">broadcast_panel.h</a></div></div>

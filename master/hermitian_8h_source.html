@@ -112,7 +112,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>                              <span class="keyword">const</span> T alpha, Matrix&lt;const T, D&gt;&amp; mat_a, MatrixRef&lt;const T, D&gt;&amp; mat_b,</div>
 <div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>                              <span class="keyword">const</span> T beta, Matrix&lt;T, D&gt;&amp; mat_c) {</div>
 <div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);</div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>  DLAF_ASSERT(matrix::square_block_size(mat_a), mat_a);</div>
 <div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);</div>
 <div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>  DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);</div>
 <div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>  DLAF_ASSERT(matrix::single_tile_per_block(mat_c), mat_c);</div>
@@ -150,7 +150,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00094" name="l00094"></a><span class="lineno"><a class="line" href="hermitian_8h.html#ab6234e4eda7adaa1469c1c09fd59cc33">   94</a></span><span class="keywordtype">void</span> hermitian_multiplication(blas::Side side, blas::Uplo uplo, <span class="keyword">const</span> T alpha, Matrix&lt;const T, D&gt;&amp; mat_a,</div>
 <div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>                              Matrix&lt;const T, D&gt;&amp; mat_b, <span class="keyword">const</span> T beta, Matrix&lt;T, D&gt;&amp; mat_c) {</div>
 <div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);</div>
-<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);</div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>  DLAF_ASSERT(matrix::square_block_size(mat_a), mat_a);</div>
 <div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);</div>
 <div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>  DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);</div>
 <div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>  DLAF_ASSERT(matrix::single_tile_per_block(mat_c), mat_c);</div>
@@ -193,7 +193,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span> </div>
 <div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>}</div>
 <div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html">dlaf::comm::CommunicatorGrid</a></div><div class="ttdef"><b>Definition</b> communicator_grid.h:37</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1internal_1_1_matrix_ref_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref.html">dlaf::matrix::internal::MatrixRef</a></div><div class="ttdef"><b>Definition</b> matrix_ref.h:172</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1internal_1_1_matrix_ref_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref.html">dlaf::matrix::internal::MatrixRef</a></div><div class="ttdef"><b>Definition</b> matrix_ref.h:176</div></div>
 <div class="ttc" id="acommunicator__grid_8h_html"><div class="ttname"><a href="communicator__grid_8h.html">communicator_grid.h</a></div></div>
 <div class="ttc" id="amatrix_8h_html"><div class="ttname"><a href="matrix_8h.html">matrix.h</a></div></div>
 <div class="ttc" id="astructdlaf_1_1multiplication_1_1internal_1_1_hermitian_html"><div class="ttname"><a href="structdlaf_1_1multiplication_1_1internal_1_1_hermitian.html">dlaf::multiplication::internal::Hermitian</a></div><div class="ttdef"><b>Definition</b> api.h:23</div></div>

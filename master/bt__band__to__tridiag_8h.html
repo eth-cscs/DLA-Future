@@ -150,9 +150,9 @@ template&lt;Backend B, Device D, class T &gt; </div>
 <dd>
 <code>mat_hh</code> has size (N x N) </dd>
 <dd>
-<code>mat_hh</code> has blocksize (NB x NB) </dd>
+<code>mat_hh</code> has block size (NB x NB) </dd>
 <dd>
-<code>mat_hh</code> has tilesize (NB x NB)</dd></dl>
+<code>mat_hh</code> has tile size (NB x NB)</dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">mat_e</td><td>matrix to which the inverse transformation is applied to </td></tr>
@@ -163,16 +163,16 @@ template&lt;Backend B, Device D, class T &gt; </div>
 <dd>
 <code>mat_e</code> has size (N x M) </dd>
 <dd>
-<code>mat_e</code> has blocksize (NB x MB) </dd>
+<code>mat_e</code> has block size (NB x MB) </dd>
 <dd>
-<code>mat_e</code> has tilesize (NB x MB)</dd></dl>
+<code>mat_e</code> has tile size (NB x MB)</dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">band_size</td><td>size of the reflectors (normal one, not constrained by any matrix size limit) </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section pre"><dt>Precondition</dt><dd><code>band_size</code> is a divisor of <code>mat_hh.blockSize().cols()</code> </dd></dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>band_size</code> is a divisor of <code>mat_hh.tile_size().cols()</code> </dd></dl>
 
 </div>
 </div>
@@ -224,9 +224,9 @@ template&lt;Backend B, Device D, class T &gt; </div>
 <dd>
 <code>mat_hh</code> has size (N x N) </dd>
 <dd>
-<code>mat_hh</code> has blocksize (NB x NB) </dd>
+<code>mat_hh</code> has block size (NB x NB) </dd>
 <dd>
-<code>mat_hh</code> has tilesize (NB x NB)</dd></dl>
+<code>mat_hh</code> has tile size (NB x NB)</dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">mat_e</td><td>matrix to which the inverse transformation is applied to </td></tr>
@@ -237,16 +237,16 @@ template&lt;Backend B, Device D, class T &gt; </div>
 <dd>
 <code>mat_e</code> has size (N x M) </dd>
 <dd>
-<code>mat_e</code> has blocksize (NB x MB) </dd>
+<code>mat_e</code> has block size (NB x MB) </dd>
 <dd>
-<code>mat_e</code> has tilesize (NB x MB)</dd></dl>
+<code>mat_e</code> has tile size (NB x MB)</dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">band_size</td><td>size of the reflectors (normal one, not constrained by any matrix size limit) </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section pre"><dt>Precondition</dt><dd><code>band_size</code> is a divisor of <code>mat_hh.blockSize().cols()</code> </dd></dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>band_size</code> is a divisor of <code>mat_hh.tile_size().cols()</code> </dd></dl>
 
 </div>
 </div>

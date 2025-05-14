@@ -108,7 +108,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00048" name="l00048"></a><span class="lineno"><a class="line" href="multiplication_2triangular_8h.html#af467c3e497156c9595e7b04d7ca60da4">   48</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="multiplication_2triangular_8h.html#af467c3e497156c9595e7b04d7ca60da4">triangular_multiplication</a>(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha,</div>
 <div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>                               Matrix&lt;const T, device&gt;&amp; mat_a, Matrix&lt;T, device&gt;&amp; mat_b) {</div>
 <div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);</div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>  DLAF_ASSERT(matrix::square_block_size(mat_a), mat_a);</div>
 <div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);</div>
 <div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>  DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);</div>
 <div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>  DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);</div>
@@ -167,7 +167,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>                               blas::Op op, blas::Diag diag, T alpha, Matrix&lt;const T, device&gt;&amp; mat_a,</div>
 <div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>                               Matrix&lt;T, device&gt;&amp; mat_b) {</div>
 <div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);</div>
-<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);</div>
+<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>  DLAF_ASSERT(matrix::square_block_size(mat_a), mat_a);</div>
 <div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);</div>
 <div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span>  DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);</div>
 <div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span>  DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);</div>

@@ -140,9 +140,9 @@ template&lt;Backend backend, Device device, class T &gt; </div>
 <dl class="section note"><dt>Note</dt><dd><code>uplo</code> == blas::uplo::Upper not yet implemented</dd></dl>
 <dl class="section pre"><dt>Precondition</dt><dd><code>A</code> has size (M x N) and is distributed according to <code>grid</code> </dd>
 <dd>
-<code>A</code> has blocksize (MB x NB) </dd>
+<code>A</code> has block size (MB x NB) </dd>
 <dd>
-<code>A</code> has tilesize (MB x NB) </dd>
+<code>A</code> has tile size (MB x NB) </dd>
 <dd>
 if uplo == blas::uplo::Upper or uplo == blas::uplo::Lower A should be square, i.e. M == N and MB == NB. </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>the max norm of the Matrix <code>A</code> or 0 if <code>A.size().isEmpty()</code> </dd></dl>

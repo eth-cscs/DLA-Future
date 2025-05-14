@@ -175,9 +175,9 @@ template&lt;Backend B, Device D, class T , Coord coord&gt; </div>
 </dl>
 <dl class="section pre"><dt>Precondition</dt><dd><code>perms</code> is not distributed </dd>
 <dd>
-<code>perms</code> has blocksize (NB x MB) </dd>
+<code>perms</code> has block size (NB x MB) </dd>
 <dd>
-<code>perms</code> has tilesize (NB x MB)</dd></dl>
+<code>perms</code> has tile size (NB x MB)</dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">mat_in</td><td>is the distributed input matrix. Only tiles whose both global row and col tile coords are in the range [i_begin,i_end) are accessed in readwrite-mode. </td></tr>
@@ -188,9 +188,9 @@ template&lt;Backend B, Device D, class T , Coord coord&gt; </div>
 <dd>
 <code>mat_in</code> has size (N x N) </dd>
 <dd>
-<code>mat_in</code> has blocksize (NB x NB) </dd>
+<code>mat_in</code> has block size (NB x NB) </dd>
 <dd>
-<code>mat_in</code> has tilesize (NB x NB)</dd></dl>
+<code>mat_in</code> has tile size (NB x NB)</dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">mat_out</td><td>is the distributed output matrix. Only tiles whose both global row and col tile coords are in the range [i_begin,i_end) are accessed in readwrite-mode. </td></tr>
@@ -201,9 +201,9 @@ template&lt;Backend B, Device D, class T , Coord coord&gt; </div>
 <dd>
 <code>mat_out</code> has size (N x N) </dd>
 <dd>
-<code>mat_out</code> has blocksize (NB x NB) </dd>
+<code>mat_out</code> has block size (NB x NB) </dd>
 <dd>
-<code>mat_out</code> has tilesize (NB x NB) </dd></dl>
+<code>mat_out</code> has tile size (NB x NB) </dd></dl>
 
 </div>
 </div>
@@ -261,9 +261,9 @@ template&lt;Backend B, Device D, class T , Coord coord&gt; </div>
 </dl>
 <dl class="section pre"><dt>Precondition</dt><dd><code>perms</code> is not distributed </dd>
 <dd>
-<code>perms</code> has blocksize (NB x MB) </dd>
+<code>perms</code> has block size (NB x MB) </dd>
 <dd>
-<code>perms</code> has tilesize (NB x MB)</dd></dl>
+<code>perms</code> has tile size (NB x MB)</dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">mat_in</td><td>is the input matrix. Only tiles whose both row and col tile coords are in the range [i_begin,i_end) are accessed in read-only mode. </td></tr>
@@ -272,9 +272,9 @@ template&lt;Backend B, Device D, class T , Coord coord&gt; </div>
 </dl>
 <dl class="section pre"><dt>Precondition</dt><dd><code>mat_in</code> has size (N x N) </dd>
 <dd>
-<code>mat_in</code> has blocksize (NB x NB) </dd>
+<code>mat_in</code> has block size (NB x NB) </dd>
 <dd>
-<code>mat_in</code> has tilesize (NB x NB)</dd></dl>
+<code>mat_in</code> has tile size (NB x NB)</dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">mat_out</td><td>is the output matrix. Only tiles whose both row and col tile coords are in the range [i_begin,i_end) are accessed in write-only mode. </td></tr>
@@ -283,9 +283,9 @@ template&lt;Backend B, Device D, class T , Coord coord&gt; </div>
 </dl>
 <dl class="section pre"><dt>Precondition</dt><dd><code>mat_out</code> has size (N x N) </dd>
 <dd>
-<code>mat_out</code> has blocksize (NB x NB) </dd>
+<code>mat_out</code> has block size (NB x NB) </dd>
 <dd>
-<code>mat_out</code> has tilesize (NB x NB) </dd></dl>
+<code>mat_out</code> has tile size (NB x NB) </dd></dl>
 
 </div>
 </div>

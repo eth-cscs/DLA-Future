@@ -1186,7 +1186,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l01095" name="l01095"></a><span class="lineno"> 1095</span>  matrix::Distribution dist({1, size}, {1, nb_band}, {1, ranks}, {0, rank}, {0, 0});</div>
 <div class="line"><a id="l01096" name="l01096"></a><span class="lineno"> 1096</span> </div>
 <div class="line"><a id="l01097" name="l01097"></a><span class="lineno"> 1097</span>  <span class="comment">// Maximum block_size / (2b-1) sweeps per block can be executed in parallel + 1 communication buffer.</span></div>
-<div class="line"><a id="l01098" name="l01098"></a><span class="lineno"> 1098</span>  <span class="keyword">const</span> <span class="keyword">auto</span> workers_per_block = 1 + ceilDiv(dist.blockSize().cols(), 2 * b - 1);</div>
+<div class="line"><a id="l01098" name="l01098"></a><span class="lineno"> 1098</span>  <span class="keyword">const</span> <span class="keyword">auto</span> workers_per_tile = 1 + ceilDiv(dist.tile_size().cols(), 2 * b - 1);</div>
 <div class="line"><a id="l01099" name="l01099"></a><span class="lineno"> 1099</span> </div>
 <div class="line"><a id="l01100" name="l01100"></a><span class="lineno"> 1100</span>  <span class="comment">// Point to point communication happens in four ways:</span></div>
 <div class="line"><a id="l01101" name="l01101"></a><span class="lineno"> 1101</span>  <span class="comment">// - when copying the band matrix in compact form             -&gt; compute_copy_tag</span></div>
@@ -1235,15 +1235,15 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l01144" name="l01144"></a><span class="lineno"> 1144</span>      offset_col_tag + (ranks == 2 ? compute_col_tag(dist.nrTiles().cols() - 1, <span class="keyword">true</span>) + 1 : 0);</div>
 <div class="line"><a id="l01145" name="l01145"></a><span class="lineno"> 1145</span>  ;</div>
 <div class="line"><a id="l01146" name="l01146"></a><span class="lineno"> 1146</span> </div>
-<div class="line"><a id="l01147" name="l01147"></a><span class="lineno"> 1147</span>  <span class="keyword">auto</span> compute_worker_tag = [offset_worker_tag, workers_per_block, ranks](SizeType sweep,</div>
-<div class="line"><a id="l01148" name="l01148"></a><span class="lineno"> 1148</span>                                                                          SizeType id_block) {</div>
-<div class="line"><a id="l01149" name="l01149"></a><span class="lineno"> 1149</span>    <span class="comment">// As only workers_per_block are available a dependency is introduced by reusing it, therefore</span></div>
+<div class="line"><a id="l01147" name="l01147"></a><span class="lineno"> 1147</span>  <span class="keyword">auto</span> compute_worker_tag = [offset_worker_tag, workers_per_tile, ranks](SizeType sweep,</div>
+<div class="line"><a id="l01148" name="l01148"></a><span class="lineno"> 1148</span>                                                                         SizeType id_block) {</div>
+<div class="line"><a id="l01149" name="l01149"></a><span class="lineno"> 1149</span>    <span class="comment">// As only workers_per_tile are available a dependency is introduced by reusing it, therefore</span></div>
 <div class="line"><a id="l01150" name="l01150"></a><span class="lineno"> 1150</span>    <span class="comment">// a different tag for all sweeps is not needed.</span></div>
 <div class="line"><a id="l01151" name="l01151"></a><span class="lineno"> 1151</span>    <span class="comment">// Moreover id_block is divided by the number of ranks as only the local index is needed.</span></div>
 <div class="line"><a id="l01152" name="l01152"></a><span class="lineno"> 1152</span>    <span class="comment">// Note: Passing the id_block_local is not an option as the sender local index might be different</span></div>
 <div class="line"><a id="l01153" name="l01153"></a><span class="lineno"> 1153</span>    <span class="comment">//       from the receiver index.</span></div>
-<div class="line"><a id="l01154" name="l01154"></a><span class="lineno"> 1154</span>    <span class="keywordflow">return</span> offset_worker_tag + <span class="keyword">static_cast&lt;</span>comm::IndexT_MPI<span class="keyword">&gt;</span>(sweep % workers_per_block +</div>
-<div class="line"><a id="l01155" name="l01155"></a><span class="lineno"> 1155</span>                                                             id_block / ranks * workers_per_block);</div>
+<div class="line"><a id="l01154" name="l01154"></a><span class="lineno"> 1154</span>    <span class="keywordflow">return</span> offset_worker_tag +</div>
+<div class="line"><a id="l01155" name="l01155"></a><span class="lineno"> 1155</span>           <span class="keyword">static_cast&lt;</span>comm::IndexT_MPI<span class="keyword">&gt;</span>(sweep % workers_per_tile + id_block / ranks * workers_per_tile);</div>
 <div class="line"><a id="l01156" name="l01156"></a><span class="lineno"> 1156</span>  };</div>
 <div class="line"><a id="l01157" name="l01157"></a><span class="lineno"> 1157</span> </div>
 <div class="line"><a id="l01158" name="l01158"></a><span class="lineno"> 1158</span>  <span class="comment">// Need shared pointer to keep the allocation until all the tasks are executed.</span></div>
@@ -1355,8 +1355,8 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l01264" name="l01264"></a><span class="lineno"> 1264</span> </div>
 <div class="line"><a id="l01265" name="l01265"></a><span class="lineno"> 1265</span>  vector&lt;vector&lt;Pipeline&lt;SweepWorkerDist&lt;T&gt;&gt;&gt;&gt; workers(dist.localNrTiles().cols());</div>
 <div class="line"><a id="l01266" name="l01266"></a><span class="lineno"> 1266</span>  <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; workers_block : workers) {</div>
-<div class="line"><a id="l01267" name="l01267"></a><span class="lineno"> 1267</span>    workers_block.reserve(workers_per_block);</div>
-<div class="line"><a id="l01268" name="l01268"></a><span class="lineno"> 1268</span>    <span class="keywordflow">for</span> (SizeType i = 0; i &lt; workers_per_block; ++i)</div>
+<div class="line"><a id="l01267" name="l01267"></a><span class="lineno"> 1267</span>    workers_block.reserve(workers_per_tile);</div>
+<div class="line"><a id="l01268" name="l01268"></a><span class="lineno"> 1268</span>    <span class="keywordflow">for</span> (SizeType i = 0; i &lt; workers_per_tile; ++i)</div>
 <div class="line"><a id="l01269" name="l01269"></a><span class="lineno"> 1269</span>      workers_block.emplace_back(SweepWorkerDist&lt;T&gt;(size, b));</div>
 <div class="line"><a id="l01270" name="l01270"></a><span class="lineno"> 1270</span>  }</div>
 <div class="line"><a id="l01271" name="l01271"></a><span class="lineno"> 1271</span> </div>
@@ -1454,7 +1454,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l01363" name="l01363"></a><span class="lineno"> 1363</span>        <span class="keyword">const</span> <span class="keyword">auto</span> id_block_local = dist.localTileIndex(id_block).col();</div>
 <div class="line"><a id="l01364" name="l01364"></a><span class="lineno"> 1364</span>        <span class="keyword">auto</span>&amp; a_block = a_ws[id_block_local];</div>
 <div class="line"><a id="l01365" name="l01365"></a><span class="lineno"> 1365</span>        <span class="keyword">auto</span>&amp; sem = sems[id_block_local];</div>
-<div class="line"><a id="l01366" name="l01366"></a><span class="lineno"> 1366</span>        <span class="keyword">auto</span>&amp; w_pipeline = workers[id_block_local][sweep % workers_per_block];</div>
+<div class="line"><a id="l01366" name="l01366"></a><span class="lineno"> 1366</span>        <span class="keyword">auto</span>&amp; w_pipeline = workers[id_block_local][sweep % workers_per_tile];</div>
 <div class="line"><a id="l01367" name="l01367"></a><span class="lineno"> 1367</span>        <span class="keyword">auto</span>&amp; dep_block = deps[id_block_local];</div>
 <div class="line"><a id="l01368" name="l01368"></a><span class="lineno"> 1368</span>        <span class="keyword">auto</span>&amp; tile_v = tiles_v[id_block_local];</div>
 <div class="line"><a id="l01369" name="l01369"></a><span class="lineno"> 1369</span> </div>
@@ -1662,7 +1662,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="ttc" id="aclassdlaf_1_1eigensolver_1_1internal_1_1_sweep_worker_dist_html"><div class="ttname"><a href="classdlaf_1_1eigensolver_1_1internal_1_1_sweep_worker_dist.html">dlaf::eigensolver::internal::SweepWorkerDist</a></div><div class="ttdef"><b>Definition</b> mc.h:569</div></div>
 <div class="ttc" id="aclassdlaf_1_1eigensolver_1_1internal_1_1_sweep_worker_html"><div class="ttname"><a href="classdlaf_1_1eigensolver_1_1internal_1_1_sweep_worker.html">dlaf::eigensolver::internal::SweepWorker</a></div><div class="ttdef"><b>Definition</b> mc.h:477</div></div>
 <div class="ttc" id="aclassdlaf_1_1internal_1_1_policy_html"><div class="ttname"><a href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a></div><div class="ttdef"><b>Definition</b> policy.h:24</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html">dlaf::matrix::Distribution</a></div><div class="ttdef"><b>Definition</b> distribution.h:111</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html">dlaf::matrix::Distribution</a></div><div class="ttdef"><b>Definition</b> distribution.h:115</div></div>
 <div class="ttc" id="aclassdlaf_1_1matrix_1_1_matrix_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_matrix.html">dlaf::matrix::Matrix</a></div><div class="ttdef"><b>Definition</b> matrix.h:62</div></div>
 <div class="ttc" id="aclassdlaf_1_1memory_1_1_memory_view_html"><div class="ttname"><a href="classdlaf_1_1memory_1_1_memory_view.html">dlaf::memory::MemoryView</a></div><div class="ttdef"><b>Definition</b> memory_view.h:33</div></div>
 <div class="ttc" id="acommunication_2index_8h_html"><div class="ttname"><a href="communication_2index_8h.html">index.h</a></div></div>

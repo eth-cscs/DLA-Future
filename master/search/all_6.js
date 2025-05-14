@@ -27,14 +27,15 @@ var searchData=
   ['global_5ftile_5felement_5fdistance_24',['global_tile_element_distance',['../distribution_8h.html#afe4a8baf6bb510cb8d666c6e33b0cefc',1,'dlaf::matrix::internal::distribution']]],
   ['global_5ftile_5felement_5foffset_25',['global_tile_element_offset',['../distribution__extensions_8h.html#aa87a557f98ef1215a05067b01ee2fb33',1,'dlaf::matrix::internal::distribution']]],
   ['global_5ftile_5ffrom_5fglobal_5felement_26',['global_tile_from_global_element',['../classdlaf_1_1matrix_1_1_distribution.html#a4302348a2a1318a8405d331b13ae21bb',1,'dlaf::matrix::Distribution']]],
-  ['global_5ftile_5ffrom_5flocal_5ftile_27',['global_tile_from_local_tile',['../util__distribution_8h.html#a7fe9df041a1fc4274489b511c40a27cc',1,'dlaf::util::matrix::global_tile_from_local_tile()'],['../classdlaf_1_1matrix_1_1_distribution.html#a28bd868049fd92f0bb28dcf134c9571f',1,'dlaf::matrix::Distribution::global_tile_from_local_tile()']]],
+  ['global_5ftile_5ffrom_5flocal_5ftile_27',['global_tile_from_local_tile',['../classdlaf_1_1matrix_1_1_distribution.html#a28bd868049fd92f0bb28dcf134c9571f',1,'dlaf::matrix::Distribution::global_tile_from_local_tile()'],['../util__distribution_8h.html#a7fe9df041a1fc4274489b511c40a27cc',1,'dlaf::util::matrix::global_tile_from_local_tile()']]],
   ['global_5ftile_5ffrom_5flocal_5ftile_5fon_5frank_28',['global_tile_from_local_tile_on_rank',['../distribution__extensions_8h.html#a32764806334e1b55cc7abe4a12c07e8a',1,'dlaf::matrix::internal::distribution']]],
   ['global_5ftile_5findex_29',['global_tile_index',['../classdlaf_1_1matrix_1_1_distribution.html#a9072ae428b418565019f3986c67bddca',1,'dlaf::matrix::Distribution::global_tile_index(const LocalTileIndex &amp;local_tile) const noexcept'],['../classdlaf_1_1matrix_1_1_distribution.html#ac95f338d40063bc76aacea918704ea43',1,'dlaf::matrix::Distribution::global_tile_index(const GlobalElementIndex &amp;global_element) const noexcept']]],
   ['global_5ftile_5findex_5ffrom_5fsub_5fdistribution_30',['global_tile_index_from_sub_distribution',['../distribution_8h.html#ad40ebeee4d978542c2a1460c05c1c3fa',1,'dlaf::matrix::internal::distribution']]],
   ['global_5ftile_5flinear_5findex_31',['global_tile_linear_index',['../distribution_8h.html#a4dbe5cf03961dec5b6b381a4f8415314',1,'dlaf::matrix::internal::distribution']]],
   ['global_5ftile_5foffset_32',['global_tile_offset',['../distribution__extensions_8h.html#ae8c5ed233fad3336d331da897a56a8a9',1,'dlaf::matrix::internal::distribution']]],
-  ['gpublas_2eh_33',['gpublas.h',['../gpublas_8h.html',1,'']]],
-  ['grid_2eh_34',['grid.h',['../grid_8h.html',1,'']]],
-  ['grid_5fordering_35',['grid_ordering',['../grid_8h.html#a438a7328e8679dfd1bc4758e96688d6b',1,'grid.h']]],
-  ['grid_5fsize_36',['grid_size',['../classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#aab63e932ea19be17ee87fca99879266c',1,'dlaf::matrix::internal::MatrixBase']]]
+  ['global_5ftile_5fsize_5fof_33',['global_tile_size_of',['../classdlaf_1_1matrix_1_1_distribution.html#a63dd108853932e6f68efe7e1575293a2',1,'dlaf::matrix::Distribution']]],
+  ['gpublas_2eh_34',['gpublas.h',['../gpublas_8h.html',1,'']]],
+  ['grid_2eh_35',['grid.h',['../grid_8h.html',1,'']]],
+  ['grid_5fordering_36',['grid_ordering',['../grid_8h.html#a438a7328e8679dfd1bc4758e96688d6b',1,'grid.h']]],
+  ['grid_5fsize_37',['grid_size',['../classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#aab63e932ea19be17ee87fca99879266c',1,'dlaf::matrix::internal::MatrixBase']]]
 ];

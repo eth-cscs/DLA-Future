@@ -143,9 +143,9 @@ template&lt;Backend backend, Device device, class T &gt; </div>
 <dd>
 <code>mat_a</code> has size (N x N) </dd>
 <dd>
-<code>mat_a</code> has blocksize (NB x NB) </dd>
+<code>mat_a</code> has block size (NB x NB) </dd>
 <dd>
-<code>mat_a</code> has tilesize (NB x NB)</dd></dl>
+<code>mat_a</code> has tile size (NB x NB)</dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">mat_b</td><td>contains the Cholesky factorisation of the Hermitian positive definite matrix B The triangular matrix can be lower (L) or upper (U). Only the tiles of the matrix which contain the lower triangular or the upper triangular part are accessed. Note: B should be modifiable as the diagonal tiles might be temporarily modified during the calculation. </td></tr>
@@ -156,9 +156,9 @@ template&lt;Backend backend, Device device, class T &gt; </div>
 <dd>
 <code>mat_b</code> has size (N x N) </dd>
 <dd>
-<code>mat_b</code> has blocksize (NB x NB) </dd>
+<code>mat_b</code> has block size (NB x NB) </dd>
 <dd>
-<code>mat_b</code> has tilesize (NB x NB) </dd></dl>
+<code>mat_b</code> has tile size (NB x NB) </dd></dl>
 
 </div>
 </div>
@@ -215,9 +215,9 @@ template&lt;Backend backend, Device device, class T &gt; </div>
 <dd>
 <code>mat_a</code> has size (N x N) </dd>
 <dd>
-<code>mat_a</code> has blocksize (NB x NB) </dd>
+<code>mat_a</code> has block size (NB x NB) </dd>
 <dd>
-<code>mat_a</code> has tilesize (NB x NB)</dd></dl>
+<code>mat_a</code> has tile size (NB x NB)</dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">mat_b</td><td>contains the triangular matrix. It can be lower (L) or upper (U). Only the tiles of the matrix which contain the lower triangular or the upper triangular part are accessed. Note: B should be modifiable as the diagonal tiles might be temporarily modified during the calculation. </td></tr>
@@ -228,9 +228,9 @@ template&lt;Backend backend, Device device, class T &gt; </div>
 <dd>
 <code>mat_b</code> has size (N x N) </dd>
 <dd>
-<code>mat_b</code> has blocksize (NB x NB) </dd>
+<code>mat_b</code> has block size (NB x NB) </dd>
 <dd>
-<code>mat_b</code> has tilesize (NB x NB) </dd></dl>
+<code>mat_b</code> has tile size (NB x NB) </dd></dl>
 
 </div>
 </div>

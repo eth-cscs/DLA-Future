@@ -134,14 +134,14 @@ template&lt;Backend B, Device D, class T &gt; </div>
 <p>The Q matrix is a product of elementary Householder reflectors <code>Q</code> = H(1) . H(2) . ... . H(n)</p>
 <p>with <code>H(i) = I - tau(i) * v(i) . v(i)**H</code></p>
 <p>which are stored, together with the resulting band-diagonal matrix, in-place in the lower triangular part of <code>mat_a</code>.</p>
-<p>In particular, <code>mat_a</code> will look like this (tile representation) if band_size == blocksize </p><pre class="fragment">B ~ ~ ~ ~ ~
+<p>In particular, <code>mat_a</code> will look like this (tile representation) if band_size == block_size </p><pre class="fragment">B ~ ~ ~ ~ ~
 * B ~ ~ ~ ~
 v * B ~ ~ ~
 v v * B ~ ~
 v v v * B ~
 v v v v * B
 </pre><p> where each column of <code>v</code> is an elementary reflector without its first element (which is always equal to 1), <code>B</code> are the tiles containg the band-diagonal form, while <code>*</code> tiles contain both elements of the band (upper triangular diagonal included) and of the elementary reflectors (lower triangular diagonal excluded).</p>
-<p>In case band_size &lt; blocksize: </p><pre class="fragment">* ~ ~ ~ ~ ~
+<p>In case band_size &lt; block_size: </p><pre class="fragment">* ~ ~ ~ ~ ~
 * * ~ ~ ~ ~
 v * * ~ ~ ~
 v v * * ~ ~
@@ -158,9 +158,9 @@ v v v v * *
 <dd>
 <code>mat_a</code> has size (N x N) </dd>
 <dd>
-<code>mat_a</code> has blocksize (NB x NB) </dd>
+<code>mat_a</code> has block size (NB x NB) </dd>
 <dd>
-<code>mat_a</code> has tilesize (NB x NB)</dd></dl>
+<code>mat_a</code> has tile size (NB x NB)</dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">band_size</td><td>size of the band of the resulting matrix (main diagonal + band_size sub-diagonals) </td></tr>
@@ -210,9 +210,9 @@ template&lt;Backend B, Device D, class T &gt; </div>
 <dd>
 <code>mat_a</code> has size (N x N) </dd>
 <dd>
-<code>mat_a</code> has blocksize (NB x NB) </dd>
+<code>mat_a</code> has block size (NB x NB) </dd>
 <dd>
-<code>mat_a</code> has tilesize (NB x NB)</dd></dl>
+<code>mat_a</code> has tile size (NB x NB)</dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">band_size</td><td>size of the band of the resulting matrix (main diagonal + band_size sub-diagonals) </td></tr>

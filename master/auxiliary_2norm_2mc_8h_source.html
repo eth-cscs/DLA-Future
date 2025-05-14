@@ -163,7 +163,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>  <span class="keyword">const</span> <span class="keyword">auto</span>&amp; distribution = matrix.distribution();</div>
 <div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span> </div>
 <div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>  DLAF_ASSERT(<a class="code hl_function" href="util__matrix_8h.html#aae6464887dae32e01668a32e71397cb0">square_size</a>(matrix), matrix);</div>
-<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>  DLAF_ASSERT(<a class="code hl_function" href="util__matrix_8h.html#a355682eaf279129f2aa06c8e96eaa61b">square_blocksize</a>(matrix), matrix);</div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>  DLAF_ASSERT(<a class="code hl_function" href="util__matrix_8h.html#af2492db21e2191009a147064a08e78eb">square_tile_size</a>(matrix), matrix);</div>
 <div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span> </div>
 <div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>  <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">vector&lt;ex::unique_any_sender&lt;NormT&gt;</a>&gt; <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">tiles_max</a>;</div>
 <div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>  <a class="code hl_class" href="classdlaf_1_1matrix_1_1_matrix.html">tiles_max</a>.reserve(distribution.localNrTiles().rows() * distribution.localNrTiles().cols());</div>
@@ -263,8 +263,8 @@ $(document).ready(function() { init_codefold(0); });
 <div class="ttc" id="async_2reduce_8h_html"><div class="ttname"><a href="sync_2reduce_8h.html">reduce.h</a></div></div>
 <div class="ttc" id="atypes_8h_html"><div class="ttname"><a href="types_8h.html">types.h</a></div></div>
 <div class="ttc" id="autil__matrix_8h_html"><div class="ttname"><a href="util__matrix_8h.html">util_matrix.h</a></div></div>
-<div class="ttc" id="autil__matrix_8h_html_a355682eaf279129f2aa06c8e96eaa61b"><div class="ttname"><a href="util__matrix_8h.html#a355682eaf279129f2aa06c8e96eaa61b">dlaf::matrix::square_blocksize</a></div><div class="ttdeci">bool square_blocksize(const MatrixLike &amp;m) noexcept</div><div class="ttdoc">Returns true if the matrix block size is square.</div><div class="ttdef"><b>Definition</b> util_matrix.h:49</div></div>
 <div class="ttc" id="autil__matrix_8h_html_aae6464887dae32e01668a32e71397cb0"><div class="ttname"><a href="util__matrix_8h.html#aae6464887dae32e01668a32e71397cb0">dlaf::matrix::square_size</a></div><div class="ttdeci">bool square_size(const MatrixLike &amp;m) noexcept</div><div class="ttdoc">Returns true if the matrix is square.</div><div class="ttdef"><b>Definition</b> util_matrix.h:43</div></div>
+<div class="ttc" id="autil__matrix_8h_html_af2492db21e2191009a147064a08e78eb"><div class="ttname"><a href="util__matrix_8h.html#af2492db21e2191009a147064a08e78eb">dlaf::matrix::square_tile_size</a></div><div class="ttdeci">bool square_tile_size(const MatrixLike &amp;m) noexcept</div><div class="ttdoc">Returns true if the matrix tile size is square.</div><div class="ttdef"><b>Definition</b> util_matrix.h:55</div></div>
 <div class="ttc" id="avector_8h_html"><div class="ttname"><a href="vector_8h.html">vector.h</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->

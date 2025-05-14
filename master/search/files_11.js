@@ -1,12 +1,11 @@
 var searchData=
 [
-  ['tile_2eh_0',['tile.h',['../blas_2tile_8h.html',1,'(Global Namespace)'],['../lapack_2tile_8h.html',1,'(Global Namespace)'],['../matrix_2tile_8h.html',1,'(Global Namespace)']]],
-  ['tile_5fextensions_2eh_1',['tile_extensions.h',['../tile__extensions_8h.html',1,'']]],
-  ['timer_2eh_2',['timer.h',['../timer_8h.html',1,'']]],
-  ['traits_2eh_3',['traits.h',['../traits_8h.html',1,'']]],
-  ['triangular_2eh_4',['triangular.h',['../multiplication_2triangular_8h.html',1,'(Global Namespace)'],['../solver_2triangular_8h.html',1,'(Global Namespace)']]],
-  ['tridiag_5fsolver_2eh_5',['tridiag_solver.h',['../tridiag__solver_8h.html',1,'']]],
-  ['tune_2eh_6',['tune.h',['../tune_8h.html',1,'']]],
-  ['type_5fhandler_2eh_7',['type_handler.h',['../type__handler_8h.html',1,'']]],
-  ['types_2eh_8',['types.h',['../types_8h.html',1,'']]]
+  ['unwrap_2eh_0',['unwrap.h',['../unwrap_8h.html',1,'']]],
+  ['util_5fblas_2eh_1',['util_blas.h',['../util__blas_8h.html',1,'']]],
+  ['util_5fdistribution_2eh_2',['util_distribution.h',['../util__distribution_8h.html',1,'']]],
+  ['util_5flapack_2eh_3',['util_lapack.h',['../util__lapack_8h.html',1,'']]],
+  ['util_5fmath_2eh_4',['util_math.h',['../util__math_8h.html',1,'']]],
+  ['util_5fmatrix_2eh_5',['util_matrix.h',['../util__matrix_8h.html',1,'']]],
+  ['util_5ftile_2eh_6',['util_tile.h',['../util__tile_8h.html',1,'']]],
+  ['utils_2eh_7',['utils.h',['../utils_8h.html',1,'']]]
 ];

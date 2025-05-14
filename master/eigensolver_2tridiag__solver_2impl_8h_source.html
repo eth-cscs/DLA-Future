@@ -303,7 +303,7 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>  <span class="comment">// Auxiliary matrix used for the D&amp;C algorithm</span></div>
 <div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>  <span class="keyword">const</span> matrix::Distribution&amp; distr = evecs.distribution();</div>
 <div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>  <span class="keyword">const</span> LocalElementSize vec_size(distr.size().rows(), 1);</div>
-<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>  <span class="keyword">const</span> TileElementSize vec_tile_size(distr.blockSize().rows(), 1);</div>
+<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>  <span class="keyword">const</span> TileElementSize vec_tile_size(distr.tile_size().rows(), 1);</div>
 <div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>  WorkSpace&lt;T, D&gt; ws{Matrix&lt;T, D&gt;(distr),                            <span class="comment">// e0</span></div>
 <div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>                     Matrix&lt;T, D&gt;(distr),                            <span class="comment">// e1</span></div>
 <div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>                     evecs,                                          <span class="comment">// e2</span></div>

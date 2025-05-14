@@ -69,10 +69,10 @@ public:
     return dist_.tile_size_of(index);
   }
 
-  /// Returns the minimum number of elements that are needed for the @p index tile.
+  /// Returns the leading dimension of the @p index tile.
   ///
   /// @pre index.isIn(nr_tiles()).
-  SizeType ld_tile(const LocalTileIndex&) const noexcept {
+  SizeType ld_tile(const LocalTileIndex& /*index*/) const noexcept {
     return ld_;
   }
 

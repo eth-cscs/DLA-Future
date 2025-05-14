@@ -119,7 +119,8 @@ public:
   /// Constructs a distribution for a non distributed matrix of size {0, 0} and block size {1, 1}.
   Distribution() noexcept;
 
-  DLAF_DISTRIBUTION_DEPRECATED("Use another constructor")
+  /// Constructs a distribution for a non distributed matrix of size @p size and block size @p tile_size
+  /// and tile size @p tile_size.
   Distribution(const LocalElementSize& size, const TileElementSize& tile_size,
                const GlobalElementIndex& element_offset = {0, 0});
 

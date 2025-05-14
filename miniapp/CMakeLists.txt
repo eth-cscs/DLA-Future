@@ -14,7 +14,7 @@ project(DLAF-miniapps)
 list(PREPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 find_package(DLAF REQUIRED)
-find_package(pika 0.11.0 REQUIRED)
+find_package(pika REQUIRED)
 
 include(DLAF_AddMiniapp)
 include(DLAF_AddTargetWarnings)

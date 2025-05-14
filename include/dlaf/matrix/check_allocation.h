@@ -78,7 +78,7 @@ bool is_allocated_as_blocks(MatrixLike& mat) {
     return true;
 
   for (SizeType j_bl = 0, j = 0; j_bl < local_nr_blocks.cols(); ++j_bl) {
-    // When computing the number of tiles in block, special care is needed when onlny a single block is
+    // When computing the number of tiles in a block, special care is needed when only a single block is
     // present, as it can contain two incomplete tiles.
     SizeType nb = helper_dist.local_tile_size_of<Coord::Col>(j_bl);
     SizeType tiles_in_block_cols = nb / dist.tile_size().cols();
@@ -86,8 +86,8 @@ bool is_allocated_as_blocks(MatrixLike& mat) {
       tiles_in_block_cols = dist.local_nr_tiles().cols();
 
     for (SizeType i_bl = 0, i = 0; i_bl < local_nr_blocks.rows(); ++i_bl) {
-      // When computing the number of tiles in block, special care is needed when only a single block is
-      // present, as it can contain two incomplete tiles.
+      // When computing the number of tiles in a block, special care is needed when only a single block
+      // is present, as it can contain two incomplete tiles.
       SizeType mb = helper_dist.local_tile_size_of<Coord::Row>(i_bl);
       SizeType tiles_in_block_rows = mb / dist.tile_size().rows();
       if (local_nr_blocks.rows() == 1)

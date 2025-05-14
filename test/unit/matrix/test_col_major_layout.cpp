@@ -21,8 +21,8 @@
 using namespace dlaf;
 using namespace testing;
 
-// size, tile_size, ld, min_memory
 const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, SizeType>> values(
+    // size, tile_size, ld, min_memory
     {{{31, 17}, {7, 11}, 31, 527},   // Scalapack like layout
      {{31, 17}, {32, 11}, 31, 527},  // only one row of tiles
      {{31, 17}, {7, 11}, 33, 559},   // with padding (ld)
@@ -60,8 +60,9 @@ TEST(ColMajorLayoutTest, Constructor) {
   }
 }
 
-// size, tile_size, ld, is_equal
+const matrix::ColMajorLayout layout0({{25, 25}, {5, 5}}, 50);
 const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, bool>> comp_values({
+    // size, tile_size, ld, is_equal
     {{25, 25}, {5, 5}, 50, true},   // Original
     {{23, 25}, {5, 5}, 50, false},  // different size
     {{25, 25}, {6, 5}, 50, false},  // different block_size
@@ -69,9 +70,6 @@ const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, bool>>
 });
 
 TEST(LayoutInfoTest, ComparisonOperator) {
-  matrix::Distribution distribution0({25, 25}, {5, 5});
-  matrix::ColMajorLayout layout0(std::move(distribution0), 50);
-
   for (const auto& [size, tile_size, ld, is_equal] : comp_values) {
     matrix::Distribution distribution(size, tile_size);
     matrix::ColMajorLayout layout(std::move(distribution), ld);

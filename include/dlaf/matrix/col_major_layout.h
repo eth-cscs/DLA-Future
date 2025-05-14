@@ -28,8 +28,8 @@ public:
   ///
   /// @pre leading_dimension >= max(1, distribution.local_size().rows())
   /// @pre distribution.offset() == {0, 0}
-  ColMajorLayout(const Distribution& distribution, SizeType leading_dimension)
-      : dist_(distribution), ld_(leading_dimension) {
+  ColMajorLayout(Distribution distribution, SizeType leading_dimension)
+      : dist_(std::move(distribution)), ld_(leading_dimension) {
     if (dist_.local_size().isEmpty()) {
       DLAF_ASSERT(ld_ >= 1, ld_);
     }

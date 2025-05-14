@@ -11,6 +11,7 @@
 #pragma once
 
 /// @file
+#include <utility>
 
 #include <dlaf/common/assert.h>
 #include <dlaf/matrix/allocation.h>

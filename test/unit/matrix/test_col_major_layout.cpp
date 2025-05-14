@@ -71,8 +71,7 @@ const std::vector<std::tuple<LocalElementSize, TileElementSize, SizeType, bool>>
 
 TEST(LayoutInfoTest, ComparisonOperator) {
   for (const auto& [size, tile_size, ld, is_equal] : comp_values) {
-    matrix::Distribution distribution(size, tile_size);
-    matrix::ColMajorLayout layout(std::move(distribution), ld);
+    matrix::ColMajorLayout layout({size, tile_size}, ld);
 
     if (is_equal) {
       EXPECT_TRUE(layout0 == layout);

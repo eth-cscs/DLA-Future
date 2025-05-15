@@ -10,7 +10,7 @@
   - Note: previous usages without changes provide correct result but they perform an additional tile brodcast, This extra communication can be avoided shrinking the transposed panel.
 - Refactored `Matrix` API. (#1321)
   - Constructors changed.
-  - Old methods still available, but will be deprecated soon.
+  - Member functions have been updated. Old member functions are still available, but will be deprecated soon.
 
 ### Bug fixes
 

@@ -17,7 +17,7 @@ Currently DLA-Future provides the following algorithms which are available in th
 | `P[C,Z]HEMM`, `P[S,D]SYMM` | Hermitian matrix multiplication | ✔️ | ❌ | ❌ |
 | `P[S,D,C,Z]TRSM` | Triangular solver | ✔️ | ❌ | ❌ |
 | `P[S,D,C,Z]POTRF` | Cholesky decomposition | ✔️ | ✔️ | ✔️ |
-| `P[S,D,C,Z]POTRI` | Inverse from Cholesky factor | ✔️ | ❌ | ❌ |
+| `P[S,D,C,Z]POTRI` | Inverse from Cholesky factor | ✔️ | ✔️ | ✔️ |
 | `P[S,D,C,Z]TRTRI` | Inverse of triangular matrix | ✔️ | ❌ | ❌ |
 | `P[C,Z]HEEV*`, `P[S,D]SYEV*` | Symmetric / Hermitian eigenvalue solver | ✔️ | ✔️ | ✔️ |
 | `P[C,Z]HEGV*`, `P[S,D]SYGV*` | Generalized Symmetric / Hermitian eigenvalue solver | ✔️ | ✔️ | ✔️ |

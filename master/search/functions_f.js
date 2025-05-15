@@ -2,7 +2,7 @@ var searchData=
 [
   ['same_5fprocess_5fgrid_0',['same_process_grid',['../util__matrix_8h.html#a716bde10afdaefd9ef17b02c7b2b64d7',1,'dlaf::matrix']]],
   ['samesign_1',['sameSign',['../util__math_8h.html#a0922553e7cd5d09cc857bb33e8a1b91b',1,'dlaf::util']]],
-  ['scal_2',['scal',['../tile__extensions_8h.html#a4b89838d3f4dff6ba23a20e5f035453e',1,'dlaf::tile::scal(const dlaf::internal::Policy&lt; B &gt; &amp;p, Sender &amp;&amp;s)'],['../tile__extensions_8h.html#ad9af5486873937fee38a10701216be48',1,'dlaf::tile::scal(T beta, const matrix::Tile&lt; T, D &gt; &amp;tile)'],['../tile__extensions_8h.html#a8db3ce17362217fe093962ccadea9990',1,'dlaf::tile::scal(const dlaf::internal::Policy&lt; B &gt; &amp;p)']]],
+  ['scal_2',['scal',['../blas_2tile__extensions_8h.html#a4b89838d3f4dff6ba23a20e5f035453e',1,'dlaf::tile::scal(const dlaf::internal::Policy&lt; B &gt; &amp;p, Sender &amp;&amp;s)'],['../blas_2tile__extensions_8h.html#ad9af5486873937fee38a10701216be48',1,'dlaf::tile::scal(T beta, const matrix::Tile&lt; T, D &gt; &amp;tile)'],['../blas_2tile__extensions_8h.html#a8db3ce17362217fe093962ccadea9990',1,'dlaf::tile::scal(const dlaf::internal::Policy&lt; B &gt; &amp;p)']]],
   ['schedule_5fall_5freduce_5fin_5fplace_3',['schedule_all_reduce_in_place',['../kernels_2all__reduce_8h.html#ae596c9d94b5be4b286a5fef9eb338332',1,'dlaf::comm']]],
   ['schedule_5fbcast_5frecv_4',['schedule_bcast_recv',['../kernels_2broadcast_8h.html#a89e305606cba10b28b7594931039442e',1,'dlaf::comm']]],
   ['schedule_5fbcast_5fsend_5',['schedule_bcast_send',['../kernels_2broadcast_8h.html#a72f364f8f48d558bcf425ec2b0264c02',1,'dlaf::comm']]],

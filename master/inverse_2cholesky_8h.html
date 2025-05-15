@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>DLAF: /home/runner/work/DLA-Future/DLA-Future/include/dlaf/factorization/cholesky.h File Reference</title>
+<title>DLAF: /home/runner/work/DLA-Future/DLA-Future/include/dlaf/inverse/cholesky.h File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -69,7 +69,7 @@ $(function() {
 
 <div id="nav-path" class="navpath">
   <ul>
-<li class="navelem"><a class="el" href="dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="dir_415b543d06dcd728a2539f6ad76147ea.html">dlaf</a></li><li class="navelem"><a class="el" href="dir_20c89e09ba2719528029ab3e71591da0.html">factorization</a></li>  </ul>
+<li class="navelem"><a class="el" href="dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="dir_415b543d06dcd728a2539f6ad76147ea.html">dlaf</a></li><li class="navelem"><a class="el" href="dir_443788093c6b0e9f1fa3e566dd8b1088.html">inverse</a></li>  </ul>
 </div>
 </div><!-- top -->
 <div class="header">
@@ -80,25 +80,26 @@ $(function() {
 <div class="contents">
 <div class="textblock"><code>#include &lt;blas.hh&gt;</code><br />
 <code>#include &lt;<a class="el" href="communicator__grid_8h_source.html">dlaf/communication/communicator_grid.h</a>&gt;</code><br />
-<code>#include &lt;dlaf/factorization/cholesky/api.h&gt;</code><br />
+<code>#include &lt;dlaf/inverse/cholesky/api.h&gt;</code><br />
+<code>#include &lt;dlaf/inverse/triangular/api.h&gt;</code><br />
 <code>#include &lt;<a class="el" href="matrix_8h_source.html">dlaf/matrix/matrix.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="types_8h_source.html">dlaf/types.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="util__matrix_8h_source.html">dlaf/util_matrix.h</a>&gt;</code><br />
 </div>
-<p><a href="factorization_2cholesky_8h_source.html">Go to the source code of this file.</a></p>
+<p><a href="inverse_2cholesky_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:adaa1f64029b23ea42e9ba15219c1d06d" id="r_adaa1f64029b23ea42e9ba15219c1d06d"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
-<tr class="memitem:adaa1f64029b23ea42e9ba15219c1d06d"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="factorization_2cholesky_8h.html#adaa1f64029b23ea42e9ba15219c1d06d">dlaf::cholesky_factorization</a> (blas::Uplo uplo, Matrix&lt; T, device &gt; &amp;mat_a)</td></tr>
-<tr class="separator:adaa1f64029b23ea42e9ba15219c1d06d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adda5f6fab6439a17b12a1fc368be293c" id="r_adda5f6fab6439a17b12a1fc368be293c"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
-<tr class="memitem:adda5f6fab6439a17b12a1fc368be293c"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="factorization_2cholesky_8h.html#adda5f6fab6439a17b12a1fc368be293c">dlaf::cholesky_factorization</a> (<a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> &amp;grid, blas::Uplo uplo, Matrix&lt; T, device &gt; &amp;mat_a)</td></tr>
-<tr class="separator:adda5f6fab6439a17b12a1fc368be293c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:affb6a52f69315d51e908097e1bc0404c" id="r_affb6a52f69315d51e908097e1bc0404c"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
+<tr class="memitem:affb6a52f69315d51e908097e1bc0404c"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="inverse_2cholesky_8h.html#affb6a52f69315d51e908097e1bc0404c">dlaf::inverse_from_cholesky_factor</a> (blas::Uplo uplo, Matrix&lt; T, device &gt; &amp;mat_a)</td></tr>
+<tr class="separator:affb6a52f69315d51e908097e1bc0404c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1c061c7f72f5bb390c32a7871ec9958d" id="r_a1c061c7f72f5bb390c32a7871ec9958d"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
+<tr class="memitem:a1c061c7f72f5bb390c32a7871ec9958d"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="inverse_2cholesky_8h.html#a1c061c7f72f5bb390c32a7871ec9958d">dlaf::inverse_from_cholesky_factor</a> (<a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> &amp;grid, blas::Uplo uplo, Matrix&lt; T, device &gt; &amp;mat_a)</td></tr>
+<tr class="separator:a1c061c7f72f5bb390c32a7871ec9958d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="adaa1f64029b23ea42e9ba15219c1d06d" name="adaa1f64029b23ea42e9ba15219c1d06d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#adaa1f64029b23ea42e9ba15219c1d06d">&#9670;&#160;</a></span>cholesky_factorization() <span class="overload">[1/2]</span></h2>
+<a id="affb6a52f69315d51e908097e1bc0404c" name="affb6a52f69315d51e908097e1bc0404c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#affb6a52f69315d51e908097e1bc0404c">&#9670;&#160;</a></span>inverse_from_cholesky_factor() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -106,7 +107,7 @@ Functions</h2></td></tr>
 template&lt;Backend backend, Device device, class T &gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">void dlaf::cholesky_factorization </td>
+          <td class="memname">void dlaf::inverse_from_cholesky_factor </td>
           <td>(</td>
           <td class="paramtype">blas::Uplo&#160;</td>
           <td class="paramname"><em>uplo</em>, </td>
@@ -124,11 +125,11 @@ template&lt;Backend backend, Device device, class T &gt; </div>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Cholesky factorization which computes the factorization of an Hermitian positive definite matrix A.</p>
-<p>The factorization has the form A=LL^H (uplo = Lower) or A = U^H U (uplo = Upper), where L is a lower and U is an upper triangular matrix. </p><dl class="params"><dt>Parameters</dt><dd>
+<p>Compute the inverse of a positive definite matrix given its Cholesky factor.</p>
+<dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">uplo</td><td>specifies if the elements of the Hermitian matrix to be referenced are the elements in the lower or upper triangular part,</td></tr>
-    <tr><td class="paramname">mat_a</td><td>on entry it contains the triangular matrix A, on exit the matrix elements are overwritten with the elements of the Cholesky factor. Only the tiles of the matrix which contain the upper or the lower triangular part (depending on the value of uplo), are accessed and modified.</td></tr>
+    <tr><td class="paramname">uplo</td><td>specifies if the elements of the Hermitian matrix to be referenced are the elements in the lower or upper triangular part, </td></tr>
+    <tr><td class="paramname">mat_a</td><td>on entry it contains the Cholesky factor, on exit the matrix elements are overwritten with the elements of the inverse. Only the tiles of the matrix which contain the upper or the lower triangular part (depending on the value of uplo), are accessed and modified.</td></tr>
   </table>
   </dd>
 </dl>
@@ -136,14 +137,12 @@ template&lt;Backend backend, Device device, class T &gt; </div>
 <dd>
 <code>mat_a</code> has size (N x N) </dd>
 <dd>
-<code>mat_a</code> has block size (NB x NB) </dd>
-<dd>
 <code>mat_a</code> has tile size (NB x NB) </dd></dl>
 
 </div>
 </div>
-<a id="adda5f6fab6439a17b12a1fc368be293c" name="adda5f6fab6439a17b12a1fc368be293c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#adda5f6fab6439a17b12a1fc368be293c">&#9670;&#160;</a></span>cholesky_factorization() <span class="overload">[2/2]</span></h2>
+<a id="a1c061c7f72f5bb390c32a7871ec9958d" name="a1c061c7f72f5bb390c32a7871ec9958d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1c061c7f72f5bb390c32a7871ec9958d">&#9670;&#160;</a></span>inverse_from_cholesky_factor() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -151,7 +150,7 @@ template&lt;Backend backend, Device device, class T &gt; </div>
 template&lt;Backend backend, Device device, class T &gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">void dlaf::cholesky_factorization </td>
+          <td class="memname">void dlaf::inverse_from_cholesky_factor </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> &amp;&#160;</td>
           <td class="paramname"><em>grid</em>, </td>
@@ -175,20 +174,18 @@ template&lt;Backend backend, Device device, class T &gt; </div>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Cholesky factorization which computes the factorization of an Hermitian positive definite matrix A.</p>
-<p>The factorization has the form A=LL^H (uplo = Lower) or A = U^H U (uplo = Upper), where L is a lower and U is an upper triangular matrix. </p><dl class="params"><dt>Parameters</dt><dd>
+<p>Compute the inverse of a positive definite matrix given its Cholesky factor.</p>
+<dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">grid</td><td>is the communicator grid on which the matrix A has been distributed, </td></tr>
     <tr><td class="paramname">uplo</td><td>specifies if the elements of the Hermitian matrix to be referenced are the elements in the lower or upper triangular part, </td></tr>
-    <tr><td class="paramname">mat_a</td><td>on entry it contains the triangular matrix A, on exit the matrix elements are overwritten with the elements of the Cholesky factor. Only the tiles of the matrix which contain the upper or the lower triangular part (depending on the value of uplo), are accessed and modified.</td></tr>
+    <tr><td class="paramname">mat_a</td><td>on entry it contains the Cholesky factor, on exit the matrix elements are overwritten with the elements of the inverse. Only the tiles of the matrix which contain the upper or the lower triangular part (depending on the value of uplo), are accessed and modified.</td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section pre"><dt>Precondition</dt><dd><code>mat_a</code> is distributed according to <code>grid</code> </dd>
 <dd>
 <code>mat_a</code> has size (N x N) </dd>
-<dd>
-<code>mat_a</code> has block size (NB x NB) </dd>
 <dd>
 <code>mat_a</code> has tile size (NB x NB) </dd></dl>
 

@@ -9,7 +9,7 @@ var searchData=
   ['timer_6',['Timer',['../classdlaf_1_1common_1_1_timer.html',1,'dlaf::common']]],
   ['transformpack_7',['TransformPack',['../structdlaf_1_1internal_1_1_transform_pack.html',1,'dlaf::internal']]],
   ['transformpack_3c_20pack_3c_20ts_2e_2e_2e_20_3e_2c_20transformer_20_3e_8',['TransformPack&lt; Pack&lt; Ts... &gt;, Transformer &gt;',['../structdlaf_1_1internal_1_1_transform_pack_3_01_pack_3_01_ts_8_8_8_01_4_00_01_transformer_01_4.html',1,'dlaf::internal']]],
-  ['triangular_9',['triangular',['../structdlaf_1_1solver_1_1internal_1_1_triangular.html',1,'dlaf::solver::internal::Triangular&lt; backend, device, T &gt;'],['../structdlaf_1_1multiplication_1_1internal_1_1_triangular.html',1,'dlaf::multiplication::internal::Triangular&lt; backend, device, T &gt;']]],
+  ['triangular_9',['triangular',['../structdlaf_1_1solver_1_1internal_1_1_triangular.html',1,'dlaf::solver::internal::Triangular&lt; backend, device, T &gt;'],['../structdlaf_1_1multiplication_1_1internal_1_1_triangular.html',1,'dlaf::multiplication::internal::Triangular&lt; backend, device, T &gt;'],['../structdlaf_1_1inverse_1_1internal_1_1_triangular.html',1,'dlaf::inverse::internal::Triangular&lt; backend, device, T &gt;']]],
   ['tridiagresult_10',['TridiagResult',['../structdlaf_1_1eigensolver_1_1internal_1_1_tridiag_result.html',1,'dlaf::eigensolver::internal']]],
   ['tridiagsolver_11',['TridiagSolver',['../structdlaf_1_1eigensolver_1_1internal_1_1_tridiag_solver.html',1,'dlaf::eigensolver::internal']]],
   ['trmmsizes_12',['trmmSizes',['../structdlaf_1_1tile_1_1internal_1_1trmm_sizes.html',1,'dlaf::tile::internal']]],

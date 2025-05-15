@@ -168,6 +168,17 @@ template&lt;Backend B, typename Sender , typename  = std::enable_if_t&lt;pika::e
 template&lt;Backend B&gt; </td></tr>
 <tr class="memitem:a346b5f3178be63106064b1c17331dfda"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::tile::hegst</b> (const <a class="el" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a>&lt; B &gt; &amp;p)</td></tr>
 <tr class="separator:a346b5f3178be63106064b1c17331dfda"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abebf5a3623c5031f2421cd5a36482e04" id="r_abebf5a3623c5031f2421cd5a36482e04"><td class="memTemplParams" colspan="2">template&lt;Backend B, class T , Device D&gt; </td></tr>
+<tr class="memitem:abebf5a3623c5031f2421cd5a36482e04"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="lapack_2tile_8h.html#abebf5a3623c5031f2421cd5a36482e04">dlaf::tile::lauum</a> (const <a class="el" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a>&lt; B &gt; &amp;, const blas::Uplo uplo, const <a class="el" href="classdlaf_1_1matrix_1_1_tile.html">Tile</a>&lt; T, D &gt; &amp;a)</td></tr>
+<tr class="separator:abebf5a3623c5031f2421cd5a36482e04"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae526ecc4e66fdd49702d7db2e933223a" id="r_ae526ecc4e66fdd49702d7db2e933223a"><td class="memTemplParams" colspan="2"><a id="ae526ecc4e66fdd49702d7db2e933223a" name="ae526ecc4e66fdd49702d7db2e933223a"></a>
+template&lt;Backend B, typename Sender , typename  = std::enable_if_t&lt;pika::execution::experimental::is_sender_v&lt;Sender&gt;&gt;&gt; </td></tr>
+<tr class="memitem:ae526ecc4e66fdd49702d7db2e933223a"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::tile::lauum</b> (const <a class="el" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a>&lt; B &gt; &amp;p, Sender &amp;&amp;s)</td></tr>
+<tr class="separator:ae526ecc4e66fdd49702d7db2e933223a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9ce43fca4df9d4a4ffb6123ffcd9f489" id="r_a9ce43fca4df9d4a4ffb6123ffcd9f489"><td class="memTemplParams" colspan="2"><a id="a9ce43fca4df9d4a4ffb6123ffcd9f489" name="a9ce43fca4df9d4a4ffb6123ffcd9f489"></a>
+template&lt;Backend B&gt; </td></tr>
+<tr class="memitem:a9ce43fca4df9d4a4ffb6123ffcd9f489"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::tile::lauum</b> (const <a class="el" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a>&lt; B &gt; &amp;p)</td></tr>
+<tr class="separator:a9ce43fca4df9d4a4ffb6123ffcd9f489"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa917a1efbd53213821776d7d632ee41c" id="r_aa917a1efbd53213821776d7d632ee41c"><td class="memTemplParams" colspan="2">template&lt;Backend B, class T , Device D&gt; </td></tr>
 <tr class="memitem:aa917a1efbd53213821776d7d632ee41c"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="lapack_2tile_8h.html#aa917a1efbd53213821776d7d632ee41c">dlaf::tile::potrfInfo</a> (const <a class="el" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a>&lt; B &gt; &amp;, const blas::Uplo uplo, const <a class="el" href="classdlaf_1_1matrix_1_1_tile.html">Tile</a>&lt; T, D &gt; &amp;a)</td></tr>
 <tr class="separator:aa917a1efbd53213821776d7d632ee41c"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -201,6 +212,28 @@ template&lt;Backend B, typename Sender , typename  = std::enable_if_t&lt;hpx::ex
 template&lt;Backend B&gt; </td></tr>
 <tr class="memitem:a8f402da8b5dd5dd66218bf80cff0a69d"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::tile::stedc</b> (const <a class="el" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a>&lt; B &gt; &amp;p)</td></tr>
 <tr class="separator:a8f402da8b5dd5dd66218bf80cff0a69d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a80753ae403777b090432467b6478903a" id="r_a80753ae403777b090432467b6478903a"><td class="memTemplParams" colspan="2">template&lt;Backend B, class T , Device D&gt; </td></tr>
+<tr class="memitem:a80753ae403777b090432467b6478903a"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="lapack_2tile_8h.html#a80753ae403777b090432467b6478903a">dlaf::tile::trtri_info</a> (const <a class="el" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a>&lt; B &gt; &amp;, const blas::Uplo uplo, const blas::Diag diag, const <a class="el" href="classdlaf_1_1matrix_1_1_tile.html">Tile</a>&lt; T, D &gt; &amp;a)</td></tr>
+<tr class="separator:a80753ae403777b090432467b6478903a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a60925d829cf6c09c0d0f99e3399e5b39" id="r_a60925d829cf6c09c0d0f99e3399e5b39"><td class="memTemplParams" colspan="2"><a id="a60925d829cf6c09c0d0f99e3399e5b39" name="a60925d829cf6c09c0d0f99e3399e5b39"></a>
+template&lt;Backend B, typename Sender , typename  = std::enable_if_t&lt;pika::execution::experimental::is_sender_v&lt;Sender&gt;&gt;&gt; </td></tr>
+<tr class="memitem:a60925d829cf6c09c0d0f99e3399e5b39"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::tile::trtri_info</b> (const <a class="el" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a>&lt; B &gt; &amp;p, Sender &amp;&amp;s)</td></tr>
+<tr class="separator:a60925d829cf6c09c0d0f99e3399e5b39"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a34b71533b382854018c67ab8963d067c" id="r_a34b71533b382854018c67ab8963d067c"><td class="memTemplParams" colspan="2"><a id="a34b71533b382854018c67ab8963d067c" name="a34b71533b382854018c67ab8963d067c"></a>
+template&lt;Backend B&gt; </td></tr>
+<tr class="memitem:a34b71533b382854018c67ab8963d067c"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::tile::trtri_info</b> (const <a class="el" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a>&lt; B &gt; &amp;p)</td></tr>
+<tr class="separator:a34b71533b382854018c67ab8963d067c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5e79fa60b7f70ab22204130e23ee339a" id="r_a5e79fa60b7f70ab22204130e23ee339a"><td class="memTemplParams" colspan="2">template&lt;Backend B, class T , Device D&gt; </td></tr>
+<tr class="memitem:a5e79fa60b7f70ab22204130e23ee339a"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="lapack_2tile_8h.html#a5e79fa60b7f70ab22204130e23ee339a">dlaf::tile::trtri</a> (const <a class="el" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a>&lt; B &gt; &amp;p, const blas::Uplo uplo, const blas::Diag diag, const <a class="el" href="classdlaf_1_1matrix_1_1_tile.html">Tile</a>&lt; T, D &gt; &amp;a)</td></tr>
+<tr class="separator:a5e79fa60b7f70ab22204130e23ee339a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae89e1a18231a931766cf922878d873de" id="r_ae89e1a18231a931766cf922878d873de"><td class="memTemplParams" colspan="2"><a id="ae89e1a18231a931766cf922878d873de" name="ae89e1a18231a931766cf922878d873de"></a>
+template&lt;Backend B, typename Sender , typename  = std::enable_if_t&lt;pika::execution::experimental::is_sender_v&lt;Sender&gt;&gt;&gt; </td></tr>
+<tr class="memitem:ae89e1a18231a931766cf922878d873de"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::tile::trtri</b> (const <a class="el" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a>&lt; B &gt; &amp;p, Sender &amp;&amp;s)</td></tr>
+<tr class="separator:ae89e1a18231a931766cf922878d873de"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a18f400c11204c08f701ceac7a23ec730" id="r_a18f400c11204c08f701ceac7a23ec730"><td class="memTemplParams" colspan="2"><a id="a18f400c11204c08f701ceac7a23ec730" name="a18f400c11204c08f701ceac7a23ec730"></a>
+template&lt;Backend B&gt; </td></tr>
+<tr class="memitem:a18f400c11204c08f701ceac7a23ec730"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::tile::trtri</b> (const <a class="el" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a>&lt; B &gt; &amp;p)</td></tr>
+<tr class="separator:a18f400c11204c08f701ceac7a23ec730"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
 <a id="aaf274e91e36453e7994dd1f2a2813681" name="aaf274e91e36453e7994dd1f2a2813681"></a>
@@ -526,6 +559,45 @@ template&lt;Backend B, class T , Device D&gt; </div>
 
 </div>
 </div>
+<a id="abebf5a3623c5031f2421cd5a36482e04" name="abebf5a3623c5031f2421cd5a36482e04"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abebf5a3623c5031f2421cd5a36482e04">&#9670;&#160;</a></span>lauum()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;Backend B, class T , Device D&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">auto dlaf::tile::lauum </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a>&lt; B &gt; &amp;&#160;</td>
+          <td class="paramname">, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const blas::Uplo&#160;</td>
+          <td class="paramname"><em>uplo</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classdlaf_1_1matrix_1_1_tile.html">Tile</a>&lt; T, D &gt; &amp;&#160;</td>
+          <td class="paramname"><em>a</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Assemble the Cholesky inverse computing L^H L or U U^H for the triangular tile <em></em>.</p>
+<p>Only the upper or lower triangular elements are referenced according to <code>uplo</code>.</p>
+<p>This overload blocks until completion of the algorithm. </p><dl class="section pre"><dt>Precondition</dt><dd><em>is</em> the inverse of the cholesky factor. </dd></dl>
+
+</div>
+</div>
 <a id="aab0795227301a9e8e63232028e331fe0" name="aab0795227301a9e8e63232028e331fe0"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aab0795227301a9e8e63232028e331fe0">&#9670;&#160;</a></span>potrf()</h2>
 
@@ -684,6 +756,98 @@ template&lt;Backend B, class T , Device D&gt; </div>
   </table>
   </dd>
 </dl>
+<p>This overload blocks until completion of the algorithm. </p>
+
+</div>
+</div>
+<a id="a5e79fa60b7f70ab22204130e23ee339a" name="a5e79fa60b7f70ab22204130e23ee339a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5e79fa60b7f70ab22204130e23ee339a">&#9670;&#160;</a></span>trtri()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;Backend B, class T , Device D&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">void dlaf::tile::trtri </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a>&lt; B &gt; &amp;&#160;</td>
+          <td class="paramname"><em>p</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const blas::Uplo&#160;</td>
+          <td class="paramname"><em>uplo</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const blas::Diag&#160;</td>
+          <td class="paramname"><em>diag</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classdlaf_1_1matrix_1_1_tile.html">Tile</a>&lt; T, D &gt; &amp;&#160;</td>
+          <td class="paramname"><em>a</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Compute the the inverse of the triangular tile <code>a</code>.</p>
+<p>Only the upper or lower triangular elements are referenced according to <code>uplo</code>. </p><dl class="section pre"><dt>Precondition</dt><dd>matrix <code>a</code> is square, </dd>
+<dd>
+matrix <code>a</code> is non-singular.</dd></dl>
+<p>This overload blocks until completion of the algorithm. </p>
+
+</div>
+</div>
+<a id="a80753ae403777b090432467b6478903a" name="a80753ae403777b090432467b6478903a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a80753ae403777b090432467b6478903a">&#9670;&#160;</a></span>trtri_info()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;Backend B, class T , Device D&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">auto dlaf::tile::trtri_info </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a>&lt; B &gt; &amp;&#160;</td>
+          <td class="paramname">, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const blas::Uplo&#160;</td>
+          <td class="paramname"><em>uplo</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const blas::Diag&#160;</td>
+          <td class="paramname"><em>diag</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classdlaf_1_1matrix_1_1_tile.html">Tile</a>&lt; T, D &gt; &amp;&#160;</td>
+          <td class="paramname"><em>a</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Compute the inverse of the triangular tile <code>a</code> (with return code).</p>
+<p>Only the upper or lower triangular elements are referenced according to <code>uplo</code>. </p><dl class="section return"><dt>Returns</dt><dd>info = 0 on success or info &gt; 0 if one of the diagonal element of the tile is 0.</dd></dl>
 <p>This overload blocks until completion of the algorithm. </p>
 
 </div>

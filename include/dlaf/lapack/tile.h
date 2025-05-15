@@ -733,7 +733,7 @@ internal::CusolverInfo<T> trtri_info(cusolverDnHandle_t handle, const blas::Uplo
   internal::CusolverInfo<T> info{};
 #ifdef DLAF_WITH_CUDA
   DLAF_STATIC_UNIMPLEMENTED(T);
-  dlaf::internal::silenceUnusedWarningFor(handle, uplo, diag, a);
+  dlaf::internal::silenceUnusedWarningFor(handle, uplo, diag, a, n);
 
 #elif defined(DLAF_WITH_HIP)
   internal::CusolverTrtri<T>::call(handle, util::blasToRocblas(uplo), util::blasToRocblas(diag),

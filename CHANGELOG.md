@@ -7,7 +7,7 @@
 - Added inverse of a triangular matrix. (#1324)
 - Added inverse from cholesky factor and its C API. (#1324 and #1326)
 - Improved `Panel` transposed broadcast to be more flexible. (#1325)
-  - Note: previous usages without changes provide correct result but they perform an additional tile brodcast, This extra communication can be avoided shrinking the transposed panel.
+  - Note: previous usages without changes provide correct result but they perform an additional tile broadcast. This extra communication can be avoided by shrinking the transposed panel.
 - Refactored `Matrix` API. (#1321)
   - Constructors changed.
   - Member functions have been updated. Old member functions are still available, but will be deprecated soon.

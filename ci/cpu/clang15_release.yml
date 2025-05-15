@@ -14,7 +14,7 @@ cpu clang15 release deps:
   extends: .build_deps_common
   variables:
     EXTRA_APTGET: "clang-15"
-    COMPILER: clang@15
+    COMPILER: llvm@15
     SPACK_ENVIRONMENT: ci/docker/release-cpu-serial.yaml
     USE_MKL: "ON"
     DEPS_IMAGE: $CSCS_REGISTRY_PATH/cpu-clang15-release/deps

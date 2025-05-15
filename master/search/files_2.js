@@ -2,7 +2,7 @@ var searchData=
 [
   ['callable_5fobject_2eh_0',['callable_object.h',['../callable__object_8h.html',1,'']]],
   ['check_5fallocation_2eh_1',['check_allocation.h',['../check__allocation_8h.html',1,'']]],
-  ['cholesky_2eh_2',['cholesky.h',['../factorization_2cholesky_8h.html',1,'(Global Namespace)'],['../inverse_2cholesky_8h.html',1,'(Global Namespace)'],['../c_2factorization_2cholesky_8h.html',1,'(Global Namespace)']]],
+  ['cholesky_2eh_2',['cholesky.h',['../factorization_2cholesky_8h.html',1,'(Global Namespace)'],['../inverse_2cholesky_8h.html',1,'(Global Namespace)'],['../c_2factorization_2cholesky_8h.html',1,'(Global Namespace)'],['../c_2inverse_2cholesky_8h.html',1,'(Global Namespace)']]],
   ['col_5fmajor_5flayout_2eh_3',['col_major_layout.h',['../col__major__layout_8h.html',1,'']]],
   ['communicator_2eh_4',['communicator.h',['../communicator_8h.html',1,'']]],
   ['communicator_5fgrid_2eh_5',['communicator_grid.h',['../communicator__grid_8h.html',1,'']]],

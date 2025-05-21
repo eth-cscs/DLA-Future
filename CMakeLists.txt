@@ -117,8 +117,8 @@ if(DLAF_WITH_CUDA AND DLAF_WITH_HIP)
 endif()
 if(DLAF_WITH_CUDA)
   # Check if CMAKE_CUDA_ARCHITECTURES is user-defined, before enabling CUDA
-  if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-    set(_DLAF_CUDA_ARCHITECTURES_DEFINED OFF)
+  if(DEFINED CMAKE_CUDA_ARCHITECTURES)
+    set(_DLAF_CUDA_ARCHITECTURES_DEFINED ON)
   endif()
 
   enable_language(CUDA)
@@ -127,7 +127,7 @@ if(DLAF_WITH_CUDA)
 
   # Enabling CUDA will set CMAKE_CUDA_ARCHITECTURES to the default value, if not set
   # Let the user know if the default value is being used
-  if(NOT _DLAF_CUDA_ARCHITECTURES_DEFINED)
+  if(NOT DEFINED _DLAF_CUDA_ARCHITECTURES_DEFINED)
     message(WARNING "Using default CMAKE_CUDA_ARCHITECTURES=${CMAKE_CUDA_ARCHITECTURES}.\n"
                     "Consider setting CMAKE_CUDA_ARCHITECTURES explicitly."
     )

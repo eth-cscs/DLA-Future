@@ -33,10 +33,6 @@ packages:
   openblas:
     variants:
       - 'threads=openmp'
-  openssl:
-    # without version spack concretizes openssl@3.3.1 that doesn't build due to deprecation
-    require:
-      - '@3.3.2'
   libfabric:
     require:
       - '@1.15.2'

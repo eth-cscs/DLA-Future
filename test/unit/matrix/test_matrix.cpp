@@ -19,6 +19,7 @@
 #include <pika/init.hpp>
 
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/matrix/check_allocation.h>
 #include <dlaf/matrix/copy.h>
 #include <dlaf/matrix/create_matrix.h>
 #include <dlaf/matrix/distribution.h>
@@ -59,22 +60,23 @@ struct MatrixTest : public TestWithCommGrids {};
 TYPED_TEST_SUITE(MatrixTest, MatrixElementTypes);
 
 struct TestSizes {
-  LocalElementSize size;
-  TileElementSize block_size;
+  SizeType m;
+  SizeType n;
+  GlobalElementSize block_size;
   TileElementSize tile_size;
 };
 
 const std::vector<TestSizes> sizes_tests({
-    {{0, 0}, {11, 13}, {11, 13}},
-    {{3, 0}, {1, 2}, {1, 1}},
-    {{0, 1}, {7, 32}, {7, 8}},
-    {{15, 18}, {5, 9}, {5, 3}},
-    {{6, 6}, {2, 2}, {2, 2}},
-    {{3, 4}, {24, 15}, {8, 15}},
-    {{16, 24}, {3, 5}, {3, 5}},
+    {0, 0, {11, 13}, {11, 13}},
+    {3, 0, {1, 2}, {1, 1}},
+    {0, 1, {7, 32}, {7, 8}},
+    {15, 18, {5, 9}, {5, 3}},
+    {6, 6, {2, 2}, {2, 2}},
+    {3, 4, {24, 15}, {8, 15}},
+    {16, 24, {3, 5}, {3, 5}},
 });
 
-GlobalElementSize globalTestSize(const LocalElementSize& size, const Size2D& grid_size) {
+GlobalElementSize global_test_size(const LocalElementSize& size, const Size2D& grid_size) {
   return {size.rows() * grid_size.rows(), size.cols() * grid_size.cols()};
 }
 
@@ -110,35 +112,422 @@ TYPED_TEST(MatrixLocalTest, Constructor) {
   };
 
   for (const auto& test : sizes_tests) {
-    Matrix<Type, Device::CPU> mat(test.size, test.block_size);
-
+    const Distribution dist = Distribution(LocalElementSize{test.m, test.n}, test.tile_size);
     {
-      EXPECT_EQ(Distribution(test.size, test.block_size), mat.distribution());
+      Matrix<Type, Device::CPU> mat({test.m, test.n}, test.tile_size);
+      EXPECT_EQ(dist, mat.distribution());
 
       set(mat, el);
+      CHECK_MATRIX_EQ(el, mat);
+    }
+    {
+      Matrix<Type, Device::CPU> mat(LocalElementSize{test.m, test.n}, test.tile_size);
+      EXPECT_EQ(dist, mat.distribution());
+
+      set(mat, el);
+      CHECK_MATRIX_EQ(el, mat);
+    }
+    {
+      Matrix<Type, Device::CPU> mat(GlobalElementSize{test.m, test.n}, test.tile_size);
+      EXPECT_EQ(dist, mat.distribution());
+
+      set(mat, el);
+      CHECK_MATRIX_EQ(el, mat);
+
+      {
+        auto mat_sub = mat.subPipelineConst();
+        EXPECT_EQ(mat_sub.distribution(), mat.distribution());
+
+        CHECK_MATRIX_EQ(el, mat_sub);
+      }
+
+      c = 1.0;
+
+      {
+        auto mat_sub = mat.subPipeline();
+        EXPECT_EQ(mat_sub.distribution(), mat.distribution());
+
+        set(mat_sub, el);
+
+        CHECK_MATRIX_EQ(el, mat_sub);
+      }
 
       CHECK_MATRIX_EQ(el, mat);
     }
+  }
+}
 
+template <class MatrixLike>
+SizeType expected_ld_from_00(MatrixLike& mat) {
+  if (mat.distribution().local_nr_tiles().isEmpty())
+    return 1;
+  return tt::sync_wait(mat.read(LocalTileIndex{0, 0})).get().ld();
+}
+
+template <class MatrixLike>
+void check_const_ld(MatrixLike& mat, SizeType ld) {
+  for (auto& ij : iterate_range2d(mat.distribution().local_nr_tiles())) {
+    EXPECT_EQ(ld, tt::sync_wait(mat.read(ij)).get().ld());
+  }
+}
+
+namespace col_major {
+template <class MatrixLike>
+SizeType expected_ld(MatrixLike& mat, LdSpec ld) {
+  const Distribution& dist = mat.distribution();
+  const SizeType min_ld =
+      dist.local_nr_tiles().isEmpty() ? 1 : std::max<SizeType>(1, dist.local_size().rows());
+  SizeType ret = 0;
+
+  if (std::holds_alternative<Ld>(ld)) {
+    switch (std::get<Ld>(ld)) {
+      case Ld::Compact:
+        return min_ld;
+      case Ld::Padded: {
+        ret = expected_ld_from_00(mat);
+        EXPECT_GE(ret, min_ld);
+        return ret;
+      }
+      default:
+        DLAF_UNIMPLEMENTED("Invalid Ld");
+    }
+  }
+
+  ret = std::get<SizeType>(ld);
+
+  EXPECT_GE(ret, min_ld);
+  return ret;
+}
+}
+
+TYPED_TEST(MatrixLocalTest, ConstructorColMajor) {
+  using namespace col_major;
+  constexpr auto alloc = MatrixAllocation::ColMajor;
+  using Type = TypeParam;
+  BaseType<Type> c = 0.0;
+  auto el = [&](const GlobalElementIndex& index) {
+    SizeType i = index.row();
+    SizeType j = index.col();
+    return TypeUtilities<Type>::element(i + j / 1024. + c, j - i / 128.);
+  };
+
+  for (const auto& test : sizes_tests) {
+    const Distribution dist = Distribution(LocalElementSize{test.m, test.n}, test.tile_size);
     {
-      auto mat_sub = mat.subPipelineConst();
-      EXPECT_EQ(mat_sub.distribution(), mat.distribution());
+      Matrix<Type, Device::CPU> mat({test.m, test.n}, test.tile_size, alloc);
+      EXPECT_EQ(dist, mat.distribution());
 
-      CHECK_MATRIX_EQ(el, mat_sub);
+      const SizeType exp_ld = expected_ld_from_00(mat);
+      check_const_ld(mat, exp_ld);
+
+      set(mat, el);
+      CHECK_MATRIX_EQ(el, mat);
+      EXPECT_TRUE(is_allocated_as_col_major(mat));
+    }
+    {
+      Matrix<Type, Device::CPU> mat(LocalElementSize{test.m, test.n}, test.tile_size, alloc);
+      EXPECT_EQ(dist, mat.distribution());
+
+      const SizeType exp_ld = expected_ld_from_00(mat);
+      check_const_ld(mat, exp_ld);
+
+      set(mat, el);
+      CHECK_MATRIX_EQ(el, mat);
+      EXPECT_TRUE(is_allocated_as_col_major(mat));
+    }
+    {
+      Matrix<Type, Device::CPU> mat(GlobalElementSize{test.m, test.n}, test.tile_size, alloc);
+      EXPECT_EQ(dist, mat.distribution());
+
+      const SizeType exp_ld = expected_ld_from_00(mat);
+      check_const_ld(mat, exp_ld);
+
+      set(mat, el);
+      CHECK_MATRIX_EQ(el, mat);
+      EXPECT_TRUE(is_allocated_as_col_major(mat));
     }
 
-    c = 1.0;
+    const SizeType min_ld = std::max<SizeType>(1, dist.local_size().rows());
+    std::initializer_list<LdSpec> lds{Ld::Compact, Ld::Padded, min_ld, min_ld + 20};
+    for (const auto& ld : lds) {
+      {
+        Matrix<Type, Device::CPU> mat({test.m, test.n}, test.tile_size, alloc, ld);
+        EXPECT_EQ(dist, mat.distribution());
 
+        const SizeType exp_ld = expected_ld(mat, ld);
+        check_const_ld(mat, exp_ld);
+
+        set(mat, el);
+        CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_col_major(mat));
+      }
+      {
+        Matrix<Type, Device::CPU> mat(LocalElementSize{test.m, test.n}, test.tile_size, alloc, ld);
+        EXPECT_EQ(dist, mat.distribution());
+
+        const SizeType exp_ld = expected_ld(mat, ld);
+        check_const_ld(mat, exp_ld);
+
+        set(mat, el);
+        CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_col_major(mat));
+      }
+      {
+        Matrix<Type, Device::CPU> mat(GlobalElementSize{test.m, test.n}, test.tile_size, alloc, ld);
+        EXPECT_EQ(dist, mat.distribution());
+
+        const SizeType exp_ld = expected_ld(mat, ld);
+        check_const_ld(mat, exp_ld);
+
+        set(mat, el);
+        CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_col_major(mat));
+      }
+    }
+  }
+}
+
+namespace blocks {
+
+SizeType rows_of_block_containing_tile(const LocalTileIndex& ij, const Distribution& dist) {
+  Distribution helper_dist = dlaf::matrix::internal::create_single_tile_per_block_distribution(dist);
+
+  SizeType i_el_local = dist.local_element_from_local_tile_and_tile_element<Coord::Row>(ij.row(), 0);
+  SizeType i_bl_local = helper_dist.local_tile_from_local_element<Coord::Row>(i_el_local);
+
+  return helper_dist.local_tile_size_of<Coord::Row>(i_bl_local);
+}
+
+template <class MatrixLike>
+void check_compact_ld(MatrixLike& mat) {
+  for (auto& ij : iterate_range2d(mat.distribution().local_nr_tiles())) {
+    auto tile = tt::sync_wait(mat.read(ij));
+    SizeType block_rows = rows_of_block_containing_tile(ij, mat.distribution());
+    EXPECT_EQ(block_rows, tile.get().ld());
+  }
+}
+
+template <class MatrixLike>
+void check_ld(MatrixLike& mat) {
+  for (auto& ij : iterate_range2d(mat.distribution().local_nr_tiles())) {
+    auto tile = tt::sync_wait(mat.read(ij));
+    SizeType block_rows = rows_of_block_containing_tile(ij, mat.distribution());
+    EXPECT_LE(block_rows, tile.get().ld());
+  }
+}
+
+template <class MatrixLike>
+void check_ld(MatrixLike& mat, const LdSpec ld) {
+  if (std::holds_alternative<Ld>(ld)) {
+    switch (std::get<Ld>(ld)) {
+      case Ld::Compact:
+        return check_compact_ld(mat);
+      case Ld::Padded: {
+        return check_ld(mat);
+      }
+      default:
+        DLAF_UNIMPLEMENTED("Invalid Ld");
+    }
+  }
+
+  check_const_ld(mat, std::get<SizeType>(ld));
+}
+}
+
+TYPED_TEST(MatrixLocalTest, ConstructorBlocks) {
+  using namespace blocks;
+  constexpr auto alloc = MatrixAllocation::Blocks;
+  using Type = TypeParam;
+  BaseType<Type> c = 0.0;
+  auto el = [&](const GlobalElementIndex& index) {
+    SizeType i = index.row();
+    SizeType j = index.col();
+    return TypeUtilities<Type>::element(i + j / 1024. + c, j - i / 128.);
+  };
+
+  for (const auto& test : sizes_tests) {
+    const Distribution dist = Distribution(LocalElementSize{test.m, test.n}, test.tile_size);
     {
-      auto mat_sub = mat.subPipeline();
-      EXPECT_EQ(mat_sub.distribution(), mat.distribution());
+      Matrix<Type, Device::CPU> mat({test.m, test.n}, test.tile_size, alloc);
+      EXPECT_EQ(dist, mat.distribution());
 
-      set(mat_sub, el);
+      check_ld(mat);
 
-      CHECK_MATRIX_EQ(el, mat_sub);
+      set(mat, el);
+      CHECK_MATRIX_EQ(el, mat);
+      EXPECT_TRUE(is_allocated_as_blocks(mat));
+    }
+    {
+      Matrix<Type, Device::CPU> mat(LocalElementSize{test.m, test.n}, test.tile_size, alloc);
+      EXPECT_EQ(dist, mat.distribution());
+
+      check_ld(mat);
+
+      set(mat, el);
+      CHECK_MATRIX_EQ(el, mat);
+      EXPECT_TRUE(is_allocated_as_blocks(mat));
+    }
+    {
+      Matrix<Type, Device::CPU> mat(GlobalElementSize{test.m, test.n}, test.tile_size, alloc);
+      EXPECT_EQ(dist, mat.distribution());
+
+      check_ld(mat);
+
+      set(mat, el);
+      CHECK_MATRIX_EQ(el, mat);
+      EXPECT_TRUE(is_allocated_as_blocks(mat));
     }
 
-    CHECK_MATRIX_EQ(el, mat);
+    const SizeType min_ld = std::max<SizeType>(1, dist.tile_size().rows());
+    std::initializer_list<LdSpec> lds{Ld::Compact, Ld::Padded, min_ld, min_ld + 20};
+    for (const auto& ld : lds) {
+      {
+        Matrix<Type, Device::CPU> mat({test.m, test.n}, test.tile_size, alloc, ld);
+        EXPECT_EQ(dist, mat.distribution());
+
+        check_ld(mat, ld);
+
+        set(mat, el);
+        CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_blocks(mat));
+      }
+      {
+        Matrix<Type, Device::CPU> mat(LocalElementSize{test.m, test.n}, test.tile_size, alloc, ld);
+        EXPECT_EQ(dist, mat.distribution());
+
+        check_ld(mat, ld);
+
+        set(mat, el);
+        CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_blocks(mat));
+      }
+      {
+        Matrix<Type, Device::CPU> mat(GlobalElementSize{test.m, test.n}, test.tile_size, alloc, ld);
+        EXPECT_EQ(dist, mat.distribution());
+
+        check_ld(mat, ld);
+
+        set(mat, el);
+        CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_blocks(mat));
+      }
+    }
+  }
+}
+
+namespace tiles {
+template <class MatrixLike>
+void check_compact_ld(MatrixLike& mat) {
+  for (auto& ij : iterate_range2d(mat.distribution().local_nr_tiles())) {
+    auto tile = tt::sync_wait(mat.read(ij));
+    EXPECT_EQ(tile.get().size().rows(), tile.get().ld());
+  }
+}
+
+template <class MatrixLike>
+void check_ld(MatrixLike& mat) {
+  for (auto& ij : iterate_range2d(mat.distribution().local_nr_tiles())) {
+    auto tile = tt::sync_wait(mat.read(ij));
+    EXPECT_LE(tile.get().size().rows(), tile.get().ld());
+  }
+}
+
+template <class MatrixLike>
+void check_ld(MatrixLike& mat, const LdSpec ld) {
+  if (std::holds_alternative<Ld>(ld)) {
+    switch (std::get<Ld>(ld)) {
+      case Ld::Compact:
+        return check_compact_ld(mat);
+      case Ld::Padded: {
+        return check_ld(mat);
+      }
+      default:
+        DLAF_UNIMPLEMENTED("Invalid Ld");
+    }
+  }
+
+  check_const_ld(mat, std::get<SizeType>(ld));
+}
+}
+
+TYPED_TEST(MatrixLocalTest, ConstructorTiles) {
+  using namespace tiles;
+  constexpr auto alloc = MatrixAllocation::Tiles;
+  using Type = TypeParam;
+  BaseType<Type> c = 0.0;
+  auto el = [&](const GlobalElementIndex& index) {
+    SizeType i = index.row();
+    SizeType j = index.col();
+    return TypeUtilities<Type>::element(i + j / 1024. + c, j - i / 128.);
+  };
+
+  for (const auto& test : sizes_tests) {
+    const Distribution dist = Distribution(LocalElementSize{test.m, test.n}, test.tile_size);
+    {
+      Matrix<Type, Device::CPU> mat({test.m, test.n}, test.tile_size, alloc);
+      EXPECT_EQ(dist, mat.distribution());
+
+      check_ld(mat);
+
+      set(mat, el);
+      CHECK_MATRIX_EQ(el, mat);
+      EXPECT_TRUE(is_allocated_as_tiles(mat));
+    }
+    {
+      Matrix<Type, Device::CPU> mat(LocalElementSize{test.m, test.n}, test.tile_size, alloc);
+      EXPECT_EQ(dist, mat.distribution());
+
+      check_ld(mat);
+
+      set(mat, el);
+      CHECK_MATRIX_EQ(el, mat);
+      EXPECT_TRUE(is_allocated_as_tiles(mat));
+    }
+    {
+      Matrix<Type, Device::CPU> mat(GlobalElementSize{test.m, test.n}, test.tile_size, alloc);
+      EXPECT_EQ(dist, mat.distribution());
+
+      check_ld(mat);
+
+      set(mat, el);
+      CHECK_MATRIX_EQ(el, mat);
+      EXPECT_TRUE(is_allocated_as_tiles(mat));
+    }
+
+    const SizeType min_ld = std::max<SizeType>(1, dist.tile_size().rows());
+    std::initializer_list<LdSpec> lds{Ld::Compact, Ld::Padded, min_ld, min_ld + 20};
+    for (const auto& ld : lds) {
+      {
+        Matrix<Type, Device::CPU> mat({test.m, test.n}, test.tile_size, alloc, ld);
+        EXPECT_EQ(dist, mat.distribution());
+
+        check_ld(mat, ld);
+
+        set(mat, el);
+        CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_tiles(mat));
+      }
+      {
+        Matrix<Type, Device::CPU> mat(LocalElementSize{test.m, test.n}, test.tile_size, alloc, ld);
+        EXPECT_EQ(dist, mat.distribution());
+
+        check_ld(mat, ld);
+
+        set(mat, el);
+        CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_tiles(mat));
+      }
+      {
+        Matrix<Type, Device::CPU> mat(GlobalElementSize{test.m, test.n}, test.tile_size, alloc, ld);
+        EXPECT_EQ(dist, mat.distribution());
+
+        check_ld(mat, ld);
+
+        set(mat, el);
+        CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_tiles(mat));
+      }
+    }
   }
 }
 
@@ -153,42 +542,56 @@ TYPED_TEST(MatrixTest, Constructor) {
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-      Matrix<Type, Device::CPU> mat(size, test.block_size, comm_grid);
+      GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
 
       {
-        EXPECT_EQ(Distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0}),
+        Matrix<Type, Device::CPU> mat(size, test.tile_size, comm_grid);
+
+        EXPECT_EQ(Distribution(size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0}),
                   mat.distribution());
 
         set(mat, el);
-
         CHECK_MATRIX_EQ(el, mat);
       }
 
       {
-        auto mat_sub = mat.subPipelineConst();
-        EXPECT_EQ(mat_sub.distribution(), mat.distribution());
+        const comm::Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
+                                           std::min(1, comm_grid.size().cols() - 1));
+        const Distribution dist(size, test.block_size, test.tile_size, comm_grid.size(),
+                                comm_grid.rank(), src_rank_index);
 
-        CHECK_MATRIX_EQ(el, mat_sub);
+        Matrix<Type, Device::CPU> mat(dist);
+        EXPECT_EQ(dist, mat.distribution());
+
+        set(mat, el);
+
+        CHECK_MATRIX_EQ(el, mat);
+        {
+          auto mat_sub = mat.subPipelineConst();
+          EXPECT_EQ(mat_sub.distribution(), mat.distribution());
+
+          CHECK_MATRIX_EQ(el, mat_sub);
+        }
+
+        c = 1.0;
+
+        {
+          auto mat_sub = mat.subPipeline();
+          EXPECT_EQ(mat_sub.distribution(), mat.distribution());
+
+          set(mat_sub, el);
+          CHECK_MATRIX_EQ(el, mat_sub);
+        }
+
+        CHECK_MATRIX_EQ(el, mat);
       }
-
-      c = 1.0;
-
-      {
-        auto mat_sub = mat.subPipeline();
-        EXPECT_EQ(mat_sub.distribution(), mat.distribution());
-
-        set(mat_sub, el);
-
-        CHECK_MATRIX_EQ(el, mat_sub);
-      }
-
-      CHECK_MATRIX_EQ(el, mat);
     }
   }
 }
 
-TYPED_TEST(MatrixTest, ConstructorFromDistribution) {
+TYPED_TEST(MatrixTest, ConstructorColMajor) {
+  using namespace col_major;
+  constexpr auto alloc = MatrixAllocation::ColMajor;
   using Type = TypeParam;
   BaseType<Type> c = 0.0;
   auto el = [&](const GlobalElementIndex& index) {
@@ -199,44 +602,205 @@ TYPED_TEST(MatrixTest, ConstructorFromDistribution) {
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-      comm::Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
-                                   std::min(1, comm_grid.size().cols() - 1));
-      Distribution distribution(size, test.block_size, test.tile_size, comm_grid.size(),
-                                comm_grid.rank(), src_rank_index);
-
-      // Copy distribution for testing purpose.
-      Distribution distribution_copy(distribution);
-
-      Matrix<Type, Device::CPU> mat(std::move(distribution));
+      GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
+      const Distribution dist0(size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      const comm::Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
+                                         std::min(1, comm_grid.size().cols() - 1));
+      const Distribution dist(size, test.block_size, test.tile_size, comm_grid.size(), comm_grid.rank(),
+                              src_rank_index);
 
       {
-        EXPECT_EQ(distribution_copy, mat.distribution());
+        Matrix<Type, Device::CPU> mat(size, test.tile_size, comm_grid, alloc);
+
+        EXPECT_EQ(dist0, mat.distribution());
+
+        const SizeType exp_ld = expected_ld_from_00(mat);
+        check_const_ld(mat, exp_ld);
 
         set(mat, el);
-
         CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_col_major(mat));
+      }
+      {
+        Matrix<Type, Device::CPU> mat(dist, alloc);
+        EXPECT_EQ(dist, mat.distribution());
+
+        const SizeType exp_ld = expected_ld_from_00(mat);
+        check_const_ld(mat, exp_ld);
+
+        set(mat, el);
+        CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_col_major(mat));
+      }
+
+      // Note: min_ld is different as src_rank_index impacts the local matrix sizes.
+      {
+        const SizeType min_ld = std::max<SizeType>(1, dist0.local_size().rows());
+        std::initializer_list<LdSpec> lds{Ld::Compact, Ld::Padded, min_ld, min_ld + 20};
+        for (const auto& ld : lds) {
+          Matrix<Type, Device::CPU> mat(size, test.tile_size, comm_grid, alloc, ld);
+          EXPECT_EQ(dist0, mat.distribution());
+
+          const SizeType exp_ld = expected_ld(mat, ld);
+          check_const_ld(mat, exp_ld);
+
+          set(mat, el);
+          CHECK_MATRIX_EQ(el, mat);
+          EXPECT_TRUE(is_allocated_as_col_major(mat));
+        }
       }
 
       {
-        auto mat_sub = mat.subPipelineConst();
-        EXPECT_EQ(mat_sub.distribution(), mat.distribution());
+        const SizeType min_ld = std::max<SizeType>(1, dist.local_size().rows());
+        std::initializer_list<LdSpec> lds{Ld::Compact, Ld::Padded, min_ld, min_ld + 20};
+        for (const auto& ld : lds) {
+          Matrix<Type, Device::CPU> mat(dist, alloc, ld);
+          EXPECT_EQ(dist, mat.distribution());
 
-        CHECK_MATRIX_EQ(el, mat_sub);
+          const SizeType exp_ld = expected_ld(mat, ld);
+          check_const_ld(mat, exp_ld);
+
+          set(mat, el);
+          CHECK_MATRIX_EQ(el, mat);
+          EXPECT_TRUE(is_allocated_as_col_major(mat));
+        }
       }
+    }
+  }
+}
 
-      c = 1.0;
+TYPED_TEST(MatrixTest, ConstructorBlocks) {
+  using namespace blocks;
+  constexpr auto alloc = MatrixAllocation::Blocks;
+  using Type = TypeParam;
+  BaseType<Type> c = 0.0;
+  auto el = [&](const GlobalElementIndex& index) {
+    SizeType i = index.row();
+    SizeType j = index.col();
+    return TypeUtilities<Type>::element(i + j / 1024. + c, j - i / 128.);
+  };
 
+  for (auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
+      const Distribution dist0(size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      const comm::Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
+                                         std::min(1, comm_grid.size().cols() - 1));
+      const Distribution dist(size, test.block_size, test.tile_size, comm_grid.size(), comm_grid.rank(),
+                              src_rank_index);
       {
-        auto mat_sub = mat.subPipeline();
-        EXPECT_EQ(mat_sub.distribution(), mat.distribution());
+        Matrix<Type, Device::CPU> mat(size, test.tile_size, comm_grid, alloc);
+        EXPECT_EQ(dist0, mat.distribution());
 
-        set(mat_sub, el);
+        check_ld(mat);
 
-        CHECK_MATRIX_EQ(el, mat_sub);
+        set(mat, el);
+        CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_blocks(mat));
+      }
+      {
+        Matrix<Type, Device::CPU> mat(dist, alloc);
+        EXPECT_EQ(dist, mat.distribution());
+
+        check_ld(mat);
+
+        set(mat, el);
+        CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_blocks(mat));
       }
 
-      CHECK_MATRIX_EQ(el, mat);
+      const SizeType min_ld = test.block_size.rows();
+      std::initializer_list<LdSpec> lds{Ld::Compact, Ld::Padded, min_ld, min_ld + 20};
+      for (const auto& ld : lds) {
+        {
+          Matrix<Type, Device::CPU> mat(size, test.tile_size, comm_grid, alloc, ld);
+          EXPECT_EQ(dist0, mat.distribution());
+
+          check_ld(mat, ld);
+
+          set(mat, el);
+          CHECK_MATRIX_EQ(el, mat);
+          EXPECT_TRUE(is_allocated_as_blocks(mat));
+        }
+        {
+          Matrix<Type, Device::CPU> mat(dist, alloc, ld);
+          EXPECT_EQ(dist, mat.distribution());
+
+          check_ld(mat, ld);
+
+          set(mat, el);
+          CHECK_MATRIX_EQ(el, mat);
+          EXPECT_TRUE(is_allocated_as_blocks(mat));
+        }
+      }
+    }
+  }
+}
+
+TYPED_TEST(MatrixTest, ConstructorTiles) {
+  using namespace tiles;
+  constexpr auto alloc = MatrixAllocation::Tiles;
+  using Type = TypeParam;
+  BaseType<Type> c = 0.0;
+  auto el = [&](const GlobalElementIndex& index) {
+    SizeType i = index.row();
+    SizeType j = index.col();
+    return TypeUtilities<Type>::element(i + j / 1024. + c, j - i / 128.);
+  };
+
+  for (auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
+      const Distribution dist0(size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      const comm::Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
+                                         std::min(1, comm_grid.size().cols() - 1));
+      const Distribution dist(size, test.block_size, test.tile_size, comm_grid.size(), comm_grid.rank(),
+                              src_rank_index);
+      {
+        Matrix<Type, Device::CPU> mat(size, test.tile_size, comm_grid, alloc);
+        EXPECT_EQ(dist0, mat.distribution());
+
+        check_ld(mat);
+
+        set(mat, el);
+        CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_tiles(mat));
+      }
+      {
+        Matrix<Type, Device::CPU> mat(dist, alloc);
+        EXPECT_EQ(dist, mat.distribution());
+
+        check_ld(mat);
+
+        set(mat, el);
+        CHECK_MATRIX_EQ(el, mat);
+        EXPECT_TRUE(is_allocated_as_tiles(mat));
+      }
+
+      const SizeType min_ld = test.tile_size.rows();
+      std::initializer_list<LdSpec> lds{Ld::Compact, Ld::Padded, min_ld, min_ld + 20};
+      for (const auto& ld : lds) {
+        {
+          Matrix<Type, Device::CPU> mat(size, test.tile_size, comm_grid, alloc, ld);
+          EXPECT_EQ(dist0, mat.distribution());
+
+          check_ld(mat, ld);
+
+          set(mat, el);
+          CHECK_MATRIX_EQ(el, mat);
+          EXPECT_TRUE(is_allocated_as_tiles(mat));
+        }
+        {
+          Matrix<Type, Device::CPU> mat(dist, alloc, ld);
+          EXPECT_EQ(dist, mat.distribution());
+
+          check_ld(mat, ld);
+
+          set(mat, el);
+          CHECK_MATRIX_EQ(el, mat);
+          EXPECT_TRUE(is_allocated_as_tiles(mat));
+        }
+      }
     }
   }
 }
@@ -245,13 +809,16 @@ TYPED_TEST(MatrixTest, ConstructorFromDistribution) {
 ///
 /// @pre index is contained in @p distribution.size(),
 /// @pre index is stored in the current rank.
-SizeType memoryIndex(const Distribution& distribution, const LayoutInfo& layout,
-                     const GlobalElementIndex& index) {
+template <class Layout>
+SizeType memoryIndex(const Layout& layout, const GlobalElementIndex& index) {
+  const Distribution& distribution = layout.distribution();
+
   auto global_tile_index = distribution.globalTileIndex(index);
   auto tile_element_index = distribution.tileElementIndex(index);
   auto local_tile_index = distribution.localTileIndex(global_tile_index);
-  SizeType tile_offset = layout.tileOffset(local_tile_index);
-  SizeType element_offset = tile_element_index.row() + layout.ldTile() * tile_element_index.col();
+  SizeType tile_offset = layout.tile_offset(local_tile_index);
+  SizeType ld = layout.ld_tile(local_tile_index);
+  SizeType element_offset = tile_element_index.row() + ld * tile_element_index.col();
   return tile_offset + element_offset;
 }
 
@@ -261,9 +828,10 @@ bool ownIndex(const Distribution& distribution, const GlobalElementIndex& index)
   return distribution.rankIndex() == distribution.rankGlobalTile(global_tile_index);
 }
 
-template <class T, Device D>
-void checkDistributionLayout(T* p, const Distribution& distribution, const LayoutInfo& layout,
-                             Matrix<T, D>& matrix) {
+template <class Layout, class T, Device D>
+void check_layout(T* p, const Layout& layout, Matrix<T, D>& matrix) {
+  const Distribution& distribution = layout.distribution();
+
   auto el = [](const GlobalElementIndex& index) {
     SizeType i = index.row();
     SizeType j = index.col();
@@ -277,9 +845,7 @@ void checkDistributionLayout(T* p, const Distribution& distribution, const Layou
 
   CHECK_MATRIX_DISTRIBUTION(distribution, matrix);
 
-  auto ptr = [p, layout, distribution](const GlobalElementIndex& index) {
-    return p + memoryIndex(distribution, layout, index);
-  };
+  auto ptr = [p, layout](const GlobalElementIndex& index) { return p + memoryIndex(layout, index); };
   auto own_element = [distribution](const GlobalElementIndex& index) {
     return ownIndex(distribution, index);
   };
@@ -312,9 +878,10 @@ void checkDistributionLayout(T* p, const Distribution& distribution, const Layou
   }
 }
 
-template <class T, Device D>
-void checkDistributionLayout(T* p, const Distribution& distribution, const LayoutInfo& layout,
-                             Matrix<const T, D>& matrix) {
+template <class Layout, class T, Device D>
+void check_layout(T* p, const Layout& layout, Matrix<const T, D>& matrix) {
+  const Distribution& distribution = layout.distribution();
+
   auto el = [](const GlobalElementIndex& index) {
     SizeType i = index.row();
     SizeType j = index.col();
@@ -323,9 +890,7 @@ void checkDistributionLayout(T* p, const Distribution& distribution, const Layou
 
   CHECK_MATRIX_DISTRIBUTION(distribution, matrix);
 
-  auto ptr = [p, layout, distribution](const GlobalElementIndex& index) {
-    return p + memoryIndex(distribution, layout, index);
-  };
+  auto ptr = [p, layout](const GlobalElementIndex& index) { return p + memoryIndex(layout, index); };
   auto own_element = [distribution](const GlobalElementIndex& index) {
     return ownIndex(distribution, index);
   };
@@ -345,88 +910,31 @@ void checkDistributionLayout(T* p, const Distribution& distribution, const Layou
   CHECK_MATRIX_EQ(el, matrix);
 }
 
-template <class T, class Mat>
-void checkLayoutLocal(T* p, const LayoutInfo& layout, Mat& matrix) {
-  Distribution distribution(layout.size(), layout.blockSize());
-  checkDistributionLayout(p, distribution, layout, matrix);
-}
-
-#define CHECK_DISTRIBUTION_LAYOUT(p, distribution, layout, mat) \
-  do {                                                          \
-    std::stringstream s;                                        \
-    s << "Rank " << distribution.rankIndex();                   \
-    SCOPED_TRACE(s.str());                                      \
-    checkDistributionLayout(p, distribution, layout, mat);      \
+#define CHECK_LAYOUT(p, layout, mat)                   \
+  do {                                                 \
+    std::stringstream s;                               \
+    s << "Rank " << layout.distribution().rankIndex(); \
+    SCOPED_TRACE(s.str());                             \
+    check_layout(p, layout, mat);                      \
   } while (0)
 
 #define CHECK_LAYOUT_LOCAL(p, layout, mat)    \
   do {                                        \
     SCOPED_TRACE("Local (i.e. Rank (0, 0))"); \
-    checkLayoutLocal(p, layout, mat);         \
+    check_layout(p, layout, mat);             \
   } while (0)
-
-TYPED_TEST(MatrixTest, ConstructorFromDistributionLayout) {
-  using Type = TypeParam;
-
-  for (auto& comm_grid : this->commGrids()) {
-    for (const auto& test : sizes_tests) {
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-
-      comm::Index2D src_rank_index(std::min(1, comm_grid.size().rows() - 1),
-                                   std::max(0, comm_grid.size().cols() - 1));
-      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(),
-                                src_rank_index);
-      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
-
-      // Copy distribution for testing purpose.
-      Distribution distribution_copy(distribution);
-
-      Matrix<Type, Device::CPU> mat(std::move(distribution), layout);
-
-      Type* ptr = nullptr;
-      if (!mat.distribution().localSize().isEmpty()) {
-        ptr = tt::sync_wait(mat.readwrite(LocalTileIndex(0, 0))).ptr();
-      }
-
-      CHECK_DISTRIBUTION_LAYOUT(ptr, distribution_copy, layout, mat);
-
-      {
-        auto mat_sub = mat.subPipelineConst();
-
-        const Type* ptr_sub = nullptr;
-        if (!mat_sub.distribution().localSize().isEmpty()) {
-          ptr_sub = tt::sync_wait(mat_sub.read(LocalTileIndex(0, 0))).get().ptr();
-        }
-
-        ASSERT_EQ(ptr, ptr_sub);
-      }
-
-      {
-        auto mat_sub = mat.subPipeline();
-
-        Type* ptr_sub = nullptr;
-        if (!mat_sub.distribution().localSize().isEmpty()) {
-          ptr_sub = tt::sync_wait(mat_sub.readwrite(LocalTileIndex(0, 0))).ptr();
-        }
-
-        ASSERT_EQ(ptr, ptr_sub);
-      }
-    }
-  }
-}
 
 TYPED_TEST(MatrixTest, LocalGlobalAccessOperatorCall) {
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
 
       comm::Index2D src_rank_index(std::min(1, comm_grid.size().rows() - 1),
                                    std::max(0, comm_grid.size().cols() - 1));
-      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(),
+      Distribution distribution(size, test.tile_size, comm_grid.size(), comm_grid.rank(),
                                 src_rank_index);
-      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
 
-      Matrix<TypeParam, Device::CPU> mat(std::move(distribution), layout);
+      Matrix<TypeParam, Device::CPU> mat(std::move(distribution), MatrixAllocation::Tiles, Ld::Compact);
       const Distribution& dist = mat.distribution();
 
       for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
@@ -466,15 +974,14 @@ TYPED_TEST(MatrixTest, LocalGlobalAccessOperatorCall) {
 TYPED_TEST(MatrixTest, LocalGlobalAccessRead) {
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
 
       comm::Index2D src_rank_index(std::min(1, comm_grid.size().rows() - 1),
                                    std::max(0, comm_grid.size().cols() - 1));
-      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(),
+      Distribution distribution(size, test.tile_size, comm_grid.size(), comm_grid.rank(),
                                 src_rank_index);
-      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+      Matrix<TypeParam, Device::CPU> mat(std::move(distribution), MatrixAllocation::Tiles, Ld::Compact);
 
-      Matrix<TypeParam, Device::CPU> mat(std::move(distribution), layout);
       const Distribution& dist = mat.distribution();
 
       for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
@@ -523,107 +1030,31 @@ TYPED_TEST(MatrixTest, LocalGlobalAccessRead) {
   }
 }
 
-struct ExistingLocalTestSizes {
-  LocalElementSize size;
-  TileElementSize block_size;
-  TileElementSize tile_size;
-  SizeType ld;
-  SizeType row_offset;
-  SizeType col_offset;
-};
-
-const std::vector<ExistingLocalTestSizes> existing_local_tests({
-    {{10, 7}, {3, 4}, {3, 4}, 10, 3, 40},  // Column major layout
-    {{10, 7}, {3, 4}, {3, 4}, 11, 3, 44},  // with padding (ld)
-    {{10, 7}, {3, 4}, {3, 4}, 13, 4, 52},  // with padding (row)
-    {{10, 7}, {3, 4}, {3, 4}, 10, 3, 41},  // with padding (col)
-    {{6, 11}, {4, 3}, {4, 3}, 4, 12, 24},  // Tile layout
-    {{6, 11}, {4, 3}, {4, 3}, 5, 15, 30},  // with padding (ld)
-    {{6, 11}, {4, 3}, {4, 3}, 4, 13, 26},  // with padding (row)
-    {{6, 11}, {4, 3}, {4, 3}, 4, 12, 31},  // with padding (col)
-    {{6, 11}, {4, 3}, {4, 3}, 4, 12, 28},  // compressed col_offset
-    {{0, 0}, {1, 1}, {1, 1}, 1, 1, 1},
-    // Same, but with block_size != tile_size
-    {{10, 7}, {3, 4}, {3, 2}, 10, 3, 40},  // Column major layout
-    {{10, 7}, {3, 4}, {3, 2}, 11, 3, 44},  // with padding (ld)
-    {{10, 7}, {3, 4}, {3, 2}, 13, 4, 52},  // with padding (row)
-    {{10, 7}, {3, 4}, {3, 1}, 10, 3, 41},  // with padding (col)
-    {{6, 11}, {4, 3}, {2, 3}, 4, 12, 24},  // Tile layout
-    {{6, 11}, {4, 3}, {2, 3}, 5, 15, 30},  // with padding (ld)
-    {{6, 11}, {4, 3}, {2, 3}, 4, 13, 26},  // with padding (row)
-    {{6, 11}, {4, 3}, {1, 3}, 4, 12, 31},  // with padding (col)
-    {{6, 11}, {4, 3}, {1, 3}, 4, 12, 28},  // compressed col_offset
-    {{0, 0}, {1, 1}, {1, 1}, 1, 1, 1},
-});
-
-TYPED_TEST(MatrixLocalTest, ConstructorExisting) {
-  using Type = TypeParam;
-
-  for (const auto& test : existing_local_tests) {
-    LayoutInfo layout(test.size, test.block_size, test.ld, test.row_offset, test.col_offset);
-    memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
-
-    Matrix<Type, Device::CPU> mat(layout, mem());
-
-    CHECK_LAYOUT_LOCAL(mem(), layout, mat);
-
-    {
-      auto mat_sub = mat.subPipeline();
-      CHECK_LAYOUT_LOCAL(mem(), layout, mat_sub);
-    }
-
-    {
-      auto mat_sub_const = mat.subPipelineConst();
-      CHECK_LAYOUT_LOCAL(mem(), layout, mat_sub_const);
-    }
-  }
-}
-
-TYPED_TEST(MatrixLocalTest, ConstructorExistingConst) {
-  using Type = TypeParam;
-
-  for (const auto& test : existing_local_tests) {
-    LayoutInfo layout(test.size, test.block_size, test.ld, test.row_offset, test.col_offset);
-    memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
-
-    const Type* p = mem();
-    Matrix<const Type, Device::CPU> mat(layout, p);
-
-    CHECK_LAYOUT_LOCAL(mem(), layout, mat);
-
-    {
-      auto mat_sub_const = mat.subPipelineConst();
-      CHECK_LAYOUT_LOCAL(mem(), layout, mat_sub_const);
-    }
-  }
-}
-
 TYPED_TEST(MatrixTest, ConstructorExisting) {
   using Type = TypeParam;
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
       Distribution distribution(size, test.block_size, test.tile_size, comm_grid.size(),
                                 comm_grid.rank(), {0, 0});
-      LayoutInfo layout = tileLayout(distribution.localSize(), test.tile_size);
-      memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
 
-      // Copy distribution for testing purpose.
-      Distribution distribution_copy(distribution);
+      SizeType ld = std::max<SizeType>(1, distribution.localSize().rows());
+      ColMajorLayout layout(std::move(distribution), ld);
+      memory::MemoryView<Type, Device::CPU> mem(layout.min_mem_size());
 
-      Matrix<Type, Device::CPU> mat(std::move(distribution), layout, mem());
+      Matrix<Type, Device::CPU> mat(layout, mem());
 
-      CHECK_DISTRIBUTION_LAYOUT(mem(), distribution_copy, layout, mat);
+      CHECK_LAYOUT(mem(), layout, mat);
 
       {
         auto mat_sub = mat.subPipeline();
-        CHECK_DISTRIBUTION_LAYOUT(mem(), distribution_copy, layout, mat_sub);
+        CHECK_LAYOUT(mem(), layout, mat_sub);
       }
 
       {
         auto mat_sub_const = mat.subPipelineConst();
-        CHECK_DISTRIBUTION_LAYOUT(mem(), distribution_copy, layout, mat_sub_const);
+        CHECK_LAYOUT(mem(), layout, mat_sub_const);
       }
     }
   }
@@ -634,24 +1065,22 @@ TYPED_TEST(MatrixTest, ConstructorExistingConst) {
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
       Distribution distribution(size, test.block_size, test.tile_size, comm_grid.size(),
                                 comm_grid.rank(), {0, 0});
-      LayoutInfo layout = colMajorLayout(distribution.localSize(), test.tile_size,
-                                         std::max<SizeType>(1, distribution.localSize().rows()));
-      memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
 
-      // Copy distribution for testing purpose.
-      Distribution distribution_copy(distribution);
+      SizeType ld = std::max<SizeType>(1, distribution.localSize().rows());
+      ColMajorLayout layout(std::move(distribution), ld);
+      memory::MemoryView<Type, Device::CPU> mem(layout.min_mem_size());
 
       const Type* p = mem();
-      Matrix<const Type, Device::CPU> mat(std::move(distribution), layout, p);
+      Matrix<const Type, Device::CPU> mat(layout, p);
 
-      CHECK_DISTRIBUTION_LAYOUT(mem(), distribution_copy, layout, mat);
+      CHECK_LAYOUT(mem(), layout, mat);
 
       {
         auto mat_sub_const = mat.subPipelineConst();
-        CHECK_DISTRIBUTION_LAYOUT(mem(), distribution_copy, layout, mat_sub_const);
+        CHECK_LAYOUT(mem(), layout, mat_sub_const);
       }
     }
   }
@@ -666,8 +1095,8 @@ TYPED_TEST(MatrixTest, Dependencies) {
       // rw0 - rw1 - ro2a - rw3 - ro4a - rw5
       //           \ ro2b /     \ ro4b /
 
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-      Matrix<Type, Device::CPU> mat(size, test.block_size, comm_grid);
+      GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
+      Matrix<Type, Device::CPU> mat(size, test.tile_size, comm_grid);
 
       auto senders0 = getReadWriteSendersUsingLocalIndex(mat);
       EXPECT_TRUE(checkSendersStep(senders0.size(), senders0));
@@ -721,8 +1150,8 @@ TYPED_TEST(MatrixTest, DependenciesSubPipeline) {
       //             +--------+
       //            sub pipeline
 
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-      Matrix<Type, Device::CPU> mat(size, test.block_size, comm_grid);
+      GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
+      Matrix<Type, Device::CPU> mat(size, test.tile_size, comm_grid);
 
       auto senders0 = getReadWriteSendersUsingLocalIndex(mat);
       EXPECT_TRUE(checkSendersStep(senders0.size(), senders0));
@@ -788,8 +1217,8 @@ TYPED_TEST(MatrixTest, DependenciesSubSubPipeline) {
       // NOTE: The above is the ideal case. The current implementation does not
       // merge read-only accesses between a pipeline and a sub-pipeline.
 
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-      Matrix<Type, Device::CPU> mat(size, test.block_size, comm_grid);
+      GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
+      Matrix<Type, Device::CPU> mat(size, test.tile_size, comm_grid);
 
       auto senders0 = getReadWriteSendersUsingLocalIndex(mat);
       EXPECT_TRUE(checkSendersStep(senders0.size(), senders0));
@@ -860,8 +1289,8 @@ TYPED_TEST(MatrixTest, DependenciesSubPipelineConst) {
       //             +--+
       //         sub pipeline
 
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-      Matrix<Type, Device::CPU> mat(size, test.block_size, comm_grid);
+      GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
+      Matrix<Type, Device::CPU> mat(size, test.tile_size, comm_grid);
 
       auto senders0 = getReadWriteSendersUsingLocalIndex(mat);
       EXPECT_TRUE(checkSendersStep(senders0.size(), senders0));
@@ -914,17 +1343,16 @@ TYPED_TEST(MatrixTest, DependenciesConst) {
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
 
-      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
-      memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
-      const Type* p = mem();
-      Matrix<const Type, Device::CPU> mat(std::move(distribution), layout, p);
-      auto rosenders1 = getReadSendersUsingGlobalIndex(mat);
+      Distribution distribution(size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      Matrix<Type, Device::CPU> mat(std::move(distribution), MatrixAllocation::Tiles, Ld::Compact);
+      Matrix<const Type, Device::CPU>& const_mat = mat;
+
+      auto rosenders1 = getReadSendersUsingGlobalIndex(const_mat);
       EXPECT_TRUE(checkSendersStep(rosenders1.size(), rosenders1));
 
-      auto rosenders2 = getReadSendersUsingLocalIndex(mat);
+      auto rosenders2 = getReadSendersUsingLocalIndex(const_mat);
       EXPECT_TRUE(checkSendersStep(rosenders2.size(), rosenders2));
     }
   }
@@ -935,20 +1363,19 @@ TYPED_TEST(MatrixTest, DependenciesConstSubPipelineConst) {
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
 
       Distribution distribution(size, test.block_size, test.tile_size, comm_grid.size(),
                                 comm_grid.rank(), {0, 0});
-      LayoutInfo layout = tileLayout(distribution.localSize(), test.tile_size);
-      memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
-      const Type* p = mem();
-      Matrix<const Type, Device::CPU> mat(std::move(distribution), layout, p);
-      auto rosenders1 = getReadSendersUsingGlobalIndex(mat);
+      Matrix<Type, Device::CPU> mat(std::move(distribution), MatrixAllocation::Tiles, Ld::Compact);
+      Matrix<const Type, Device::CPU>& const_mat = mat;
+
+      auto rosenders1 = getReadSendersUsingGlobalIndex(const_mat);
       EXPECT_TRUE(checkSendersStep(rosenders1.size(), rosenders1));
 
       auto rosenders2 = [&]() {
-        auto mat_sub = mat.subPipelineConst();
-        return getReadSendersUsingLocalIndex(mat_sub);
+        auto const_mat_sub = const_mat.subPipelineConst();
+        return getReadSendersUsingLocalIndex(const_mat_sub);
       }();
       // NOTE: This is a limitation of the current implementation. Semantically
       // read-only access in sub-pipelines should be fused with read-only access
@@ -956,7 +1383,7 @@ TYPED_TEST(MatrixTest, DependenciesConstSubPipelineConst) {
       EXPECT_TRUE(checkSendersStep(0, rosenders2));
       CHECK_MATRIX_SENDERS(true, rosenders2, rosenders1);
 
-      auto rosenders3 = getReadSendersUsingLocalIndex(mat);
+      auto rosenders3 = getReadSendersUsingLocalIndex(const_mat);
       EXPECT_TRUE(checkSendersStep(0, rosenders3));
       CHECK_MATRIX_SENDERS(true, rosenders3, rosenders2);
     }
@@ -972,8 +1399,8 @@ TYPED_TEST(MatrixTest, DependenciesReferenceMix) {
       // rw0 - rw1 - ro2a - rw3 - ro4a - rw5
       //           \ ro2b /    \ ro4b /
 
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-      Matrix<Type, Device::CPU> mat(size, test.block_size, comm_grid);
+      GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
+      Matrix<Type, Device::CPU> mat(size, test.tile_size, comm_grid);
 
       auto senders0 = getReadWriteSendersUsingGlobalIndex(mat);
       EXPECT_TRUE(checkSendersStep(senders0.size(), senders0));
@@ -1037,8 +1464,8 @@ TYPED_TEST(MatrixTest, DependenciesReferenceMixSubPipeline) {
       // NOTE: The above is the ideal case. The current implementation does not
       // merge read-only accesses between a pipeline and a sub-pipeline.
 
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-      Matrix<Type, Device::CPU> mat(size, test.block_size, comm_grid);
+      GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
+      Matrix<Type, Device::CPU> mat(size, test.tile_size, comm_grid);
 
       auto senders0 = getReadWriteSendersUsingGlobalIndex(mat);
       EXPECT_TRUE(checkSendersStep(senders0.size(), senders0));
@@ -1100,8 +1527,8 @@ TYPED_TEST(MatrixTest, DependenciesPointerMix) {
       // rw0 - rw1 - ro2a - rw3 - ro4a - rw5
       //           \ ro2b /    \ ro4b /
 
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-      Matrix<Type, Device::CPU> mat(size, test.block_size, comm_grid);
+      GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
+      Matrix<Type, Device::CPU> mat(size, test.tile_size, comm_grid);
 
       auto senders0 = getReadWriteSendersUsingLocalIndex(mat);
       EXPECT_TRUE(checkSendersStep(senders0.size(), senders0));
@@ -1156,20 +1583,20 @@ TYPED_TEST(MatrixTest, TileSize) {
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-      Matrix<Type, Device::CPU> mat(size, test.block_size, comm_grid);
+      GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
+      Matrix<Type, Device::CPU> mat(size, test.tile_size, comm_grid);
       auto mat_sub = mat.subPipeline();
       auto mat_sub_const = mat.subPipelineConst();
 
       for (SizeType i = 0; i < mat.nrTiles().rows(); ++i) {
-        SizeType mb = mat.blockSize().rows();
+        SizeType mb = mat.tile_size().rows();
         SizeType ib = std::min(mb, mat.size().rows() - i * mb);
         for (SizeType j = 0; j < mat.nrTiles().cols(); ++j) {
-          SizeType nb = mat.blockSize().cols();
+          SizeType nb = mat.tile_size().cols();
           SizeType jb = std::min(nb, mat.size().cols() - j * nb);
-          EXPECT_EQ(TileElementSize(ib, jb), mat.tileSize({i, j}));
-          EXPECT_EQ(TileElementSize(ib, jb), mat_sub.tileSize({i, j}));
-          EXPECT_EQ(TileElementSize(ib, jb), mat_sub_const.tileSize({i, j}));
+          EXPECT_EQ(TileElementSize(ib, jb), mat.tile_size_of({i, j}));
+          EXPECT_EQ(TileElementSize(ib, jb), mat_sub.tile_size_of({i, j}));
+          EXPECT_EQ(TileElementSize(ib, jb), mat_sub_const.tile_size_of({i, j}));
         }
       }
     }
@@ -1177,8 +1604,8 @@ TYPED_TEST(MatrixTest, TileSize) {
 }
 
 struct TestLocalColMajor {
-  LocalElementSize size;
-  TileElementSize block_size;
+  GlobalElementSize size;
+  TileElementSize tile_size;
   SizeType ld;
 };
 
@@ -1203,10 +1630,11 @@ TYPED_TEST(MatrixLocalTest, FromColMajor) {
   using Type = TypeParam;
 
   for (const auto& test : col_major_sizes_tests) {
-    LayoutInfo layout = colMajorLayout(test.size, test.block_size, test.ld);
-    memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
+    Distribution distribution(test.size, test.tile_size, {1, 1}, {0, 0}, {0, 0});
+    ColMajorLayout layout(distribution, test.ld);
+    memory::MemoryView<Type, Device::CPU> mem(layout.min_mem_size());
 
-    auto mat = createMatrixFromColMajor<Device::CPU>(test.size, test.block_size, test.ld, mem());
+    auto mat = create_matrix_from_col_major<Device::CPU>(test.size, test.tile_size, test.ld, mem());
     ASSERT_FALSE(haveConstElements(mat));
     CHECK_LAYOUT_LOCAL(mem(), layout, mat);
 
@@ -1228,11 +1656,12 @@ TYPED_TEST(MatrixLocalTest, FromColMajorConst) {
   using Type = TypeParam;
 
   for (const auto& test : col_major_sizes_tests) {
-    LayoutInfo layout = colMajorLayout(test.size, test.block_size, test.ld);
-    memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
+    Distribution distribution(test.size, test.tile_size, {1, 1}, {0, 0}, {0, 0});
+    ColMajorLayout layout(distribution, test.ld);
+    memory::MemoryView<Type, Device::CPU> mem(layout.min_mem_size());
     const Type* p = mem();
 
-    auto mat = createMatrixFromColMajor<Device::CPU>(test.size, test.block_size, test.ld, p);
+    auto mat = create_matrix_from_col_major<Device::CPU>(test.size, test.tile_size, test.ld, p);
     ASSERT_TRUE(haveConstElements(mat));
     CHECK_LAYOUT_LOCAL(mem(), layout, mat);
 
@@ -1249,57 +1678,57 @@ TYPED_TEST(MatrixTest, FromColMajor) {
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
 
       {
         // src_rank = {0, 0}
-        Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+        Distribution distribution(size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
 
         SizeType ld = distribution.localSize().rows() + 3;
-        LayoutInfo layout = colMajorLayout(distribution, ld);
-        memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
+        ColMajorLayout layout(distribution, ld);
+        memory::MemoryView<Type, Device::CPU> mem(layout.min_mem_size());
 
-        auto mat = createMatrixFromColMajor<Device::CPU>(size, test.block_size, ld, comm_grid, mem());
+        auto mat = create_matrix_from_col_major<Device::CPU>(size, test.tile_size, ld, comm_grid, mem());
         ASSERT_FALSE(haveConstElements(mat));
-        CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat);
+        CHECK_LAYOUT(mem(), layout, mat);
 
         {
           auto mat_sub = mat.subPipeline();
           ASSERT_FALSE(haveConstElements(mat_sub));
-          CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat_sub);
+          CHECK_LAYOUT(mem(), layout, mat_sub);
         }
 
         {
           auto mat_sub_const = mat.subPipelineConst();
           ASSERT_TRUE(haveConstElements(mat_sub_const));
-          CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat_sub_const);
+          CHECK_LAYOUT(mem(), layout, mat_sub_const);
         }
       }
       {
         // specify src_rank
         comm::Index2D src_rank(std::max(0, comm_grid.size().rows() - 1),
                                std::max(0, comm_grid.size().cols() - 1));
-        Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), src_rank);
+        Distribution distribution(size, test.tile_size, comm_grid.size(), comm_grid.rank(), src_rank);
 
         SizeType ld = distribution.localSize().rows() + 3;
-        LayoutInfo layout = colMajorLayout(distribution, ld);
-        memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
+        ColMajorLayout layout(distribution, ld);
+        memory::MemoryView<Type, Device::CPU> mem(layout.min_mem_size());
 
-        auto mat =
-            createMatrixFromColMajor<Device::CPU>(size, test.block_size, ld, comm_grid, src_rank, mem());
+        auto mat = create_matrix_from_col_major<Device::CPU>(size, test.tile_size, ld, comm_grid,
+                                                             src_rank, mem());
         ASSERT_FALSE(haveConstElements(mat));
-        CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat);
+        CHECK_LAYOUT(mem(), layout, mat);
 
         {
           auto mat_sub = mat.subPipeline();
           ASSERT_FALSE(haveConstElements(mat_sub));
-          CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat_sub);
+          CHECK_LAYOUT(mem(), layout, mat_sub);
         }
 
         {
           auto mat_sub_const = mat.subPipelineConst();
           ASSERT_TRUE(haveConstElements(mat_sub_const));
-          CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat_sub_const);
+          CHECK_LAYOUT(mem(), layout, mat_sub_const);
         }
       }
     }
@@ -1311,357 +1740,47 @@ TYPED_TEST(MatrixTest, FromColMajorConst) {
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
 
       {
         // src_rank = {0, 0}
-        Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+        Distribution distribution(size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
 
         SizeType ld = distribution.localSize().rows() + 3;
-        LayoutInfo layout = colMajorLayout(distribution, ld);
-        memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
+        ColMajorLayout layout(distribution, ld);
+        memory::MemoryView<Type, Device::CPU> mem(layout.min_mem_size());
         const Type* p = mem();
 
-        auto mat = createMatrixFromColMajor<Device::CPU>(size, test.block_size, ld, comm_grid, p);
+        auto mat = create_matrix_from_col_major<Device::CPU>(size, test.tile_size, ld, comm_grid, p);
         ASSERT_TRUE(haveConstElements(mat));
-        CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat);
+        CHECK_LAYOUT(mem(), layout, mat);
 
         {
           auto mat_sub_const = mat.subPipelineConst();
           ASSERT_TRUE(haveConstElements(mat_sub_const));
-          CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat_sub_const);
+          CHECK_LAYOUT(mem(), layout, mat_sub_const);
         }
       }
       {
         // specify src_rank
         comm::Index2D src_rank(std::min(1, comm_grid.size().rows() - 1),
                                std::min(1, comm_grid.size().cols() - 1));
-        Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), src_rank);
+        Distribution distribution(size, test.tile_size, comm_grid.size(), comm_grid.rank(), src_rank);
 
         SizeType ld = distribution.localSize().rows() + 3;
-        LayoutInfo layout = colMajorLayout(distribution, ld);
-        memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
+        ColMajorLayout layout(distribution, ld);
+        memory::MemoryView<Type, Device::CPU> mem(layout.min_mem_size());
         const Type* p = mem();
 
         auto mat =
-            createMatrixFromColMajor<Device::CPU>(size, test.block_size, ld, comm_grid, src_rank, p);
+            create_matrix_from_col_major<Device::CPU>(size, test.tile_size, ld, comm_grid, src_rank, p);
         ASSERT_TRUE(haveConstElements(mat));
-        CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat);
+        CHECK_LAYOUT(mem(), layout, mat);
 
         {
           auto mat_sub_const = mat.subPipelineConst();
           ASSERT_TRUE(haveConstElements(mat_sub_const));
-          CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat_sub_const);
-        }
-      }
-    }
-  }
-}
-
-struct TestLocalTile {
-  LocalElementSize size;
-  TileElementSize block_size;
-  SizeType ld;
-  SizeType tiles_per_col;
-  bool is_basic;
-};
-
-const std::vector<TestLocalTile> tile_sizes_tests({
-    {{10, 7}, {3, 4}, 3, 4, true},   // basic tile layout
-    {{10, 7}, {3, 4}, 3, 7, false},  // padded tiles_per_col
-    {{6, 11}, {4, 3}, 4, 2, true},   // basic tile layout
-    {{6, 11}, {4, 3}, 5, 2, false},  // padded ld
-});
-
-TYPED_TEST(MatrixLocalTest, FromTile) {
-  using Type = TypeParam;
-
-  for (const auto& test : tile_sizes_tests) {
-    LayoutInfo layout = tileLayout(test.size, test.block_size, test.ld, test.tiles_per_col);
-    memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
-    if (test.is_basic) {
-      auto mat = createMatrixFromTile<Device::CPU>(test.size, test.block_size, mem());
-      ASSERT_FALSE(haveConstElements(mat));
-      CHECK_LAYOUT_LOCAL(mem(), layout, mat);
-
-      {
-        auto mat_sub = mat.subPipeline();
-        ASSERT_FALSE(haveConstElements(mat_sub));
-        CHECK_LAYOUT_LOCAL(mem(), layout, mat_sub);
-      }
-
-      {
-        auto mat_sub_const = mat.subPipelineConst();
-        ASSERT_TRUE(haveConstElements(mat_sub_const));
-        CHECK_LAYOUT_LOCAL(mem(), layout, mat_sub_const);
-      }
-    }
-
-    auto mat = createMatrixFromTile<Device::CPU>(test.size, test.block_size, test.ld, test.tiles_per_col,
-                                                 mem());
-    ASSERT_FALSE(haveConstElements(mat));
-    CHECK_LAYOUT_LOCAL(mem(), layout, mat);
-
-    {
-      auto mat_sub = mat.subPipeline();
-      ASSERT_FALSE(haveConstElements(mat_sub));
-      CHECK_LAYOUT_LOCAL(mem(), layout, mat_sub);
-    }
-
-    {
-      auto mat_sub_const = mat.subPipelineConst();
-      ASSERT_TRUE(haveConstElements(mat_sub_const));
-      CHECK_LAYOUT_LOCAL(mem(), layout, mat_sub_const);
-    }
-  }
-}
-
-TYPED_TEST(MatrixLocalTest, FromTileConst) {
-  using Type = TypeParam;
-
-  for (const auto& test : tile_sizes_tests) {
-    LayoutInfo layout = tileLayout(test.size, test.block_size, test.ld, test.tiles_per_col);
-    memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
-    const Type* p = mem();
-    if (test.is_basic) {
-      auto mat = createMatrixFromTile<Device::CPU>(test.size, test.block_size, p);
-      ASSERT_TRUE(haveConstElements(mat));
-      CHECK_LAYOUT_LOCAL(mem(), layout, mat);
-
-      {
-        auto mat_sub_const = mat.subPipelineConst();
-        ASSERT_TRUE(haveConstElements(mat_sub_const));
-        CHECK_LAYOUT_LOCAL(mem(), layout, mat_sub_const);
-      }
-    }
-
-    auto mat =
-        createMatrixFromTile<Device::CPU>(test.size, test.block_size, test.ld, test.tiles_per_col, p);
-    ASSERT_TRUE(haveConstElements(mat));
-    CHECK_LAYOUT_LOCAL(mem(), layout, mat);
-
-    {
-      auto mat_sub_const = mat.subPipelineConst();
-      ASSERT_TRUE(haveConstElements(mat_sub_const));
-      CHECK_LAYOUT_LOCAL(mem(), layout, mat_sub_const);
-    }
-  }
-}
-
-TYPED_TEST(MatrixTest, FromTile) {
-  using Type = TypeParam;
-
-  using dlaf::util::ceilDiv;
-
-  for (auto& comm_grid : this->commGrids()) {
-    for (const auto& test : sizes_tests) {
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-
-      // Basic tile layout
-      {
-        // src_rank = {0, 0}
-        Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-        LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
-        memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
-
-        auto mat = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid, mem());
-        ASSERT_FALSE(haveConstElements(mat));
-        CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat);
-
-        {
-          auto mat_sub = mat.subPipeline();
-          ASSERT_FALSE(haveConstElements(mat_sub));
-          CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat_sub);
-        }
-
-        {
-          auto mat_sub_const = mat.subPipelineConst();
-          ASSERT_TRUE(haveConstElements(mat_sub_const));
-          CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat_sub_const);
-        }
-      }
-      {
-        // specify src_rank
-        comm::Index2D src_rank(std::max(0, comm_grid.size().rows() - 1),
-                               std::max(0, comm_grid.size().cols() - 1));
-        Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), src_rank);
-        LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
-        memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
-
-        auto mat = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid, src_rank, mem());
-        ASSERT_FALSE(haveConstElements(mat));
-        CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat);
-
-        {
-          auto mat_sub = mat.subPipeline();
-          ASSERT_FALSE(haveConstElements(mat_sub));
-          CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat_sub);
-        }
-
-        {
-          auto mat_sub_const = mat.subPipelineConst();
-          ASSERT_TRUE(haveConstElements(mat_sub_const));
-          CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat_sub_const);
-        }
-      }
-
-      // Advanced tile layout
-      {
-        // src_rank = {0, 0}
-        Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-
-        SizeType ld_tiles = test.block_size.rows();
-        SizeType tiles_per_col =
-            ceilDiv(distribution.localSize().rows(), distribution.blockSize().rows()) + 3;
-        LayoutInfo layout = tileLayout(distribution, ld_tiles, tiles_per_col);
-        memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
-
-        auto mat = createMatrixFromTile<Device::CPU>(size, test.block_size, ld_tiles, tiles_per_col,
-                                                     comm_grid, mem());
-        ASSERT_FALSE(haveConstElements(mat));
-        CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat);
-
-        {
-          auto mat_sub = mat.subPipeline();
-          ASSERT_FALSE(haveConstElements(mat_sub));
-          CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat_sub);
-        }
-
-        {
-          auto mat_sub_const = mat.subPipelineConst();
-          ASSERT_TRUE(haveConstElements(mat_sub_const));
-          CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat_sub_const);
-        }
-      }
-      {
-        // specify src_rank
-        comm::Index2D src_rank(std::min(1, comm_grid.size().rows() - 1),
-                               std::min(1, comm_grid.size().cols() - 1));
-        Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), src_rank);
-
-        SizeType ld_tiles = test.block_size.rows();
-        SizeType tiles_per_col =
-            ceilDiv(distribution.localSize().rows(), distribution.blockSize().rows()) + 1;
-        LayoutInfo layout = tileLayout(distribution, ld_tiles, tiles_per_col);
-        memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
-
-        auto mat = createMatrixFromTile<Device::CPU>(size, test.block_size, ld_tiles, tiles_per_col,
-                                                     comm_grid, src_rank, mem());
-        ASSERT_FALSE(haveConstElements(mat));
-        CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat);
-
-        {
-          auto mat_sub = mat.subPipeline();
-          ASSERT_FALSE(haveConstElements(mat_sub));
-          CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat_sub);
-        }
-
-        {
-          auto mat_sub_const = mat.subPipelineConst();
-          ASSERT_TRUE(haveConstElements(mat_sub_const));
-          CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat_sub_const);
-        }
-      }
-    }
-  }
-}
-
-TYPED_TEST(MatrixTest, FromTileConst) {
-  using Type = TypeParam;
-
-  using dlaf::util::ceilDiv;
-
-  for (auto& comm_grid : this->commGrids()) {
-    for (const auto& test : sizes_tests) {
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-
-      // Basic tile layout
-      {
-        // src_rank = {0, 0}
-        Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-        LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
-        memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
-
-        const Type* p = mem();
-        auto mat = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid, p);
-        ASSERT_TRUE(haveConstElements(mat));
-
-        CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat);
-
-        {
-          auto mat_sub_const = mat.subPipelineConst();
-          ASSERT_TRUE(haveConstElements(mat_sub_const));
-          CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat_sub_const);
-        }
-      }
-      {
-        // specify src_rank
-        comm::Index2D src_rank(std::max(0, comm_grid.size().rows() - 1),
-                               std::max(0, comm_grid.size().cols() - 1));
-        Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), src_rank);
-        LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
-        memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
-
-        const Type* p = mem();
-        auto mat = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid, src_rank, p);
-        ASSERT_TRUE(haveConstElements(mat));
-
-        CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat);
-
-        {
-          auto mat_sub_const = mat.subPipelineConst();
-          ASSERT_TRUE(haveConstElements(mat_sub_const));
-          CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat_sub_const);
-        }
-      }
-
-      // Advanced tile layout
-      {
-        // src_rank = {0, 0}
-        Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-
-        SizeType ld_tiles = test.block_size.rows();
-        SizeType tiles_per_col =
-            ceilDiv(distribution.localSize().rows(), distribution.blockSize().rows()) + 3;
-        LayoutInfo layout = tileLayout(distribution, ld_tiles, tiles_per_col);
-        memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
-
-        const Type* p = mem();
-        auto mat = createMatrixFromTile<Device::CPU>(size, test.block_size, ld_tiles, tiles_per_col,
-                                                     comm_grid, p);
-        ASSERT_TRUE(haveConstElements(mat));
-
-        CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat);
-
-        {
-          auto mat_sub_const = mat.subPipelineConst();
-          ASSERT_TRUE(haveConstElements(mat_sub_const));
-          CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat_sub_const);
-        }
-      }
-      {
-        // specify src_rank
-        comm::Index2D src_rank(std::min(1, comm_grid.size().rows() - 1),
-                               std::min(1, comm_grid.size().cols() - 1));
-        Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), src_rank);
-
-        SizeType ld_tiles = test.block_size.rows();
-        SizeType tiles_per_col =
-            ceilDiv(distribution.localSize().rows(), distribution.blockSize().rows()) + 1;
-        LayoutInfo layout = tileLayout(distribution, ld_tiles, tiles_per_col);
-        memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
-
-        const Type* p = mem();
-        auto mat = createMatrixFromTile<Device::CPU>(size, test.block_size, ld_tiles, tiles_per_col,
-                                                     comm_grid, src_rank, p);
-        ASSERT_TRUE(haveConstElements(mat));
-
-        CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat);
-
-        {
-          auto mat_sub_const = mat.subPipelineConst();
-          ASSERT_TRUE(haveConstElements(mat_sub_const));
-          CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat_sub_const);
+          CHECK_LAYOUT(mem(), layout, mat_sub_const);
         }
       }
     }
@@ -1736,19 +1855,14 @@ struct MatrixGenericTest : public TestWithCommGrids {};
 
 TEST_F(MatrixGenericTest, SelectTilesReadonly) {
   using TypeParam = double;
-  using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
   using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
 
-      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
-
-      MemoryViewT mem(layout.minMemSize());
-      MatrixT mat = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid,
-                                                      static_cast<TypeParam*>(mem()));
+      Distribution distribution(size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      MatrixT mat{distribution, MatrixAllocation::Tiles, Ld::Compact};
 
       // if this rank has no tiles locally, there's nothing interesting to do...
       if (distribution.localNrTiles().isEmpty())
@@ -1785,19 +1899,14 @@ TEST_F(MatrixGenericTest, SelectTilesReadonly) {
 
 TEST_F(MatrixGenericTest, SelectTilesReadonlySubPipeline) {
   using TypeParam = double;
-  using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
   using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
 
-      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
-
-      MemoryViewT mem(layout.minMemSize());
-      MatrixT mat = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid,
-                                                      static_cast<TypeParam*>(mem()));
+      Distribution distribution(size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      MatrixT mat(std::move(distribution), MatrixAllocation::Tiles, Ld::Compact);
       auto mat_sub = mat.subPipeline();
 
       // if this rank has no tiles locally, there's nothing interesting to do...
@@ -1835,19 +1944,14 @@ TEST_F(MatrixGenericTest, SelectTilesReadonlySubPipeline) {
 
 TEST_F(MatrixGenericTest, SelectTilesReadwrite) {
   using TypeParam = double;
-  using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
   using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
 
-      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
-
-      MemoryViewT mem(layout.minMemSize());
-      MatrixT mat = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid,
-                                                      static_cast<TypeParam*>(mem()));
+      Distribution distribution(size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      MatrixT mat(std::move(distribution), MatrixAllocation::Tiles, Ld::Compact);
 
       // if this rank has no tiles locally, there's nothing interesting to do...
       if (distribution.localNrTiles().isEmpty())
@@ -1884,19 +1988,14 @@ TEST_F(MatrixGenericTest, SelectTilesReadwrite) {
 
 TEST_F(MatrixGenericTest, SelectTilesReadwriteSubPipeline) {
   using TypeParam = double;
-  using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
   using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
 
-      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
-
-      MemoryViewT mem(layout.minMemSize());
-      MatrixT mat = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid,
-                                                      static_cast<TypeParam*>(mem()));
+      Distribution distribution(size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      MatrixT mat(std::move(distribution), MatrixAllocation::Tiles, Ld::Compact);
       auto mat_sub = mat.subPipeline();
 
       // if this rank has no tiles locally, there's nothing interesting to do...
@@ -1968,20 +2067,20 @@ auto try_waiting_guard = [](auto& guard) {
 
 // Create a single-element matrix
 template <class T>
-auto createMatrix() -> Matrix<T, device> {
+auto create_matrix() -> Matrix<T, device> {
   return {{1, 1}, {1, 1}};
 }
 
 // Create a single-element matrix with user-provided memory
 template <class T>
-auto createMatrix(T& data) -> Matrix<T, device> {
-  return createMatrixFromColMajor<Device::CPU>({1, 1}, {1, 1}, 1, &data);
+auto create_matrix(T& data) -> Matrix<T, device> {
+  return create_matrix_from_col_major<Device::CPU>({1, 1}, {1, 1}, 1, &data);
 }
 
 // Create a single-element const matrix with user-provided memory
 template <class T>
-auto createConstMatrix(const T& data) {
-  return createMatrixFromColMajor<Device::CPU>({1, 1}, {1, 1}, 1, &data);
+auto create_const_matrix(const T& data) {
+  return create_matrix_from_col_major<Device::CPU>({1, 1}, {1, 1}, 1, &data);
 }
 
 // Helper for waiting for guard and ensuring that is_exited_from_scope has been set
@@ -2000,7 +2099,7 @@ TEST(MatrixDestructor, NonConstAfterRead) {
 
   std::atomic<bool> is_exited_from_scope{false};
   {
-    auto matrix = createMatrix<T>();
+    auto matrix = create_matrix<T>();
 
     auto tile_sender = matrix.read(LocalTileIndex(0, 0));
     last_task = std::move(tile_sender) |
@@ -2019,7 +2118,7 @@ TEST(MatrixDestructor, NonConstAfterReadWrite) {
 
   std::atomic<bool> is_exited_from_scope{false};
   {
-    auto matrix = createMatrix<T>();
+    auto matrix = create_matrix<T>();
 
     auto tile_sender = matrix.readwrite(LocalTileIndex(0, 0));
     last_task = std::move(tile_sender) |
@@ -2038,7 +2137,7 @@ TEST(MatrixDestructor, NonConstAfterRead_UserMemory) {
   std::atomic<bool> is_exited_from_scope{false};
   {
     T data;
-    auto matrix = createMatrix<T>(data);
+    auto matrix = create_matrix<T>(data);
 
     auto tile_sender = matrix.read(LocalTileIndex(0, 0));
     last_task = std::move(tile_sender) |
@@ -2058,7 +2157,7 @@ TEST(MatrixDestructor, NonConstAfterReadWrite_UserMemory) {
   std::atomic<bool> is_exited_from_scope{false};
   {
     T data;
-    auto matrix = createMatrix<T>(data);
+    auto matrix = create_matrix<T>(data);
 
     auto tile_sender = matrix.readwrite(LocalTileIndex(0, 0));
     last_task = std::move(tile_sender) |
@@ -2077,7 +2176,7 @@ TEST(MatrixDestructor, ConstAfterRead_UserMemory) {
   std::atomic<bool> is_exited_from_scope{false};
   {
     T data;
-    auto matrix = createConstMatrix<T>(data);
+    auto matrix = create_const_matrix<T>(data);
 
     auto tile_sender = matrix.read(LocalTileIndex(0, 0));
     last_task = std::move(tile_sender) |
@@ -2095,7 +2194,7 @@ TEST(MatrixDestructor, NonConstAfterReadSubPipeline) {
 
   std::atomic<bool> is_exited_from_scope{false};
   {
-    auto matrix = createMatrix<T>();
+    auto matrix = create_matrix<T>();
     auto matrix_sub = matrix.subPipeline();
 
     auto tile_sender = matrix_sub.read(LocalTileIndex(0, 0));
@@ -2114,7 +2213,7 @@ TEST(MatrixDestructor, NonConstAfterReadSubPipelineConst) {
 
   std::atomic<bool> is_exited_from_scope{false};
   {
-    auto matrix = createMatrix<T>();
+    auto matrix = create_matrix<T>();
     auto matrix_sub = matrix.subPipelineConst();
 
     auto tile_sender = matrix_sub.read(LocalTileIndex(0, 0));
@@ -2134,7 +2233,7 @@ TEST(MatrixDestructor, NonConstAfterReadWriteSubPipeline) {
 
   std::atomic<bool> is_exited_from_scope{false};
   {
-    auto matrix = createMatrix<T>();
+    auto matrix = create_matrix<T>();
     auto matrix_sub = matrix.subPipeline();
 
     auto tile_sender = matrix_sub.readwrite(LocalTileIndex(0, 0));
@@ -2154,7 +2253,7 @@ TEST(MatrixDestructor, NonConstAfterReadSubPipeline_UserMemory) {
   std::atomic<bool> is_exited_from_scope{false};
   {
     T data;
-    auto matrix = createMatrix<T>(data);
+    auto matrix = create_matrix<T>(data);
     auto matrix_sub = matrix.subPipeline();
 
     auto tile_sender = matrix.read(LocalTileIndex(0, 0));
@@ -2174,7 +2273,7 @@ TEST(MatrixDestructor, NonConstAfterReadSubPipelineConst_UserMemory) {
   std::atomic<bool> is_exited_from_scope{false};
   {
     T data;
-    auto matrix = createMatrix<T>(data);
+    auto matrix = create_matrix<T>(data);
     auto matrix_sub = matrix.subPipelineConst();
 
     auto tile_sender = matrix.read(LocalTileIndex(0, 0));
@@ -2195,7 +2294,7 @@ TEST(MatrixDestructor, NonConstAfterReadWriteSubPipeline_UserMemory) {
   std::atomic<bool> is_exited_from_scope{false};
   {
     T data;
-    auto matrix = createMatrix<T>(data);
+    auto matrix = create_matrix<T>(data);
     auto matrix_sub = matrix.subPipeline();
 
     auto tile_sender = matrix_sub.readwrite(LocalTileIndex(0, 0));
@@ -2215,7 +2314,7 @@ TEST(MatrixDestructor, ConstAfterReadSubPipeline_UserMemory) {
   std::atomic<bool> is_exited_from_scope{false};
   {
     T data;
-    auto matrix = createConstMatrix<T>(data);
+    auto matrix = create_const_matrix<T>(data);
     auto matrix_sub = matrix.subPipelineConst();
 
     auto tile_sender = matrix.read(LocalTileIndex(0, 0));
@@ -2231,19 +2330,14 @@ TEST(MatrixDestructor, ConstAfterReadSubPipeline_UserMemory) {
 
 TEST_F(MatrixGenericTest, SyncBarrier) {
   using TypeParam = double;
-  using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
   using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
 
-      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
-
-      MemoryViewT mem(layout.minMemSize());
-      MatrixT matrix = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid,
-                                                         static_cast<TypeParam*>(mem()));
+      Distribution distribution(size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      MatrixT matrix{distribution, MatrixAllocation::Tiles, Ld::Compact};
 
       const auto local_size = distribution.localNrTiles();
       const LocalTileIndex tile_tl(0, 0);
@@ -2287,12 +2381,11 @@ TEST_F(MatrixGenericTest, SyncBarrier) {
     }
   }
 }
-
 struct CustomException final : public std::exception {};
 inline auto throw_custom = [](auto) { throw CustomException{}; };
 
 TEST(MatrixExceptionPropagation, RWDoesNotPropagateInRWAccess) {
-  auto matrix = createMatrix<T>();
+  auto matrix = create_matrix<T>();
 
   auto s = matrix.readwrite(LocalTileIndex(0, 0)) | ex::then(throw_custom) | ex::ensure_started();
 
@@ -2301,7 +2394,7 @@ TEST(MatrixExceptionPropagation, RWDoesNotPropagateInRWAccess) {
 }
 
 TEST(MatrixExceptionPropagation, RWDoesNotPropagateInReadAccess) {
-  auto matrix = createMatrix<T>();
+  auto matrix = create_matrix<T>();
 
   auto s = matrix.readwrite(LocalTileIndex(0, 0)) | ex::then(throw_custom) | ex::ensure_started();
 
@@ -2310,7 +2403,7 @@ TEST(MatrixExceptionPropagation, RWDoesNotPropagateInReadAccess) {
 }
 
 TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInRWAccess) {
-  auto matrix = createMatrix<T>();
+  auto matrix = create_matrix<T>();
 
   auto s = matrix.read(LocalTileIndex(0, 0)) | ex::then(throw_custom) | ex::ensure_started();
 
@@ -2319,7 +2412,7 @@ TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInRWAccess) {
 }
 
 TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInReadAccess) {
-  auto matrix = createMatrix<T>();
+  auto matrix = create_matrix<T>();
 
   auto s = matrix.read(LocalTileIndex(0, 0)) | ex::then(throw_custom) | ex::ensure_started();
 

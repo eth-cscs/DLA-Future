@@ -13,6 +13,7 @@
 #include <pika/execution.hpp>
 
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/matrix/check_allocation.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_ref.h>
 #include <dlaf/sender/transform.h>
@@ -43,7 +44,7 @@ TYPED_TEST_SUITE(MatrixRefTest, MatrixElementTypes);
 
 struct TestSubMatrix {
   GlobalElementSize size;
-  TileElementSize block_size;
+  TileElementSize tile_size;
   GlobalElementIndex sub_origin;
   GlobalElementSize sub_size;
 };
@@ -86,23 +87,28 @@ TYPED_TEST(MatrixRefTest, Basic) {
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : tests_sub_matrix) {
-      Matrix<Type, device> mat(test.size, test.block_size, comm_grid);
-      Matrix<const Type, device>& mat_const = mat;
+      for (const auto& alloc :
+           {MatrixAllocation::ColMajor, MatrixAllocation::Blocks, MatrixAllocation::Tiles}) {
+        Matrix<Type, device> mat(test.size, test.tile_size, comm_grid, alloc);
+        Matrix<const Type, device>& mat_const = mat;
 
-      const SubMatrixSpec spec{test.sub_origin, test.sub_size};
-      MatrixRef<Type, device> mat_ref(mat, spec);
-      MatrixRef<Type, device> mat_const_ref1(mat, spec);
-      MatrixRef<const Type, device> mat_const_ref2(mat_const, spec);
+        const SubMatrixSpec spec{test.sub_origin, test.sub_size};
+        MatrixRef<Type, device> mat_ref(mat, spec);
+        MatrixRef<Type, device> mat_const_ref1(mat, spec);
+        MatrixRef<const Type, device> mat_const_ref2(mat_const, spec);
 
-      EXPECT_EQ(mat_ref.distribution(), mat_const_ref1.distribution());
-      EXPECT_EQ(mat_ref.distribution(), mat_const_ref2.distribution());
-      EXPECT_EQ(mat_ref.size(), test.sub_size);
-      EXPECT_EQ(mat_ref.blockSize(), mat.blockSize());
-      EXPECT_EQ(mat_ref.baseTileSize(), mat.baseTileSize());
-      EXPECT_EQ(mat_ref.rankIndex(), mat.rankIndex());
-      EXPECT_EQ(mat_ref.commGridSize(), mat.commGridSize());
-      if (test.sub_origin.isIn(GlobalElementSize(test.block_size.rows(), test.block_size.cols()))) {
-        EXPECT_EQ(mat_ref.sourceRankIndex(), mat.sourceRankIndex());
+        EXPECT_EQ(mat_ref.distribution(), mat_const_ref1.distribution());
+        EXPECT_EQ(mat_ref.distribution(), mat_const_ref2.distribution());
+        EXPECT_EQ(mat_ref.size(), test.sub_size);
+        EXPECT_EQ(mat_ref.blockSize(), mat.blockSize());
+        EXPECT_EQ(mat_ref.baseTileSize(), mat.baseTileSize());
+        EXPECT_EQ(mat_ref.rankIndex(), mat.rankIndex());
+        EXPECT_EQ(mat_ref.commGridSize(), mat.commGridSize());
+        if (test.sub_origin.isIn(GlobalElementSize(test.tile_size.rows(), test.tile_size.cols()))) {
+          EXPECT_EQ(mat_ref.sourceRankIndex(), mat.sourceRankIndex());
+        }
+
+        EXPECT_TRUE(is_allocated_as(mat_ref, alloc));
       }
     }
   }
@@ -114,7 +120,7 @@ TYPED_TEST(MatrixRefTest, Self) {
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : tests_sub_matrix) {
-      Matrix<Type, device> mat(test.size, test.block_size, comm_grid);
+      Matrix<Type, device> mat(test.size, test.tile_size, comm_grid);
       Matrix<const Type, device>& mat_const = mat;
 
       MatrixRef<Type, device> mat_ref(mat);
@@ -150,8 +156,8 @@ TYPED_TEST(MatrixRefTest, NonConstRefFromNonConstMatrix) {
         return indexInSubMatrix(index, spec) ? el_submatrix : el_border;
       };
 
-      Matrix<Type, device> mat_expected(test.size, test.block_size, comm_grid);
-      Matrix<Type, device> mat(test.size, test.block_size, comm_grid);
+      Matrix<Type, device> mat_expected(test.size, test.tile_size, comm_grid);
+      Matrix<Type, device> mat(test.size, test.tile_size, comm_grid);
       MatrixRef<Type, device> mat_ref(mat, spec);
 
       set(mat_expected, f_el_full);
@@ -185,8 +191,8 @@ TYPED_TEST(MatrixRefTest, ConstRefFromNonConstMatrix) {
         return indexInSubMatrix(index, spec) ? el_submatrix : el_border;
       };
 
-      Matrix<Type, device> mat_expected(test.size, test.block_size, comm_grid);
-      Matrix<Type, device> mat(test.size, test.block_size, comm_grid);
+      Matrix<Type, device> mat_expected(test.size, test.tile_size, comm_grid);
+      Matrix<Type, device> mat(test.size, test.tile_size, comm_grid);
       MatrixRef<const Type, device> mat_const_ref(mat, spec);
 
       set(mat_expected, f_el_full);
@@ -213,8 +219,8 @@ TYPED_TEST(MatrixRefTest, ConstRefFromConstMatrix) {
         return indexInSubMatrix(index, spec) ? el_submatrix : el_border;
       };
 
-      Matrix<Type, device> mat_expected(test.size, test.block_size, comm_grid);
-      Matrix<Type, device> mat(test.size, test.block_size, comm_grid);
+      Matrix<Type, device> mat_expected(test.size, test.tile_size, comm_grid);
+      Matrix<Type, device> mat(test.size, test.tile_size, comm_grid);
       Matrix<const Type, device>& mat_const = mat;
       MatrixRef<const Type, device> mat_const_ref(mat_const, spec);
 

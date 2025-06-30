@@ -226,6 +226,30 @@ auto hegst(const dlaf::internal::Policy<B>& p, Sender&& s);
 template <Backend B>
 auto hegst(const dlaf::internal::Policy<B>& p);
 
+/// Assemble the Cholesky inverse computing L^H L or U U^H for the triangular tile @a.
+///
+/// Only the upper or lower triangular elements are referenced according to @p uplo.
+///
+/// This overload blocks until completion of the algorithm.
+/// @pre @a is the inverse of the cholesky factor.
+template <Backend B, class T, Device D>
+auto lauum(const dlaf::internal::Policy<B>&, const blas::Uplo uplo, const Tile<T, D>& a);
+
+/// \overload lauum
+///
+/// This overload takes a policy argument and a sender which must send all required arguments for the
+/// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
+template <Backend B, typename Sender,
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
+auto lauum(const dlaf::internal::Policy<B>& p, Sender&& s);
+
+/// \overload lauum
+///
+/// This overload partially applies the algorithm with a policy for later use with operator| with a
+/// sender on the left-hand side.
+template <Backend B>
+auto lauum(const dlaf::internal::Policy<B>& p);
+
 /// Compute the cholesky decomposition of a (with return code).
 ///
 /// Only the upper or lower triangular elements are referenced according to @p uplo.
@@ -304,6 +328,57 @@ auto stedc(const dlaf::internal::Policy<B>& p, Sender&& s);
 template <Backend B>
 auto stedc(const dlaf::internal::Policy<B>& p);
 
+/// Compute the inverse of the triangular tile @p a (with return code).
+///
+/// Only the upper or lower triangular elements are referenced according to @p uplo.
+/// @returns info = 0 on success or info > 0 if one of the diagonal element of the tile is 0.
+///
+/// This overload blocks until completion of the algorithm.
+template <Backend B, class T, Device D>
+auto trtri_info(const dlaf::internal::Policy<B>&, const blas::Uplo uplo, const blas::Diag diag,
+                const Tile<T, D>& a);
+
+/// \overload _info
+///
+/// This overload takes a policy argument and a sender which must send all required arguments for the
+/// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
+template <Backend B, typename Sender,
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
+auto trtri_info(const dlaf::internal::Policy<B>& p, Sender&& s);
+
+/// \overload trtri_info
+///
+/// This overload partially applies the algorithm with a policy for later use with operator| with a
+/// sender on the left-hand side.
+template <Backend B>
+auto trtri_info(const dlaf::internal::Policy<B>& p);
+
+/// Compute the the inverse of the triangular tile @p a.
+///
+/// Only the upper or lower triangular elements are referenced according to @p uplo.
+/// @pre matrix @p a is square,
+/// @pre matrix @p a is non-singular.
+///
+/// This overload blocks until completion of the algorithm.
+template <Backend B, class T, Device D>
+void trtri(const dlaf::internal::Policy<B>& p, const blas::Uplo uplo, const blas::Diag diag,
+           const Tile<T, D>& a);
+
+/// \overload trtri
+///
+/// This overload takes a policy argument and a sender which must send all required arguments for the
+/// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
+template <Backend B, typename Sender,
+          typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
+auto trtri(const dlaf::internal::Policy<B>& p, Sender&& s);
+
+/// \overload trtri
+///
+/// This overload partially applies the algorithm with a policy for later use with operator| with a
+/// sender on the left-hand side.
+template <Backend B>
+auto trtri(const dlaf::internal::Policy<B>& p);
+
 #else
 
 namespace internal {
@@ -339,6 +414,15 @@ void laset(const blas::Uplo uplo, T alpha, T beta, const Tile<T, Device::CPU>& t
 
   common::internal::SingleThreadedBlasScope single;
   lapack::laset(uplo, m, n, alpha, beta, tile.ptr(), tile.ld());
+}
+
+template <class T>
+void lauum(const blas::Uplo uplo, const Tile<T, Device::CPU>& a) {
+  DLAF_ASSERT(square_size(a), a);
+
+  common::internal::SingleThreadedBlasScope single;
+  auto info = lapack::lauum(uplo, a.size().rows(), a.ptr(), a.ld());
+  DLAF_ASSERT(info == 0, info);
 }
 
 template <class T>
@@ -402,6 +486,24 @@ void scaleCol(T alpha, SizeType col, const Tile<T, Device::CPU>& tile) {
   blas::scal(tile.size().rows(), alpha, tile.ptr(TileElementIndex(0, col)), 1);
 }
 
+template <class T>
+long long trtri_info(const blas::Uplo uplo, const blas::Diag diag, const Tile<T, Device::CPU>& a) {
+  DLAF_ASSERT(square_size(a), a);
+
+  common::internal::SingleThreadedBlasScope single;
+  auto info = lapack::trtri(uplo, diag, a.size().rows(), a.ptr(), a.ld());
+  DLAF_ASSERT_HEAVY(info >= 0, info);
+
+  return info;
+}
+
+template <class T>
+void trtri(const blas::Uplo uplo, const blas::Diag diag, const Tile<T, Device::CPU>& a) noexcept {
+  [[maybe_unused]] auto info = trtri_info(uplo, diag, a);
+
+  DLAF_ASSERT(info == 0, info);
+}
+
 #ifdef DLAF_WITH_GPU
 namespace internal {
 #define DLAF_DECLARE_GPULAPACK_OP(Name) \
@@ -437,6 +539,8 @@ DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<float>, Cpotrf);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<double>, Zpotrf);
 
 #elif defined(DLAF_WITH_HIP)
+
+DLAF_DECLARE_GPULAPACK_OP(Trtri);
 
 #define DLAF_GET_ROCSOLVER_WORKSPACE(f)                                                               \
   [&]() {                                                                                             \
@@ -481,6 +585,10 @@ DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, double, dpotrf);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<float>, cpotrf);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<double>, zpotrf);
 
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Trtri, float, strtri);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Trtri, double, dtrtri);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Trtri, std::complex<float>, ctrtri);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Trtri, std::complex<double>, ztrtri);
 #endif
 }
 
@@ -568,12 +676,21 @@ void hegst(cusolverDnHandle_t handle, const int itype, const blas::Uplo uplo,
                                    util::blasToCublasCast(b.ptr()), to_int(b.ld()),
                                    util::blasToCublasCast(info.workspace()), info.info());
 
-  assertExtendInfo(dlaf::gpulapack::internal::assertInfoHegst, handle, std::move(info));
+  assertExtendInfo(dlaf::gpulapack::internal::assert_info_hegst, handle, std::move(info));
 #elif defined(DLAF_WITH_HIP)
   internal::CusolverHegst<T>::call(handle, util::blasToRocblas(itype), util::blasToRocblas(uplo),
                                    to_int(n), util::blasToRocblasCast(a.ptr()), to_int(a.ld()),
                                    util::blasToRocblasCast(b.ptr()), to_int(b.ld()));
 #endif
+}
+
+template <class T>
+void lauum(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<T, Device::GPU>& a) {
+  DLAF_ASSERT(square_size(a), a);
+  const auto n = a.size().rows();
+
+  DLAF_STATIC_UNIMPLEMENTED(T);
+  dlaf::internal::silenceUnusedWarningFor(handle, uplo, a);
 }
 
 template <class T>
@@ -604,9 +721,35 @@ internal::CusolverInfo<T> potrfInfo(cusolverDnHandle_t handle, const blas::Uplo 
 template <class T>
 void potrf(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<T, Device::GPU>& a) {
   auto info = potrfInfo(handle, uplo, a);
-  assertExtendInfo(dlaf::gpulapack::internal::assertInfoPotrf, handle, std::move(info));
+  assertExtendInfo(dlaf::gpulapack::internal::assert_info_potrf, handle, std::move(info));
 }
 
+template <class T>
+internal::CusolverInfo<T> trtri_info(cusolverDnHandle_t handle, const blas::Uplo uplo,
+                                     const blas::Diag diag, const matrix::Tile<T, Device::GPU>& a) {
+  DLAF_ASSERT(square_size(a), a);
+  const auto n = a.size().rows();
+
+  internal::CusolverInfo<T> info{};
+#ifdef DLAF_WITH_CUDA
+  DLAF_STATIC_UNIMPLEMENTED(T);
+  dlaf::internal::silenceUnusedWarningFor(handle, uplo, diag, a, n);
+
+#elif defined(DLAF_WITH_HIP)
+  internal::CusolverTrtri<T>::call(handle, util::blasToRocblas(uplo), util::blasToRocblas(diag),
+                                   to_int(n), util::blasToRocblasCast(a.ptr()), to_int(a.ld()),
+                                   info.info());
+#endif
+
+  return info;
+}
+
+template <class T>
+void trtri(cusolverDnHandle_t handle, const blas::Uplo uplo, const blas::Diag diag,
+           const matrix::Tile<T, Device::GPU>& a) {
+  auto info = trtri_info(handle, uplo, diag, a);
+  assertExtendInfo(dlaf::gpulapack::internal::assert_info_trtri, handle, std::move(info));
+}
 #endif
 
 DLAF_MAKE_CALLABLE_OBJECT(lange);
@@ -614,10 +757,13 @@ DLAF_MAKE_CALLABLE_OBJECT(lantr);
 DLAF_MAKE_CALLABLE_OBJECT(laset);
 DLAF_MAKE_CALLABLE_OBJECT(set0);
 DLAF_MAKE_CALLABLE_OBJECT(hegst);
+DLAF_MAKE_CALLABLE_OBJECT(lauum);
 DLAF_MAKE_CALLABLE_OBJECT(potrf);
 DLAF_MAKE_CALLABLE_OBJECT(potrfInfo);
 DLAF_MAKE_CALLABLE_OBJECT(stedc);
 DLAF_MAKE_CALLABLE_OBJECT(scaleCol);
+DLAF_MAKE_CALLABLE_OBJECT(trtri);
+DLAF_MAKE_CALLABLE_OBJECT(trtri_info);
 }
 
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, lange,
@@ -630,6 +776,8 @@ DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Pl
                                      internal::set0_o)
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, hegst,
                                      internal::hegst_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, lauum,
+                                     internal::lauum_o)
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, potrf,
                                      internal::potrf_o)
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, potrfInfo,
@@ -638,6 +786,9 @@ DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::La
                                      internal::stedc_o)
 DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, scaleCol,
                                      internal::scaleCol_o)
-
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, trtri,
+                                     internal::trtri_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, trtri_info,
+                                     internal::trtri_info_o)
 #endif
 }

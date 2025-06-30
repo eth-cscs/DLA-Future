@@ -19,7 +19,6 @@
 #include <dlaf/matrix/copy_tile.h>
 #include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/index.h>
-#include <dlaf/matrix/layout_info.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/memory/memory_view.h>
 #include <dlaf/sender/policy.h>
@@ -103,10 +102,10 @@ TEST_F(P2PTestMC, SendRecv) {
   auto dist = matrix::Distribution({13, 13}, {13, 13});
 
   // single tile matrix whose columns are stored in contiguous memory
-  testSendRecv(world, MatrixT(dist, matrix::tileLayout(dist, 13, 13)));
+  testSendRecv(world, MatrixT(dist, matrix::MatrixAllocation::Tiles, matrix::Ld::Compact));
 
   // single tile matrix whose columns are stored in non-contiguous memory
-  testSendRecv(world, MatrixT(dist, matrix::colMajorLayout(dist, 13)));
+  testSendRecv(world, MatrixT(dist, matrix::MatrixAllocation::ColMajor, 26));
 }
 
 #ifdef DLAF_WITH_GPU
@@ -114,10 +113,10 @@ TEST_F(P2PTestGPU, SendRecv) {
   auto dist = matrix::Distribution({13, 13}, {13, 13});
 
   // single tile matrix whose columns are stored in contiguous memory
-  testSendRecv(world, MatrixT(dist, matrix::tileLayout(dist, 13, 13)));
+  testSendRecv(world, MatrixT(dist, matrix::MatrixAllocation::Tiles, matrix::Ld::Compact));
 
   // single tile matrix whose columns are stored in non-contiguous memory
-  testSendRecv(world, MatrixT(dist, matrix::colMajorLayout(dist, 13)));
+  testSendRecv(world, MatrixT(dist, matrix::MatrixAllocation::ColMajor, 26));
 }
 #endif
 
@@ -176,10 +175,10 @@ TEST_F(P2PTestMC, SendRecvMixTags) {
   const auto dist = matrix::Distribution({10, 10}, {3, 3});
 
   // each tile is stored in contiguous memory (i.e. ld == blocksize.rows())
-  testSendRecvMixTags(world, MatrixT(dist, matrix::tileLayout(dist, 3, 4)));
+  testSendRecvMixTags(world, MatrixT(dist, matrix::MatrixAllocation::Tiles, matrix::Ld::Compact));
 
   // tiles are stored in non-contiguous memory
-  testSendRecvMixTags(world, MatrixT(dist, matrix::colMajorLayout(dist, 10)));
+  testSendRecvMixTags(world, MatrixT(dist, matrix::MatrixAllocation::ColMajor, 16));
 }
 
 template <Backend B, Device D, class T>
@@ -215,10 +214,10 @@ TEST_F(P2PTestMC, AllSum) {
   auto dist = matrix::Distribution({13, 13}, {13, 13});
 
   // single tile matrix whose columns are stored in contiguous memory
-  testP2PAllSum<Backend::MC>(world, MatrixT(dist, matrix::tileLayout(dist, 13, 13)));
+  testSendRecv(world, MatrixT(dist, matrix::MatrixAllocation::Tiles, matrix::Ld::Compact));
 
   // single tile matrix whose columns are stored in non-contiguous memory
-  testP2PAllSum<Backend::MC>(world, MatrixT(dist, matrix::colMajorLayout(dist, 13)));
+  testSendRecv(world, MatrixT(dist, matrix::MatrixAllocation::ColMajor, 26));
 }
 
 #ifdef DLAF_WITH_GPU
@@ -226,10 +225,10 @@ TEST_F(P2PTestGPU, AllSum) {
   auto dist = matrix::Distribution({13, 13}, {13, 13});
 
   // single tile matrix whose columns are stored in contiguous memory
-  testP2PAllSum<Backend::GPU>(world, MatrixT(dist, matrix::tileLayout(dist, 13, 13)));
+  testSendRecv(world, MatrixT(dist, matrix::MatrixAllocation::Tiles, matrix::Ld::Compact));
 
   // single tile matrix whose columns are stored in non-contiguous memory
-  testP2PAllSum<Backend::GPU>(world, MatrixT(dist, matrix::colMajorLayout(dist, 13)));
+  testSendRecv(world, MatrixT(dist, matrix::MatrixAllocation::ColMajor, 26));
 }
 #endif
 
@@ -292,8 +291,8 @@ TEST_F(P2PTestMC, AllSumMixTags) {
   const auto dist = matrix::Distribution({10, 10}, {3, 3});
 
   // each tile is stored in contiguous memory (i.e. ld == blocksize.rows())
-  testP2PAllSumMixTags<Backend::MC>(world, MatrixT(dist, matrix::tileLayout(dist, 3, 4)));
+  testSendRecvMixTags(world, MatrixT(dist, matrix::MatrixAllocation::Tiles, matrix::Ld::Compact));
 
   // tiles are stored in non-contiguous memory
-  testP2PAllSumMixTags<Backend::MC>(world, MatrixT(dist, matrix::colMajorLayout(dist, 10)));
+  testSendRecvMixTags(world, MatrixT(dist, matrix::MatrixAllocation::ColMajor, 16));
 }

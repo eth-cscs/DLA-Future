@@ -48,16 +48,9 @@ template <typename Type>
 class EigensolverTest : public TestWithCommGrids {};
 
 template <class T>
-using EigensolverTestMC = EigensolverTest<T>;
+using EigensolverTestCapi = EigensolverTest<T>;
 
-TYPED_TEST_SUITE(EigensolverTestMC, MatrixElementTypes);
-
-#ifdef DLAF_WITH_GPU
-template <class T>
-using EigensolverTestGPU = EigensolverTest<T>;
-
-TYPED_TEST_SUITE(EigensolverTestGPU, MatrixElementTypes);
-#endif
+TYPED_TEST_SUITE(EigensolverTestCapi, MatrixElementTypes);
 
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
 
@@ -73,7 +66,7 @@ std::set<std::optional<SizeType>> num_evals(const SizeType m) {
   return {std::nullopt, 0, m / 2, m};
 }
 
-template <class T, Backend B, Device D, API api>
+template <class T, API api>
 void testEigensolver(int dlaf_context, const blas::Uplo uplo, const SizeType m, const SizeType mb,
                      CommunicatorGrid& grid, std::optional<SizeType> eigenvalues_index_end) {
   // std::nullopt calls the API without specifying the number of eigenvalues to compute
@@ -99,11 +92,11 @@ void testEigensolver(int dlaf_context, const blas::Uplo uplo, const SizeType m, 
   copy(reference, mat_a_h);
   mat_a_h.waitLocalTiles();
 
-  EigensolverResult<T, D> ret = [&]() {
+  EigensolverResult<T, Device::CPU> ret = [&]() {
     const SizeType size = mat_a_h.size().rows();
-    Matrix<BaseType<T>, D> eigenvalues(LocalElementSize(size, 1),
-                                       TileElementSize(mat_a_h.blockSize().rows(), 1));
-    Matrix<T, D> eigenvectors(GlobalElementSize(size, size), mat_a_h.blockSize(), grid);
+    Matrix<BaseType<T>, Device::CPU> eigenvalues(LocalElementSize(size, 1),
+                                                 TileElementSize(mat_a_h.blockSize().rows(), 1));
+    Matrix<T, Device::CPU> eigenvectors(GlobalElementSize(size, size), mat_a_h.blockSize(), grid);
 
     eigenvalues.waitLocalTiles();
     eigenvectors.waitLocalTiles();
@@ -236,7 +229,7 @@ void testEigensolver(int dlaf_context, const blas::Uplo uplo, const SizeType m, 
 #endif
     }
 
-    return EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
+    return EigensolverResult<T, Device::CPU>{std::move(eigenvalues), std::move(eigenvectors)};
   }();
 
   // Resume pika runtime suspended by C API for correctness checks
@@ -251,7 +244,7 @@ void testEigensolver(int dlaf_context, const blas::Uplo uplo, const SizeType m, 
   pika::suspend();
 }
 
-TYPED_TEST(EigensolverTestMC, CorrectnessDistributedDLAF) {
+TYPED_TEST(EigensolverTestCapi, CorrectnessDistributedDLAF) {
   for (comm::CommunicatorGrid& grid : this->commGrids()) {
     auto dlaf_context =
         c_api_test_initialize<API::dlaf>(pika_argc, pika_argv, dlaf_argc, dlaf_argv, grid);
@@ -260,8 +253,7 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributedDLAF) {
       for (auto [m, mb, b_min] : sizes) {
         auto numevals = num_evals(m);
         for (auto nevals : numevals) {
-          testEigensolver<TypeParam, Backend::MC, Device::CPU, API::dlaf>(dlaf_context, uplo, m, mb,
-                                                                          grid, nevals);
+          testEigensolver<TypeParam, API::dlaf>(dlaf_context, uplo, m, mb, grid, nevals);
         }
       }
     }
@@ -271,7 +263,7 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributedDLAF) {
 }
 
 #ifdef DLAF_WITH_SCALAPACK
-TYPED_TEST(EigensolverTestMC, CorrectnessDistributedScalapack) {
+TYPED_TEST(EigensolverTestCapi, CorrectnessDistributedScalapack) {
   for (comm::CommunicatorGrid& grid : this->commGrids()) {
     auto dlaf_context =
         c_api_test_initialize<API::scalapack>(pika_argc, pika_argv, dlaf_argc, dlaf_argv, grid);
@@ -280,8 +272,7 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributedScalapack) {
       for (auto [m, mb, b_min] : sizes) {
         auto numevals = num_evals(m);
         for (auto nevals : numevals) {
-          testEigensolver<TypeParam, Backend::MC, Device::CPU, API::scalapack>(dlaf_context, uplo, m, mb,
-                                                                               grid, nevals);
+          testEigensolver<TypeParam, API::scalapack>(dlaf_context, uplo, m, mb, grid, nevals);
         }
       }
     }
@@ -289,46 +280,4 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributedScalapack) {
     c_api_test_finalize<API::scalapack>(dlaf_context);
   }
 }
-#endif
-
-#ifdef DLAF_WITH_GPU
-TYPED_TEST(EigensolverTestGPU, CorrectnessDistributedDLAF) {
-  for (comm::CommunicatorGrid& grid : this->commGrids()) {
-    auto dlaf_context =
-        c_api_test_initialize<API::dlaf>(pika_argc, pika_argv, dlaf_argc, dlaf_argv, grid);
-
-    for (auto uplo : blas_uplos) {
-      for (auto [m, mb, b_min] : sizes) {
-        auto numevals = num_evals(m);
-        for (auto nevals : numevals) {
-          testEigensolver<TypeParam, Backend::GPU, Device::GPU, API::dlaf>(dlaf_context, uplo, m, mb,
-                                                                           grid, nevals);
-        }
-      }
-    }
-
-    c_api_test_finalize<API::dlaf>(dlaf_context);
-  }
-}
-
-#ifdef DLAF_WITH_SCALAPACK
-TYPED_TEST(EigensolverTestGPU, CorrectnessDistributedScalapack) {
-  for (comm::CommunicatorGrid& grid : this->commGrids()) {
-    auto dlaf_context =
-        c_api_test_initialize<API::scalapack>(pika_argc, pika_argv, dlaf_argc, dlaf_argv, grid);
-
-    for (auto uplo : blas_uplos) {
-      for (auto [m, mb, b_min] : sizes) {
-        auto numevals = num_evals(m);
-        for (auto nevals : numevals) {
-          testEigensolver<TypeParam, Backend::GPU, Device::GPU, API::scalapack>(dlaf_context, uplo, m,
-                                                                                mb, grid, nevals);
-        }
-      }
-    }
-
-    c_api_test_finalize<API::scalapack>(dlaf_context);
-  }
-}
-#endif
 #endif

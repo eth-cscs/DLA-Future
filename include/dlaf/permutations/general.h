@@ -32,20 +32,20 @@ namespace dlaf::permutations {
 ///        submatrix, they are not global). Only tiles whose row tile coords are in the range
 ///        [i_begin,i_end) are accessed in read-only mode.
 /// @pre @p perms is not distributed
-/// @pre @p perms has blocksize (NB x MB)
-/// @pre @p perms has tilesize (NB x MB)
+/// @pre @p perms has block size (NB x MB)
+/// @pre @p perms has tile size (NB x MB)
 ///
 /// @param mat_in is the input matrix. Only tiles whose both row and col tile coords are in
 ///        the range [i_begin,i_end) are accessed in read-only mode.
 /// @pre @p mat_in has size (N x N)
-/// @pre @p mat_in has blocksize (NB x NB)
-/// @pre @p mat_in has tilesize (NB x NB)
+/// @pre @p mat_in has block size (NB x NB)
+/// @pre @p mat_in has tile size (NB x NB)
 ///
 /// @param mat_out is the output matrix. Only tiles whose both row and col tile coords are in
 ///        the range [i_begin,i_end) are accessed in write-only mode.
 /// @pre @p mat_out has size (N x N)
-/// @pre @p mat_out has blocksize (NB x NB)
-/// @pre @p mat_out has tilesize (NB x NB)
+/// @pre @p mat_out has block size (NB x NB)
+/// @pre @p mat_out has tile size (NB x NB)
 template <Backend B, Device D, class T, Coord coord>
 void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
              Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {
@@ -58,9 +58,9 @@ void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
   // in terms of number of tiles). Moreover, by requiring mat_in and mat_out matrices to have the same
   // shape, it is ensured that range [i_begin, i_end] is actually the same on both sides.
   DLAF_ASSERT(matrix::square_size(mat_in), mat_in);
-  DLAF_ASSERT(matrix::square_blocksize(mat_in), mat_in);
+  DLAF_ASSERT(matrix::square_block_size(mat_in), mat_in);
   DLAF_ASSERT(matrix::equal_size(mat_in, mat_out), mat_in);
-  DLAF_ASSERT(matrix::equal_blocksize(mat_in, mat_out), mat_in);
+  DLAF_ASSERT(matrix::equal_block_size(mat_in, mat_out), mat_in);
 
   DLAF_ASSERT(matrix::single_tile_per_block(perms), perms);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_in), mat_in);
@@ -96,22 +96,22 @@ void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
 ///        instead of the full matrix indices). Only tiles whose row tile coords are in the range
 ///        [i_begin,i_end) are accessed in read-only mode.
 /// @pre @p perms is not distributed
-/// @pre @p perms has blocksize (NB x MB)
-/// @pre @p perms has tilesize (NB x MB)
+/// @pre @p perms has block size (NB x MB)
+/// @pre @p perms has tile size (NB x MB)
 ///
 /// @param mat_in is the distributed input matrix. Only tiles whose both global row and col tile coords are in
 ///        the range [i_begin,i_end) are accessed in readwrite-mode.
 /// @pre @p mat_in is distributed according to @p grid
 /// @pre @p mat_in has size (N x N)
-/// @pre @p mat_in has blocksize (NB x NB)
-/// @pre @p mat_in has tilesize (NB x NB)
+/// @pre @p mat_in has block size (NB x NB)
+/// @pre @p mat_in has tile size (NB x NB)
 ///
 /// @param mat_out is the distributed output matrix. Only tiles whose both global row and col tile coords are in
 ///        the range [i_begin,i_end) are accessed in readwrite-mode.
 /// @pre @p mat_out is distributed according to @p grid
 /// @pre @p mat_out has size (N x N)
-/// @pre @p mat_out has blocksize (NB x NB)
-/// @pre @p mat_out has tilesize (NB x NB)
+/// @pre @p mat_out has block size (NB x NB)
+/// @pre @p mat_out has tile size (NB x NB)
 template <Backend B, Device D, class T, Coord coord>
 void permute(
     comm::CommunicatorPipeline<comm::coord_to_communicator_type(orthogonal(coord))>& sub_task_chain,
@@ -127,9 +127,9 @@ void permute(
   // in terms of number of tiles). Moreover, by requiring mat_in and mat_out matrices to have the same
   // shape, it is ensured that range [i_begin, i_end] is actually the same on both sides.
   DLAF_ASSERT(square_size(mat_in), mat_in);
-  DLAF_ASSERT(matrix::square_blocksize(mat_in), mat_in);
+  DLAF_ASSERT(matrix::square_block_size(mat_in), mat_in);
   DLAF_ASSERT(matrix::equal_size(mat_in, mat_out), mat_in);
-  DLAF_ASSERT(matrix::equal_blocksize(mat_in, mat_out), mat_in);
+  DLAF_ASSERT(matrix::equal_block_size(mat_in, mat_out), mat_in);
 
   DLAF_ASSERT(matrix::single_tile_per_block(perms), perms);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_in), mat_in);

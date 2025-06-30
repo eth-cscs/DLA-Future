@@ -181,7 +181,7 @@ DLAF_EXTERN_C int dlaf_hermitian_generalized_eigensolver_partial_spectrum_factor
 ///
 /// @param uplo indicates whether the upper ('U') or lower ('L') triangular part of the global submatrix
 /// \f$\mathbf{A}\f$ is referenced
-/// @param n order of the sumbatrix \f$\mathbf{A}\f$ used in the computation
+/// @param n order of the submatrix \f$\mathbf{A}\f$ used in the computation
 /// @param a Local part of the global matrix \f$\mathbf{A}\f$
 /// @param ia row index of the global matrix \f$\mathbf{A}\f$ identifying the first row of the submatrix
 /// $A$, has to be 1
@@ -275,7 +275,7 @@ DLAF_EXTERN_C void dlaf_pzhegvd_partial_spectrum(
 ///
 /// @param uplo indicates whether the upper ('U') or lower ('L') triangular part of the global submatrix
 /// \f$\mathbf{A}\f$ is referenced
-/// @param n order of the sumbatrix \f$\mathbf{A}\f$ used in the computation
+/// @param n order of the submatrix \f$\mathbf{A}\f$ used in the computation
 /// @param a Local part of the global matrix \f$\mathbf{A}\f$
 /// @param ia row index of the global matrix \f$\mathbf{A}\f$ identifying the first row of the submatrix
 /// $A$, has to be 1

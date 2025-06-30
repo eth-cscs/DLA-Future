@@ -265,7 +265,7 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid& grid, Matrix<T
       panelT.reset();
     }
 
-    panelT.setRange({kt, kt}, indexFromOrigin(distr.nrTiles()));
+    panelT.setRange({kt, kt}, {nrtile - 1, nrtile - 1});
 
     broadcast(kk_rank.col(), panel, panelT, mpi_row_task_chain, mpi_col_task_chain);
 
@@ -411,7 +411,7 @@ void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid& grid, Matrix<T
       panelT.reset();
     }
 
-    panelT.setRange({kt, kt}, indexFromOrigin(distr.nrTiles()));
+    panelT.setRange({kt, kt}, {nrtile - 1, nrtile - 1});
 
     broadcast(kk_rank.row(), panel, panelT, mpi_row_task_chain, mpi_col_task_chain);
 

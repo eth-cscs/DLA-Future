@@ -42,7 +42,7 @@ TYPED_TEST_SUITE(MatrixMirrorTest, MatrixElementTypes);
 
 struct TestSizes {
   LocalElementSize size;
-  TileElementSize block_size;
+  GlobalElementSize block_size;
   TileElementSize tile_size;
 };
 

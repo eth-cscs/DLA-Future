@@ -204,7 +204,6 @@ DLAF_addSublibrary(
           communication/kernels/reduce.cpp
           init.cpp
           matrix/distribution.cpp
-          matrix/layout_info.cpp
           matrix/matrix_ref.cpp
           matrix/tile.cpp
           matrix.cpp
@@ -257,6 +256,14 @@ DLAF_addSublibrary(
   LIBRARIES dlaf.core
 )
 
+# Define DLAF's inverse library
+DLAF_addSublibrary(
+  inverse
+  SOURCES inverse/triangular/mc.cpp $<$<BOOL:${DLAF_WITH_GPU}>:inverse/triangular/gpu.cpp>
+  SOURCES inverse/cholesky/mc.cpp $<$<BOOL:${DLAF_WITH_GPU}>:inverse/cholesky/gpu.cpp>
+  LIBRARIES dlaf.core
+)
+
 # Define DLAF's multiplication library
 DLAF_addSublibrary(
   multiplication
@@ -282,9 +289,15 @@ DLAF_addSublibrary(
 
 # Define DLAF's C API library
 DLAF_addSublibrary(
-  c_api SOURCES c_api/eigensolver/eigensolver.cpp c_api/eigensolver/gen_eigensolver.cpp
-                c_api/factorization/cholesky.cpp c_api/grid.cpp c_api/init.cpp c_api/utils.cpp
-  LIBRARIES dlaf.core dlaf.factorization dlaf.eigensolver
+  c_api
+  SOURCES c_api/eigensolver/eigensolver.cpp
+          c_api/eigensolver/gen_eigensolver.cpp
+          c_api/factorization/cholesky.cpp
+          c_api/inverse/cholesky.cpp
+          c_api/grid.cpp
+          c_api/init.cpp
+          c_api/utils.cpp
+  LIBRARIES dlaf.core dlaf.factorization dlaf.inverse dlaf.eigensolver
 )
 
 # Define DLAF's complete library
@@ -295,6 +308,7 @@ add_library(
   $<TARGET_OBJECTS:dlaf.eigensolver_object>
   $<TARGET_OBJECTS:dlaf.tridiagonal_eigensolver_object>
   $<TARGET_OBJECTS:dlaf.factorization_object>
+  $<TARGET_OBJECTS:dlaf.inverse_object>
   $<TARGET_OBJECTS:dlaf.multiplication_object>
   $<TARGET_OBJECTS:dlaf.permutations_object>
   $<TARGET_OBJECTS:dlaf.solver_object>

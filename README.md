@@ -13,10 +13,12 @@ DLA-Future runs on x86 and ARM CPUs as well as NVIDIA and AMD GPUs.
 Currently DLA-Future provides the following algorithms which are available in the following interfaces:
 | ScaLAPACK Name | Algorithm | C++ API | C API | Scalapack C API |
 |----------------|-----------|:-------:|:-----:|:---------------:|
-| `P[S,D,C,Z]TRMM` | Triangular Matrix Multiplication | ✔️ | ❌ | ❌ |
-| `P[C,Z]HEMM`, `P[S,D]SYMM` | Hermitian Matrix Multiplication | ✔️ | ❌ | ❌ |
-| `P[S,D,C,Z]TRSM` | Triangular Solver | ✔️ | ❌ | ❌ |
-| `P[S,D,C,Z]POTRF` | Cholesky Decomposition | ✔️ | ✔️ | ✔️ |
+| `P[S,D,C,Z]TRMM` | Triangular matrix multiplication | ✔️ | ❌ | ❌ |
+| `P[C,Z]HEMM`, `P[S,D]SYMM` | Hermitian matrix multiplication | ✔️ | ❌ | ❌ |
+| `P[S,D,C,Z]TRSM` | Triangular solver | ✔️ | ❌ | ❌ |
+| `P[S,D,C,Z]POTRF` | Cholesky decomposition | ✔️ | ✔️ | ✔️ |
+| `P[S,D,C,Z]POTRI` | Inverse from Cholesky factor | ✔️ | ✔️ | ✔️ |
+| `P[S,D,C,Z]TRTRI` | Inverse of triangular matrix | ✔️ | ❌ | ❌ |
 | `P[C,Z]HEEV*`, `P[S,D]SYEV*` | Symmetric / Hermitian eigenvalue solver | ✔️ | ✔️ | ✔️ |
 | `P[C,Z]HEGV*`, `P[S,D]SYGV*` | Generalized Symmetric / Hermitian eigenvalue solver | ✔️ | ✔️ | ✔️ |
 
@@ -60,7 +62,7 @@ target_link_libraries(<your_target> PRIVATE DLAF::DLAF)
 ### Documentation
 
 - [Documentation of `master` branch](https://eth-cscs.github.io/DLA-Future/master/)
-- [Documentation of `v0.9.0`](https://eth-cscs.github.io/DLA-Future/v0.9.0/)
+- [Documentation of `v0.10.0`](https://eth-cscs.github.io/DLA-Future/v0.10.0/)
 
 See [DOCUMENTATION.md](DOCUMENTATION.md) for the documentation of older versions, or for the instructions to build it.
 

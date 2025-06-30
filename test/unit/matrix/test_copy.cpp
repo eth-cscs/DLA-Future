@@ -81,15 +81,11 @@ TYPED_TEST(MatrixCopyTest, FullMatrixCPU) {
       const GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
       const Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      const LayoutInfo layout = tileLayout(distribution.local_size(), distribution.block_size());
-
-      memory::MemoryView<TypeParam, Device::CPU> mem_src(layout.minMemSize());
-      Matrix<TypeParam, Device::CPU> mat_src(distribution, layout, mem_src());
+      Matrix<TypeParam, Device::CPU> mat_src(distribution, MatrixAllocation::Tiles, Ld::Compact);
       set(mat_src, inputValues<TypeParam>);
       Matrix<const TypeParam, Device::CPU> mat_src_const = std::move(mat_src);
 
-      memory::MemoryView<TypeParam, Device::CPU> mem_dst(layout.minMemSize());
-      Matrix<TypeParam, Device::CPU> mat_dst(distribution, layout, mem_dst());
+      Matrix<TypeParam, Device::CPU> mat_dst(distribution, MatrixAllocation::Tiles, Ld::Compact);
       set(mat_dst, outputValues<TypeParam>);
 
       copy(mat_src_const, mat_dst);
@@ -108,21 +104,14 @@ TYPED_TEST(MatrixCopyTest, FullMatrixGPU) {
       const GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
       const Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      const LayoutInfo layout = tileLayout(distribution.local_size(), distribution.block_size());
-
-      memory::MemoryView<TypeParam, Device::CPU> mem_src(layout.minMemSize());
-      Matrix<TypeParam, Device::CPU> mat_src(distribution, layout, mem_src());
+      Matrix<TypeParam, Device::CPU> mat_src(distribution, MatrixAllocation::Tiles, Ld::Compact);
       set(mat_src, inputValues<TypeParam>);
       Matrix<const TypeParam, Device::CPU> mat_src_const = std::move(mat_src);
 
-      memory::MemoryView<TypeParam, Device::GPU> mem_gpu1(layout.minMemSize());
-      Matrix<TypeParam, Device::GPU> mat_gpu1(distribution, layout, mem_gpu1());
+      Matrix<TypeParam, Device::GPU> mat_gpu1(distribution, MatrixAllocation::Tiles, Ld::Compact);
+      Matrix<TypeParam, Device::GPU> mat_gpu2(distribution, MatrixAllocation::Tiles, Ld::Compact);
 
-      memory::MemoryView<TypeParam, Device::GPU> mem_gpu2(layout.minMemSize());
-      Matrix<TypeParam, Device::GPU> mat_gpu2(distribution, layout, mem_gpu2());
-
-      memory::MemoryView<TypeParam, Device::CPU> mem_dst(layout.minMemSize());
-      Matrix<TypeParam, Device::CPU> mat_dst(distribution, layout, mem_dst());
+      Matrix<TypeParam, Device::CPU> mat_dst(distribution, MatrixAllocation::Tiles, Ld::Compact);
       set(mat_dst, outputValues<TypeParam>);
 
       copy(mat_src_const, mat_gpu1);
@@ -175,14 +164,8 @@ const std::vector<SubMatrixCopyConfig> sub_configs{
 template <class T>
 void testSubMatrix(const SubMatrixCopyConfig& test, const matrix::Distribution& dist_in,
                    const matrix::Distribution& dist_out) {
-  const LayoutInfo layout_in = tileLayout(dist_in.local_size(), dist_in.block_size());
-  const LayoutInfo layout_out = tileLayout(dist_out.local_size(), dist_out.block_size());
-
-  memory::MemoryView<T, Device::CPU> mem_in(layout_in.minMemSize());
-  memory::MemoryView<T, Device::CPU> mem_out(layout_out.minMemSize());
-
-  Matrix<T, Device::CPU> mat_in(dist_in, layout_in, mem_in());
-  Matrix<T, Device::CPU> mat_out(dist_out, layout_out, mem_out());
+  Matrix<T, Device::CPU> mat_in(dist_in, MatrixAllocation::Tiles, Ld::Compact);
+  Matrix<T, Device::CPU> mat_out(dist_out, MatrixAllocation::Tiles, Ld::Compact);
 
   // Note: currently `subPipeline`-ing does not support sub-matrices
   if (isFullMatrix(dist_in, test.sub_in())) {
@@ -247,22 +230,13 @@ TYPED_TEST(MatrixCopyTest, SubMatrixCPUDistributed) {
 template <class T>
 void testSubMatrixOnGPU(const SubMatrixCopyConfig& test, const matrix::Distribution& dist_in,
                         const matrix::Distribution& dist_out) {
-  const LayoutInfo layout_in = tileLayout(dist_in.local_size(), dist_in.block_size());
-  const LayoutInfo layout_out = tileLayout(dist_out.local_size(), dist_out.block_size());
-
   // CPU
-  memory::MemoryView<T, Device::CPU> mem_in(layout_in.minMemSize());
-  memory::MemoryView<T, Device::CPU> mem_out(layout_out.minMemSize());
-
-  Matrix<T, Device::CPU> mat_in(dist_in, layout_in, mem_in());
-  Matrix<T, Device::CPU> mat_out(dist_out, layout_out, mem_out());
+  Matrix<T, Device::CPU> mat_in(dist_in, MatrixAllocation::Tiles, Ld::Compact);
+  Matrix<T, Device::CPU> mat_out(dist_out, MatrixAllocation::Tiles, Ld::Compact);
 
   // GPU
-  memory::MemoryView<T, Device::GPU> mem_in_gpu(layout_in.minMemSize());
-  memory::MemoryView<T, Device::GPU> mem_out_gpu(layout_out.minMemSize());
-
-  Matrix<T, Device::GPU> mat_in_gpu(dist_in, layout_in, mem_in_gpu());
-  Matrix<T, Device::GPU> mat_out_gpu(dist_out, layout_out, mem_out_gpu());
+  Matrix<T, Device::GPU> mat_in_gpu(dist_in, MatrixAllocation::Tiles, Ld::Compact);
+  Matrix<T, Device::GPU> mat_out_gpu(dist_out, MatrixAllocation::Tiles, Ld::Compact);
 
   // Note: currently `subPipeline`-ing does not support sub-matrices
   if (isFullMatrix(dist_in, test.sub_in())) {

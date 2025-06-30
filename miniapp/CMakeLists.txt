@@ -14,7 +14,7 @@ project(DLAF-miniapps)
 list(PREPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 find_package(DLAF REQUIRED)
-find_package(pika 0.11.0 REQUIRED)
+find_package(pika REQUIRED)
 
 include(DLAF_AddMiniapp)
 include(DLAF_AddTargetWarnings)
@@ -35,6 +35,8 @@ DLAF_addMiniapp(miniapp_triangular_multiplication SOURCES miniapp_triangular_mul
 DLAF_addMiniapp(miniapp_eigensolver SOURCES miniapp_eigensolver.cpp)
 DLAF_addMiniapp(miniapp_gen_eigensolver SOURCES miniapp_gen_eigensolver.cpp)
 DLAF_addMiniapp(miniapp_communication SOURCES miniapp_communication.cpp)
+DLAF_addMiniapp(miniapp_triangular_inverse SOURCES miniapp_triangular_inverse.cpp)
+DLAF_addMiniapp(miniapp_inverse_from_cholesky_factor SOURCES miniapp_inverse_from_cholesky_factor.cpp)
 
 if(DLAF_BUILD_TESTING)
   set(miniapp_test_args
@@ -61,6 +63,8 @@ if(DLAF_BUILD_TESTING)
   DLAF_addTargetTest(miniapp_eigensolver ${miniapp_test_args})
   DLAF_addTargetTest(miniapp_gen_eigensolver ${miniapp_test_args})
   DLAF_addTargetTest(miniapp_communication ${miniapp_test_args})
+  DLAF_addTargetTest(miniapp_triangular_inverse ${miniapp_test_args})
+  DLAF_addTargetTest(miniapp_inverse_from_cholesky_factor ${miniapp_test_args})
 endif()
 
 add_subdirectory(kernel)

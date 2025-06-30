@@ -17,7 +17,7 @@
 #ifdef DLAF_ASSERT_ENABLE
 
 #define DLAF_DEFINE_CUSOLVER_ASSERT_INFO(func)                                                      \
-  void assertInfo##func(whip::stream_t stream, int* info) {                                         \
+  void assert_info_##func(whip::stream_t stream, int* info) {                                       \
     dlaf::gpulapack::internal::assert_info<<<1, 1, 0, stream>>>(info,                               \
                                                                 [] __device__() { return #func; }); \
   }
@@ -25,7 +25,7 @@
 #else
 
 #define DLAF_DEFINE_CUSOLVER_ASSERT_INFO(func) \
-  void assertInfo##func(whip::stream_t, int*) {}
+  void assert_info_##func(whip::stream_t, int*) {}
 
 #endif
 
@@ -43,7 +43,8 @@ __global__ void assert_info(int* info, F func) {
   }
 }
 
-DLAF_DEFINE_CUSOLVER_ASSERT_INFO(Potrf)
-DLAF_DEFINE_CUSOLVER_ASSERT_INFO(Hegst)
+DLAF_DEFINE_CUSOLVER_ASSERT_INFO(potrf)
+DLAF_DEFINE_CUSOLVER_ASSERT_INFO(hegst)
+DLAF_DEFINE_CUSOLVER_ASSERT_INFO(trtri)
 
 }

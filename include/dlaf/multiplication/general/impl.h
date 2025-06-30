@@ -100,9 +100,11 @@ void General<B, D, T>::callNN(comm::CommunicatorPipeline<comm::CommunicatorType:
     auto& panelB = panelsB.nextResource();
 
     if (k == 0 || k == mat_a.nr_tiles().cols() - 1) {
-      DLAF_ASSERT_HEAVY(dist_a.tile_size_of<Coord::Col>(k) == dist_b.tile_size_of<Coord::Row>(k),
-                        dist_a.tile_size_of<Coord::Col>(k), dist_b.tile_size_of<Coord::Row>(k));
-      const SizeType kSize = dist_a.tile_size_of<Coord::Col>(k);
+      DLAF_ASSERT_HEAVY(dist_a.global_tile_size_of<Coord::Col>(k) ==
+                            dist_b.global_tile_size_of<Coord::Row>(k),
+                        dist_a.global_tile_size_of<Coord::Col>(k),
+                        dist_b.global_tile_size_of<Coord::Row>(k));
+      const SizeType kSize = dist_a.global_tile_size_of<Coord::Col>(k);
       panelA.setWidth(kSize);
       panelB.setHeight(kSize);
     }

@@ -123,6 +123,10 @@ public:
     return splitTile(std::move(tile_sender), SubTileSpec{ij_tile, tile_size});
   }
 
+  MatrixAllocation allocation() const noexcept {
+    return mat_const_.allocation();
+  }
+
 private:
   Matrix<const T, D>& mat_const_;
 

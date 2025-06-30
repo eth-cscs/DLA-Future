@@ -340,7 +340,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid& grid, Matrix<T
     auto& a_panel = a_panels.nextResource();
     auto& a_panelT = a_panelsT.nextResource();
     l_panel.setRangeStart(kk);
-    l_panelT.setRangeStart(kk);
+    l_panelT.setRange(kk, {nrtile - 1, nrtile - 1});
     a_panelT.setRange({0, 0}, kk);
 
     if (k == nrtile - 1) {
@@ -438,7 +438,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid& grid, Matrix<T
       a_panelT.reset();
     }
 
-    a_panelT.setRange(at, common::indexFromOrigin(distr.nrTiles()));
+    a_panelT.setRange(at, {nrtile - 1, nrtile - 1});
 
     broadcast(kk_rank.col(), a_panel, a_panelT, mpi_row_task_chain, mpi_col_task_chain);
 
@@ -610,7 +610,7 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid& grid, Matrix<T
     auto& a_panel = a_panels.nextResource();
     auto& a_panelT = a_panelsT.nextResource();
     u_panel.setRangeStart(kk);
-    u_panelT.setRangeStart(kk);
+    u_panelT.setRange(kk, {nrtile - 1, nrtile - 1});
     a_panelT.setRange({0, 0}, kk);
 
     if (k == nrtile - 1) {
@@ -709,7 +709,7 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid& grid, Matrix<T
       a_panelT.reset();
     }
 
-    a_panelT.setRange(at, common::indexFromOrigin(distr.nrTiles()));
+    a_panelT.setRange(at, {nrtile - 1, nrtile - 1});
 
     broadcast(kk_rank.row(), a_panel, a_panelT, mpi_row_task_chain, mpi_col_task_chain);
 

@@ -46,14 +46,13 @@ int hermitian_eigensolver(const int dlaf_context, const char uplo, T* a,
 
   auto& communicator_grid = grid_from_context(dlaf_context);
 
-  auto [distribution_a, layout_a] = distribution_and_layout(dlaf_desca, communicator_grid);
-  auto [distribution_z, layout_z] = distribution_and_layout(dlaf_descz, communicator_grid);
+  auto layout_a = make_layout(dlaf_desca, communicator_grid);
+  auto layout_z = make_layout(dlaf_descz, communicator_grid);
 
-  MatrixHost matrix_host(distribution_a, layout_a, a);
-  MatrixHost eigenvectors_host(distribution_z, layout_z, z);
-  auto eigenvalues_host =
-      dlaf::matrix::createMatrixFromColMajor<dlaf::Device::CPU>({dlaf_descz.m, 1}, {dlaf_descz.mb, 1},
-                                                                std::max(dlaf_descz.m, 1), w);
+  MatrixHost matrix_host(layout_a, a);
+  MatrixHost eigenvectors_host(layout_z, z);
+  auto eigenvalues_host = dlaf::matrix::create_matrix_from_col_major<dlaf::Device::CPU>(
+      {dlaf_descz.m, 1}, {dlaf_descz.mb, 1}, std::max(dlaf_descz.m, 1), w);
 
   {
     MatrixMirror matrix(matrix_host);

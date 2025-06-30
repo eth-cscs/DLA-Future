@@ -30,5 +30,6 @@ spack:
       require:: 'openblas'
     pika:
       require:
+        - '+stdexec'
         - 'build_type=Debug'
         - 'malloc=system'

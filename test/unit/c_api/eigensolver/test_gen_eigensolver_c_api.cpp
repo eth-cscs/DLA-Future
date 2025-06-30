@@ -47,9 +47,9 @@ template <typename Type>
 class GenEigensolverTest : public TestWithCommGrids {};
 
 template <class T>
-using GenEigensolverTestMC = GenEigensolverTest<T>;
+using GenEigensolverTestCapi = GenEigensolverTest<T>;
 
-TYPED_TEST_SUITE(GenEigensolverTestMC, MatrixElementTypes);
+TYPED_TEST_SUITE(GenEigensolverTestCapi, MatrixElementTypes);
 
 #ifdef DLAF_WITH_GPU
 template <class T>
@@ -74,7 +74,10 @@ std::set<std::optional<SizeType>> num_evals(const SizeType m) {
   return {std::nullopt, 0, m / 2, m};
 }
 
-template <class T, Backend B, Device D, API api, Factorization factorization>
+constexpr auto do_factorization = Factorization::do_factorization;
+constexpr auto already_factorized = Factorization::already_factorized;
+
+template <class T, API api, Factorization factorization>
 void testGenEigensolver(int dlaf_context, const blas::Uplo uplo, const SizeType m, const SizeType mb,
                         CommunicatorGrid& grid, std::optional<SizeType> eigenvalues_index_end) {
   // std::nullopt calls the API without specifying the number of eigenvalues to compute
@@ -111,14 +114,11 @@ void testGenEigensolver(int dlaf_context, const blas::Uplo uplo, const SizeType 
   copy(reference_b, mat_b_h);
   mat_b_h.waitLocalTiles();
 
-  EigensolverResult<T, D> ret = [&]() {
-    MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
-    MatrixMirror<T, D, Device::CPU> mat_b(mat_b_h);
-
+  EigensolverResult<T, Device::CPU> ret = [&]() {
     const SizeType size = mat_a_h.size().rows();
-    Matrix<BaseType<T>, D> eigenvalues(LocalElementSize(size, 1),
-                                       TileElementSize(mat_a_h.blockSize().rows(), 1));
-    Matrix<T, D> eigenvectors(GlobalElementSize(size, size), mat_a_h.blockSize(), grid);
+    Matrix<BaseType<T>, Device::CPU> eigenvalues(LocalElementSize(size, 1),
+                                                 TileElementSize(mat_a_h.blockSize().rows(), 1));
+    Matrix<T, Device::CPU> eigenvectors(GlobalElementSize(size, size), mat_a_h.blockSize(), grid);
 
     eigenvalues.waitLocalTiles();
     eigenvectors.waitLocalTiles();
@@ -406,7 +406,7 @@ void testGenEigensolver(int dlaf_context, const blas::Uplo uplo, const SizeType 
 #endif
     }
 
-    return EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
+    return EigensolverResult<T, Device::CPU>{std::move(eigenvalues), std::move(eigenvectors)};
   }();
 
   // Resume pika runtime suspended by C API for correctness checks
@@ -420,7 +420,9 @@ void testGenEigensolver(int dlaf_context, const blas::Uplo uplo, const SizeType 
   pika::suspend();
 }
 
-TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributedDLAF) {
+TYPED_TEST(GenEigensolverTestCapi, CorrectnessDistributedDLAF) {
+  using T = TypeParam;
+
   for (comm::CommunicatorGrid& grid : this->commGrids()) {
     auto dlaf_context =
         c_api_test_initialize<API::dlaf>(pika_argc, pika_argv, dlaf_argc, dlaf_argv, grid);
@@ -429,10 +431,8 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributedDLAF) {
       for (auto [m, mb, b_min] : sizes) {
         auto numevals = num_evals(m);
         for (auto nevals : numevals) {
-          testGenEigensolver<TypeParam, Backend::MC, Device::CPU, API::dlaf,
-                             Factorization::do_factorization>(dlaf_context, uplo, m, mb, grid, nevals);
-          testGenEigensolver<TypeParam, Backend::MC, Device::CPU, API::dlaf,
-                             Factorization::already_factorized>(dlaf_context, uplo, m, mb, grid, nevals);
+          testGenEigensolver<T, API::dlaf, do_factorization>(dlaf_context, uplo, m, mb, grid, nevals);
+          testGenEigensolver<T, API::dlaf, already_factorized>(dlaf_context, uplo, m, mb, grid, nevals);
         }
       }
     }
@@ -440,33 +440,11 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributedDLAF) {
     c_api_test_finalize<API::dlaf>(dlaf_context);
   }
 }
-
-#ifdef DLAF_WITH_GPU
-TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributedDLAF) {
-  for (comm::CommunicatorGrid& grid : this->commGrids()) {
-    auto dlaf_context =
-        c_api_test_initialize<API::dlaf>(pika_argc, pika_argv, dlaf_argc, dlaf_argv, grid);
-
-    for (auto uplo : blas_uplos) {
-      for (auto [m, mb, b_min] : sizes) {
-        auto numevals = num_evals(m);
-        for (auto nevals : numevals) {
-          testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, API::dlaf,
-                             Factorization::do_factorization>(dlaf_context, uplo, m, mb, grid, nevals);
-          testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, API::dlaf,
-                             Factorization::already_factorized>(dlaf_context, uplo, m, mb, grid, nevals);
-        }
-      }
-    }
-
-    c_api_test_finalize<API::dlaf>(dlaf_context);
-  }
-}
-#endif
 
 #ifdef DLAF_WITH_SCALAPACK
+TYPED_TEST(GenEigensolverTestCapi, CorrectnessDistributedScaLAPACK) {
+  using T = TypeParam;
 
-TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributedScaLAPACK) {
   for (comm::CommunicatorGrid& grid : this->commGrids()) {
     auto dlaf_context =
         c_api_test_initialize<API::scalapack>(pika_argc, pika_argv, dlaf_argc, dlaf_argv, grid);
@@ -475,10 +453,10 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributedScaLAPACK) {
       for (auto [m, mb, b_min] : sizes) {
         auto numevals = num_evals(m);
         for (auto nevals : numevals) {
-          testGenEigensolver<TypeParam, Backend::MC, Device::CPU, API::scalapack,
-                             Factorization::do_factorization>(dlaf_context, uplo, m, mb, grid, nevals);
-          testGenEigensolver<TypeParam, Backend::MC, Device::CPU, API::scalapack,
-                             Factorization::already_factorized>(dlaf_context, uplo, m, mb, grid, nevals);
+          testGenEigensolver<T, API::scalapack, do_factorization>(dlaf_context, uplo, m, mb, grid,
+                                                                  nevals);
+          testGenEigensolver<T, API::scalapack, already_factorized>(dlaf_context, uplo, m, mb, grid,
+                                                                    nevals);
         }
       }
     }
@@ -486,28 +464,4 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributedScaLAPACK) {
     c_api_test_finalize<API::scalapack>(dlaf_context);
   }
 }
-
-#ifdef DLAF_WITH_GPU
-TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributedScaLAPACK) {
-  for (comm::CommunicatorGrid& grid : this->commGrids()) {
-    auto dlaf_context =
-        c_api_test_initialize<API::scalapack>(pika_argc, pika_argv, dlaf_argc, dlaf_argv, grid);
-
-    for (auto uplo : blas_uplos) {
-      for (auto [m, mb, b_min] : sizes) {
-        auto numevals = num_evals(m);
-        for (auto nevals : numevals) {
-          testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, API::scalapack,
-                             Factorization::do_factorization>(dlaf_context, uplo, m, mb, grid, nevals);
-          testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, API::scalapack,
-                             Factorization::already_factorized>(dlaf_context, uplo, m, mb, grid, nevals);
-        }
-      }
-    }
-
-    c_api_test_finalize<API::scalapack>(dlaf_context);
-  }
-}
-#endif
-
 #endif

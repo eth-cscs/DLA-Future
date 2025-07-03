@@ -35,7 +35,7 @@ packages:
       - 'threads=openmp'
   libfabric:
     require:
-      - '@1.15.2'
+      - '@1.22.0'
   hwloc:
     variants:
       - '~libxml2'

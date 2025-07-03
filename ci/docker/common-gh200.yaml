@@ -41,7 +41,7 @@ packages:
   libfabric:
     # Fix version to be compatible with version on todi
     require:
-      - '@1.15.2'
+      - '@1.22.0'
   hwloc:
     variants:
       - '~libxml2'

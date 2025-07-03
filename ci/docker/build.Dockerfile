@@ -33,13 +33,18 @@ RUN apt-get -yqq update && \
     ${EXTRA_APTGET} && \
     rm -rf /var/lib/apt/lists/*
 
-# This is the spack version we want to have
+# These are the versions of spack and spack-packages we want to have
 ARG SPACK_SHA
 ENV SPACK_SHA=$SPACK_SHA
+ARG SPACK_PACKAGES_SHA
+ENV SPACK_PACKAGES_SHA=$SPACK_PACKAGES_SHA
 
 # Install the specific ref of Spack provided by the user and find compilers
 RUN mkdir -p /opt/spack && \
-    curl -Ls "https://api.github.com/repos/spack/spack/tarball/$SPACK_SHA" | tar --strip-components=1 -xz -C /opt/spack
+    curl -Ls "https://api.github.com/repos/spack/spack/tarball/$SPACK_SHA" | tar --strip-components=1 -xz -C /opt/spack && \
+    mkdir -p /opt/spack-packages && \
+    curl -Ls "https://api.github.com/repos/spack/spack-packages/tarball/$SPACK_PACKAGES_SHA" | tar --strip-components=1 -xz -C /opt/spack-packages
+RUN spack repo add --scope site /opt/spack-packages/repos/spack_repo/builtin
 
 # Find compilers + Define which compiler we want to use
 ARG COMPILER

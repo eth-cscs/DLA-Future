@@ -32,6 +32,9 @@ packages:
   openblas:
     variants:
       - 'threads=openmp'
+  libfabric:
+    require:
+      - '@1.22.0'
   mpich:
     # Requirement for ABI compatibility on the test system
     require:

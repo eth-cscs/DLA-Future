@@ -35,6 +35,9 @@ packages:
   libfabric:
     require:
       - '@1.22.0'
+  xpmem:
+    require:
+      - '~kernel-module'
   cray-gtl:
     buildable: True
   cray-mpich:

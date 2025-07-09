@@ -22,6 +22,14 @@ packages:
   mpi:
     ### Workaround until CE provides full MPI substitution.
     require: 'cray-mpich'
+  cray-gtl:
+    buildable: True
+  cray-mpich:
+    buildable: True
+  cray-pals:
+    buildable: True
+  cray-pmi:
+    buildable: True
   blaspp:
     variants:
       - '~cuda'

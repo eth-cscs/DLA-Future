@@ -35,6 +35,14 @@ packages:
   libfabric:
     require:
       - '@1.22.0'
+  cray-gtl:
+    buildable: True
+  cray-mpich:
+    buildable: True
+  cray-pals:
+    buildable: True
+  cray-pmi:
+    buildable: True
   mpich:
     # Requirement for ABI compatibility on the test system
     require:

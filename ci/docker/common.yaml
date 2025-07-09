@@ -20,7 +20,7 @@ packages:
   scalapack:
     require: 'intel-oneapi-mkl'
   mpi:
-    require: 'mpich'
+    require: 'cray-mpich'
   blaspp:
     variants:
       - '~cuda'

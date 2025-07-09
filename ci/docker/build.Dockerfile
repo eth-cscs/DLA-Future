@@ -79,7 +79,7 @@ RUN spack repo add --scope site /user_repo
 ### Workaround until CE provides full MPI substitution.
 # Add ~/site/repo if it exists in the base image
 RUN git clone -b dlaf-pika-0.33.0-ci --single-branch https://github.com/eth-cscs/alps-cluster-config ~/custom-site && \
-    spack repo add --scope site ~/custom-site/site/repo
+    spack repo add --scope site ~/custom-site/site/spack_repo/alps
 
 # Set this to a spack.yaml file which contains a spec
 # e.g. --build-arg SPACK_ENVIRONMENT=ci/spack/my-env.yaml

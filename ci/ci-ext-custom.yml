@@ -14,6 +14,8 @@ include:
   extends: .container-runner-eiger
   variables:
     SLURM_CONSTRAINT: mc
+    # Need to reset as remote adds SLURM_MPI_TYPE: pmi2
+    SLURM_MPI_TYPE: cray_shasta
 
 .dlaf-container-runner-daint-gh200:
   extends: .container-runner-daint-gh200

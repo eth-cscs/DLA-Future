@@ -77,9 +77,12 @@ COPY $SPACK_DLAF_REPO /user_repo
 RUN spack repo add --scope site /user_repo
 
 ### Workaround until CE provides full MPI substitution.
-# Add ~/site/repo if it exists in the base image
-RUN git clone -b main --single-branch https://github.com/eth-cscs/alps-cluster-config ~/custom-site && \
-    spack repo add --scope site ~/custom-site/site/spack_repo/alps
+ARG ALPS_CLUSTER_CONFIG_SHA
+ENV ALPS_CLUSTER_CONFIG_SHA=$ALPS_CLUSTER_CONFIG_SHA
+RUN mkdir -p /opt/alps-cluster-config && \
+    curl -Ls "https://api.github.com/repos/eth-cscs/alps-cluster-config/tarball/$ALPS_CLUSTER_CONFIG_SHA" | \
+    tar --strip-components=1 -xz -C /opt/alps-cluster-config && \
+    spack repo add --scope site /opt/alps-cluster-config/site/spack_repo/alps
 
 # Set this to a spack.yaml file which contains a spec
 # e.g. --build-arg SPACK_ENVIRONMENT=ci/spack/my-env.yaml

@@ -32,9 +32,10 @@ variables:
     - TAG_DOCKERFILE=`sha256sum $DOCKERFILE | head -c 12`
     - TAG_SPACK=`echo $SPACK_SHA | sed "s/develop-//g" | head -c 8`
     - TAG_SPACK_PACKAGES=`echo $SPACK_PACKAGES_SHA | sed "s/develop-//g" | head -c 8`
+    - TAG_ALPS_CLUSTER_CONFIG=`echo $ALPS_CLUSTER_CONFIG_SHA | head -c 8`
     - TAG_REPO=`find $SPACK_DLAF_REPO -type f -exec sha256sum {} \; | sha256sum - | head -c 12`
     - TAG_ENVIRONMENT=`cat $SPACK_ENVIRONMENT $COMMON_SPACK_ENVIRONMENT | sha256sum | head -c 12`
-    - TAG=${TAG_IMAGE}-${TAG_APTGET}-${TAG_COMPILER}-MKL${USE_MKL}-${TAG_DOCKERFILE}-${TAG_SPACK}-${TAG_SPACK_PACKAGES}-${TAG_REPO}-${TAG_ENVIRONMENT}
+    - TAG=${TAG_IMAGE}-${TAG_APTGET}-${TAG_COMPILER}-MKL${USE_MKL}-${TAG_DOCKERFILE}-${TAG_SPACK}-${TAG_SPACK_PACKAGES}-${TAG_ALPS_CLUSTER_CONFIG}-${TAG_REPO}-${TAG_ENVIRONMENT}
     - export PERSIST_IMAGE_NAME=$DEPS_IMAGE:$TAG
     - echo "DEPS_IMAGE=$PERSIST_IMAGE_NAME" > build.env
     - echo "USE_MKL=$USE_MKL" >> build.env
@@ -47,11 +48,13 @@ variables:
   variables:
     SPACK_SHA: fbadf557433ae3d8cb8a2b63a81303de42a9fd6f
     SPACK_PACKAGES_SHA: bf71e784ba28818a05468ce4ffef405fa7c3d151
+    ALPS_CLUSTER_CONFIG_SHA: 32117f9707052f18b1734295418e6d3b54ce0f94
     SPACK_DLAF_REPO: ./spack
     DOCKER_BUILD_ARGS: '[
         "BASE_IMAGE",
         "SPACK_SHA",
         "SPACK_PACKAGES_SHA",
+        "ALPS_CLUSTER_CONFIG_SHA",
         "EXTRA_APTGET",
         "COMPILER",
         "CXXSTD",

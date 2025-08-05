@@ -73,7 +73,7 @@ fi
 # Create coverage reports for code run
 if [[ "$ENABLE_COVERAGE" == "YES" ]]; then
     # Don't use too many threads to avoid out-of-memory errors
-    max_cov_threads=4
+    max_cov_threads=1
     COV_THREADS=$((SLURM_CPUS_PER_TASK > max_cov_threads ? max_cov_threads : SLURM_CPUS_PER_TASK))
 
     TZ=CET date +"Start creating codecov reports from rank $SLURM_PROCID at: %H:%M:%S %z with $COV_THREADS threads"

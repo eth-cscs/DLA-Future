@@ -9,6 +9,7 @@
 //
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cmath>
@@ -16,6 +17,8 @@
 #include <sstream>
 #include <utility>
 #include <vector>
+
+#include <blas.hh>
 
 #include <pika/barrier.hpp>
 #include <pika/execution.hpp>
@@ -636,64 +639,269 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
   }
 
   const std::size_t nworkers = [nrtiles = panel_tiles.size()]() {
-    const std::size_t min_workers = 1;
+    const std::size_t min_workers = 2;
     const std::size_t available_workers = get_red2band_panel_num_workers();
+    DLAF_ASSERT(available_workers >= min_workers, available_workers, min_workers);
     const std::size_t ideal_workers =
         util::ceilDiv(to_sizet(nrtiles), get_red2band_panel_worker_minwork());
     return std::clamp(ideal_workers, min_workers, available_workers);
   }();
 
   ex::start_detached(
-      ex::when_all(ex::just(std::make_unique<pika::barrier<>>(nworkers),
-                            std::vector<common::internal::vector<T>>{}),  // w (internally required)
+      ex::when_all(ex::just(common::internal::vector<T>{},               // reduce message
+                            std::vector<common::internal::vector<T>>{},  // w (internally required)
+                            std::make_unique<pika::barrier<>>(nworkers)),
                    mat_taus.readwrite(GlobalTileIndex(j_sub, 0)),
                    ex::when_all_vector(std::move(panel_tiles)),
                    std::forward<CommSender>(mpi_col_chain_panel), std::forward<TriggerSender>(trigger)) |
       ex::continues_on(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
-      ex::bulk(nworkers, [nworkers, rank_v0,
-                          cols = panel_view.cols()](const std::size_t index, auto& barrier_ptr, auto& w,
-                                                    auto& taus, auto& tiles, auto&& pcomm) {
+      ex::bulk(nworkers, [nworkers, rank_v0, cols = panel_view.cols()](
+                             const std::size_t tid, auto& algo_data, auto& w, auto& barrier_ptr,
+                             auto& taus, auto& tiles, auto&& pcomm) {
         const bool rankHasHead = rank_v0 == pcomm.get().rank();
 
         const auto barrier_busy_wait = getReductionToBandBarrierBusyWait();
-        const std::size_t batch_size = util::ceilDiv(tiles.size(), nworkers);
-        const std::size_t begin = index * batch_size;
-        const std::size_t end = std::min(index * batch_size + batch_size, tiles.size());
+
+        // Note: tid = 0 is kept separated
+        const std::size_t batch_size = util::ceilDiv(tiles.size(), nworkers - 1);
+        const std::size_t begin = (tid - 1) * batch_size;
+        const std::size_t end = std::min(tid * batch_size, tiles.size());
         const SizeType nrefls = taus.size().rows();
 
-        if (index == 0) {
+        if (tid == 0) {
+          // Note: (x0, x_squares, w[pt_cols], pt_row0[pt_cols])
+          algo_data.resize(1 + 1 + 2 * (cols - 1));
           w.resize(nworkers);
+
+          // for (const auto& tile : tiles) {
+          //   print(format::numpy{}, tile);
+          // }
         }
+        barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
         for (SizeType j = 0; j < nrefls; ++j) {
-          // STEP1: compute tau and reflector (single-thread)
-          if (index == 0) {
-            const bool has_head = rankHasHead;
-            taus({j, 0}) = computeReflector(has_head, pcomm.get(), tiles, j);
+          const SizeType pt_cols = cols - (j + 1);
+          const std::size_t algo_data_size = to_sizet(2 + pt_cols * 2);
+
+          w[tid] = common::internal::vector<T>(pt_cols, 0);
+
+          if (tid == 0) {
+            // std::cout << "STEP " << j << std::endl;
+
+            std::array<T, 2> x0_and_squares = computeX0AndSquares(rankHasHead, tiles, j);
+
+            // copy x0 and first row of trailing panel
+            if (rankHasHead) {
+              algo_data[0] = x0_and_squares[0];
+              for (SizeType c = 0; c < pt_cols; ++c) {
+                algo_data[2 + pt_cols + c] = tiles.at(0)({j, j + 1 + c});
+              }
+            }
+            else {
+              // Note: just one rank owns the head
+              std::fill_n(&algo_data[0], algo_data_size, 0);
+            }
+
+            algo_data[1] = x0_and_squares[1];
+          }
+          else {
+            // W = Pt* . V
+            // Note: skipping first line and first element
+            common::internal::SingleThreadedBlasScope single;
+
+            const TileElementIndex index_el_x0(j, j);
+
+            bool tid_has_head = rankHasHead && tid == 1;
+
+            for (auto index = begin; index < end; ++index) {
+              const matrix::Tile<const T, D>& tile_a = tiles[index];
+              const SizeType first_element = tid_has_head ? index_el_x0.row() : 0;
+
+              TileElementIndex pt_start{first_element, index_el_x0.col() + 1};
+              TileElementSize pt_size{tile_a.size().rows() - pt_start.row(), pt_cols};
+              TileElementIndex v_start{first_element, index_el_x0.col()};
+
+              // Note: first panel row and related vector head is deferred after communication
+              if (tid_has_head && index == begin) {
+                const TileElementSize offset{1, 0};
+
+                pt_start = pt_start + offset;
+                v_start = v_start + offset;
+                pt_size = pt_size - offset;
+
+                tid_has_head = false;
+              }
+
+              if (pt_start.isIn(tile_a.size())) {
+                // std::cout << "GEMV" << pt_size << " @ " << pt_start << " v@" << v_start << std::endl;
+                blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, pt_size.rows(), pt_size.cols(),
+                           T(1), tile_a.ptr(pt_start), tile_a.ld(), tile_a.ptr(v_start), 1, T(1),
+                           w[tid].data(), 1);
+              }
+            }
           }
           barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
-          // STEP2a: compute w (multi-threaded)
-          const SizeType pt_cols = cols - (j + 1);
+          // ALLREDUCE -- (x0, squares, w*, panel row) -- offsets: (0, 1, 2, 2 + pt_cols)
+          if (tid == 0) {
+            // Note: this is not the final w
+
+            // for (auto cur_tid = 0; cur_tid < nworkers; ++cur_tid) {
+            //   std::cout << "w[" << cur_tid << "] = ";
+            //   for (auto c = 0; c < pt_cols; ++c)
+            //     std::cout << w[cur_tid][c] << ", ";
+            //   std::cout << std::endl;
+            // }
+
+            dlaf::eigensolver::internal::reduceColumnVectors(w);
+            std::copy_n(w[0].data(), pt_cols, algo_data.data() + 2);
+
+            // std::cout << "SEND" << std::endl;
+            // std::cout << "x0=" << algo_data[0] << " squares=" << algo_data[1] << std::endl;
+            // std::cout << "w* = ";
+            // for (int c = 0; c < pt_cols; ++c) {
+            //   std::cout << algo_data[2 + c] << ", ";
+            // }
+            // std::cout << std::endl;
+            // std::cout << "row0 = ";
+            // for (int c = 0; c < pt_cols; ++c) {
+            //   std::cout << algo_data[2 + pt_cols + c] << ", ";
+            // }
+            // std::cout << std::endl;
+
+            comm::sync::allReduceInPlace(
+                pcomm.get(), MPI_SUM, common::make_data(algo_data.data(), to_SizeType(algo_data_size)));
+
+            // std::cout << "x0=" << algo_data[0] << " squares=" << algo_data[1] << std::endl;
+            // std::cout << "w* = ";
+            // for (int c = 0; c < pt_cols; ++c) {
+            //   std::cout << algo_data[2 + c] << ", ";
+            // }
+            // std::cout << std::endl;
+            // std::cout << "row0 = ";
+            // for (int c = 0; c < pt_cols; ++c) {
+            //   std::cout << algo_data[2 + pt_cols + c] << ", ";
+            // }
+            // std::cout << std::endl;
+          }
+          barrier_ptr->arrive_and_wait(barrier_busy_wait);
+
+          // COMPUTE REFLECTOR and PREPARE PANEL UPDATE
+          const T x0 = algo_data[0];
+          const T norm = std::sqrt(algo_data[1]);
+          const T y = std::signbit(std::real(algo_data[0])) ? norm : -norm;
+          const T tau = (y - x0) / y;
+          const T alpha = T(1) / (x0 - y);
+
+          // TODO has pika atomic for bulk threads? condition_variable or atomic?
+          if (tid == 0) {
+            // std::cout << "norm = " << norm << std::endl;
+
+            taus({j, 0}) = tau;
+
+            // Note: correct w* to get the actual w
+            if (pt_cols > 0)
+              blas::axpy(pt_cols, alpha, &algo_data[2], 1, &algo_data[2 + pt_cols], 1);
+          }
+          barrier_ptr->arrive_and_wait(barrier_busy_wait);
+
+          const T& w_tot = algo_data[2 + pt_cols];
+
+          // SCAL: compute reflector
+          // TODO fix this, it can be multithreaded
+          if (tid == 0) {
+            auto it_begin = tiles.begin();
+            auto it_end = tiles.end();
+
+            common::internal::SingleThreadedBlasScope single;
+
+            if (rankHasHead) {
+              const auto& tile_v0 = *it_begin++;
+
+              const TileElementIndex idx_x0(j, j);
+              tile_v0(idx_x0) = y;  //  TODO can be managed with the other ones?
+
+              if (j + 1 < tile_v0.size().rows()) {
+                T* v = tile_v0.ptr({j + 1, j});
+                blas::scal(tile_v0.size().rows() - (j + 1), alpha, v, 1);
+              }
+            }
+
+            for (auto it = it_begin; it != it_end; ++it) {
+              auto& tile_v = *it;
+              T* v = tile_v.ptr({0, j});
+              blas::scal(tile_v.size().rows(), alpha, v, 1);
+            }
+
+            // std::cout << "v = ";
+            // for (const auto& tile : tiles)
+            //   for (auto i = 0; i < tile.size().rows(); ++i)
+            //     std::cout << tile({i, j}) << ", ";
+            // std::cout << std::endl;
+          }
+
+          // TODO fix this, it might be skipped if each thread compute its scal
+          barrier_ptr->arrive_and_wait(barrier_busy_wait);
+
           if (pt_cols == 0)
             break;
 
-          const bool has_head = rankHasHead && (index == 0);
+          // GER: PANEL UPDATE
+          if (tid != 0) {
+            const TileElementIndex index_el_x0(j, j);
 
-          w[index] = common::internal::vector<T>(pt_cols, 0);
-          computeWTrailingPanel(has_head, tiles, w[index], j, pt_cols, begin, end);
-          barrier_ptr->arrive_and_wait(barrier_busy_wait);
+            bool has_first_component = rankHasHead && tid == 1;
 
-          // STEP2b: reduce w results (single-threaded)
-          if (index == 0) {
-            dlaf::eigensolver::internal::reduceColumnVectors(w);
-            comm::sync::allReduceInPlace(pcomm.get(), MPI_SUM, common::make_data(w[0].data(), pt_cols));
+            common::internal::SingleThreadedBlasScope single;
+
+            // GER Pt = Pt - tau . v . w*
+            for (auto index = begin; index < end; ++index) {
+              const matrix::Tile<T, D>& tile_a = tiles[index];
+              const SizeType first_element = has_first_component ? index_el_x0.row() : 0;
+
+              TileElementIndex pt_start{first_element, index_el_x0.col() + 1};
+              TileElementSize pt_size{tile_a.size().rows() - pt_start.row(),
+                                      tile_a.size().cols() - pt_start.col()};
+              TileElementIndex v_start{first_element, index_el_x0.col()};
+
+              if (has_first_component) {
+                const TileElementSize offset{1, 0};
+
+                // Pt = Pt - tau * v[0] * w*
+                const T fake_v = 1;
+                blas::ger(blas::Layout::ColMajor, 1, pt_size.cols(), -dlaf::conj(tau), &fake_v, 1,
+                          &w_tot, 1, tile_a.ptr(pt_start), tile_a.ld());
+
+                pt_start = pt_start + offset;
+                v_start = v_start + offset;
+                pt_size = pt_size - offset;
+
+                has_first_component = false;
+
+                // std::cout << "GER: fake_v" << std::endl;
+              }
+
+              if (pt_start.isIn(tile_a.size())) {
+                // std::cout << "GER: " << pt_size << " v=" << tile_a(v_start) << " pt=" << tile_a(pt_start)
+                //           << " w=" << w_tot << std::endl;
+                // Pt = Pt - tau * v * w*
+                blas::ger(blas::Layout::ColMajor, pt_size.rows(), pt_size.cols(), -dlaf::conj(tau),
+                          tile_a.ptr(v_start), 1, &w_tot, 1, tile_a.ptr(pt_start), tile_a.ld());
+              }
+            }
           }
+
+          // TODO fixme check if needed
           barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
-          // STEP3: update trailing panel (multi-threaded)
-          updateTrailingPanel(has_head, tiles, j, w[0], taus({j, 0}), begin, end);
-          barrier_ptr->arrive_and_wait(barrier_busy_wait);
+          // if (tid == 0) {
+          //   std::cout << "PtG BEG" << std::endl;
+          //   for (const auto& tile : tiles)
+          //     print(format::numpy{}, tile);
+          //   std::cout << "PtG END" << std::endl;
+          // }
+          // // TODO remove me, just for print purposes
+          // barrier_ptr->arrive_and_wait(barrier_busy_wait);
         }
       }));
 }

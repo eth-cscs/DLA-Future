@@ -656,7 +656,7 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
                    std::forward<CommSender>(mpi_col_chain_panel), std::forward<TriggerSender>(trigger)) |
       ex::continues_on(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
       ex::bulk(nworkers, [nworkers, rank_v0, cols = panel_view.cols()](
-                             const std::size_t tid, auto& algo_data, auto& w, auto& barrier_ptr,
+                             const std::size_t tid, auto& algo_data, auto& w_ws, auto& barrier_ptr,
                              auto& taus, auto& tiles, auto&& pcomm) {
         const bool rankHasHead = rank_v0 == pcomm.get().rank();
 
@@ -671,19 +671,21 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
         if (tid == 0) {
           // Note: (x0, x_squares, w[pt_cols], pt_row0[pt_cols])
           algo_data.resize(1 + 1 + 2 * (cols - 1));
-          w.resize(nworkers);
-
-          // for (const auto& tile : tiles) {
-          //   print(format::numpy{}, tile);
-          // }
+          w_ws.resize(nworkers);
         }
+
         barrier_ptr->arrive_and_wait(barrier_busy_wait);
+
+        // allocate workspaces for workers with maximum size
+        w_ws[tid] = common::internal::vector<T>(cols);
 
         for (SizeType j = 0; j < nrefls; ++j) {
           const SizeType pt_cols = cols - (j + 1);
           const std::size_t algo_data_size = to_sizet(2 + pt_cols * 2);
 
-          w[tid] = common::internal::vector<T>(pt_cols, 0);
+          // each worker shrink the workspace and reset it
+          w_ws[tid].resize(pt_cols);
+          std::fill_n(w_ws[tid].data(), w_ws[tid].size(), 0);
 
           if (tid == 0) {
             // std::cout << "STEP " << j << std::endl;
@@ -736,7 +738,7 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
                 // std::cout << "GEMV" << pt_size << " @ " << pt_start << " v@" << v_start << std::endl;
                 blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, pt_size.rows(), pt_size.cols(),
                            T(1), tile_a.ptr(pt_start), tile_a.ld(), tile_a.ptr(v_start), 1, T(1),
-                           w[tid].data(), 1);
+                           w_ws[tid].data(), 1);
               }
             }
           }
@@ -753,8 +755,8 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
             //   std::cout << std::endl;
             // }
 
-            dlaf::eigensolver::internal::reduceColumnVectors(w);
-            std::copy_n(w[0].data(), pt_cols, algo_data.data() + 2);
+            dlaf::eigensolver::internal::reduceColumnVectors(w_ws);
+            std::copy_n(w_ws[0].data(), pt_cols, algo_data.data() + 2);
 
             // std::cout << "SEND" << std::endl;
             // std::cout << "x0=" << algo_data[0] << " squares=" << algo_data[1] << std::endl;
@@ -806,7 +808,7 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
           // TODO has pika atomic for bulk threads? condition_variable or atomic?
           barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
-          const T& w_tot = algo_data[2 + pt_cols];
+          const T& w = algo_data[2 + pt_cols];
 
           // SCAL: compute reflector
           {
@@ -874,8 +876,8 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
 
                 // Pt = Pt - tau * v[0] * w*
                 const T fake_v = 1;
-                blas::ger(blas::Layout::ColMajor, 1, pt_size.cols(), -dlaf::conj(tau), &fake_v, 1,
-                          &w_tot, 1, tile_a.ptr(pt_start), tile_a.ld());
+                blas::ger(blas::Layout::ColMajor, 1, pt_size.cols(), -dlaf::conj(tau), &fake_v, 1, &w, 1,
+                          tile_a.ptr(pt_start), tile_a.ld());
 
                 pt_start = pt_start + offset;
                 v_start = v_start + offset;
@@ -891,22 +893,13 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
                 //           << " w=" << w_tot << std::endl;
                 // Pt = Pt - tau * v * w*
                 blas::ger(blas::Layout::ColMajor, pt_size.rows(), pt_size.cols(), -dlaf::conj(tau),
-                          tile_a.ptr(v_start), 1, &w_tot, 1, tile_a.ptr(pt_start), tile_a.ld());
+                          tile_a.ptr(v_start), 1, &w, 1, tile_a.ptr(pt_start), tile_a.ld());
               }
             }
           }
 
           // TODO this is needed until GER and GEMV (begin next step) are not splitted the same over threads
           barrier_ptr->arrive_and_wait(barrier_busy_wait);
-
-          // if (tid == 0) {
-          //   std::cout << "PtG BEG" << std::endl;
-          //   for (const auto& tile : tiles)
-          //     print(format::numpy{}, tile);
-          //   std::cout << "PtG END" << std::endl;
-          // }
-          // // TODO remove me, just for print purposes
-          // barrier_ptr->arrive_and_wait(barrier_busy_wait);
         }
       }));
 }

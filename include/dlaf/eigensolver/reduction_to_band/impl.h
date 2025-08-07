@@ -793,7 +793,6 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
           const T tau = (y - x0) / y;
           const T alpha = T(1) / (x0 - y);
 
-          // TODO has pika atomic for bulk threads? condition_variable or atomic?
           if (tid == 0) {
             // std::cout << "norm = " << norm << std::endl;
 
@@ -803,34 +802,39 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
             if (pt_cols > 0)
               blas::axpy(pt_cols, alpha, &algo_data[2], 1, &algo_data[2 + pt_cols], 1);
           }
+
+          // TODO has pika atomic for bulk threads? condition_variable or atomic?
           barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
           const T& w_tot = algo_data[2 + pt_cols];
 
           // SCAL: compute reflector
-          // TODO fix this, it can be multithreaded
-          if (tid == 0) {
-            auto it_begin = tiles.begin();
-            auto it_end = tiles.end();
-
+          {
             common::internal::SingleThreadedBlasScope single;
 
-            if (rankHasHead) {
-              const auto& tile_v0 = *it_begin++;
+            const std::size_t batch_size = util::ceilDiv(tiles.size(), nworkers);
+            const std::size_t begin = tid * batch_size;
+            const std::size_t end = std::min((tid + 1) * batch_size, tiles.size());
 
-              const TileElementIndex idx_x0(j, j);
-              tile_v0(idx_x0) = y;  //  TODO can be managed with the other ones?
+            bool tid_has_head = rankHasHead && tid == 0;
 
-              if (j + 1 < tile_v0.size().rows()) {
-                T* v = tile_v0.ptr({j + 1, j});
-                blas::scal(tile_v0.size().rows() - (j + 1), alpha, v, 1);
+            for (auto i_tl = begin; i_tl < end; ++i_tl) {
+              const auto& tile_v = tiles[i_tl];
+
+              if (tid_has_head) {
+                const TileElementIndex idx_x0(j, j);
+                tile_v(idx_x0) = y;  //  set band
+
+                if (j + 1 < tile_v.size().rows()) {
+                  T* v = tile_v.ptr({j + 1, j});
+                  blas::scal(tile_v.size().rows() - (j + 1), alpha, v, 1);
+                }
+                tid_has_head = false;
               }
-            }
-
-            for (auto it = it_begin; it != it_end; ++it) {
-              auto& tile_v = *it;
-              T* v = tile_v.ptr({0, j});
-              blas::scal(tile_v.size().rows(), alpha, v, 1);
+              else {
+                T* v = tile_v.ptr({0, j});
+                blas::scal(tile_v.size().rows(), alpha, v, 1);
+              }
             }
 
             // std::cout << "v = ";
@@ -840,19 +844,20 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
             // std::cout << std::endl;
           }
 
-          // TODO fix this, it might be skipped if each thread compute its scal
-          barrier_ptr->arrive_and_wait(barrier_busy_wait);
-
           if (pt_cols == 0)
             break;
 
           // GER: PANEL UPDATE
-          if (tid != 0) {
-            const TileElementIndex index_el_x0(j, j);
-
-            bool has_first_component = rankHasHead && tid == 1;
-
+          {
             common::internal::SingleThreadedBlasScope single;
+
+            const std::size_t batch_size = util::ceilDiv(tiles.size(), nworkers);
+            const std::size_t begin = tid * batch_size;
+            const std::size_t end = std::min((tid + 1) * batch_size, tiles.size());
+
+            bool has_first_component = rankHasHead && tid == 0;
+
+            const TileElementIndex index_el_x0(j, j);
 
             // GER Pt = Pt - tau . v . w*
             for (auto index = begin; index < end; ++index) {
@@ -891,7 +896,7 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
             }
           }
 
-          // TODO fixme check if needed
+          // TODO this is needed until GER and GEMV (begin next step) are not splitted the same over threads
           barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
           // if (tid == 0) {

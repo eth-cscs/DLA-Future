@@ -688,8 +688,6 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
           std::fill_n(w_ws[tid].data(), w_ws[tid].size(), T(0));
 
           if (tid == 0) {
-            // std::cout << "STEP " << j << std::endl;
-
             std::array<T, 2> x0_and_squares = computeX0AndSquares(rankHasHead, tiles, j);
 
             // copy x0 and first row of trailing panel
@@ -735,7 +733,6 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
               }
 
               if (pt_start.isIn(tile_a.size())) {
-                // std::cout << "GEMV" << pt_size << " @ " << pt_start << " v@" << v_start << std::endl;
                 blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, pt_size.rows(), pt_size.cols(),
                            T(1), tile_a.ptr(pt_start), tile_a.ld(), tile_a.ptr(v_start), 1, T(1),
                            w_ws[tid].data(), 1);
@@ -747,44 +744,11 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
           // ALLREDUCE -- (x0, squares, w*, panel row) -- offsets: (0, 1, 2, 2 + pt_cols)
           if (tid == 0) {
             // Note: this is not the final w
-
-            // for (auto cur_tid = 0; cur_tid < nworkers; ++cur_tid) {
-            //   std::cout << "w[" << cur_tid << "] = ";
-            //   for (auto c = 0; c < pt_cols; ++c)
-            //     std::cout << w[cur_tid][c] << ", ";
-            //   std::cout << std::endl;
-            // }
-
             dlaf::eigensolver::internal::reduceColumnVectors(w_ws);
             std::copy_n(w_ws[0].data(), pt_cols, algo_data.data() + 2);
 
-            // std::cout << "SEND" << std::endl;
-            // std::cout << "x0=" << algo_data[0] << " squares=" << algo_data[1] << std::endl;
-            // std::cout << "w* = ";
-            // for (int c = 0; c < pt_cols; ++c) {
-            //   std::cout << algo_data[2 + c] << ", ";
-            // }
-            // std::cout << std::endl;
-            // std::cout << "row0 = ";
-            // for (int c = 0; c < pt_cols; ++c) {
-            //   std::cout << algo_data[2 + pt_cols + c] << ", ";
-            // }
-            // std::cout << std::endl;
-
             comm::sync::allReduceInPlace(
                 pcomm.get(), MPI_SUM, common::make_data(algo_data.data(), to_SizeType(algo_data_size)));
-
-            // std::cout << "x0=" << algo_data[0] << " squares=" << algo_data[1] << std::endl;
-            // std::cout << "w* = ";
-            // for (int c = 0; c < pt_cols; ++c) {
-            //   std::cout << algo_data[2 + c] << ", ";
-            // }
-            // std::cout << std::endl;
-            // std::cout << "row0 = ";
-            // for (int c = 0; c < pt_cols; ++c) {
-            //   std::cout << algo_data[2 + pt_cols + c] << ", ";
-            // }
-            // std::cout << std::endl;
           }
           barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
@@ -802,8 +766,6 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
             const T alpha = T(1) / (x0 - y);
 
             if (tid == 0) {
-              // std::cout << "norm = " << norm << std::endl;
-
               taus({j, 0}) = tau;
 
               // Note: correct w* to get the actual w
@@ -847,12 +809,6 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
                   blas::scal(tile_v.size().rows(), alpha, v, 1);
                 }
               }
-
-              // std::cout << "v = ";
-              // for (const auto& tile : tiles)
-              //   for (auto i = 0; i < tile.size().rows(); ++i)
-              //     std::cout << tile({i, j}) << ", ";
-              // std::cout << std::endl;
             }
 
             if (pt_cols == 0)
@@ -893,14 +849,9 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
                   pt_size = pt_size - offset;
 
                   has_first_component = false;
-
-                  // std::cout << "GER: fake_v" << std::endl;
                 }
 
                 if (pt_start.isIn(tile_a.size())) {
-                  // std::cout << "GER: " << pt_size << " v=" << tile_a(v_start) << " pt=" << tile_a(pt_start)
-                  //           << " w=" << w_tot << std::endl;
-                  // Pt = Pt - tau * v * w*
                   blas::ger(blas::Layout::ColMajor, pt_size.rows(), pt_size.cols(), -dlaf::conj(tau),
                             tile_a.ptr(v_start), 1, &w, 1, tile_a.ptr(pt_start), tile_a.ld());
                 }

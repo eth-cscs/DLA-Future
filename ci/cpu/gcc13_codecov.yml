@@ -16,8 +16,7 @@ cpu gcc13 codecov deps:
     COMPILER: gcc@13
     SPACK_ENVIRONMENT: ci/docker/debug-cpu.yaml
     DEPS_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc13-codecov/deps
-    # https://github.com/eth-cscs/DLA-Future/pull/1311
-    # USE_CODECOV: "true"
+    USE_CODECOV: "true"
 
 cpu gcc13 codecov build:
   extends:

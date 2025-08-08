@@ -72,9 +72,12 @@ fi
 
 # Create coverage reports for code run
 if [[ "$ENABLE_COVERAGE" == "YES" ]]; then
-    # Don't use too many threads to avoid out-of-memory errors
-    max_cov_threads=1
-    COV_THREADS=$((SLURM_CPUS_PER_TASK > max_cov_threads ? max_cov_threads : SLURM_CPUS_PER_TASK))
+    # On daint-mc (XC40) reduce the number of tasks to avoid out-of-memory error
+    if [ $SLURM_CPUS_ON_NODE -eq 72 -a "$SLURM_CLUSTER_NAME" = "daint" ]; then
+      COV_THREADS=$((SLURM_CPUS_PER_TASK/2))
+    else
+      COV_THREADS=$SLURM_CPUS_PER_TASK
+    fi
 
     TZ=CET date +"Start creating codecov reports from rank $SLURM_PROCID at: %H:%M:%S %z with $COV_THREADS threads"
 

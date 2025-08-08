@@ -685,7 +685,7 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
 
           // each worker shrink the workspace and reset it
           w_ws[tid].resize(pt_cols);
-          std::fill_n(w_ws[tid].data(), w_ws[tid].size(), 0);
+          std::fill_n(w_ws[tid].data(), w_ws[tid].size(), T(0));
 
           if (tid == 0) {
             // std::cout << "STEP " << j << std::endl;
@@ -701,7 +701,7 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
             }
             else {
               // Note: just one rank owns the head
-              std::fill_n(&algo_data[0], algo_data_size, 0);
+              std::fill_n(&algo_data[0], algo_data_size, T(0));
             }
 
             algo_data[1] = x0_and_squares[1];
@@ -807,8 +807,11 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
               taus({j, 0}) = tau;
 
               // Note: correct w* to get the actual w
-              if (pt_cols > 0)
+              if (pt_cols > 0) {
+                if constexpr (dlaf::isComplex_v<T>)
+                  lapack::lacgv(pt_cols, &algo_data[2 + pt_cols], 1);
                 blas::axpy(pt_cols, alpha, &algo_data[2], 1, &algo_data[2 + pt_cols], 1);
+              }
             }
 
             // TODO has pika atomic for bulk threads? condition_variable or atomic?

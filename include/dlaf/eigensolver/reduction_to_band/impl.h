@@ -594,31 +594,6 @@ void her2kUpdateTrailingMatrix(const matrix::SubMatrixView& view, matrix::Matrix
 }
 
 namespace distributed {
-template <Device D, class T>
-T computeReflector(const bool has_head, comm::Communicator& communicator,
-                   const std::vector<matrix::Tile<T, D>>& panel, SizeType j) {
-  std::array<T, 2> x0_and_squares = computeX0AndSquares(has_head, panel, j);
-
-  // Note:
-  // This is an optimization for grouping two separate low bandwidth communications, respectively
-  // bcast(x0) and reduce(norm), where the latency was degrading performances.
-  //
-  // In particular this allReduce allows to:
-  // - bcast x0, since for all ranks is 0 and just the root rank has the real value;
-  // - allReduce squares for the norm computation.
-  //
-  // Moreover, by all-reducing squares and broadcasting x0, all ranks have all the information to
-  // update locally the reflectors (section they have). This is more efficient than computing params
-  // (e.g. norm, y, tau) just on the root rank and then having to broadcast them (i.e. additional
-  // communication).
-  comm::sync::allReduceInPlace(communicator, MPI_SUM,
-                               common::make_data(x0_and_squares.data(),
-                                                 to_SizeType(x0_and_squares.size())));
-
-  auto tau = computeReflectorAndTau(has_head, panel, j, std::move(x0_and_squares));
-
-  return tau;
-}
 
 template <class MatrixLikeA, class MatrixLikeTaus, class TriggerSender, class CommSender>
 void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,

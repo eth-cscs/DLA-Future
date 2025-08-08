@@ -217,7 +217,7 @@ cscs["alps-gh200"] = {
 #SBATCH --no-requeue
 
 # Env
-export FI_MR_CACHE_MONITOR=disabled
+export FI_MR_CACHE_MONITOR=userfaultfd
 export MPICH_GPU_SUPPORT_ENABLED=1
 export MIMALLOC_EAGER_COMMIT_DELAY=0
 export MIMALLOC_ALLOW_LARGE_OS_PAGES=1

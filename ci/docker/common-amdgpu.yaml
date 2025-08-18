@@ -22,6 +22,17 @@ packages:
   mpi:
     ### Workaround until CE provides full MPI substitution.
     require: 'cray-mpich'
+  xpmem:
+    require:
+      - '~kernel-module'
+  cray-gtl:
+    buildable: True
+  cray-mpich:
+    buildable: True
+  cray-pals:
+    buildable: True
+  cray-pmi:
+    buildable: True
   blaspp:
     variants:
       - '~cuda'
@@ -29,17 +40,13 @@ packages:
       - '~rocm'
   intel-oneapi-mkl:
     require:
-      - 'threads=openmp'
+      - 'threads=none'
   openblas:
     variants:
       - 'threads=openmp'
-  openssl:
-    # without version spack concretizes openssl@3.3.1 that doesn't build due to deprecation
-    require:
-      - '@3.3.2'
   libfabric:
     require:
-      - '@1.15.2'
+      - '@1.22.0'
   hwloc:
     variants:
       - '~libxml2'

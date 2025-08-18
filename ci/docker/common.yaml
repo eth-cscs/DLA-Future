@@ -20,7 +20,7 @@ packages:
   scalapack:
     require: 'intel-oneapi-mkl'
   mpi:
-    require: 'mpich'
+    require: 'cray-mpich'
   blaspp:
     variants:
       - '~cuda'
@@ -28,10 +28,24 @@ packages:
       - '~rocm'
   intel-oneapi-mkl:
     require:
-      - 'threads=openmp'
+      - 'threads=none'
   openblas:
     variants:
       - 'threads=openmp'
+  libfabric:
+    require:
+      - '@1.22.0'
+  xpmem:
+    require:
+      - '~kernel-module'
+  cray-gtl:
+    buildable: True
+  cray-mpich:
+    buildable: True
+  cray-pals:
+    buildable: True
+  cray-pmi:
+    buildable: True
   mpich:
     # Requirement for ABI compatibility on the test system
     require:

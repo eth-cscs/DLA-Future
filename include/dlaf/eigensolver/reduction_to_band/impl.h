@@ -633,15 +633,18 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
       ex::bulk(nworkers, [nworkers, rank_v0, cols = panel_view.cols()](
                              const std::size_t tid, auto& algo_data, auto& w_ws, auto& barrier_ptr,
                              auto& taus, auto& tiles, auto&& pcomm) {
-        const bool rankHasHead = rank_v0 == pcomm.get().rank();
+        common::internal::SingleThreadedBlasScope _single;
 
         const auto barrier_busy_wait = getReductionToBandBarrierBusyWait();
 
-        // Note: tid = 0 is kept separated
-        const std::size_t batch_size = util::ceilDiv(tiles.size(), nworkers - 1);
-        const std::size_t begin = (tid - 1) * batch_size;
-        const std::size_t end = std::min(tid * batch_size, tiles.size());
         const SizeType nrefls = taus.size().rows();
+
+        const std::size_t batch_size = util::ceilDiv(tiles.size(), nworkers);
+        const std::size_t begin = tid * batch_size;
+        const std::size_t end = std::min((tid + 1) * batch_size, tiles.size());
+
+        const bool rankHasHead = rank_v0 == pcomm.get().rank();
+        const bool tid_has_head = rankHasHead && tid == 0;
 
         if (tid == 0) {
           // Note: (x0, x_squares, w[pt_cols], pt_row0[pt_cols])
@@ -662,6 +665,40 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
           w_ws[tid].resize(pt_cols);
           std::fill_n(w_ws[tid].data(), w_ws[tid].size(), T(0));
 
+          {
+            // W = Pt* . V
+            const TileElementIndex x0_el(j, j);
+
+            if (tid_has_head) {
+              const matrix::Tile<const T, D>& tile_a = tiles[0];
+
+              // Note: skipping first line and first element
+              const SizeType first_element = x0_el.row() + 1;
+              const TileElementIndex v_start{first_element, x0_el.col()};
+              const TileElementIndex pt_start{first_element, x0_el.col() + 1};
+              const TileElementSize pt_size{tile_a.size().rows() - pt_start.row(), pt_cols};
+
+              blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, pt_size.rows(), pt_size.cols(),
+                         T(1), tile_a.ptr(pt_start), tile_a.ld(), tile_a.ptr(v_start), 1, T(1),
+                         w_ws[tid].data(), 1);
+            }
+
+            const TileElementIndex v_start{0, x0_el.col()};
+            const TileElementIndex pt_start{0, x0_el.col() + 1};
+            for (auto i = (tid_has_head ? 1 : begin); i < end; ++i) {
+              const matrix::Tile<const T, D>& tile_a = tiles[i];
+
+              const TileElementSize pt_size{tile_a.size().rows(), pt_cols};
+
+              blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, pt_size.rows(), pt_size.cols(),
+                         T(1), tile_a.ptr(pt_start), tile_a.ld(), tile_a.ptr(v_start), 1, T(1),
+                         w_ws[tid].data(), 1);
+            }
+          }
+
+          barrier_ptr->arrive_and_wait(barrier_busy_wait);
+
+          // Note: tid == 0 does a bit more work
           if (tid == 0) {
             std::array<T, 2> x0_and_squares = computeX0AndSquares(rankHasHead, tiles, j);
 
@@ -679,42 +716,6 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
 
             algo_data[1] = x0_and_squares[1];
           }
-          else {
-            // W = Pt* . V
-            // Note: skipping first line and first element
-            common::internal::SingleThreadedBlasScope single;
-
-            const TileElementIndex index_el_x0(j, j);
-
-            bool tid_has_head = rankHasHead && tid == 1;
-
-            for (auto index = begin; index < end; ++index) {
-              const matrix::Tile<const T, D>& tile_a = tiles[index];
-              const SizeType first_element = tid_has_head ? index_el_x0.row() : 0;
-
-              TileElementIndex pt_start{first_element, index_el_x0.col() + 1};
-              TileElementSize pt_size{tile_a.size().rows() - pt_start.row(), pt_cols};
-              TileElementIndex v_start{first_element, index_el_x0.col()};
-
-              // Note: first panel row and related vector head is deferred after communication
-              if (tid_has_head && index == begin) {
-                const TileElementSize offset{1, 0};
-
-                pt_start = pt_start + offset;
-                v_start = v_start + offset;
-                pt_size = pt_size - offset;
-
-                tid_has_head = false;
-              }
-
-              if (pt_start.isIn(tile_a.size())) {
-                blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, pt_size.rows(), pt_size.cols(),
-                           T(1), tile_a.ptr(pt_start), tile_a.ld(), tile_a.ptr(v_start), 1, T(1),
-                           w_ws[tid].data(), 1);
-              }
-            }
-          }
-          barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
           // ALLREDUCE -- (x0, squares, w*, panel row) -- offsets: (0, 1, 2, 2 + pt_cols)
           if (tid == 0) {
@@ -754,22 +755,14 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
             // TODO has pika atomic for bulk threads? condition_variable or atomic?
             barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
-            const T& w = algo_data[2 + pt_cols];
-
             // SCAL: compute reflector
             {
-              common::internal::SingleThreadedBlasScope single;
-
-              const std::size_t batch_size = util::ceilDiv(tiles.size(), nworkers);
-              const std::size_t begin = tid * batch_size;
-              const std::size_t end = std::min((tid + 1) * batch_size, tiles.size());
-
-              bool tid_has_head = rankHasHead && tid == 0;
+              bool has_first_component = tid_has_head;
 
               for (auto i_tl = begin; i_tl < end; ++i_tl) {
                 const auto& tile_v = tiles[i_tl];
 
-                if (tid_has_head) {
+                if (has_first_component) {
                   const TileElementIndex idx_x0(j, j);
                   tile_v(idx_x0) = y;  //  set band
 
@@ -777,7 +770,7 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
                     T* v = tile_v.ptr({j + 1, j});
                     blas::scal(tile_v.size().rows() - (j + 1), alpha, v, 1);
                   }
-                  tid_has_head = false;
+                  has_first_component = false;
                 }
                 else {
                   T* v = tile_v.ptr({0, j});
@@ -793,13 +786,11 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
             {
               common::internal::SingleThreadedBlasScope single;
 
-              const std::size_t batch_size = util::ceilDiv(tiles.size(), nworkers);
-              const std::size_t begin = tid * batch_size;
-              const std::size_t end = std::min((tid + 1) * batch_size, tiles.size());
-
               bool has_first_component = rankHasHead && tid == 0;
 
               const TileElementIndex index_el_x0(j, j);
+
+              const T& w = algo_data[2 + pt_cols];
 
               // GER Pt = Pt - tau . v . w*
               for (auto index = begin; index < end; ++index) {
@@ -832,9 +823,6 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
                 }
               }
             }
-
-            // TODO this is needed until GER and GEMV (begin next step) are not splitted the same over threads
-            barrier_ptr->arrive_and_wait(barrier_busy_wait);
           }
         }
       }));

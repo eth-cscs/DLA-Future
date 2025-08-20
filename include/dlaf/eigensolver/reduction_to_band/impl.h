@@ -726,84 +726,85 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
             comm::sync::allReduceInPlace(
                 pcomm.get(), MPI_SUM, common::make_data(algo_data.data(), to_SizeType(algo_data_size)));
           }
+
           barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
+          // COMPUTE REFLECTOR and PREPARE PANEL UPDATE
+
+          // Note: if current column is already 0, there's nothing to annihilate.
           if (algo_data[1] == T(0)) {
-            // Note: if current column is already 0, there's nothing to annihilate.
             taus({j, 0}) = 0;
-            // TODO does it need barrier?
+            continue;
           }
-          else {
-            // COMPUTE REFLECTOR and PREPARE PANEL UPDATE
-            const T x0 = algo_data[0];
-            const T norm = std::sqrt(algo_data[1]);
-            const T y = std::signbit(std::real(algo_data[0])) ? norm : -norm;
-            const T tau = (y - x0) / y;
-            const T alpha = T(1) / (x0 - y);
 
-            if (tid == 0) {
-              taus({j, 0}) = tau;
+          const T x0 = algo_data[0];
+          const T norm = std::sqrt(algo_data[1]);
+          const T y = std::signbit(std::real(algo_data[0])) ? norm : -norm;
+          const T tau = (y - x0) / y;
+          const T alpha = T(1) / (x0 - y);
 
-              // Note: correct w* to get the actual w
-              if (pt_cols > 0) {
-                if constexpr (dlaf::isComplex_v<T>)
-                  lapack::lacgv(pt_cols, &algo_data[2 + pt_cols], 1);
-                blas::axpy(pt_cols, alpha, &algo_data[2], 1, &algo_data[2 + pt_cols], 1);
-              }
-            }
+          if (tid == 0) {
+            taus({j, 0}) = tau;
 
-            // TODO has pika atomic for bulk threads? condition_variable or atomic?
-            barrier_ptr->arrive_and_wait(barrier_busy_wait);
-
-            // SCAL: compute reflector
-            {
-              bool has_first_component = tid_has_head;
-
-              for (auto i_tl = begin; i_tl < end; ++i_tl) {
-                const auto& tile_v = tiles[i_tl];
-
-                if (has_first_component) {
-                  const TileElementIndex idx_x0(j, j);
-                  // Note: temporarily keep the reflector well-formed and set band at the end of the iteration
-                  tile_v(idx_x0) = 1;
-
-                  if (j + 1 < tile_v.size().rows()) {
-                    T* v = tile_v.ptr({j + 1, j});
-                    blas::scal(tile_v.size().rows() - (j + 1), alpha, v, 1);
-                  }
-                  has_first_component = false;
-                }
-                else {
-                  T* v = tile_v.ptr({0, j});
-                  blas::scal(tile_v.size().rows(), alpha, v, 1);
-                }
-              }
-            }
-
-            // GER: PANEL UPDATE
+            // Note: correct w* to get the actual w
             if (pt_cols > 0) {
-              const T& w = algo_data[2 + pt_cols];
-              const TileElementIndex index_el_x0(j, j);
+              if constexpr (dlaf::isComplex_v<T>)
+                lapack::lacgv(pt_cols, &algo_data[2 + pt_cols], 1);
+              blas::axpy(pt_cols, alpha, &algo_data[2], 1, &algo_data[2 + pt_cols], 1);
+            }
+          }
 
-              // GER Pt = Pt - tau . v . w*
-              for (auto index = begin; index < end; ++index) {
-                const matrix::Tile<T, D>& tile_a = tiles[index];
-                const SizeType first_element = (tid_has_head && index == begin) ? index_el_x0.row() : 0;
+          // TODO has pika atomic for bulk threads? condition_variable or atomic?
+          barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
-                const TileElementIndex pt_start{first_element, index_el_x0.col() + 1};
-                const TileElementSize pt_size{tile_a.size().rows() - pt_start.row(),
-                                              tile_a.size().cols() - pt_start.col()};
-                const TileElementIndex v_start{first_element, index_el_x0.col()};
+          // SCAL: compute reflector
+          {
+            bool has_first_component = tid_has_head;
 
-                blas::ger(blas::Layout::ColMajor, pt_size.rows(), pt_size.cols(), -dlaf::conj(tau),
-                          tile_a.ptr(v_start), 1, &w, 1, tile_a.ptr(pt_start), tile_a.ld());
+            for (auto i_tl = begin; i_tl < end; ++i_tl) {
+              const auto& tile_v = tiles[i_tl];
+
+              if (has_first_component) {
+                const TileElementIndex idx_x0(j, j);
+                // Note: temporarily keep the reflector well-formed and set band at the end of the iteration
+                tile_v(idx_x0) = 1;
+
+                if (j + 1 < tile_v.size().rows()) {
+                  T* v = tile_v.ptr({j + 1, j});
+                  blas::scal(tile_v.size().rows() - (j + 1), alpha, v, 1);
+                }
+                has_first_component = false;
+              }
+              else {
+                T* v = tile_v.ptr({0, j});
+                blas::scal(tile_v.size().rows(), alpha, v, 1);
               }
             }
+          }
 
-            if (tid_has_head) {
-              // Note: set band now that a well-formed reflector is not needed anymore
-              tiles[begin]({j, j}) = y;
+          // GER: PANEL UPDATE
+          // GER Pt = Pt - tau . v . w*
+          if (pt_cols > 0) {
+            const T& w = algo_data[2 + pt_cols];
+            const TileElementIndex index_el_x0(j, j);
+
+            for (auto index = begin; index < end; ++index) {
+              const matrix::Tile<T, D>& tile_a = tiles[index];
+              const SizeType first_element = (tid_has_head && index == begin) ? index_el_x0.row() : 0;
+
+              const TileElementIndex pt_start{first_element, index_el_x0.col() + 1};
+              const TileElementSize pt_size{tile_a.size().rows() - pt_start.row(),
+                                            tile_a.size().cols() - pt_start.col()};
+              const TileElementIndex v_start{first_element, index_el_x0.col()};
+
+              blas::ger(blas::Layout::ColMajor, pt_size.rows(), pt_size.cols(), -dlaf::conj(tau),
+                        tile_a.ptr(v_start), 1, &w, 1, tile_a.ptr(pt_start), tile_a.ld());
             }
+          }
+
+          // Note: set band now that a well-formed reflector is not needed anymore
+          if (tid_has_head) {
+            tiles[begin]({j, j}) = y;
           }
         }
       }));

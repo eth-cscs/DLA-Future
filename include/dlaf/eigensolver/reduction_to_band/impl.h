@@ -699,6 +699,8 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
           barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
           // Note: tid == 0 does a bit more work
+          // TODO this has been moved here in order to avoid need of sync between iterations,
+          // at the cost of getting it serialized after gemv
           if (tid == 0) {
             std::array<T, 2> x0_and_squares = computeX0AndSquares(rankHasHead, tiles, j);
 
@@ -754,9 +756,6 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
             }
           }
 
-          // TODO has pika atomic for bulk threads? condition_variable or atomic?
-          barrier_ptr->arrive_and_wait(barrier_busy_wait);
-
           // SCAL: compute reflector
           {
             bool has_first_component = tid_has_head;
@@ -781,6 +780,9 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
               }
             }
           }
+
+          // TODO has pika atomic for bulk threads? condition_variable or atomic?
+          barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
           // GER: PANEL UPDATE
           // GER Pt = Pt - tau . v . w*

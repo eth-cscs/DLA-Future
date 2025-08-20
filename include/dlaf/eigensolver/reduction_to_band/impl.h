@@ -764,7 +764,8 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
 
                 if (has_first_component) {
                   const TileElementIndex idx_x0(j, j);
-                  tile_v(idx_x0) = y;  //  set band
+                  // Note: temporarily keep the reflector well-formed and set band at the end of the iteration
+                  tile_v(idx_x0) = 1;
 
                   if (j + 1 < tile_v.size().rows()) {
                     T* v = tile_v.ptr({j + 1, j});
@@ -779,49 +780,29 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
               }
             }
 
-            if (pt_cols == 0)
-              break;
-
             // GER: PANEL UPDATE
-            {
-              common::internal::SingleThreadedBlasScope single;
-
-              bool has_first_component = rankHasHead && tid == 0;
-
-              const TileElementIndex index_el_x0(j, j);
-
+            if (pt_cols > 0) {
               const T& w = algo_data[2 + pt_cols];
+              const TileElementIndex index_el_x0(j, j);
 
               // GER Pt = Pt - tau . v . w*
               for (auto index = begin; index < end; ++index) {
                 const matrix::Tile<T, D>& tile_a = tiles[index];
-                const SizeType first_element = has_first_component ? index_el_x0.row() : 0;
+                const SizeType first_element = (tid_has_head && index == begin) ? index_el_x0.row() : 0;
 
-                TileElementIndex pt_start{first_element, index_el_x0.col() + 1};
-                TileElementSize pt_size{tile_a.size().rows() - pt_start.row(),
-                                        tile_a.size().cols() - pt_start.col()};
-                TileElementIndex v_start{first_element, index_el_x0.col()};
+                const TileElementIndex pt_start{first_element, index_el_x0.col() + 1};
+                const TileElementSize pt_size{tile_a.size().rows() - pt_start.row(),
+                                              tile_a.size().cols() - pt_start.col()};
+                const TileElementIndex v_start{first_element, index_el_x0.col()};
 
-                if (has_first_component) {
-                  const TileElementSize offset{1, 0};
-
-                  // Pt = Pt - tau * v[0] * w*
-                  const T fake_v = 1;
-                  blas::ger(blas::Layout::ColMajor, 1, pt_size.cols(), -dlaf::conj(tau), &fake_v, 1, &w,
-                            1, tile_a.ptr(pt_start), tile_a.ld());
-
-                  pt_start = pt_start + offset;
-                  v_start = v_start + offset;
-                  pt_size = pt_size - offset;
-
-                  has_first_component = false;
-                }
-
-                if (pt_start.isIn(tile_a.size())) {
-                  blas::ger(blas::Layout::ColMajor, pt_size.rows(), pt_size.cols(), -dlaf::conj(tau),
-                            tile_a.ptr(v_start), 1, &w, 1, tile_a.ptr(pt_start), tile_a.ld());
-                }
+                blas::ger(blas::Layout::ColMajor, pt_size.rows(), pt_size.cols(), -dlaf::conj(tau),
+                          tile_a.ptr(v_start), 1, &w, 1, tile_a.ptr(pt_start), tile_a.ld());
               }
+            }
+
+            if (tid_has_head) {
+              // Note: set band now that a well-formed reflector is not needed anymore
+              tiles[begin]({j, j}) = y;
             }
           }
         }

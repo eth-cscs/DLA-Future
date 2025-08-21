@@ -614,7 +614,7 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
   }
 
   const std::size_t nworkers = [nrtiles = panel_tiles.size()]() {
-    const std::size_t min_workers = 2;
+    const std::size_t min_workers = 1;
     const std::size_t available_workers = get_red2band_panel_num_workers();
     DLAF_ASSERT(available_workers >= min_workers, available_workers, min_workers);
     const std::size_t ideal_workers =

@@ -15,6 +15,7 @@
 #include <cmath>
 #include <cstddef>
 #include <sstream>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -639,12 +640,24 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
 
         const SizeType nrefls = taus.size().rows();
 
-        const std::size_t batch_size = util::ceilDiv(tiles.size(), nworkers);
-        const std::size_t begin = tid * batch_size;
-        const std::size_t end = std::min((tid + 1) * batch_size, tiles.size());
-
         const bool rankHasHead = rank_v0 == pcomm.get().rank();
-        const bool tid_has_head = rankHasHead && tid == 0;
+
+        const auto [begin, end, tid_has_head] = [=, ntiles = tiles.size()]() {
+          const std::size_t batch_size = util::ceilDiv(ntiles, nworkers);
+
+          const std::size_t mirror_tid = nworkers - 1 - tid;
+          std::size_t begin = mirror_tid * batch_size;
+          std::size_t end = std::min((mirror_tid + 1) * batch_size, ntiles);
+
+          std::swap(begin, end);
+
+          begin = ntiles - begin;
+          end = end > ntiles ? ntiles : ntiles - end;
+
+          const bool tid_has_head = rankHasHead && begin == 0;
+
+          return std::tuple<std::size_t, std::size_t, bool>{begin, end, tid_has_head};
+        }();
 
         if (tid == 0) {
           // Note: (x0, x_squares, w[pt_cols], pt_row0[pt_cols])

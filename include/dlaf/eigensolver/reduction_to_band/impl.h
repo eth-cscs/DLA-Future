@@ -344,6 +344,9 @@ void computePanelReflectors(MatrixLikeA& mat_a, MatrixLikeTaus& mat_taus, const 
 
           barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
+          if (taus({j, 0}) == T(0))
+            continue;
+
           // STEP2a: compute w (multi-threaded)
           const SizeType pt_cols = cols - (j + 1);
           if (pt_cols == 0)
@@ -672,6 +675,9 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
             taus({j, 0}) = computeReflector(has_head, pcomm.get(), tiles, j);
           }
           barrier_ptr->arrive_and_wait(barrier_busy_wait);
+
+          if (taus({j, 0}) == T(0))
+            continue;
 
           // STEP2a: compute w (multi-threaded)
           const SizeType pt_cols = cols - (j + 1);

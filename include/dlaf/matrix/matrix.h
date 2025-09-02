@@ -75,63 +75,59 @@ public:
   /// Create a non distributed matrix of size @p size, block size @p tile_size and
   /// tile_size @p tile_size.
   ///
-  /// @param[in] alloc specifies the allocation type, default MatrixAllocation::ColMajor
+  /// @param[in] alloc specifies the allocation type, default AllocationLayout::ColMajor
   /// @param[in] ld specifies the leading dimension of each tile. Can be set to a specific value or to
   /// @p compact_ld for the minimum possible value, or to @p padded_ld for optimal values.
   ///
   /// @pre @p size.isValid(),
   /// @pre @p !tile_size.isEmpty(),
   /// @pre @p !tile_size.isEmpty(),
-  /// @pre <tt> ld == compact_ld || ld == padded_ld || ld >= ld_min, </tt>
-  ///      where <tt> ld_min = max(1, size.rows()) </tt> for @p MatrixAllocation::ColMajor or
-  ///      <tt> ld_min = block_size.rows() </tt> for @p MatrixAllocation::Blocks or
-  ///      <tt> ld_min = tile_size.rows() </tt> for @p MatrixAllocation::Tiles.
+  /// @pre <tt> ld == compact_ld || ld == padded_ld || ld >= ld_min, </tt> where <tt> ld = alloc.ld() </tt>
+  ///      and <tt> ld_min = max(1, size.rows()) </tt> for @p alloc.layout() == AllocationLayout::ColMajor or
+  ///      <tt> ld_min = block_size.rows() </tt> for @p alloc.layout() == AllocationLayout::Blocks or
+  ///      <tt> ld_min = tile_size.rows() </tt> for @p alloc.layout() == AllocationLayout::Tiles.
   Matrix(const GlobalElementSize& size, const TileElementSize& tile_size,
-         MatrixAllocation alloc = MatrixAllocation::ColMajor, LdSpec ld = Ld::Padded)
-      : Matrix<T, D>(Distribution(size, tile_size, {1, 1}, {0, 0}, {0, 0}), alloc, ld) {}
+         const MatrixAllocation& alloc = {})
+      : Matrix<T, D>(Distribution(size, tile_size, {1, 1}, {0, 0}, {0, 0}), alloc) {}
   Matrix(const LocalElementSize& size, const TileElementSize& tile_size,
-         MatrixAllocation alloc = MatrixAllocation::ColMajor, LdSpec ld = Ld::Padded)
-      : Matrix<T, D>(GlobalElementSize{size.rows(), size.cols()}, tile_size, alloc, ld) {}
+         const MatrixAllocation& alloc = {})
+      : Matrix<T, D>(GlobalElementSize{size.rows(), size.cols()}, tile_size, alloc) {}
   Matrix(std::initializer_list<SizeType> size, const TileElementSize& tile_size,
-         MatrixAllocation alloc = MatrixAllocation::ColMajor, LdSpec ld = Ld::Padded)
+         const MatrixAllocation& alloc = {})
       : Matrix<T, D>((DLAF_ASSERT(size.size() == 2, size.size()),
                       GlobalElementSize{*size.begin(), *(size.begin() + 1)}),
-                     tile_size, alloc, ld) {}
+                     tile_size, alloc) {}
   ///@}
 
   /// Create a distributed matrix of size @p size, block size @p tile_size and tile size @p tile_size
   /// on the given 2D communicator grid @p comm.
   ///
-  /// @param[in] alloc specifies the allocation type, default MatrixAllocation::ColMajor
+  /// @param[in] alloc specifies the allocation details, default @p MatrixAllocation{}.
   /// @param[in] ld specifies the leading dimension of each tile. Can be set to a specific value or to
   /// @p compact_ld for the minimum possible value, or to @p padded_ld for optimal values.
   ///
   /// @pre @p size.isValid(),
   /// @pre @p !tile_size.isEmpty(),
   /// @pre @p !tile_size.isEmpty(),
-  /// @pre <tt> ld == compact_ld || ld == padded_ld || ld >= ld_min, </tt>
-  ///      where <tt> ld_min = max(1, local_size.rows()) </tt> for @p MatrixAllocation::ColMajor or
-  ///      <tt> ld_min = block_size.rows() </tt> for @p MatrixAllocation::Blocks or
-  ///      <tt> ld_min = tile_size.rows() </tt> for @p MatrixAllocation::Tiles.
+  /// @pre <tt> alloc.ld() == Compact || alloc.ld() == Padded || alloc.ld() >= ld_min, </tt> where
+  ///      <tt> ld_min = max(1, local_size.rows()) </tt> for <tt> alloc.layout() == ColMajor </tt> or
+  ///      <tt> ld_min = block_size.rows() </tt> for <tt> alloc.layout() == Blocks </tt> or
+  ///      <tt> ld_min = tile_size.rows() </tt> for <tt> alloc.layout() == Tiles </tt>.
   Matrix(const GlobalElementSize& size, const TileElementSize& tile_size,
-         const comm::CommunicatorGrid& comm, MatrixAllocation alloc = MatrixAllocation::ColMajor,
-         LdSpec ld = Ld::Padded)
-      : Matrix<T, D>(Distribution(size, tile_size, comm.size(), comm.rank(), {0, 0}), alloc, ld) {}
+         const comm::CommunicatorGrid& comm, const MatrixAllocation& alloc = {})
+      : Matrix<T, D>(Distribution(size, tile_size, comm.size(), comm.rank(), {0, 0}), alloc) {}
 
   /// Create a matrix distributed according to the distribution @p distribution.
   ///
-  /// @param[in] alloc specifies the allocation type, default MatrixAllocation::ColMajor
-  /// @param[in] ld specifies the leading dimension of each tile. Can be set to a specific value or to
-  /// @p compact_ld for the minimum possible value, or to @p padded_ld for optimal values.
+  /// @param[in] alloc specifies the allocation details, default @p MatrixAllocation{}.
   ///
-  /// @pre <tt> ld == compact_ld || ld == padded_ld || ld >= ld_min, </tt>
-  ///      where <tt> ld_min = max(1, local_size.rows()) </tt> for @p MatrixAllocation::ColMajor or
-  ///      <tt> ld_min = block_size.rows() </tt> for @p MatrixAllocation::Blocks or
-  ///      <tt> ld_min = tile_size.rows() </tt> for @p MatrixAllocation::Tiles.
-  Matrix(Distribution distribution, MatrixAllocation alloc = MatrixAllocation::ColMajor,
-         LdSpec ld = Ld::Padded)
-      : Matrix<const T, D>(std::move(distribution), alloc) {
-    set_up_non_preallocated_tiles(alloc, ld);
+  /// @pre <tt> alloc.ld() == Compact || alloc.ld() == Padded || alloc.ld() >= ld_min, </tt> where
+  ///      <tt> ld_min = max(1, local_size.rows()) </tt> for <tt> alloc.layout() == ColMajor </tt> or
+  ///      <tt> ld_min = block_size.rows() </tt> for <tt> alloc.layout() == Blocks </tt> or
+  ///      <tt> ld_min = tile_size.rows() </tt> for <tt> alloc.layout() == Tiles </tt>.
+  Matrix(Distribution distribution, const MatrixAllocation& alloc = {})
+      : Matrix<const T, D>(std::move(distribution), alloc.layout()) {
+    set_up_non_preallocated_tiles(alloc);
   }
 
   /// Create a distributed matrix,
@@ -212,7 +208,7 @@ private:
   static SizeType compute_ld(SizeType rows, LdSpec ld) noexcept;
   // Note: safe to use in constructors if:
   // - MatrixBase is initialized correctly.
-  void set_up_non_preallocated_tiles(MatrixAllocation alloc, LdSpec ld) noexcept;
+  void set_up_non_preallocated_tiles(const MatrixAllocation&) noexcept;
   // using Matrix<const T, D>::set_up_tiles;
   using Matrix<const T, D>::tile_managers_;
 };
@@ -249,7 +245,13 @@ SizeType Matrix<T, D>::compute_ld(SizeType rows, LdSpec ld) noexcept {
 }
 
 template <class T, Device D>
-void Matrix<T, D>::set_up_non_preallocated_tiles(MatrixAllocation alloc, LdSpec ld) noexcept {
+void Matrix<T, D>::set_up_non_preallocated_tiles(const MatrixAllocation& alloc) noexcept {
+  // Warning: Here we use matrix.allocation() instead of alloc.layout() to ensure that the matrix
+  //          is contructed consistently even if tune parameters are modified in the mean time.
+  //          See AllocationLayoutDefault{} v.s. tune parameter default_allocation_layout.
+  const auto& allocation = this->allocation();
+  const auto& ld = alloc.ld();
+
   using MemView = memory::MemoryView<T, D>;
   const Distribution& dist = this->distribution();
 
@@ -265,7 +267,7 @@ void Matrix<T, D>::set_up_non_preallocated_tiles(MatrixAllocation alloc, LdSpec 
   DLAF_ASSERT(tile_managers_.empty(), "");
   tile_managers_.reserve(to_sizet(local_nr_tiles.linear_size()));
 
-  if (alloc == MatrixAllocation::ColMajor) {
+  if (allocation == AllocationLayout::ColMajor) {
     SizeType mat_ld = compute_ld(local_size.rows(), ld);
 
     ColMajorLayout layout(dist, mat_ld);
@@ -282,7 +284,7 @@ void Matrix<T, D>::set_up_non_preallocated_tiles(MatrixAllocation alloc, LdSpec 
       }
     }
   }
-  else if (alloc == MatrixAllocation::Blocks) {
+  else if (allocation == AllocationLayout::Blocks) {
     // To be able to reuse tile methods for blocks we create a distribution with a single tile per block
     Distribution helper_dist = internal::create_single_tile_per_block_distribution(dist);
 
@@ -327,7 +329,7 @@ void Matrix<T, D>::set_up_non_preallocated_tiles(MatrixAllocation alloc, LdSpec 
       mem_views.clear();
     }
   }
-  else if (alloc == MatrixAllocation::Tiles) {
+  else if (allocation == AllocationLayout::Tiles) {
     for (SizeType j = 0; j < local_nr_tiles.cols(); ++j) {
       for (SizeType i = 0; i < local_nr_tiles.rows(); ++i) {
         LocalTileIndex ij(i, j);
@@ -376,7 +378,7 @@ public:
   Matrix& operator=(const Matrix& rhs) = delete;
   Matrix& operator=(Matrix&& rhs) = default;
 
-  MatrixAllocation allocation() const noexcept {
+  AllocationLayout allocation() const noexcept {
     return allocation_;
   }
 
@@ -449,7 +451,7 @@ public:
   }
 
 protected:
-  Matrix(Distribution distribution, MatrixAllocation alloc)
+  Matrix(Distribution distribution, AllocationLayout alloc)
       : internal::MatrixBase{std::move(distribution)}, allocation_(alloc) {
     DLAF_ASSERT((distribution.offset() == GlobalElementIndex{0, 0}), "not supported",
                 distribution.offset());
@@ -464,9 +466,9 @@ protected:
   Matrix(MatrixLike<const T, D>& mat, const LocalTileSize& tiles_per_block) noexcept
       : MatrixBase(mat.distribution(), tiles_per_block), allocation_(mat.allocation()) {
     // Adjust allocation_ when retiling the first time a tile allocated matrix.
-    if (allocation_ == MatrixAllocation::Tiles && mat.distribution().single_tile_per_block() &&
+    if (allocation_ == AllocationLayout::Tiles && mat.distribution().single_tile_per_block() &&
         !distribution().single_tile_per_block())
-      allocation_ = MatrixAllocation::Blocks;
+      allocation_ = AllocationLayout::Blocks;
 
     set_up_retiled_sub_pipelines(mat, tiles_per_block);
   }
@@ -480,7 +482,7 @@ protected:
                                     const LocalTileSize& tiles_per_block) noexcept;
 
   std::vector<internal::TilePipeline<T, D>> tile_managers_;
-  MatrixAllocation allocation_;
+  AllocationLayout allocation_;
 
 private:
   ReadWriteSenderType readwrite(const LocalTileIndex& index) noexcept {

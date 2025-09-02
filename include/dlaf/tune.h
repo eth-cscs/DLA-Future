@@ -20,6 +20,7 @@
 #include <pika/init.hpp>
 #include <pika/runtime.hpp>
 
+#include <dlaf/matrix/allocation_types.h>
 #include <dlaf/types.h>
 
 namespace dlaf {
@@ -62,6 +63,10 @@ namespace dlaf {
 ///     Enable dump of tridiagonal solver input/output data to "tridiagonal.h5" file that will be
 ///     created in the working folder (it should not exist before the execution).
 ///     Set with environment variable DLAF_DEBUG_DUMP_TRIDIAG_SOLVER_DATA.
+/// - default_allocation_layout:
+///     Specify the default AllocationLayout for Matrices.
+///     Allowed values: ColMajor (default), Blocks, Tiles.
+///     Set with environment variable DLAF_DEFAULT_ALLOCATION_LAYOUT.
 /// - tfactor_num_threads:
 ///     The maximum number of threads to use for computing tfactor (e.g. which is used for
 ///     instance in red2band and its backtransformation). Set with --dlaf:tfactor-num-threads or env
@@ -139,6 +144,8 @@ struct TuneParameters {
   bool debug_dump_inverse_from_cholesky_factor_data = false;
   bool debug_dump_triangular_inverse_data = false;
   bool debug_dump_tridiag_solver_data = false;
+
+  matrix::AllocationLayout default_allocation_layout = matrix::AllocationLayout::ColMajor;
 
   std::size_t tfactor_num_threads = 1;
   std::size_t tfactor_num_streams = 4;

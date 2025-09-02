@@ -14,15 +14,74 @@
 
 #include <variant>
 
+#include <dlaf/matrix/allocation_types.h>
+#include <dlaf/tune.h>
 #include <dlaf/types.h>
 
 namespace dlaf::matrix {
 
-enum class MatrixAllocation { ColMajor, Blocks, Tiles };
+/// Manages the specs for matrix allocation.
+class MatrixAllocation {
+  static constexpr auto layout_0 = AllocationLayoutDefault{};
+  static constexpr auto ld_0 = LdDefault{};
+public:
+  using AllocationLayoutType = std::variant<AllocationLayoutDefault, AllocationLayout>;
+  using LdType = std::variant<LdDefault, LdSpec>;
 
-enum class Ld { Compact, Padded };
-// Ld::Padded: leading dimension is set to an optimal value that might introduce padding.
-// Ld::Compact: leading dimension is set to the minimum value.
+  ///@{
+  /// Construct a MatrixAllocation object
+  ///
+  /// @params layout (optional, default AllocationLayoutDefault{}) can be either of type
+  ///         @p AllocationLayoutDefault or @p AllocationLayout (see layout() for more details).
+  /// @params ld (optional, default LdDefault{}) can be either of type
+  ///         @p LdDefault, @p LdSpec, @p Ld or @p SizeType (see ld() for more details).
+  MatrixAllocation() {}
 
-using LdSpec = std::variant<Ld, SizeType>;
+  MatrixAllocation(AllocationLayoutType layout, LdType ld = ld_0) : layout_(layout), ld_(ld) {}
+  MatrixAllocation(LdType ld) : ld_(ld) {}
+
+  /// Sets the spec for the leading dimension.
+  ///
+  /// See layout() for more details.
+  MatrixAllocation& set_layout(AllocationLayoutType layout) noexcept {
+    layout_ = layout;
+    return *this;
+  }
+
+  /// Sets the spec for the leading dimension.
+  ///
+  /// See ld() for more details.
+  MatrixAllocation& set_ld(LdType ld) noexcept {
+    ld_ = ld;
+    return *this;
+  }
+
+  /// Returns the spec for the leading dimension.
+  ///
+  /// If layout is set to default the default value set in tune parameters is returned.
+  AllocationLayout layout() const noexcept {
+    if (std::holds_alternative<AllocationLayoutDefault>(layout_)) {
+      return getTuneParameters().default_allocation_layout;
+    }
+    return std::get<AllocationLayout>(layout_);
+  }
+
+  /// Returns the spec for the leading dimension.
+  ///
+  /// If ld is set to default:
+  ///   - Ld::Padded is returned if layout() resolves to AllocationLayout::ColMajor
+  ///   - Ld::Compact is returned in the other cases (AllocationLayout::Blocks, AllocationLayout::Tiles)
+  LdSpec ld() const noexcept {
+    if (std::holds_alternative<LdDefault>(ld_)) {
+      if (layout() == AllocationLayout::ColMajor)
+        return Ld::Padded;
+      return Ld::Compact;
+    }
+    return std::get<LdSpec>(ld_);
+  }
+
+private:
+  AllocationLayoutType layout_ = layout_0;
+  LdType ld_ = ld_0;
+};
 }

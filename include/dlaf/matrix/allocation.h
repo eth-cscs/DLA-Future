@@ -24,6 +24,7 @@ namespace dlaf::matrix {
 class MatrixAllocation {
   static constexpr auto layout_0 = AllocationLayoutDefault{};
   static constexpr auto ld_0 = LdDefault{};
+
 public:
   using AllocationLayoutType = std::variant<AllocationLayoutDefault, AllocationLayout>;
   using LdType = std::variant<LdDefault, LdSpec>;

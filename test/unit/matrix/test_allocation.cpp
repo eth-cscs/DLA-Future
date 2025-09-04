@@ -9,6 +9,7 @@
 //
 
 #include <variant>
+#include <vector>
 
 #include <dlaf/matrix/allocation.h>
 #include <dlaf/tune.h>

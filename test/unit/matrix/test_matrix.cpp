@@ -216,7 +216,7 @@ TYPED_TEST(MatrixLocalTest, ConstructorColMajor) {
   for (const auto& test : sizes_tests) {
     const Distribution dist = Distribution(LocalElementSize{test.m, test.n}, test.tile_size);
     {
-      Matrix<Type, Device::CPU> mat({test.m, test.n}, test.tile_size, alloc);
+      Matrix<Type, Device::CPU> mat({test.m, test.n}, test.tile_size, {alloc});
       EXPECT_EQ(dist, mat.distribution());
 
       const SizeType exp_ld = expected_ld_from_00(mat);
@@ -624,7 +624,7 @@ TYPED_TEST(MatrixTest, ConstructorColMajor) {
         EXPECT_TRUE(is_allocated_as_col_major(mat));
       }
       {
-        Matrix<Type, Device::CPU> mat(dist, alloc);
+        Matrix<Type, Device::CPU> mat(dist, {alloc});
         EXPECT_EQ(dist, mat.distribution());
 
         const SizeType exp_ld = expected_ld_from_00(mat);

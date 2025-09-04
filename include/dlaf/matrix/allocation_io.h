@@ -24,6 +24,7 @@ inline AllocationLayout get_allocation_layout(const std::string& layout) {
     return AllocationLayout::Blocks;
   else if (layout == "Tiles")
     return AllocationLayout::Tiles;
+  DLAF_INVALID_OPTION_VALUE("AllocationLayout", layout, "ColMajor, Blocks, Tiles");
   return DLAF_UNREACHABLE(AllocationLayout);
 }
 

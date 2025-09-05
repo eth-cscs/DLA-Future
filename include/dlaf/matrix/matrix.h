@@ -75,17 +75,15 @@ public:
   /// Create a non distributed matrix of size @p size, block size @p tile_size and
   /// tile_size @p tile_size.
   ///
-  /// @param[in] alloc specifies the allocation type, default AllocationLayout::ColMajor
-  /// @param[in] ld specifies the leading dimension of each tile. Can be set to a specific value or to
-  /// @p compact_ld for the minimum possible value, or to @p padded_ld for optimal values.
+  /// @param[in] alloc specifies the allocation details, default @p MatrixAllocation{}.
   ///
   /// @pre @p size.isValid(),
   /// @pre @p !tile_size.isEmpty(),
   /// @pre @p !tile_size.isEmpty(),
-  /// @pre <tt> ld == compact_ld || ld == padded_ld || ld >= ld_min, </tt> where <tt> ld = alloc.ld() </tt>
-  ///      and <tt> ld_min = max(1, size.rows()) </tt> for @p alloc.layout() == AllocationLayout::ColMajor or
-  ///      <tt> ld_min = block_size.rows() </tt> for @p alloc.layout() == AllocationLayout::Blocks or
-  ///      <tt> ld_min = tile_size.rows() </tt> for @p alloc.layout() == AllocationLayout::Tiles.
+  /// @pre <tt> alloc.ld() == Compact || alloc.ld() == Padded || alloc.ld() >= ld_min, </tt> where
+  ///      <tt> ld_min = max(1, size.rows()) </tt> for <tt> alloc.layout() == ColMajor </tt> or
+  ///      <tt> ld_min = block_size.rows() </tt> for <tt> alloc.layout() == Blocks </tt> or
+  ///      <tt> ld_min = tile_size.rows() </tt> for <tt> alloc.layout() == Tiles </tt>.
   Matrix(const GlobalElementSize& size, const TileElementSize& tile_size,
          const MatrixAllocation& alloc = {})
       : Matrix<T, D>(Distribution(size, tile_size, {1, 1}, {0, 0}, {0, 0}), alloc) {}
@@ -103,8 +101,6 @@ public:
   /// on the given 2D communicator grid @p comm.
   ///
   /// @param[in] alloc specifies the allocation details, default @p MatrixAllocation{}.
-  /// @param[in] ld specifies the leading dimension of each tile. Can be set to a specific value or to
-  /// @p compact_ld for the minimum possible value, or to @p padded_ld for optimal values.
   ///
   /// @pre @p size.isValid(),
   /// @pre @p !tile_size.isEmpty(),

@@ -11,7 +11,7 @@
 #pragma once
 
 /// @file
-/// Utilities to check if a matrix is allocated correctly according to the given MatrixAllocation parameter.
+/// Utilities to check if a matrix is allocated correctly according to the given AllocationLayout parameter.
 ///
 /// These functions are included in DLAF as they can be used by the users to test custom defined layouts.
 /// Note: These functions are blocking and meant only for testing purpose. Do not use them in applications.
@@ -42,7 +42,7 @@ SizeType sync_tile_ld(MatrixLike& mat, const LocalTileIndex& ij) {
 
 template <class MatrixLike>
 bool is_allocated_as_col_major(MatrixLike& mat) {
-  if (mat.allocation() != MatrixAllocation::ColMajor)
+  if (mat.allocation() != AllocationLayout::ColMajor)
     return false;
 
   Distribution dist = mat.distribution();
@@ -67,7 +67,7 @@ bool is_allocated_as_col_major(MatrixLike& mat) {
 
 template <class MatrixLike>
 bool is_allocated_as_blocks(MatrixLike& mat) {
-  if (mat.allocation() != MatrixAllocation::Blocks)
+  if (mat.allocation() != AllocationLayout::Blocks)
     return false;
 
   const Distribution& dist = mat.distribution();
@@ -124,17 +124,17 @@ bool is_allocated_as_blocks(MatrixLike& mat) {
 
 template <class MatrixLike>
 bool is_allocated_as_tiles(MatrixLike& mat) {
-  return mat.allocation() == MatrixAllocation::Tiles;
+  return mat.allocation() == AllocationLayout::Tiles;
 }
 
 template <class MatrixLike>
-bool is_allocated_as(MatrixLike& mat, MatrixAllocation alloc) {
+bool is_allocated_as(MatrixLike& mat, AllocationLayout alloc) {
   switch (alloc) {
-    case MatrixAllocation::ColMajor:
+    case AllocationLayout::ColMajor:
       return is_allocated_as_col_major(mat);
-    case MatrixAllocation::Blocks:
+    case AllocationLayout::Blocks:
       return is_allocated_as_blocks(mat);
-    case MatrixAllocation::Tiles:
+    case AllocationLayout::Tiles:
       return is_allocated_as_tiles(mat);
   }
   return false;

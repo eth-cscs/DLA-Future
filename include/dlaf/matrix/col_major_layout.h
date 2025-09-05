@@ -103,8 +103,8 @@ public:
     return dist_;
   }
 
-  constexpr static MatrixAllocation allocation() noexcept {
-    return MatrixAllocation::ColMajor;
+  constexpr static AllocationLayout allocation() noexcept {
+    return AllocationLayout::ColMajor;
   }
 
 private:

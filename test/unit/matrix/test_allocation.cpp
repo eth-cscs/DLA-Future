@@ -203,3 +203,10 @@ TEST(MatrixAllocationTest, SetLd) {
   alloc.set_ld(LdDefault{});
   EXPECT_TRUE(test_default_layout_ld(alloc));
 }
+
+TEST(MatrixAllocationTest, SetConcatenation) {
+  MatrixAllocation alloc;
+  alloc.set_layout(AllocationLayout::ColMajor).set_ld(5).set_ld(Ld::Padded);
+  EXPECT_TRUE(test_layout(alloc, AllocationLayout::ColMajor));
+  EXPECT_TRUE(test_ld(alloc, Ld::Padded));
+}

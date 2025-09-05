@@ -56,8 +56,8 @@ inline void invalid_option_value(const common::internal::source_location& loc, c
                                  const T& actual, const char* expected) noexcept {
   std::ostringstream ss;
   ss << "[ERROR] " << loc << '\n'
-     << "Invalid option for " << option << ". Got " << actual << " but expected one of " << expected
-     << '\n';
+     << "Invalid option for " << option << ". Got '" << actual << "' but expected one of " << expected
+     << ".\n";
   std::cerr << ss.str();
   std::terminate();
 }

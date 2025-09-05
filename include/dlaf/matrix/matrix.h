@@ -243,7 +243,7 @@ SizeType Matrix<T, D>::compute_ld(SizeType rows, LdSpec ld) noexcept {
 template <class T, Device D>
 void Matrix<T, D>::set_up_non_preallocated_tiles(const MatrixAllocation& alloc) noexcept {
   // Warning: Here we use matrix.allocation() instead of alloc.layout() to ensure that the matrix
-  //          is contructed consistently even if tune parameters are modified in the mean time.
+  //          is constructed consistently even if tune parameters are modified in the mean time.
   //          See AllocationLayoutDefault{} v.s. tune parameter default_allocation_layout.
   const auto& allocation = this->allocation();
   const auto& ld = alloc.ld();

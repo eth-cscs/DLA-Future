@@ -40,7 +40,7 @@ public:
     const SizeType chunk_size = ld * n;
     const SizeType chunks = util::ceilDiv(count, tiles_in_chunk);
 
-    memory::MemoryView<T, D> mem(chunks * chunk_size);
+    memory::MemoryView<T, D> mem(chunks * chunk_size, memory::AllocateOnDefault{});
 
     for (SizeType i = 0; i < count; ++i) {
       memory::MemoryView<T, D> sub_mem(mem, i % tiles_in_chunk * m + i / tiles_in_chunk * chunk_size,

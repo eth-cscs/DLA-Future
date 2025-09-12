@@ -10,6 +10,7 @@
 
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include <dlaf/memory/memory_chunk.h>
 

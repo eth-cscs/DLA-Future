@@ -18,13 +18,14 @@
 #include <dlaf/tune.h>
 #include <dlaf/types.h>
 
+#define MATRIXALLOCATION_ASSERT_MESSAGE                                        \
+  "Constructor signature is MatrixAllocation(AllocationLayoutType, LdType);\n" \
+  "All parameters are optional, but order is enforced."
+
 namespace dlaf::matrix {
 
 /// Manages the specs for matrix allocation.
 class MatrixAllocation {
-  static constexpr auto layout_0 = AllocationLayoutDefault{};
-  static constexpr auto ld_0 = LdDefault{};
-
 public:
   using AllocationLayoutType = std::variant<AllocationLayoutDefault, AllocationLayout>;
   using LdType = std::variant<LdDefault, LdSpec>;
@@ -38,8 +39,11 @@ public:
   ///         @p LdDefault, @p LdSpec, @p Ld or @p SizeType (see ld() for more details).
   MatrixAllocation() {}
 
-  MatrixAllocation(AllocationLayoutType layout, LdType ld = ld_0) : layout_(layout), ld_(ld) {}
-  MatrixAllocation(LdType ld) : ld_(ld) {}
+  template <class... T>
+  MatrixAllocation(T... params) : MatrixAllocation() {
+    set<0>(params...);
+  }
+  ///@}
 
   /// Sets the spec for the leading dimension.
   ///
@@ -82,7 +86,25 @@ public:
   }
 
 private:
-  AllocationLayoutType layout_ = layout_0;
-  LdType ld_ = ld_0;
+  template <int>
+  void set() {}
+
+  template <int index, class... T>
+  void set(AllocationLayoutType layout, T... params) {
+    static_assert(index < 1, MATRIXALLOCATION_ASSERT_MESSAGE);
+    set_layout(layout);
+    set<1>(params...);
+  }
+  template <int index, class... T>
+  void set(LdType ld, T... params) {
+    static_assert(index < 2, MATRIXALLOCATION_ASSERT_MESSAGE);
+    set_ld(ld);
+    set<2>(params...);
+  }
+
+  AllocationLayoutType layout_ = AllocationLayoutDefault{};
+  LdType ld_ = LdDefault{};
 };
 }
+
+#undef MATRIXALLOCATION_ASSERT_MESSAGE

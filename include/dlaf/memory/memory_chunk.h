@@ -12,6 +12,7 @@
 
 /// @file
 
+#include <atomic>
 #include <cstddef>
 #include <cstdlib>
 #include <exception>

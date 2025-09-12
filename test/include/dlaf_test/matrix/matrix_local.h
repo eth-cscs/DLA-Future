@@ -62,7 +62,7 @@ struct MatrixLocal<const T> : public ::dlaf::matrix::internal::MatrixBase {
       return;
 
     ColMajorLayout layout(distribution(), ld_);
-    memory_ = MemoryT{layout.min_mem_size()};
+    memory_ = MemoryT{layout.min_mem_size(), memory::AllocateOnDefault{}};
 
     for (const auto& tile_index : iterate_range2d(layout.nr_tiles()))
       tiles_.emplace_back(

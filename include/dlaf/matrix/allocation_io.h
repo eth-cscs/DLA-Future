@@ -17,7 +17,7 @@
 
 namespace dlaf::matrix {
 
-inline AllocationLayout get_allocation_layout(const std::string& layout) {
+inline AllocationLayout allocation_layout_from(const std::string& layout) {
   if (layout == "ColMajor")
     return AllocationLayout::ColMajor;
   else if (layout == "Blocks")

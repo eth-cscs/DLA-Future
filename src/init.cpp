@@ -285,7 +285,7 @@ void updateConfiguration(const pika::program_options::variables_map& vm, configu
   std::string default_allocation_layout_str = "";
   updateConfigurationValue(vm, default_allocation_layout_str, "DEFAULT_ALLOCATION_LAYOUT", "default_allocation_layout");
   if (default_allocation_layout_str != "") {
-    param.default_allocation_layout = matrix::get_allocation_layout(default_allocation_layout_str);
+    param.default_allocation_layout = matrix::allocation_layout_from(default_allocation_layout_str);
   }
   updateConfigurationValue(vm, param.tfactor_num_threads, "TFACTOR_NUM_THREADS", "tfactor-num-threads");
   updateConfigurationValue(vm, param.tfactor_num_streams, "TFACTOR_NUM_STREAMS", "tfactor-num-streams");

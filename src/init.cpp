@@ -26,6 +26,7 @@
 #include <dlaf/communication/error.h>
 #include <dlaf/init.h>
 #include <dlaf/matrix/allocation_io.h>
+#include <dlaf/memory/allocation_io.h>
 #include <dlaf/memory/memory_chunk.h>
 #include <dlaf/tune.h>
 
@@ -282,6 +283,11 @@ void updateConfiguration(const pika::program_options::variables_map& vm, configu
   // These are added automatically by updateConfigurationValue.
   auto& param = getTuneParameters();
   // clang-format off
+  std::string default_allocate_on_str = "";
+  updateConfigurationValue(vm, default_allocate_on_str, "DEFAULT_ALLOCATE_ON", "default_allocate_on");
+  if (default_allocate_on_str != "") {
+    param.default_allocate_on = memory::get_allocate_on(default_allocate_on_str);
+  }
   std::string default_allocation_layout_str = "";
   updateConfigurationValue(vm, default_allocation_layout_str, "DEFAULT_ALLOCATION_LAYOUT", "default_allocation_layout");
   if (default_allocation_layout_str != "") {
@@ -346,6 +352,7 @@ pika::program_options::options_description getOptionsDescription() {
   desc.add_options()("dlaf:no-mpi-pool", pika::program_options::bool_switch(), "Disable the MPI pool.");
 
   // Tune parameters command line options
+  desc.add_options()("dlaf:default_allocate_on", pika::program_options::value<std::string>(), "The default AllocateOn for Matrices and MemoryViews.");
   desc.add_options()("dlaf:default_allocation_layout", pika::program_options::value<std::string>(), "The default AllocationLayout for Matrices.");
   desc.add_options()("dlaf:tfactor-num-threads", pika::program_options::value<std::size_t>(), "The maximum number of threads to use for computing the tfactor.");
   desc.add_options()("dlaf:tfactor-num-streams", pika::program_options::value<std::size_t>(), "The maximum number of GPU streams to use for computing the tfactor.");

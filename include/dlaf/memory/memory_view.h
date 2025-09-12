@@ -18,6 +18,7 @@
 #include <utility>
 
 #include <dlaf/common/assert.h>
+#include <dlaf/memory/allocation.h>
 #include <dlaf/memory/memory_chunk.h>
 #include <dlaf/types.h>
 
@@ -44,9 +45,11 @@ public:
   ///
   /// Memory of @p size elements of type @c T is allocated on the given device.
   template <class U = T, class = typename std::enable_if_t<!std::is_const_v<U> && std::is_same_v<T, U>>>
-  explicit MemoryView(SizeType size)
-      : memory_(size > 0 ? std::make_shared<MemoryChunk<ElementType, D>>(size) : nullptr), offset_(0),
-        size_(size) {
+  explicit MemoryView(SizeType size, AllocateOnType allocate_on)
+      : memory_(size > 0
+                    ? std::make_shared<MemoryChunk<ElementType, D>>(size, get_allocate_on(allocate_on))
+                    : nullptr),
+        offset_(0), size_(size) {
     DLAF_ASSERT(size >= 0, size);
   }
 
@@ -63,7 +66,7 @@ public:
   }
 
   MemoryView(const MemoryView&) = default;
-  template <class U = T, class = typename std::enable_if_t<std::is_const_v<U> && std::is_same_v<T, U>>>
+  template <class U = T, typename std::enable_if_t<std::is_const_v<U> && std::is_same_v<T, U>, int> = 0>
   MemoryView(const MemoryView<ElementType, D>& rhs)
       : memory_(rhs.memory_), offset_(rhs.offset_), size_(rhs.size_) {}
 
@@ -73,7 +76,7 @@ public:
     rhs.offset_ = 0;
   }
 
-  template <class U = T, class = typename std::enable_if_t<std::is_const_v<U> && std::is_same_v<T, U>>>
+  template <class U = T, std::enable_if_t<std::is_const_v<U> && std::is_same_v<T, U>, int> = 0>
   MemoryView(MemoryView<ElementType, D>&& rhs) noexcept
       : memory_(std::move(rhs.memory_)), offset_(rhs.offset_), size_(rhs.size_) {
     rhs.size_ = 0;

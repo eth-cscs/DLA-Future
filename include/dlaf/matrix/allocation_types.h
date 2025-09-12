@@ -20,9 +20,12 @@ namespace dlaf::matrix {
 
 enum class AllocationLayout { ColMajor, Blocks, Tiles };
 
-enum class Ld { Compact, Padded };
-// Ld::Padded: leading dimension is set to an optimal value that might introduce padding.
-// Ld::Compact: leading dimension is set to the minimum value.
+enum class Ld {
+  /// leading dimension is set to the minimum valid value.
+  Compact,
+  /// leading dimension is set to an optimal value that might introduce padding.
+  Padded
+};
 
 using LdSpec = std::variant<Ld, SizeType>;
 

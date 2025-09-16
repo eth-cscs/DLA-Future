@@ -283,6 +283,12 @@ def _parse_line_based(fout, bench_name, nodes):
             + stages
             + " {time:g}s {matrix_type} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d})"
         )
+    elif bench_name.startswith("evp_cusolver"):
+        pstr_arr = []
+        pstr_res = "[{run_index:d}] cuSOLVER {time:g}s {matrix_type} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d})"
+    elif bench_name.startswith("evp_cusolvermp"):
+        pstr_arr = []
+        pstr_res = "[{run_index:d}] cuSOLVERMp {time:g}s {matrix_type} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d})"
     else:
         raise ValueError("Unknown bench_name: " + bench_name)
 

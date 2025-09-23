@@ -179,7 +179,7 @@ public:
   template <bool dist2 = dist, std::enable_if_t<!dist2 && dist == dist2, int> = 0>
   BandBlock(SizeType n, SizeType band_size)
       : size_(n), band_size_(band_size), ld_(2 * band_size_ - 1), id_(0), block_size_(n),
-        mem_size_col_(n), mem_(mem_size_col_ * (ld_ + 1)) {}
+        mem_size_col_(n), mem_(mem_size_col_ * (ld_ + 1), memory::AllocateOnDefault{}) {}
 
   // Distributed constructor
   // Note on size of the buffers:
@@ -210,7 +210,8 @@ public:
   template <bool dist2 = dist, std::enable_if_t<dist2 && dist == dist2, int> = 0>
   BandBlock(SizeType n, SizeType band_size, SizeType id, SizeType block_size)
       : size_(n), band_size_(band_size), ld_(2 * band_size_ - 1), id_(id), block_size_(block_size),
-        mem_size_col_(2 + block_size + (id == 0 ? block_size : 0)), mem_(mem_size_col_ * (ld_ + 1)) {
+        mem_size_col_(2 + block_size + (id == 0 ? block_size : 0)),
+        mem_(mem_size_col_ * (ld_ + 1), memory::AllocateOnDefault{}) {
     using util::ceilDiv;
     DLAF_ASSERT(0 <= n, n);
     // Note: band_size_ = 1 means already tridiagonal.
@@ -477,7 +478,7 @@ template <class T>
 class SweepWorker {
 public:
   SweepWorker(SizeType size, SizeType band_size)
-      : size_(size), band_size_(band_size), data_(1 + 2 * band_size) {}
+      : size_(size), band_size_(band_size), data_(1 + 2 * band_size, memory::AllocateOnDefault{}) {}
 
   SweepWorker(const SweepWorker&) = delete;
   SweepWorker(SweepWorker&&) = default;

@@ -206,7 +206,7 @@ void print(const Tile<T, Device::CPU>& tile, int precision = 4, std::ostream& ou
 /// @pre ld is the leading dimension of the tile to be created.
 template <class T, Device D = Device::CPU>
 Tile<T, D> createTile(const TileElementSize size, const SizeType ld) {
-  memory::MemoryView<T, D> support_mem(ld * size.cols());
+  memory::MemoryView<T, D> support_mem(ld * size.cols(), memory::AllocateOnDefault{});
   return Tile<T, D>(size, std::move(support_mem), ld);
 }
 

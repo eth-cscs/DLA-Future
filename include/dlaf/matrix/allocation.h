@@ -18,29 +18,29 @@
 #include <dlaf/tune.h>
 #include <dlaf/types.h>
 
-#define MATRIXALLOCATION_ASSERT_MESSAGE                                        \
-  "Constructor signature is MatrixAllocation(AllocationLayoutType, LdType);\n" \
+#define MATRIXALLOCATIONSPEC_ASSERT_MESSAGE                                  \
+  "Constructor signature is AllocationSpec(AllocationLayoutType, LdType);\n" \
   "All parameters are optional, but order is enforced."
 
 namespace dlaf::matrix {
 
 /// Manages the specs for matrix allocation.
-class MatrixAllocation {
+class AllocationSpec {
 public:
   using AllocationLayoutType = std::variant<AllocationLayoutDefault, AllocationLayout>;
   using LdType = std::variant<LdDefault, LdSpec>;
 
   ///@{
-  /// Construct a MatrixAllocation object
+  /// Construct a AllocationSpec object
   ///
   /// @params layout (optional, default AllocationLayoutDefault{}) can be either of type
   ///         @p AllocationLayoutDefault or @p AllocationLayout (see layout() for more details).
   /// @params ld (optional, default LdDefault{}) can be either of type
   ///         @p LdDefault, @p LdSpec, @p Ld or @p SizeType (see ld() for more details).
-  MatrixAllocation() {}
+  AllocationSpec() {}
 
   template <class... T>
-  MatrixAllocation(T... params) : MatrixAllocation() {
+  AllocationSpec(T... params) : AllocationSpec() {
     set<0>(params...);
   }
   ///@}
@@ -48,7 +48,7 @@ public:
   /// Sets the spec for the leading dimension.
   ///
   /// See layout() for more details.
-  MatrixAllocation& set_layout(AllocationLayoutType layout) noexcept {
+  AllocationSpec& set_layout(AllocationLayoutType layout) noexcept {
     layout_ = layout;
     return *this;
   }
@@ -56,7 +56,7 @@ public:
   /// Sets the spec for the leading dimension.
   ///
   /// See ld() for more details.
-  MatrixAllocation& set_ld(LdType ld) noexcept {
+  AllocationSpec& set_ld(LdType ld) noexcept {
     ld_ = ld;
     return *this;
   }
@@ -91,13 +91,13 @@ private:
 
   template <int index, class... T>
   void set(AllocationLayoutType layout, T... params) {
-    static_assert(index < 1, MATRIXALLOCATION_ASSERT_MESSAGE);
+    static_assert(index < 1, MATRIXALLOCATIONSPEC_ASSERT_MESSAGE);
     set_layout(layout);
     set<1>(params...);
   }
   template <int index, class... T>
   void set(LdType ld, T... params) {
-    static_assert(index < 2, MATRIXALLOCATION_ASSERT_MESSAGE);
+    static_assert(index < 2, MATRIXALLOCATIONSPEC_ASSERT_MESSAGE);
     set_ld(ld);
     set<2>(params...);
   }
@@ -107,4 +107,4 @@ private:
 };
 }
 
-#undef MATRIXALLOCATION_ASSERT_MESSAGE
+#undef MATRIXALLOCATIONSPEC_ASSERT_MESSAGE

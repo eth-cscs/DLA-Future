@@ -67,7 +67,7 @@ GlobalElementSize globalSquareTestSize(const LocalElementSize& size, const comm:
   return GlobalElementSize{size.rows() * k, size.cols() * k};
 }
 
-const MatrixAllocation alloc(AllocationLayout::Tiles, Ld::Compact);
+const AllocationSpec alloc(AllocationLayout::Tiles, Ld::Compact);
 
 TYPED_TEST(MatrixUtilsTest, Set0) {
   for (auto& comm_grid : this->commGrids()) {

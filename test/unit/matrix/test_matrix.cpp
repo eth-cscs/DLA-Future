@@ -80,7 +80,7 @@ GlobalElementSize global_test_size(const LocalElementSize& size, const Size2D& g
   return {size.rows() * grid_size.rows(), size.cols() * grid_size.cols()};
 }
 
-const matrix::MatrixAllocation tiles_compact(AllocationLayout::Tiles, Ld::Compact);
+const matrix::AllocationSpec tiles_compact(AllocationLayout::Tiles, Ld::Compact);
 
 template <class T, Device D>
 void testStaticAPI() {

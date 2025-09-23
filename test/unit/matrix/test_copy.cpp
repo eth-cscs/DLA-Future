@@ -73,7 +73,7 @@ T outputValues(const GlobalElementIndex&) noexcept {
   return TypeUtilities<T>::element(13, 26);
 }
 
-const MatrixAllocation compact_tiles(AllocationLayout::Tiles, Ld::Compact);
+const AllocationSpec compact_tiles(AllocationLayout::Tiles, Ld::Compact);
 
 TYPED_TEST(MatrixCopyTest, FullMatrixCPU) {
   using dlaf::matrix::util::set;

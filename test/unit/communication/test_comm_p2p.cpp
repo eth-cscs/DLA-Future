@@ -98,7 +98,7 @@ void testSendRecv(comm::Communicator world, matrix::Matrix<T, D> matrix) {
   tt::sync_wait(checkTileEq(input_tile, matrix.read(idx)));
 }
 
-const matrix::MatrixAllocation tiles_compact(matrix::AllocationLayout::Tiles, matrix::Ld::Compact);
+const matrix::AllocationSpec tiles_compact(matrix::AllocationLayout::Tiles, matrix::Ld::Compact);
 
 TEST_F(P2PTestMC, SendRecv) {
   auto dist = matrix::Distribution({13, 13}, {13, 13});

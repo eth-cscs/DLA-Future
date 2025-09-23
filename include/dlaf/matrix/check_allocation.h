@@ -42,7 +42,7 @@ SizeType sync_tile_ld(MatrixLike& mat, const LocalTileIndex& ij) {
 
 template <class MatrixLike>
 bool is_allocated_as_col_major(MatrixLike& mat) {
-  if (mat.allocation() != AllocationLayout::ColMajor)
+  if (mat.allocation_layout() != AllocationLayout::ColMajor)
     return false;
 
   Distribution dist = mat.distribution();
@@ -67,7 +67,7 @@ bool is_allocated_as_col_major(MatrixLike& mat) {
 
 template <class MatrixLike>
 bool is_allocated_as_blocks(MatrixLike& mat) {
-  if (mat.allocation() != AllocationLayout::Blocks)
+  if (mat.allocation_layout() != AllocationLayout::Blocks)
     return false;
 
   const Distribution& dist = mat.distribution();
@@ -124,7 +124,7 @@ bool is_allocated_as_blocks(MatrixLike& mat) {
 
 template <class MatrixLike>
 bool is_allocated_as_tiles(MatrixLike& mat) {
-  return mat.allocation() == AllocationLayout::Tiles;
+  return mat.allocation_layout() == AllocationLayout::Tiles;
 }
 
 template <class MatrixLike>

@@ -103,7 +103,7 @@ public:
     return dist_;
   }
 
-  constexpr static AllocationLayout allocation() noexcept {
+  constexpr static AllocationLayout allocation_layout() noexcept {
     return AllocationLayout::ColMajor;
   }
 

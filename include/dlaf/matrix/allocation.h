@@ -124,7 +124,7 @@ private:
   }
   template <int index, class... T>
   void set(AllocateOnType allocate_on, T... params) {
-    static_assert(index < 3, MATRIXALLOCATION_ASSERT_MESSAGE);
+    static_assert(index < 3, MATRIXALLOCATIONSPEC_ASSERT_MESSAGE);
     set_allocate_on(allocate_on);
     set<3>(params...);
   }

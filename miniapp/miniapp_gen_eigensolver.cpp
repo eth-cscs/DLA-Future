@@ -11,6 +11,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <limits>
+#include <optional>
 #include <string>
 
 #include <pika/init.hpp>
@@ -97,9 +98,6 @@ struct Options
     }
     else if (vm.count("eval-index-end") == 1) {
       eval_idx_end = vm["eval-index-end"].as<SizeType>();
-    }
-    else {
-      eval_idx_end = std::nullopt;
     }
 
 #ifdef DLAF_WITH_HDF5

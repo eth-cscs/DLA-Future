@@ -20,3 +20,6 @@ notebook = [
 
 [tool.black]
 line-length = 105
+
+[tool.ruff]
+line-length = 105

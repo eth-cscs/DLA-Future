@@ -69,7 +69,7 @@ variables:
     DOCKERFILE: ci/docker/build.Dockerfile
     BASE_IMAGE: docker.io/ubuntu:24.04
     EXTRA_APTGET: ""
-    CXXSTD: 17
+    CXXSTD: 20
     USE_MKL: "OFF"
     USE_CODECOV: "false"
 

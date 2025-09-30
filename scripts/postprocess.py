@@ -335,7 +335,9 @@ def _parse_line_based(fout, bench_name, nodes):
             # Note: DPLASMA trsm miniapp does not respect `--nruns`. This is a workaround
             # to make _calc_metrics not skipping the first run, the only one available, by
             # not setting 'run_index' field (=NaN).
-            if not "dlaf" in bench_name and not bench_name.startswith("trsm_dplasma"):
+            if all(
+                [keyword not in bench_name for keyword in ["dlaf", "cusolver"]]
+            ) and not bench_name.startswith("trsm_dplasma"):
                 rd["run_index"] = run_index
                 run_index += 1
 

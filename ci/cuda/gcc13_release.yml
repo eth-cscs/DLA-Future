@@ -13,7 +13,7 @@ include:
 cuda gcc13 release deps:
   extends: .build_deps_common_gh200
   variables:
-    BASE_IMAGE: $CSCS_REGISTRY_PATH/base-images/cuda_12.6.1-devel-ubuntu24.04:v1.4
+    BASE_IMAGE: jfrog.svc.cscs.ch/dockerhub/nvidia/cuda:12.6.1-devel-ubuntu24.04
     COMPILER: gcc@13
     SPACK_ENVIRONMENT: ci/docker/release-cuda-gh200.yaml
     DEPS_IMAGE: $CSCS_REGISTRY_PATH/cuda-gh200-gcc13-release/deps

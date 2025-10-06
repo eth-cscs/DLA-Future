@@ -61,8 +61,8 @@ using dlaf::comm::Size2D;
 using dlaf::common::iterate_range2d;
 using dlaf::common::Ordering;
 using dlaf::internal::RequireContiguous;
+using dlaf::matrix::AllocationLayout;
 using dlaf::matrix::local_matrix;
-using dlaf::matrix::MatrixAllocation;
 
 struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
@@ -85,7 +85,7 @@ struct Options
 template <Device D, class T>
 Matrix<T, D> get_matrix_on_device_sync(Matrix<const T, Device::CPU>& matrix_ref) {
   DLAF_ASSERT(local_matrix(matrix_ref), matrix_ref);
-  Matrix<T, D> matrix(matrix_ref.distribution(), MatrixAllocation::ColMajor);
+  Matrix<T, D> matrix(matrix_ref.distribution(), {AllocationLayout::ColMajor});
   copy(matrix_ref, matrix);
   matrix.waitLocalTiles();
 

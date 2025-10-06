@@ -73,6 +73,8 @@ T outputValues(const GlobalElementIndex&) noexcept {
   return TypeUtilities<T>::element(13, 26);
 }
 
+const AllocationSpec compact_tiles(AllocationLayout::Tiles, Ld::Compact);
+
 TYPED_TEST(MatrixCopyTest, FullMatrixCPU) {
   using dlaf::matrix::util::set;
 
@@ -81,11 +83,11 @@ TYPED_TEST(MatrixCopyTest, FullMatrixCPU) {
       const GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
       const Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      Matrix<TypeParam, Device::CPU> mat_src(distribution, MatrixAllocation::Tiles, Ld::Compact);
+      Matrix<TypeParam, Device::CPU> mat_src(distribution, compact_tiles);
       set(mat_src, inputValues<TypeParam>);
       Matrix<const TypeParam, Device::CPU> mat_src_const = std::move(mat_src);
 
-      Matrix<TypeParam, Device::CPU> mat_dst(distribution, MatrixAllocation::Tiles, Ld::Compact);
+      Matrix<TypeParam, Device::CPU> mat_dst(distribution, compact_tiles);
       set(mat_dst, outputValues<TypeParam>);
 
       copy(mat_src_const, mat_dst);
@@ -104,14 +106,14 @@ TYPED_TEST(MatrixCopyTest, FullMatrixGPU) {
       const GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
       const Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      Matrix<TypeParam, Device::CPU> mat_src(distribution, MatrixAllocation::Tiles, Ld::Compact);
+      Matrix<TypeParam, Device::CPU> mat_src(distribution, compact_tiles);
       set(mat_src, inputValues<TypeParam>);
       Matrix<const TypeParam, Device::CPU> mat_src_const = std::move(mat_src);
 
-      Matrix<TypeParam, Device::GPU> mat_gpu1(distribution, MatrixAllocation::Tiles, Ld::Compact);
-      Matrix<TypeParam, Device::GPU> mat_gpu2(distribution, MatrixAllocation::Tiles, Ld::Compact);
+      Matrix<TypeParam, Device::GPU> mat_gpu1(distribution, compact_tiles);
+      Matrix<TypeParam, Device::GPU> mat_gpu2(distribution, compact_tiles);
 
-      Matrix<TypeParam, Device::CPU> mat_dst(distribution, MatrixAllocation::Tiles, Ld::Compact);
+      Matrix<TypeParam, Device::CPU> mat_dst(distribution, compact_tiles);
       set(mat_dst, outputValues<TypeParam>);
 
       copy(mat_src_const, mat_gpu1);
@@ -164,8 +166,8 @@ const std::vector<SubMatrixCopyConfig> sub_configs{
 template <class T>
 void testSubMatrix(const SubMatrixCopyConfig& test, const matrix::Distribution& dist_in,
                    const matrix::Distribution& dist_out) {
-  Matrix<T, Device::CPU> mat_in(dist_in, MatrixAllocation::Tiles, Ld::Compact);
-  Matrix<T, Device::CPU> mat_out(dist_out, MatrixAllocation::Tiles, Ld::Compact);
+  Matrix<T, Device::CPU> mat_in(dist_in, compact_tiles);
+  Matrix<T, Device::CPU> mat_out(dist_out, compact_tiles);
 
   // Note: currently `subPipeline`-ing does not support sub-matrices
   if (isFullMatrix(dist_in, test.sub_in())) {
@@ -231,12 +233,12 @@ template <class T>
 void testSubMatrixOnGPU(const SubMatrixCopyConfig& test, const matrix::Distribution& dist_in,
                         const matrix::Distribution& dist_out) {
   // CPU
-  Matrix<T, Device::CPU> mat_in(dist_in, MatrixAllocation::Tiles, Ld::Compact);
-  Matrix<T, Device::CPU> mat_out(dist_out, MatrixAllocation::Tiles, Ld::Compact);
+  Matrix<T, Device::CPU> mat_in(dist_in, compact_tiles);
+  Matrix<T, Device::CPU> mat_out(dist_out, compact_tiles);
 
   // GPU
-  Matrix<T, Device::GPU> mat_in_gpu(dist_in, MatrixAllocation::Tiles, Ld::Compact);
-  Matrix<T, Device::GPU> mat_out_gpu(dist_out, MatrixAllocation::Tiles, Ld::Compact);
+  Matrix<T, Device::GPU> mat_in_gpu(dist_in, compact_tiles);
+  Matrix<T, Device::GPU> mat_out_gpu(dist_out, compact_tiles);
 
   // Note: currently `subPipeline`-ing does not support sub-matrices
   if (isFullMatrix(dist_in, test.sub_in())) {

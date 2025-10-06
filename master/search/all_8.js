@@ -10,7 +10,7 @@ var searchData=
   ['index2d_3c_20sizetype_2c_20matrix_3a_3alocaltile_5ftag_20_3e_7',['Index2D&lt; SizeType, matrix::LocalTile_TAG &gt;',['../classdlaf_1_1common_1_1_index2_d.html',1,'dlaf::common']]],
   ['index2d_3c_20sizetype_2c_20matrix_3a_3atileelement_5ftag_20_3e_8',['Index2D&lt; SizeType, matrix::TileElement_TAG &gt;',['../classdlaf_1_1common_1_1_index2_d.html',1,'dlaf::common']]],
   ['indext_5fmpi_9',['IndexT_MPI',['../communication_2index_8h.html#a2b48f62607e5e128dff19ceac22093e9',1,'dlaf::comm']]],
-  ['init_2eh_10',['init.h',['../dlaf_2init_8h.html',1,'(Global Namespace)'],['../dlaf__c_2init_8h.html',1,'(Global Namespace)'],['../dlaf_2communication_2init_8h.html',1,'(Global Namespace)']]],
+  ['init_2eh_10',['init.h',['../dlaf__c_2init_8h.html',1,'(Global Namespace)'],['../dlaf_2init_8h.html',1,'(Global Namespace)'],['../dlaf_2communication_2init_8h.html',1,'(Global Namespace)']]],
   ['initialize_11',['initialize',['../dlaf_2init_8h.html#a94175c61baedbcc0bf6bd53e0f57380f',1,'dlaf::initialize(int argc, const char *const argv[], const configuration &amp;user_cfg={})'],['../dlaf_2init_8h.html#a100757e13ff576c8a93dd7aed3ca7ec4',1,'dlaf::initialize(const pika::program_options::variables_map &amp;vm, const configuration &amp;user_cfg={})']]],
   ['internal_5f_12',['internal_',['../structdlaf_1_1matrix_1_1_panel_3_01axis_00_01const_01_t_00_01_d_00_01_store_transposed_1_1_no_01_4.html#adf84f8c3806212547305082bf21ac006',1,'dlaf::matrix::Panel&lt; axis, const T, D, StoreTransposed::No &gt;']]],
   ['inverse_2eh_13',['inverse.h',['../inverse_8h.html',1,'']]],

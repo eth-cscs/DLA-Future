@@ -104,6 +104,30 @@ std::array<T, 2> computeX0AndSquares(const bool has_head, const std::vector<matr
 }
 
 template <Device D, class T>
+void scaleReflector(const bool has_head, const std::vector<matrix::Tile<T, D>>& panel, const SizeType j,
+                    const T alpha, const std::size_t begin, const std::size_t end) {
+  common::internal::SingleThreadedBlasScope _single;
+
+  bool has_first_component = has_head;
+
+  for (auto i_tl = begin; i_tl < end; ++i_tl) {
+    const auto& tile_v = panel[i_tl];
+
+    if (has_first_component) {
+      if (j + 1 < tile_v.size().rows()) {
+        T* v = tile_v.ptr({j + 1, j});
+        blas::scal(tile_v.size().rows() - (j + 1), alpha, v, 1);
+      }
+      has_first_component = false;
+    }
+    else {
+      T* v = tile_v.ptr({0, j});
+      blas::scal(tile_v.size().rows(), alpha, v, 1);
+    }
+  }
+}
+
+template <Device D, class T>
 T computeReflectorAndTau(const bool has_head, const std::vector<matrix::Tile<T, D>>& panel,
                          const SizeType j, std::array<T, 2> x0_and_squares) {
   if (x0_and_squares[1] == T(0))
@@ -113,29 +137,13 @@ T computeReflectorAndTau(const bool has_head, const std::vector<matrix::Tile<T, 
   const T x0 = x0_and_squares[0];
   const T y = std::signbit(std::real(x0_and_squares[0])) ? norm : -norm;
   const T tau = (y - x0) / y;
-
-  auto it_begin = panel.begin();
-  auto it_end = panel.end();
-
-  common::internal::SingleThreadedBlasScope single;
+  const T alpha = T(1) / (x0 - y);
 
   if (has_head) {
-    const auto& tile_v0 = *it_begin++;
-
-    const TileElementIndex idx_x0(j, j);
-    tile_v0(idx_x0) = y;
-
-    if (j + 1 < tile_v0.size().rows()) {
-      T* v = tile_v0.ptr({j + 1, j});
-      blas::scal(tile_v0.size().rows() - (j + 1), T(1) / (x0 - y), v, 1);
-    }
+    panel[0]({j, j}) = y;
   }
 
-  for (auto it = it_begin; it != it_end; ++it) {
-    auto& tile_v = *it;
-    T* v = tile_v.ptr({0, j});
-    blas::scal(tile_v.size().rows(), T(1) / (x0 - y), v, 1);
-  }
+  scaleReflector(has_head, panel, j, alpha, 0, panel.size());
 
   return tau;
 }
@@ -144,87 +152,45 @@ template <Device D, class T>
 void computeWTrailingPanel(const bool has_head, const std::vector<matrix::Tile<T, D>>& panel,
                            common::internal::vector<T>& w, SizeType j, const SizeType pt_cols,
                            const std::size_t begin, const std::size_t end) {
-  // for each tile in the panel, consider just the trailing panel
-  // i.e. all rows (height = reflector), just columns to the right of the current reflector
-  if (!(pt_cols > 0))
-    return;
+  common::internal::SingleThreadedBlasScope single;
 
   const TileElementIndex index_el_x0(j, j);
-  bool has_first_component = has_head;
-
-  common::internal::SingleThreadedBlasScope single;
 
   // W = Pt* . V
   for (auto index = begin; index < end; ++index) {
     const matrix::Tile<const T, D>& tile_a = panel[index];
-    const SizeType first_element = has_first_component ? index_el_x0.row() : 0;
+    const SizeType first_element = (index == 0 && has_head) ? index_el_x0.row() : 0;
 
-    TileElementIndex pt_start{first_element, index_el_x0.col() + 1};
-    TileElementSize pt_size{tile_a.size().rows() - pt_start.row(), pt_cols};
-    TileElementIndex v_start{first_element, index_el_x0.col()};
+    const TileElementIndex pt_start{first_element, index_el_x0.col() + 1};
+    const TileElementSize pt_size{tile_a.size().rows() - pt_start.row(), pt_cols};
+    const TileElementIndex v_start{first_element, index_el_x0.col()};
 
-    if (has_first_component) {
-      const TileElementSize offset{1, 0};
-
-      const T fake_v = 1;
-      blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, offset.rows(), pt_size.cols(), T(1),
-                 tile_a.ptr(pt_start), tile_a.ld(), &fake_v, 1, T(0), w.data(), 1);
-
-      pt_start = pt_start + offset;
-      v_start = v_start + offset;
-      pt_size = pt_size - offset;
-
-      has_first_component = false;
-    }
-
-    if (pt_start.isIn(tile_a.size())) {
-      // W += 1 . A* . V
-      blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, pt_size.rows(), pt_size.cols(), T(1),
-                 tile_a.ptr(pt_start), tile_a.ld(), tile_a.ptr(v_start), 1, T(1), w.data(), 1);
-    }
+    // W += 1 . A* . V
+    blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, pt_size.rows(), pt_size.cols(), T(1),
+               tile_a.ptr(pt_start), tile_a.ld(), tile_a.ptr(v_start), 1, T(1), w.data(), 1);
   }
 }
 
 template <Device D, class T>
 void updateTrailingPanel(const bool has_head, const std::vector<matrix::Tile<T, D>>& panel, SizeType j,
-                         const std::vector<T>& w, const T tau, const std::size_t begin,
-                         const std::size_t end) {
-  const TileElementIndex index_el_x0(j, j);
-
-  bool has_first_component = has_head;
-
+                         const T* w, const T tau, const std::size_t begin, const std::size_t end) {
   common::internal::SingleThreadedBlasScope single;
+
+  const TileElementIndex index_el_x0(j, j);
 
   // GER Pt = Pt - tau . v . w*
   for (auto index = begin; index < end; ++index) {
     const matrix::Tile<T, D>& tile_a = panel[index];
-    const SizeType first_element = has_first_component ? index_el_x0.row() : 0;
+    const SizeType first_element = (index == 0 && has_head) ? index_el_x0.row() : 0;
 
-    TileElementIndex pt_start{first_element, index_el_x0.col() + 1};
-    TileElementSize pt_size{tile_a.size().rows() - pt_start.row(),
-                            tile_a.size().cols() - pt_start.col()};
-    TileElementIndex v_start{first_element, index_el_x0.col()};
+    const TileElementIndex pt_start{first_element, index_el_x0.col() + 1};
+    const TileElementSize pt_size{tile_a.size().rows() - pt_start.row(),
+                                  tile_a.size().cols() - pt_start.col()};
+    const TileElementIndex v_start{first_element, index_el_x0.col()};
 
-    if (has_first_component) {
-      const TileElementSize offset{1, 0};
-
-      // Pt = Pt - tau * v[0] * w*
-      const T fake_v = 1;
-      blas::ger(blas::Layout::ColMajor, 1, pt_size.cols(), -dlaf::conj(tau), &fake_v, 1, w.data(), 1,
-                tile_a.ptr(pt_start), tile_a.ld());
-
-      pt_start = pt_start + offset;
-      v_start = v_start + offset;
-      pt_size = pt_size - offset;
-
-      has_first_component = false;
-    }
-
-    if (pt_start.isIn(tile_a.size())) {
-      // Pt = Pt - tau * v * w*
-      blas::ger(blas::Layout::ColMajor, pt_size.rows(), pt_size.cols(), -dlaf::conj(tau),
-                tile_a.ptr(v_start), 1, w.data(), 1, tile_a.ptr(pt_start), tile_a.ld());
-    }
+    // Pt = Pt - tau * v * w*
+    blas::ger(blas::Layout::ColMajor, pt_size.rows(), pt_size.cols(), -dlaf::conj(tau),
+              tile_a.ptr(v_start), 1, w, 1, tile_a.ptr(pt_start), tile_a.ld());
   }
 }
 
@@ -283,17 +249,6 @@ void her2kOffDiag(pika::execution::thread_priority priority, ASender&& tile_a, B
 
 namespace local {
 
-template <Device D, class T>
-T computeReflector(const std::vector<matrix::Tile<T, D>>& panel, SizeType j) {
-  constexpr bool has_head = true;
-
-  std::array<T, 2> x0_and_squares = computeX0AndSquares(has_head, panel, j);
-
-  auto tau = computeReflectorAndTau(has_head, panel, j, std::move(x0_and_squares));
-
-  return tau;
-}
-
 template <class MatrixLikeA, class MatrixLikeTaus>
 void computePanelReflectors(MatrixLikeA& mat_a, MatrixLikeTaus& mat_taus, const SizeType j_sub,
                             const matrix::SubPanelView& panel_view) {
@@ -331,6 +286,7 @@ void computePanelReflectors(MatrixLikeA& mat_a, MatrixLikeTaus& mat_taus, const 
         const std::size_t begin = index * batch_size;
         const std::size_t end = std::min(index * batch_size + batch_size, tiles.size());
         const SizeType nrefls = taus.size().rows();
+        const bool has_head = (begin == 0);
 
         if (index == 0) {
           w.resize(nworkers);
@@ -338,33 +294,57 @@ void computePanelReflectors(MatrixLikeA& mat_a, MatrixLikeTaus& mat_taus, const 
 
         for (SizeType j = 0; j < nrefls; ++j) {
           // STEP1: compute tau and reflector (single-thread)
-          if (index == 0) {
-            taus({j, 0}) = computeReflector(tiles, j);
+          if (has_head) {
+            taus({j, 0}) =
+                computeReflectorAndTau(has_head, tiles, j, computeX0AndSquares(has_head, tiles, j));
           }
 
           barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
-          if (taus({j, 0}) == T(0))
+          if (taus({j, 0}) == T(0)) {
             continue;
+          }
+
+          const SizeType pt_cols = cols - (j + 1);
+          const bool has_pt = pt_cols > 0;
+
+          if (!has_pt)
+            break;
+
+          // Note: for convenience of next trailing panel computations, the reflector is made
+          // well-formed, i.e. head = 1, by using the band element as reflector head.
+          // When done with computations, it will be "restored" by returning the head element
+          // to the band (with its value).
+          //
+          // Note: optional is used because just a single thread has to perform this.
+          const std::optional<T> y = [=, &tiles]() -> std::optional<T> {
+            if (!has_head)
+              return {};
+
+            const T y = tiles[begin]({j, j});
+            tiles[begin]({j, j}) = 1;
+            return y;
+          }();
 
           // STEP2a: compute w (multi-threaded)
-          const SizeType pt_cols = cols - (j + 1);
-          if (pt_cols == 0)
-            break;
-          const bool has_head = (index == 0);
-
           w[index] = common::internal::vector<T>(pt_cols, 0);
           computeWTrailingPanel(has_head, tiles, w[index], j, pt_cols, begin, end);
           barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
           // STEP2b: reduce w results (single-threaded)
-          if (index == 0)
+          if (index == 0) {
             dlaf::eigensolver::internal::reduceColumnVectors(w);
+          }
           barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
           // STEP3: update trailing panel (multi-threaded)
-          updateTrailingPanel(has_head, tiles, j, w[0], taus({j, 0}), begin, end);
+          updateTrailingPanel(has_head, tiles, j, w[0].data(), taus({j, 0}), begin, end);
           barrier_ptr->arrive_and_wait(barrier_busy_wait);
+
+          // Note: Return the reflector head to the band
+          if (has_head) {
+            tiles[begin]({j, j}) = y.value();
+          }
         }
       }));
 }

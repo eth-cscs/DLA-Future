@@ -10,24 +10,24 @@
 include:
   - local: 'ci/common-ci.yml'
 
-cuda gcc13 debug scalapack deps:
+cuda gcc13 debug scalapack stdexec deps:
   extends: .build_deps_common_gh200
   variables:
     BASE_IMAGE: jfrog.svc.cscs.ch/dockerhub/nvidia/cuda:12.6.1-devel-ubuntu24.04
     COMPILER: gcc@13
-    SPACK_ENVIRONMENT: ci/docker/debug-cuda-gh200-scalapack.yaml
-    DEPS_IMAGE: $CSCS_REGISTRY_PATH/cuda-gh200-gcc13-scalapack-debug/deps
+    SPACK_ENVIRONMENT: ci/docker/debug-cuda-gh200-scalapack-stdexec.yaml
+    DEPS_IMAGE: $CSCS_REGISTRY_PATH/cuda-gh200-gcc13-scalapack-stdexec-debug/deps
 
-cuda gcc13 debug scalapack build:
+cuda gcc13 debug scalapack stdexec build:
   extends:
     - .build_common_gh200
     - .build_for_alps_gh200
   needs:
-    - cuda gcc13 debug scalapack deps
+    - cuda gcc13 debug scalapack stdexec deps
   variables:
-    DLAF_IMAGE: $CSCS_REGISTRY_PATH/cuda-gh200-gcc13-scalapack-debug/dlaf:$CI_COMMIT_SHA
+    DLAF_IMAGE: $CSCS_REGISTRY_PATH/cuda-gh200-gcc13-scalapack-stdexec-debug/dlaf:$CI_COMMIT_SHA
 
-cuda gcc13 debug scalapack test:
+cuda gcc13 debug scalapack stdexec test:
   extends: .run_common
   variables:
     DLAF_CI_BIND_GPU: "ALPS-GH200"
@@ -35,8 +35,8 @@ cuda gcc13 debug scalapack test:
     PIKA_MPI_COMPLETION_MODE: 30
     MPICH_GPU_SUPPORT_ENABLED: 0
   needs:
-    - cuda gcc13 debug scalapack build
+    - cuda gcc13 debug scalapack stdexec build
   trigger:
     include:
       - artifact: pipeline.yml
-        job: cuda gcc13 debug scalapack build
+        job: cuda gcc13 debug scalapack stdexec build

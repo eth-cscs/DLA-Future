@@ -38,3 +38,4 @@ spack:
         - '@0.30.1'
         - 'build_type=Debug'
         - 'malloc=system'
+        - '+stdexec'

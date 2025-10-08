@@ -574,31 +574,6 @@ void her2kUpdateTrailingMatrix(const matrix::SubMatrixView& view, matrix::Matrix
 }
 
 namespace distributed {
-template <Device D, class T>
-T computeReflector(const bool has_head, comm::Communicator& communicator,
-                   const std::vector<matrix::Tile<T, D>>& panel, SizeType j) {
-  std::array<T, 2> x0_and_squares = computeX0AndSquares(has_head, panel, j);
-
-  // Note:
-  // This is an optimization for grouping two separate low bandwidth communications, respectively
-  // bcast(x0) and reduce(norm), where the latency was degrading performances.
-  //
-  // In particular this allReduce allows to:
-  // - bcast x0, since for all ranks is 0 and just the root rank has the real value;
-  // - allReduce squares for the norm computation.
-  //
-  // Moreover, by all-reducing squares and broadcasting x0, all ranks have all the information to
-  // update locally the reflectors (section they have). This is more efficient than computing params
-  // (e.g. norm, y, tau) just on the root rank and then having to broadcast them (i.e. additional
-  // communication).
-  comm::sync::allReduceInPlace(communicator, MPI_SUM,
-                               common::make_data(x0_and_squares.data(),
-                                                 to_SizeType(x0_and_squares.size())));
-
-  auto tau = computeReflectorAndTau(has_head, panel, j, std::move(x0_and_squares));
-
-  return tau;
-}
 
 template <class MatrixLikeA, class MatrixLikeTaus, class TriggerSender, class CommSender>
 void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
@@ -649,23 +624,55 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
         }
 
         for (SizeType j = 0; j < nrefls; ++j) {
+          const bool has_head = rankHasHead && (index == 0);
+
           // STEP1: compute tau and reflector (single-thread)
           if (index == 0) {
-            const bool has_head = rankHasHead;
-            taus({j, 0}) = computeReflector(has_head, pcomm.get(), tiles, j);
+            std::array<T, 2> x0_and_squares = computeX0AndSquares(has_head, tiles, j);
+
+            // Note:
+            // This is an optimization for grouping two separate low bandwidth communications,
+            // respectively bcast(x0) and reduce(norm), where the latency was degrading performances.
+            //
+            // In particular this allReduce allows to:
+            // - bcast x0, since for all ranks is 0 and just the root rank has the real value;
+            // - allReduce squares for the norm computation.
+            //
+            // Moreover, by all-reducing squares and broadcasting x0, all ranks have all the information
+            // to update locally the reflectors (section they have). This is more efficient than
+            // computing params (e.g. norm, y, tau) just on the root rank and then having to broadcast
+            // them (i.e. additional communication).
+            comm::sync::allReduceInPlace(pcomm.get(), MPI_SUM,
+                                         common::make_data(x0_and_squares.data(),
+                                                           to_SizeType(x0_and_squares.size())));
+
+            taus({j, 0}) = computeReflectorAndTau(has_head, tiles, j, std::move(x0_and_squares));
           }
           barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
           if (taus({j, 0}) == T(0))
             continue;
 
-          // STEP2a: compute w (multi-threaded)
           const SizeType pt_cols = cols - (j + 1);
           if (pt_cols == 0)
             break;
 
-          const bool has_head = rankHasHead && (index == 0);
+          // Note: for convenience of next trailing panel computations, the reflector is made
+          // well-formed, i.e. head = 1, by using the band element as reflector head.
+          // When done with computations, it will be "restored" by returning the head element
+          // to the band (with its value).
+          //
+          // Note: optional is used because just a single thread has to perform this.
+          const std::optional<T> y = [=, &tiles]() -> std::optional<T> {
+            if (!has_head) {
+              return {};
+            }
+            const T y = tiles[begin]({j, j});
+            tiles[begin]({j, j}) = 1;
+            return y;
+          }();
 
+          // STEP2a: compute w (multi-threaded)
           w[index] = common::internal::vector<T>(pt_cols, 0);
           computeWTrailingPanel(has_head, tiles, w[index], j, pt_cols, begin, end);
           barrier_ptr->arrive_and_wait(barrier_busy_wait);
@@ -678,7 +685,13 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
           barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
           // STEP3: update trailing panel (multi-threaded)
-          updateTrailingPanel(has_head, tiles, j, w[0], taus({j, 0}), begin, end);
+          updateTrailingPanel(has_head, tiles, j, w[0].data(), taus({j, 0}), begin, end);
+
+          // Note: Return the reflector head to the band
+          if (has_head) {
+            tiles[begin]({j, j}) = y.value();
+          }
+
           barrier_ptr->arrive_and_wait(barrier_busy_wait);
         }
       }));

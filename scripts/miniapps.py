@@ -65,7 +65,7 @@ def _computeResourcesNeededList(system, nodes, rpn):
 
 
 def _err_msg(lib):
-    return f"No such `lib`: {lib}! Allowed values are : `dlaf`, `slate`, `dplasma` and `scalapack` (cholesky only)."
+    return f"No such `lib`: {lib}! Allowed values are : `dlaf`, `slate`, `dplasma`, `cusolver` (local evp only), `cusolvermp` (evp only), `scalapack` (cholesky only)."
 
 
 class JobText:

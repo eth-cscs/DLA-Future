@@ -283,6 +283,8 @@ def _parse_line_based(fout, bench_name, nodes):
             + stages
             + " {time:g}s {matrix_type} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d})"
         )
+    # WARNING:  `cusolvermp` comes before `cusolver` because, since they share the same prefix,
+    #           not keeping this order would result in `cusolver` acting as a catch-all for both.
     elif bench_name.startswith("evp_cusolvermp"):
         pstr_arr = []
         pstr_res = "[{run_index:d}] cuSOLVERMp {time:g}s {matrix_type}L ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d})"

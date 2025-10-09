@@ -694,7 +694,7 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
           // TODO this has been moved here in order to avoid need of sync between iterations,
           // at the cost of getting it serialized after gemv
           if (tid == tid_master) {
-            std::array<T, 2> x0_and_squares = computeX0AndSquares(rankHasHead, tiles, j);
+            const std::array<T, 2> x0_and_squares = computeX0AndSquares(rankHasHead, tiles, j);
 
             // copy x0 and first row of trailing panel
             if (rankHasHead) {
@@ -725,8 +725,6 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
 
           barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
-          // COMPUTE REFLECTOR and PREPARE PANEL UPDATE
-
           // Note: if current column is already 0, there's nothing to annihilate.
           if (algo_data[1] == T(0)) {
             taus({j, 0}) = 0;
@@ -746,64 +744,30 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
             if (has_pt) {
               common::internal::SingleThreadedBlasScope _single;
 
+              T& w = algo_data[2 + pt_cols];
+
               if constexpr (dlaf::isComplex_v<T>)
-                lapack::lacgv(pt_cols, &algo_data[2 + pt_cols], 1);
-              blas::axpy(pt_cols, alpha, &algo_data[2], 1, &algo_data[2 + pt_cols], 1);
+                lapack::lacgv(pt_cols, &w, 1);
+              blas::axpy(pt_cols, alpha, &algo_data[2], 1, &w, 1);
             }
           }
 
-          // SCAL: compute reflector
-          {
-            common::internal::SingleThreadedBlasScope _single;
-
-            bool has_first_component = tid_has_head;
-
-            for (auto i_tl = begin; i_tl < end; ++i_tl) {
-              const auto& tile_v = tiles[i_tl];
-
-              if (has_first_component) {
-                const TileElementIndex idx_x0(j, j);
-                // Note: temporarily keep the reflector well-formed and set band at the end of the iteration
-                tile_v(idx_x0) = 1;
-
-                if (j + 1 < tile_v.size().rows()) {
-                  T* v = tile_v.ptr({j + 1, j});
-                  blas::scal(tile_v.size().rows() - (j + 1), alpha, v, 1);
-                }
-                has_first_component = false;
-              }
-              else {
-                T* v = tile_v.ptr({0, j});
-                blas::scal(tile_v.size().rows(), alpha, v, 1);
-              }
-            }
-          }
+          scaleReflector(tid_has_head, tiles, j, alpha, begin, end);
 
           barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
-          // GER: PANEL UPDATE
-          // GER Pt = Pt - tau . v . w*
           if (has_pt) {
-            common::internal::SingleThreadedBlasScope _single;
-
             const T& w = algo_data[2 + pt_cols];
-            const TileElementIndex index_el_x0(j, j);
 
-            for (auto index = begin; index < end; ++index) {
-              const matrix::Tile<T, D>& tile_a = tiles[index];
-              const SizeType first_element = (tid_has_head && index == begin) ? index_el_x0.row() : 0;
-
-              const TileElementIndex pt_start{first_element, index_el_x0.col() + 1};
-              const TileElementSize pt_size{tile_a.size().rows() - pt_start.row(),
-                                            tile_a.size().cols() - pt_start.col()};
-              const TileElementIndex v_start{first_element, index_el_x0.col()};
-
-              blas::ger(blas::Layout::ColMajor, pt_size.rows(), pt_size.cols(), -dlaf::conj(tau),
-                        tile_a.ptr(v_start), 1, &w, 1, tile_a.ptr(pt_start), tile_a.ld());
+            // Note: temporarily keep the reflector well-formed and set band at the end of the iteration
+            if (tid_has_head) {
+              tiles[begin]({j, j}) = 1;
             }
+
+            updateTrailingPanel(tid_has_head, tiles, j, &w, tau, begin, end);
           }
 
-          // Note: set band now that a well-formed reflector is not needed anymore
+          // Note: set band value, now that a well-formed reflector is not needed anymore
           if (tid_has_head) {
             tiles[begin]({j, j}) = y;
           }

@@ -692,8 +692,16 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
           barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
           // Note: tid == tid_master does a bit more work
-          // TODO this has been moved here in order to avoid need of sync between iterations,
-          // at the cost of getting it serialized after gemv
+
+          // Note:
+          // This has been moved here in order to avoid need of sync across loop iterations,
+          // at the cost of getting it serialized after GEMV.
+          // In particular, GER (last step of an iteration) and GEMV (first step of next iteration)
+          // are "thread" aligned, i.e. the same thread work on the same tiles, so there is no need
+          // of synchronization.
+          // Moving this at the beginning of the iteration would "interrupt" the thread alignment,
+          // since this is a "single-thread" computation, and it would require an additional
+          // synchornization point.
           if (tid == tid_master) {
             const std::array<T, 2> x0_and_squares = computeX0AndSquares(rankHasHead, tiles, j);
 

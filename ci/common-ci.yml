@@ -46,8 +46,8 @@ variables:
     reports:
       dotenv: build.env
   variables:
-    SPACK_SHA: 17d34285729c1bb39dfbdef09c5b78d88bb9e3f9
-    SPACK_PACKAGES_SHA: bf71e784ba28818a05468ce4ffef405fa7c3d151
+    SPACK_SHA: 734c5db2121b01c373eed6538e452f18887e9e44 # 1.0.2
+    SPACK_PACKAGES_SHA: d14721f39656939c817853716dd45cdba717e6a8 # develop on 2025-10-10
     ALPS_CLUSTER_CONFIG_SHA: 2daaab94f685968c7b30b35a7253c93c0c2613da
     SPACK_DLAF_REPO: ./spack
     DOCKER_BUILD_ARGS: '[

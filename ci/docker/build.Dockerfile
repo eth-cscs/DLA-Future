@@ -96,7 +96,7 @@ COPY $SPACK_ENVIRONMENT /spack_environment/spack.yaml
 COPY $COMMON_SPACK_ENVIRONMENT /spack_environment/
 RUN spack env create --with-view ${ENV_VIEW} ci /spack_environment/spack.yaml
 # 2. Set the C++ standard
-ARG CXXSTD=17
+ARG CXXSTD=20
 RUN spack -e ci config add "packages:dla-future:variants:cxxstd=${CXXSTD}"
 # 3. Concretize environment
 RUN spack -e ci concretize

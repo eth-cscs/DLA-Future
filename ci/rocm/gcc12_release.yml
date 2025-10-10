@@ -13,11 +13,11 @@ include:
 rocm gcc12 release deps:
   extends: .build_deps_common_amdgpu
   variables:
-    BASE_IMAGE: jfrog.svc.cscs.ch/dockerhub/rocm/dev-ubuntu-22.04:6.0.2
+    BASE_IMAGE: jfrog.svc.cscs.ch/dockerhub/rocm/dev-ubuntu-22.04:6.4.4
     EXTRA_APTGET: "g++-12 gcc-12 gfortran-12 rocblas rocblas-dev rocsolver rocsolver-dev llvm-amdgpu rocm-device-libs libjansson4"
     COMPILER: gcc@12
     USE_ROCBLAS: "ON"
-    SPACK_ENVIRONMENT: ci/docker/release-rocm602.yaml
+    SPACK_ENVIRONMENT: ci/docker/release-rocm.yaml
     DEPS_IMAGE: $CSCS_REGISTRY_PATH/rocm-gcc12-release/deps
 
 rocm gcc12 release build:

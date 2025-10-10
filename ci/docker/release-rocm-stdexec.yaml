@@ -24,8 +24,11 @@ spack:
     all:
       variants:
       - build_type=Release
-      - cxxstd=17
+      - cxxstd=20
       - amdgpu_target=gfx90a:xnack-
+    pika:
+      require:
+        - '+stdexec'
     blas:
       require:: openblas
     lapack:
@@ -35,36 +38,36 @@ spack:
         - '~rocm'
     llvm-amdgpu:
       externals:
-      - spec: llvm-amdgpu@6.0.2 ~rocm-device-libs
-        prefix: /opt/rocm-6.0.2/llvm
+      - spec: llvm-amdgpu@6.4.4 ~rocm-device-libs
+        prefix: /opt/rocm-6.4.4/llvm
         extra_attributes:
           compilers:
-            c: /opt/rocm-6.0.2/llvm/bin/amdclang
-            cxx: /opt/rocm-6.0.2/llvm/bin/amdclang++
-            fortran: /opt/rocm-6.0.2/llvm/bin/amdflang
+            c: /opt/rocm-6.4.4/llvm/bin/amdclang
+            cxx: /opt/rocm-6.4.4/llvm/bin/amdclang++
+            fortran: /opt/rocm-6.4.4/llvm/bin/amdflang
       buildable: false
     rocm-device-libs:
       externals:
-      - spec: rocm-device-libs@6.0.2
-        prefix: /opt/rocm-6.0.2
+      - spec: rocm-device-libs@6.4.4
+        prefix: /opt/rocm-6.4.4
       buildable: false
     hip:
       externals:
-      - spec: hip@6.0.2
-        prefix: /opt/rocm-6.0.2
+      - spec: hip@6.4.4
+        prefix: /opt/rocm-6.4.4
       buildable: false
     rocblas:
       externals:
-      - spec: rocblas@6.0.2
-        prefix: /opt/rocm-6.0.2
+      - spec: rocblas@6.4.4
+        prefix: /opt/rocm-6.4.4
       buildable: false
     rocsolver:
       externals:
-      - spec: rocsolver@6.0.2
-        prefix: /opt/rocm-6.0.2
+      - spec: rocsolver@6.4.4
+        prefix: /opt/rocm-6.4.4
       buildable: false
     hsa-rocr-dev:
       externals:
-      - spec: hsa-rocr-dev@6.0.2
-        prefix: /opt/rocm-6.0.2
+      - spec: hsa-rocr-dev@6.4.4
+        prefix: /opt/rocm-6.4.4
       buildable: false

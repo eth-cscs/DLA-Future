@@ -11,7 +11,7 @@ include:
   - local: 'ci/common-ci.yml'
 
 test_mi200:
-  image: docker.io/rocm/dev-ubuntu-22.04:6.4.4
+  image: docker.io/rocm/dev-ubuntu-24.04:6.4.4
   stage: build_deps
   extends: .dlaf-container-runner-beverin-mi200
   variables:

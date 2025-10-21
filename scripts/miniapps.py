@@ -65,7 +65,7 @@ def _computeResourcesNeededList(system, nodes, rpn):
 
 
 def _err_msg(lib):
-    return f"No such `lib`: {lib}! Allowed values are : `dlaf`, `slate`, `dplasma` and `scalapack` (cholesky only)."
+    return f"No such `lib`: {lib}! Allowed values are : `dlaf`, `slate`, `dplasma`, `cusolver` (local evp only), `cusolvermp` (evp only), `scalapack` (cholesky only)."
 
 
 class JobText:
@@ -660,6 +660,16 @@ def evp(
         elif dtype == "z":
             app = f"{miniapp_dir}/miniapp_evp_elpa_z"
         opts = f"{m_sz} {mb_sz} {grid_rows} {grid_cols} {nruns} {stages}"
+    elif lib == "cusolver":
+        _only_type_d(dtype)
+        env += f" OMP_NUM_THREADS={cores_per_rank}"
+        app = f"{miniapp_dir}/miniapp_evp_cusolver"
+        opts = f"{m_sz} {nruns}"
+    elif lib == "cusolvermp":
+        _only_type_d(dtype)
+        env += f" OMP_NUM_THREADS={cores_per_rank}"
+        app = f"{miniapp_dir}/miniapp_evp_cusolvermp"
+        opts = f"{m_sz} {mb_sz} {grid_rows} {grid_cols} {nruns}"
     else:
         raise ValueError(_err_msg(lib))
 

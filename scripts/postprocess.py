@@ -283,6 +283,14 @@ def _parse_line_based(fout, bench_name, nodes):
             + stages
             + " {time:g}s {matrix_type} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d})"
         )
+    # WARNING:  `cusolvermp` comes before `cusolver` because, since they share the same prefix,
+    #           not keeping this order would result in `cusolver` acting as a catch-all for both.
+    elif bench_name.startswith("evp_cusolvermp"):
+        pstr_arr = []
+        pstr_res = "[{run_index:d}] cuSOLVERMp {time:g}s {matrix_type}L ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d})"
+    elif bench_name.startswith("evp_cusolver"):
+        pstr_arr = []
+        pstr_res = "[{run_index:d}] cuSOLVER {time:g}s {matrix_type} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d})"
     else:
         raise ValueError("Unknown bench_name: " + bench_name)
 
@@ -329,7 +337,9 @@ def _parse_line_based(fout, bench_name, nodes):
             # Note: DPLASMA trsm miniapp does not respect `--nruns`. This is a workaround
             # to make _calc_metrics not skipping the first run, the only one available, by
             # not setting 'run_index' field (=NaN).
-            if not "dlaf" in bench_name and not bench_name.startswith("trsm_dplasma"):
+            if all(
+                [keyword not in bench_name for keyword in ["dlaf", "cusolver"]]
+            ) and not bench_name.startswith("trsm_dplasma"):
                 rd["run_index"] = run_index
                 run_index += 1
 

@@ -44,6 +44,13 @@ DLAF_addTest(
 )
 
 DLAF_addTest(
+  test_allocation
+  SOURCES test_allocation.cpp
+  LIBRARIES dlaf.core
+  USE_MAIN PIKA
+)
+
+DLAF_addTest(
   test_matrix
   SOURCES test_matrix.cpp
   LIBRARIES dlaf.core

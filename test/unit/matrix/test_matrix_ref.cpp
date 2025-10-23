@@ -88,8 +88,8 @@ TYPED_TEST(MatrixRefTest, Basic) {
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : tests_sub_matrix) {
       for (const auto& alloc :
-           {MatrixAllocation::ColMajor, MatrixAllocation::Blocks, MatrixAllocation::Tiles}) {
-        Matrix<Type, device> mat(test.size, test.tile_size, comm_grid, alloc);
+           {AllocationLayout::ColMajor, AllocationLayout::Blocks, AllocationLayout::Tiles}) {
+        Matrix<Type, device> mat(test.size, test.tile_size, comm_grid, {alloc});
         Matrix<const Type, device>& mat_const = mat;
 
         const SubMatrixSpec spec{test.sub_origin, test.sub_size};

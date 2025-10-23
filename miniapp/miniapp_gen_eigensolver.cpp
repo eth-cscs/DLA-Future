@@ -11,6 +11,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <limits>
+#include <optional>
 #include <string>
 
 #include <pika/init.hpp>
@@ -69,7 +70,7 @@ struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
   SizeType m;
   SizeType mb;
-  SizeType eval_idx_end;
+  std::optional<SizeType> eval_idx_end;
   blas::Uplo uplo;
 #ifdef DLAF_WITH_HDF5
   std::filesystem::path input_file;
@@ -98,11 +99,6 @@ struct Options
     else if (vm.count("eval-index-end") == 1) {
       eval_idx_end = vm["eval-index-end"].as<SizeType>();
     }
-    else {
-      eval_idx_end = m;
-    }
-
-    DLAF_ASSERT(eval_idx_end >= 0 && eval_idx_end <= m, eval_idx_end, m);
 
 #ifdef DLAF_WITH_HDF5
     if (vm.count("input-file") == 1) {
@@ -142,10 +138,9 @@ struct GenEigensolverMiniapp {
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
 
     // Allocate memory for the matrix
-    GlobalElementSize matrix_size(opts.m, opts.m);
     TileElementSize block_size(opts.mb, opts.mb);
 
-    ConstHostMatrixType matrix_a_ref = [matrix_size, block_size, &comm_grid, &opts]() {
+    ConstHostMatrixType matrix_a_ref = [block_size, &comm_grid, &opts]() {
 #ifdef DLAF_WITH_HDF5
       if (!opts.input_file.empty()) {
         auto infile = FileHDF5(opts.input_file, FileHDF5::FileMode::readonly);
@@ -159,7 +154,7 @@ struct GenEigensolverMiniapp {
 #endif
       using dlaf::matrix::util::set_random_hermitian;
 
-      HostMatrixType hermitian(matrix_size, block_size, comm_grid);
+      HostMatrixType hermitian(GlobalElementSize(opts.m, opts.m), block_size, comm_grid);
       set_random_hermitian(hermitian);
 
       return hermitian;
@@ -167,7 +162,7 @@ struct GenEigensolverMiniapp {
 
     // Default capture & is needed to suppress warning of unused opts when DLAF_WITH_HDF5 is not defined.
     // [[maybe_unused]] is not supported in lambda captures
-    ConstHostMatrixType matrix_b_ref = [&, matrix_size, block_size]() {
+    ConstHostMatrixType matrix_b_ref = [block_size, &comm_grid, &opts]() {
 #ifdef DLAF_WITH_HDF5
       if (!opts.input_file.empty()) {
         auto infile = FileHDF5(opts.input_file, FileHDF5::FileMode::readonly);
@@ -179,11 +174,17 @@ struct GenEigensolverMiniapp {
 #endif
       using dlaf::matrix::util::set_random_hermitian_positive_definite;
 
-      HostMatrixType triangular(matrix_size, block_size, comm_grid);
+      HostMatrixType triangular(GlobalElementSize(opts.m, opts.m), block_size, comm_grid);
       set_random_hermitian_positive_definite(triangular);
 
       return triangular;
     }();
+
+    auto matrix_size = matrix_a_ref.size();
+
+    auto eval_idx_end = opts.eval_idx_end.value_or(matrix_size.rows());
+    DLAF_ASSERT(eval_idx_end >= 0 && eval_idx_end <= matrix_size.rows(), eval_idx_end,
+                matrix_size.rows());
 
     for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
       if (0 == world.rank() && run_index >= 0)
@@ -207,10 +208,10 @@ struct GenEigensolverMiniapp {
         using dlaf::hermitian_generalized_eigensolver;
         if (opts.local)
           return hermitian_generalized_eigensolver<backend>(opts.uplo, matrix_a->get(), matrix_b->get(),
-                                                            0l, opts.eval_idx_end);
+                                                            0l, eval_idx_end);
         else
           return hermitian_generalized_eigensolver<backend>(comm_grid, opts.uplo, matrix_a->get(),
-                                                            matrix_b->get(), 0l, opts.eval_idx_end);
+                                                            matrix_b->get(), 0l, eval_idx_end);
       };
       auto [eigenvalues, eigenvectors] = bench();
 
@@ -243,7 +244,7 @@ struct GenEigensolverMiniapp {
       if (0 == world.rank() && run_index >= 0) {
         std::cout << "[" << run_index << "]" << " " << elapsed_time << "s" << " "
                   << dlaf::internal::FormatShort{opts.type} << dlaf::internal::FormatShort{opts.uplo}
-                  << " " << matrix_a_host.size() << " (" << 0l << ", " << opts.eval_idx_end << ") "
+                  << " " << matrix_a_host.size() << " (" << 0l << ", " << eval_idx_end << ") "
                   << " " << matrix_a_host.blockSize() << " "
                   << dlaf::eigensolver::internal::getBandSize(matrix_a_host.blockSize().rows()) << " "
                   << comm_grid.size() << " " << pika::get_os_thread_count() << " " << backend
@@ -265,7 +266,7 @@ struct GenEigensolverMiniapp {
                     << "threads, " << pika::get_os_thread_count() << ", "
                     << "backend, " << backend << ", "
                     << "eigenvalue index begin, " << 0l << ", "
-                    << "eigenvalue index end, " << opts.eval_idx_end << ", " << opts.info << std::endl;
+                    << "eigenvalue index end, " << eval_idx_end << ", " << opts.info << std::endl;
         }
       }
       // (optional) run test
@@ -274,7 +275,7 @@ struct GenEigensolverMiniapp {
         MatrixMirrorEvalsType eigenvalues_host(eigenvalues);
         MatrixMirrorEvectsType eigenvectors_host(eigenvectors);
         checkGenEigensolver(comm_grid, opts.uplo, matrix_a_ref, matrix_b_ref, eigenvalues_host.get(),
-                            eigenvectors_host.get(), opts.eval_idx_end);
+                            eigenvectors_host.get(), eval_idx_end);
       }
 
       eigenvalues.waitLocalTiles();

@@ -12,6 +12,7 @@
 #include <filesystem>
 #include <iostream>
 #include <limits>
+#include <optional>
 #include <string>
 
 #include <pika/init.hpp>
@@ -68,7 +69,7 @@ struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
   SizeType m;
   SizeType mb;
-  SizeType eval_idx_end;
+  std::optional<SizeType> eval_idx_end;
   blas::Uplo uplo;
 #ifdef DLAF_WITH_HDF5
   std::filesystem::path input_file;
@@ -96,11 +97,6 @@ struct Options
     else if (vm.count("eval-index-end") == 1) {
       eval_idx_end = vm["eval-index-end"].as<SizeType>();
     }
-    else {
-      eval_idx_end = m;
-    }
-
-    DLAF_ASSERT(eval_idx_end >= 0 && eval_idx_end <= m, eval_idx_end, m);
 
 #ifdef DLAF_WITH_HDF5
     if (vm.count("input-file") == 1) {
@@ -159,6 +155,9 @@ struct EigensolverMiniapp {
 
     auto matrix_size = matrix_ref.size();
     auto block_size = matrix_ref.blockSize();
+    auto eval_idx_end = opts.eval_idx_end.value_or(matrix_size.rows());
+    DLAF_ASSERT(eval_idx_end >= 0 && eval_idx_end <= matrix_size.rows(), eval_idx_end,
+                matrix_size.rows());
 
     for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
       if (0 == world.rank() && run_index >= 0)
@@ -176,10 +175,10 @@ struct EigensolverMiniapp {
       dlaf::common::Timer<> timeit;
       auto bench = [&]() {
         if (opts.local)
-          return dlaf::hermitian_eigensolver<backend>(opts.uplo, matrix->get(), 0l, opts.eval_idx_end);
+          return dlaf::hermitian_eigensolver<backend>(opts.uplo, matrix->get(), 0l, eval_idx_end);
         else
           return dlaf::hermitian_eigensolver<backend>(comm_grid, opts.uplo, matrix->get(), 0l,
-                                                      opts.eval_idx_end);
+                                                      eval_idx_end);
       };
       auto [eigenvalues, eigenvectors] = bench();
 
@@ -210,7 +209,7 @@ struct EigensolverMiniapp {
       if (0 == world.rank() && run_index >= 0) {
         std::cout << "[" << run_index << "]" << " " << elapsed_time << "s" << " "
                   << dlaf::internal::FormatShort{opts.type} << dlaf::internal::FormatShort{opts.uplo}
-                  << " " << matrix_host.size() << " (" << 0l << ", " << opts.eval_idx_end << ") "
+                  << " " << matrix_host.size() << " (" << 0l << ", " << eval_idx_end << ") "
                   << matrix_host.blockSize() << " "
                   << dlaf::eigensolver::internal::getBandSize(matrix_host.blockSize().rows()) << " "
                   << comm_grid.size() << " " << pika::get_os_thread_count() << " " << backend
@@ -232,7 +231,7 @@ struct EigensolverMiniapp {
                     << "threads, " << pika::get_os_thread_count() << ", "
                     << "backend, " << backend << ", "
                     << "first eigenvalue index, " << 0l << ", "
-                    << "last eigenvalue index, " << opts.eval_idx_end << ", " << opts.info << std::endl;
+                    << "last eigenvalue index, " << eval_idx_end << ", " << opts.info << std::endl;
         }
       }
       // (optional) run test
@@ -241,7 +240,7 @@ struct EigensolverMiniapp {
         MatrixMirrorEvalsType eigenvalues_host(eigenvalues);
         MatrixMirrorEvectsType eigenvectors_host(eigenvectors);
         checkEigensolver(comm_grid, opts.uplo, matrix_ref, eigenvalues_host.get(),
-                         eigenvectors_host.get(), opts.eval_idx_end);
+                         eigenvectors_host.get(), eval_idx_end);
       }
 
       eigenvalues.waitLocalTiles();

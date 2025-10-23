@@ -26,5 +26,6 @@ jobs:
     steps:
     - uses: actions/first-interaction@v3
       with:
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-        pr-message: 'Hello, welcome to DLA-Future! Thank you for your contribution. Please add yourself to the `CITATION.cff` file, if you have not done it already.'
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        pr_message: 'Hello, welcome to DLA-Future! Thank you for your contribution. Please add yourself to the `CITATION.cff` file, if you have not done it already.'
+        issue_message: ''

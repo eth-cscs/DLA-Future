@@ -8,9 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-
-#include<string>
-#include<vector>
+#include <string>
+#include <vector>
 
 #include <dlaf/util_string.h>
 
@@ -19,7 +18,8 @@
 using namespace dlaf;
 using namespace testing;
 
-std::vector<std::string> strings {"asdf, (+6]g", "ASDF, (+6]G", "AsDf, (+6]G", "aSdF, (+6]g", "asDF, (+6]G"};
+std::vector<std::string> strings{"asdf, (+6]g", "ASDF, (+6]G", "AsDf, (+6]G", "aSdF, (+6]g",
+                                 "asDF, (+6]G"};
 
 TEST(StringUtilTest, ToLower) {
   std::string expected("asdf, (+6]g");

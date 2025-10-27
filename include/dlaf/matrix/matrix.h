@@ -129,7 +129,8 @@ public:
   /// Create a distributed matrix,
   /// which references elements that are already allocated in the memory.
   ///
-  /// @param[in] layout_mapper is an object (which satisfies AllocationMapping concept)
+  /// @param[in] layout_mapper is an object
+  ///            (which satisfies AllocationMapping concept (see ColMajorLayout for the methods required))
   ///            which describes how the elements of the local part of the matrix are stored in memory,
   /// @param[in] ptr is the pointer to the first element of the local part of the matrix,
   /// @pre @p ptr refers to an allocated memory region of at least @c layout_mapper.min_mem_size() elements.

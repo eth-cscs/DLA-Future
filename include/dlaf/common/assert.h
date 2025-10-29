@@ -51,6 +51,17 @@ inline void do_assert(bool expr, const common::internal::source_location& loc, c
   }
 }
 
+template <class T>
+inline void invalid_option_value(const common::internal::source_location& loc, const char* option,
+                                 const T& actual, const char* expected) noexcept {
+  std::ostringstream ss;
+  ss << "[ERROR] " << loc << '\n'
+     << "Invalid option for " << option << ". Got '" << actual << "' but expected one of " << expected
+     << ".\n";
+  std::cerr << ss.str();
+  std::terminate();
+}
+
 /// Helper function for silencing unused parameter warning.
 ///
 /// This allows to not add std::maybe_unused to each argument of an UNIMPLEMENTED function,
@@ -126,6 +137,9 @@ void silenceUnusedWarningFor(Args&&...) {}
 
 #define DLAF_UNIMPLEMENTED(...) \
   dlaf::internal::do_assert(false, SOURCE_LOCATION(), "Not yet implemented!", __VA_ARGS__)
+
+#define DLAF_INVALID_OPTION_VALUE(option, actual, expected) \
+  dlaf::internal::invalid_option_value(SOURCE_LOCATION(), option, actual, expected)
 
 #define DLAF_STATIC_UNIMPLEMENTED(DummyType) \
   static_assert(sizeof(DummyType) == 0, "Not yet implemented!")

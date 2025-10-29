@@ -137,10 +137,10 @@ TYPED_TEST(RetiledMatrixRefLocalTest, LocalConstructor) {
 
   for (const auto& [size, tile_size, tiles_per_block, dist_origin, dist_size] : local_sizes_tests) {
     for (const auto& alloc :
-         {MatrixAllocation::ColMajor, MatrixAllocation::Blocks, MatrixAllocation::Tiles}) {
-      const MatrixAllocation exp_alloc =
-          alloc == MatrixAllocation::Tiles && tiles_per_block != LocalTileSize{1, 1}
-              ? MatrixAllocation::Blocks
+         {AllocationLayout::ColMajor, AllocationLayout::Blocks, AllocationLayout::Tiles}) {
+      const AllocationLayout exp_alloc =
+          alloc == AllocationLayout::Tiles && tiles_per_block != LocalTileSize{1, 1}
+              ? AllocationLayout::Blocks
               : alloc;
       const GlobalElementSize block_size(tile_size.rows() * tiles_per_block.rows(),
                                          tile_size.cols() * tiles_per_block.cols());
@@ -149,7 +149,7 @@ TYPED_TEST(RetiledMatrixRefLocalTest, LocalConstructor) {
       Distribution expected_distribution({dist_size.rows(), dist_size.cols()}, block_size, tile_size,
                                          {1, 1}, {0, 0}, {0, 0});
 
-      Matrix<Type, Device::CPU> mat(size, {block_size.rows(), block_size.cols()}, alloc);
+      Matrix<Type, Device::CPU> mat(size, {block_size.rows(), block_size.cols()}, {alloc});
       ASSERT_TRUE(is_allocated_as(mat, alloc));
 
       // Matrix ref
@@ -225,10 +225,10 @@ TYPED_TEST(RetiledMatrixRefTest, GlobalConstructor) {
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& [size, tile_size, tiles_per_block, dist_origin, dist_size] : global_sizes_tests) {
       for (const auto& alloc :
-           {MatrixAllocation::ColMajor, MatrixAllocation::Blocks, MatrixAllocation::Tiles}) {
-        const MatrixAllocation exp_alloc =
-            alloc == MatrixAllocation::Tiles && tiles_per_block != LocalTileSize{1, 1}
-                ? MatrixAllocation::Blocks
+           {AllocationLayout::ColMajor, AllocationLayout::Blocks, AllocationLayout::Tiles}) {
+        const AllocationLayout exp_alloc =
+            alloc == AllocationLayout::Tiles && tiles_per_block != LocalTileSize{1, 1}
+                ? AllocationLayout::Blocks
                 : alloc;
         const GlobalElementSize block_size(tile_size.rows() * tiles_per_block.rows(),
                                            tile_size.cols() * tiles_per_block.cols());
@@ -237,7 +237,7 @@ TYPED_TEST(RetiledMatrixRefTest, GlobalConstructor) {
         Distribution expected_distribution({dist_size.rows(), dist_size.cols()}, block_size, tile_size,
                                            comm_grid.size(), comm_grid.rank(), {0, 0});
 
-        Matrix<Type, Device::CPU> mat(size, {block_size.rows(), block_size.cols()}, comm_grid, alloc);
+        Matrix<Type, Device::CPU> mat(size, {block_size.rows(), block_size.cols()}, comm_grid, {alloc});
         ASSERT_TRUE(is_allocated_as(mat, alloc));
 
         // Matrix ref

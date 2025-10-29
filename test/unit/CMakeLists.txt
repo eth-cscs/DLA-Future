@@ -32,6 +32,13 @@ DLAF_addTest(
 )
 
 DLAF_addTest(
+  test_util_string
+  SOURCES test_util_string.cpp
+  LIBRARIES dlaf.core
+  USE_MAIN PLAIN
+)
+
+DLAF_addTest(
   test_blas_tile
   SOURCES test_blas_tile.cpp
   LIBRARIES dlaf.core

@@ -237,8 +237,9 @@ auto allGatherTaus(const SizeType k, Matrix<const T, Device::CPU>& mat_taus,
                 std::back_inserter(taus));
     }
     else {
-      Tile<T, Device::CPU> tile_local(TileElementSize(chunk_size, 1),
-                                      MemoryView<T, Device::CPU>(chunk_size), chunk_size);
+      Tile<T, Device::CPU> tile_local(
+          TileElementSize(chunk_size, 1),
+          MemoryView<T, Device::CPU>(chunk_size, memory::AllocateOnDefault{}), chunk_size);
       sync::broadcast::receive_from(owner, comm_grid.rowCommunicator(), common::make_data(tile_local));
       std::copy(tile_local.ptr(), tile_local.ptr() + tile_local.size().rows(), std::back_inserter(taus));
     }

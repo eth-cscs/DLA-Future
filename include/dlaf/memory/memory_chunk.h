@@ -12,19 +12,21 @@
 
 /// @file
 
+#include <atomic>
 #include <cstddef>
 #include <cstdlib>
 #include <exception>
 #include <iostream>
 #include <memory>
+#include <mutex>
 
 #include <umpire/Allocator.hpp>
 
+#include <dlaf/memory/allocation_types.h>
 #include <dlaf/memory/memory_type.h>
 #include <dlaf/types.h>
 
 namespace dlaf::memory {
-
 namespace internal {
 umpire::Allocator& getUmpireHostAllocator();
 void initializeUmpireHostAllocator(std::size_t initial_block_bytes, std::size_t next_block_bytes,
@@ -48,37 +50,20 @@ public:
   using ElementType = T;
 
   /// Creates a MemoryChunk object with size 0.
-  MemoryChunk() : MemoryChunk(0) {}
+  MemoryChunk() : MemoryChunk(0, AllocateOn::Construction) {}
 
   /// Creates a MemoryChunk object allocating the required memory.
   ///
   /// @param size The size of the memory to be allocated.
   ///
   /// Memory of @a size elements of type @c T are is allocated on the given device.
-  MemoryChunk(SizeType size) : size_(size), ptr_(nullptr), allocated_(true) {
+  MemoryChunk(SizeType size, AllocateOn allocate_on)
+      : size_(size), ptr_(nullptr), status_(initial_allocation_status(size)) {
     DLAF_ASSERT(size >= 0, size);
 
-    if (size == 0)
-      return;
-
-    std::size_t mem_size = static_cast<std::size_t>(size_) * sizeof(T);
-#ifdef DLAF_WITH_GPU
-    if (D == Device::CPU) {
-      ptr_ = static_cast<T*>(internal::getUmpireHostAllocator().allocate(mem_size));
+    if (size > 0 && allocate_on == AllocateOn::Construction) {
+      allocate();
     }
-    else {
-      ptr_ = static_cast<T*>(internal::getUmpireDeviceAllocator().allocate(mem_size));
-    }
-#else
-    if (D == Device::CPU) {
-      ptr_ = static_cast<T*>(internal::getUmpireHostAllocator().allocate(mem_size));
-    }
-    else {
-      std::cout
-          << "[ERROR] GPU memory was requested but the `DLAF_WITH_CUDA` or `DLAF_WITH_HIP` flags were not passed!";
-      std::terminate();
-    }
-#endif
   }
 
   /// Creates a MemoryChunk object from an existing memory allocation.
@@ -86,7 +71,9 @@ public:
   /// @param ptr  The pointer to the already allocated memory,
   /// @param size The size (in number of elements of type @c T) of the existing allocation,
   /// @pre @p ptr+i can be dereferenced for 0 <= @c i < @p size.
-  MemoryChunk(T* ptr, SizeType size) : size_(size), ptr_(size > 0 ? ptr : nullptr), allocated_(false) {
+  MemoryChunk(T* ptr, SizeType size)
+      : size_(size), ptr_(size > 0 ? ptr : nullptr),
+        status_(internal::AllocationStatus::ExternallyManaged) {
     DLAF_ASSERT_HEAVY(size == 0 ? ptr_ == nullptr : ptr_ != nullptr, size);
 
     using dlaf::memory::internal::get_memory_type;
@@ -114,10 +101,10 @@ public:
 #endif
   /// Move constructor.
   MemoryChunk(MemoryChunk&& rhs) noexcept
-      : size_(rhs.size_), ptr_(rhs.ptr_), allocated_(rhs.allocated_) {
+      : size_(rhs.size_), ptr_(rhs.ptr_), status_(rhs.status_.load(std::memory_order_relaxed)) {
     rhs.ptr_ = nullptr;
     rhs.size_ = 0;
-    rhs.allocated_ = false;
+    rhs.status_.store(internal::AllocationStatus::Empty, std::memory_order_relaxed);
   }
 #if defined(__GNUC__)
 #pragma GCC diagnostic pop
@@ -131,11 +118,11 @@ public:
 
     size_ = rhs.size_;
     ptr_ = rhs.ptr_;
-    allocated_ = rhs.allocated_;
+    status_ = rhs.status_.load(std::memory_order_relaxed);
 
     rhs.size_ = 0;
     rhs.ptr_ = nullptr;
-    rhs.allocated_ = false;
+    rhs.status_.store(internal::AllocationStatus::Empty, std::memory_order_relaxed);
 
     return *this;
   }
@@ -151,19 +138,30 @@ public:
   /// @pre @p index < @p size.
   T* operator()(SizeType index) {
     DLAF_ASSERT_HEAVY(index < size_, index, size_);
-    return ptr_ + index;
+    return (*this)() + index;
   }
   const T* operator()(SizeType index) const {
     DLAF_ASSERT_HEAVY(index < size_, index, size_);
-    return ptr_ + index;
+    return (*this)() + index;
   }
 
   /// Returns a pointer to the underlying memory.
   /// If @p size == 0 a @c nullptr is returned.
   T* operator()() {
+    using internal::AllocationStatus;
+    if (status_.load(std::memory_order_acquire) == AllocationStatus::WaitAllocation) {
+      allocate();
+    }
+    DLAF_ASSERT_HEAVY(status_.load(std::memory_order_acquire) != AllocationStatus::WaitAllocation,
+                      "DLAF Internal allocation error");
+    DLAF_ASSERT_HEAVY(size_ == 0 || ptr_ != nullptr, size_);
     return ptr_;
   }
   const T* operator()() const {
+    using internal::AllocationStatus;
+    DLAF_ASSERT(status_.load(std::memory_order_acquire) != AllocationStatus::WaitAllocation,
+                "DLAF Internal allocation error");
+    DLAF_ASSERT_HEAVY(size_ == 0 || ptr_ != nullptr, size_);
     return ptr_;
   }
 
@@ -173,18 +171,45 @@ public:
   }
 
 private:
-  void deallocate() {
-    if (allocated_) {
-#ifdef DLAF_WITH_GPU
+  static internal::AllocationStatus initial_allocation_status(SizeType size) noexcept {
+    using internal::AllocationStatus;
+    if (size == 0)
+      return AllocationStatus::Empty;
+    return AllocationStatus::WaitAllocation;
+  }
+
+  void allocate() {
+    using internal::AllocationStatus;
+    std::lock_guard lock(allocation_mutex);
+    if (status_.load(std::memory_order_acquire) == AllocationStatus::WaitAllocation) {
+      std::size_t mem_size = static_cast<std::size_t>(size_) * sizeof(T);
       if (D == Device::CPU) {
-        internal::getUmpireHostAllocator().deallocate(ptr_);
+        ptr_ = static_cast<T*>(internal::getUmpireHostAllocator().allocate(mem_size));
       }
+#ifdef DLAF_WITH_GPU
       else {
-        internal::getUmpireDeviceAllocator().deallocate(ptr_);
+        ptr_ = static_cast<T*>(internal::getUmpireDeviceAllocator().allocate(mem_size));
       }
 #else
+      else {
+        std::cout
+            << "[ERROR] GPU memory was requested but the `DLAF_WITH_CUDA` or `DLAF_WITH_HIP` flags were not passed!";
+        std::terminate();
+      }
+#endif
+      status_.store(AllocationStatus::Allocated, std::memory_order_release);
+    }
+  }
+
+  void deallocate() {
+    using internal::AllocationStatus;
+    if (status_.load(std::memory_order_acquire) == AllocationStatus::Allocated) {
       if (D == Device::CPU) {
         internal::getUmpireHostAllocator().deallocate(ptr_);
+      }
+#ifdef DLAF_WITH_GPU
+      else {
+        internal::getUmpireDeviceAllocator().deallocate(ptr_);
       }
 #endif
     }
@@ -192,7 +217,8 @@ private:
 
   SizeType size_;
   T* ptr_;
-  bool allocated_;
+  std::atomic<internal::AllocationStatus> status_;
+  std::mutex allocation_mutex;
 };
 
 }

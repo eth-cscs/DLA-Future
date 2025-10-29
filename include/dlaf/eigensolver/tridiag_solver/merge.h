@@ -840,7 +840,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
         if (thread_idx == 0) {
           ws_vecs.reserve(nthreads);
           for (std::size_t i = 0; i < nthreads; ++i)
-            ws_vecs.emplace_back(to_sizet(k));
+            ws_vecs.emplace_back(to_sizet(k), memory::AllocateOnDefault{});
         }
 
         barrier_ptr->arrive_and_wait(barrier_busy_wait);
@@ -1406,10 +1406,11 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                    // the workspace with the highest requirement of memory, and reuse them for both steps.
                    const SizeType max_size = std::max(k, m_el_lc);
                    for (std::size_t i = 0; i < nthreads; ++i)
-                     ws_cols.emplace_back(max_size);
-                   ws_cols.emplace_back(m_el_lc);
+                     ws_cols.emplace_back(max_size, memory::AllocateOn::Construction);
+                   ws_cols.emplace_back(m_el_lc, memory::AllocateOn::Construction);
 
-                   ws_row = memory::MemoryView<T, Device::CPU>(n_el_lc);
+                   ws_row =
+                       memory::MemoryView<T, Device::CPU>(n_el_lc, memory::AllocateOn::Construction);
                    std::fill_n(ws_row(), n_el_lc, 0);
                  }
 

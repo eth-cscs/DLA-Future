@@ -76,6 +76,8 @@ const std::vector<TestSizes> sizes_tests({
     {16, 24, {3, 5}, {3, 5}},
 });
 
+constexpr memory::AllocateOnDefault allocate_on_default;
+
 GlobalElementSize global_test_size(const LocalElementSize& size, const Size2D& grid_size) {
   return {size.rows() * grid_size.rows(), size.cols() * grid_size.cols()};
 }
@@ -1043,7 +1045,7 @@ TYPED_TEST(MatrixTest, ConstructorExisting) {
 
       SizeType ld = std::max<SizeType>(1, distribution.localSize().rows());
       ColMajorLayout layout(std::move(distribution), ld);
-      memory::MemoryView<Type, Device::CPU> mem(layout.min_mem_size());
+      memory::MemoryView<Type, Device::CPU> mem(layout.min_mem_size(), allocate_on_default);
 
       Matrix<Type, Device::CPU> mat(layout, mem());
 
@@ -1073,7 +1075,7 @@ TYPED_TEST(MatrixTest, ConstructorExistingConst) {
 
       SizeType ld = std::max<SizeType>(1, distribution.localSize().rows());
       ColMajorLayout layout(std::move(distribution), ld);
-      memory::MemoryView<Type, Device::CPU> mem(layout.min_mem_size());
+      memory::MemoryView<Type, Device::CPU> mem(layout.min_mem_size(), allocate_on_default);
 
       const Type* p = mem();
       Matrix<const Type, Device::CPU> mat(layout, p);
@@ -1634,7 +1636,7 @@ TYPED_TEST(MatrixLocalTest, FromColMajor) {
   for (const auto& test : col_major_sizes_tests) {
     Distribution distribution(test.size, test.tile_size, {1, 1}, {0, 0}, {0, 0});
     ColMajorLayout layout(distribution, test.ld);
-    memory::MemoryView<Type, Device::CPU> mem(layout.min_mem_size());
+    memory::MemoryView<Type, Device::CPU> mem(layout.min_mem_size(), allocate_on_default);
 
     auto mat = create_matrix_from_col_major<Device::CPU>(test.size, test.tile_size, test.ld, mem());
     ASSERT_FALSE(haveConstElements(mat));
@@ -1660,7 +1662,7 @@ TYPED_TEST(MatrixLocalTest, FromColMajorConst) {
   for (const auto& test : col_major_sizes_tests) {
     Distribution distribution(test.size, test.tile_size, {1, 1}, {0, 0}, {0, 0});
     ColMajorLayout layout(distribution, test.ld);
-    memory::MemoryView<Type, Device::CPU> mem(layout.min_mem_size());
+    memory::MemoryView<Type, Device::CPU> mem(layout.min_mem_size(), allocate_on_default);
     const Type* p = mem();
 
     auto mat = create_matrix_from_col_major<Device::CPU>(test.size, test.tile_size, test.ld, p);
@@ -1688,7 +1690,7 @@ TYPED_TEST(MatrixTest, FromColMajor) {
 
         SizeType ld = distribution.localSize().rows() + 3;
         ColMajorLayout layout(distribution, ld);
-        memory::MemoryView<Type, Device::CPU> mem(layout.min_mem_size());
+        memory::MemoryView<Type, Device::CPU> mem(layout.min_mem_size(), allocate_on_default);
 
         auto mat = create_matrix_from_col_major<Device::CPU>(size, test.tile_size, ld, comm_grid, mem());
         ASSERT_FALSE(haveConstElements(mat));
@@ -1714,7 +1716,7 @@ TYPED_TEST(MatrixTest, FromColMajor) {
 
         SizeType ld = distribution.localSize().rows() + 3;
         ColMajorLayout layout(distribution, ld);
-        memory::MemoryView<Type, Device::CPU> mem(layout.min_mem_size());
+        memory::MemoryView<Type, Device::CPU> mem(layout.min_mem_size(), allocate_on_default);
 
         auto mat = create_matrix_from_col_major<Device::CPU>(size, test.tile_size, ld, comm_grid,
                                                              src_rank, mem());
@@ -1750,7 +1752,7 @@ TYPED_TEST(MatrixTest, FromColMajorConst) {
 
         SizeType ld = distribution.localSize().rows() + 3;
         ColMajorLayout layout(distribution, ld);
-        memory::MemoryView<Type, Device::CPU> mem(layout.min_mem_size());
+        memory::MemoryView<Type, Device::CPU> mem(layout.min_mem_size(), allocate_on_default);
         const Type* p = mem();
 
         auto mat = create_matrix_from_col_major<Device::CPU>(size, test.tile_size, ld, comm_grid, p);
@@ -1771,7 +1773,7 @@ TYPED_TEST(MatrixTest, FromColMajorConst) {
 
         SizeType ld = distribution.localSize().rows() + 3;
         ColMajorLayout layout(distribution, ld);
-        memory::MemoryView<Type, Device::CPU> mem(layout.min_mem_size());
+        memory::MemoryView<Type, Device::CPU> mem(layout.min_mem_size(), allocate_on_default);
         const Type* p = mem();
 
         auto mat =

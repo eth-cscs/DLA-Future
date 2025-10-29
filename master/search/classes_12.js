@@ -1,7 +1,7 @@
 var searchData=
 [
-  ['withresultof_0',['WithResultOf',['../classdlaf_1_1internal_1_1_with_result_of.html',1,'dlaf::internal']]],
-  ['workspace_1',['WorkSpace',['../structdlaf_1_1eigensolver_1_1internal_1_1_work_space.html',1,'dlaf::eigensolver::internal']]],
-  ['workspacehost_2',['WorkSpaceHost',['../structdlaf_1_1eigensolver_1_1internal_1_1_work_space_host.html',1,'dlaf::eigensolver::internal']]],
-  ['workspacehostmirror_3',['WorkSpaceHostMirror',['../structdlaf_1_1eigensolver_1_1internal_1_1_work_space_host_mirror.html',1,'dlaf::eigensolver::internal']]]
+  ['vaccesshelper_0',['VAccessHelper',['../structdlaf_1_1eigensolver_1_1internal_1_1_v_access_helper.html',1,'dlaf::eigensolver::internal']]],
+  ['vector_1',['vector',['../structdlaf_1_1common_1_1internal_1_1vector.html',1,'dlaf::common::internal']]],
+  ['vector_3c_20readonlysendertype_20_3e_2',['vector&lt; ReadOnlySenderType &gt;',['../structdlaf_1_1common_1_1internal_1_1vector.html',1,'dlaf::common::internal']]],
+  ['view_3',['View',['../structdlaf_1_1matrix_1_1internal_1_1_view.html',1,'dlaf::matrix::internal']]]
 ];

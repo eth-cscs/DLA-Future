@@ -111,6 +111,9 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>debug_dump_triangular
 <tr class="memitem:ab4d07707175a19d47e989e21c9ba97ab" id="r_ab4d07707175a19d47e989e21c9ba97ab"><td class="memItemLeft" align="right" valign="top"><a id="ab4d07707175a19d47e989e21c9ba97ab" name="ab4d07707175a19d47e989e21c9ba97ab"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>debug_dump_tridiag_solver_data</b> = false</td></tr>
 <tr class="separator:ab4d07707175a19d47e989e21c9ba97ab"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5ed3c63ed3425f9eb206e79594690b46" id="r_a5ed3c63ed3425f9eb206e79594690b46"><td class="memItemLeft" align="right" valign="top"><a id="a5ed3c63ed3425f9eb206e79594690b46" name="a5ed3c63ed3425f9eb206e79594690b46"></a>
+matrix::AllocationLayout&#160;</td><td class="memItemRight" valign="bottom"><b>default_allocation_layout</b> = matrix::AllocationLayout::ColMajor</td></tr>
+<tr class="separator:a5ed3c63ed3425f9eb206e79594690b46"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a633665fcd5d9a9397017509b42465fbe" id="r_a633665fcd5d9a9397017509b42465fbe"><td class="memItemLeft" align="right" valign="top"><a id="a633665fcd5d9a9397017509b42465fbe" name="a633665fcd5d9a9397017509b42465fbe"></a>
 std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>tfactor_num_threads</b> = 1</td></tr>
 <tr class="separator:a633665fcd5d9a9397017509b42465fbe"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -157,6 +160,7 @@ std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>communicator_g
 <li>debug_dump_inverse_from_cholesky_factor_data: Enable dump of triangular inverse input/output data to "inverse-from-cholesky-factor-&lt;T&gt;-&lt;id&gt;.h5" file that will be created in the working folder (it should not exist before the execution). Set with environment variable DLAF_DEBUG_DUMP_INVERSE_FROM_CHOLESKY_FACTOR_DATA.</li>
 <li>debug_dump_triangular_inverse_data: Enable dump of inverse from cholesky factor input/output data to "triangular-inverse-&lt;T&gt;-&lt;id&gt;.h5" file that will be created in the working folder (it should not exist before the execution). Set with environment variable DLAF_DEBUG_DUMP_TRIANGULAR_INVERSE_DATA.</li>
 <li>debug_dump_tridiag_solver_data: Enable dump of tridiagonal solver input/output data to "tridiagonal.h5" file that will be created in the working folder (it should not exist before the execution). Set with environment variable DLAF_DEBUG_DUMP_TRIDIAG_SOLVER_DATA.</li>
+<li>default_allocation_layout: Specify the default AllocationLayout for Matrices. Allowed values: ColMajor (default), Blocks, Tiles. Set with environment variable DLAF_DEFAULT_ALLOCATION_LAYOUT.</li>
 <li>tfactor_num_threads: The maximum number of threads to use for computing tfactor (e.g. which is used for instance in red2band and its backtransformation). Set with &ndash;dlaf:tfactor-num-threads or env variable DLAF_TFACTOR_NUM_THREADS.</li>
 <li>tfactor_num_streams: The maximum number of streams to use for computing tfactor (e.g. which is used for instance in red2band and its backtransformation). Set with &ndash;dlaf:tfactor-num-streams or env variable DLAF_TFACTOR_NUM_STREAMS.</li>
 <li>tfactor_barrier_busy_wait_us: The duration in microseconds to busy-wait in barriers in the tfactor algorithm. Set with &ndash;dlaf:tfactor-barrier-busy-wait-us or env variable DLAF_TFACTOR_BARRIER_BUSY_WAIT_US.</li>

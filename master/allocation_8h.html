@@ -74,34 +74,46 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="summary">
-<a href="#typedef-members">Typedefs</a> &#124;
-<a href="#enum-members">Enumerations</a>  </div>
+<a href="#nested-classes">Classes</a> &#124;
+<a href="#define-members">Macros</a>  </div>
   <div class="headertitle"><div class="title">allocation.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><code>#include &lt;variant&gt;</code><br />
+<code>#include &lt;<a class="el" href="allocation__types_8h_source.html">dlaf/matrix/allocation_types.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="tune_8h_source.html">dlaf/tune.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="types_8h_source.html">dlaf/types.h</a>&gt;</code><br />
 </div>
 <p><a href="allocation_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
-Typedefs</h2></td></tr>
-<tr class="memitem:a17017fd0c04757589d2022c80bbeead8" id="r_a17017fd0c04757589d2022c80bbeead8"><td class="memItemLeft" align="right" valign="top"><a id="a17017fd0c04757589d2022c80bbeead8" name="a17017fd0c04757589d2022c80bbeead8"></a>
-<a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">using</a>&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::matrix::LdSpec</b> = std::variant&lt; Ld, SizeType &gt;</td></tr>
-<tr class="separator:a17017fd0c04757589d2022c80bbeead8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
+Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1_allocation_spec.html">dlaf::matrix::AllocationSpec</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Manages the specs for matrix allocation.  <a href="classdlaf_1_1matrix_1_1_allocation_spec.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
-Enumerations</h2></td></tr>
-<tr class="memitem:a8dbdbfa0a9faba2a03ab5041efc44ab7" id="r_a8dbdbfa0a9faba2a03ab5041efc44ab7"><td class="memItemLeft" align="right" valign="top"><a id="a8dbdbfa0a9faba2a03ab5041efc44ab7" name="a8dbdbfa0a9faba2a03ab5041efc44ab7"></a>enum class &#160;</td><td class="memItemRight" valign="bottom"><b>MatrixAllocation</b> { <b>ColMajor</b>
-, <b>Blocks</b>
-, <b>Tiles</b>
- }</td></tr>
-<tr class="separator:a8dbdbfa0a9faba2a03ab5041efc44ab7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afac01eb6c131705719e497d09f63cbe5" id="r_afac01eb6c131705719e497d09f63cbe5"><td class="memItemLeft" align="right" valign="top"><a id="afac01eb6c131705719e497d09f63cbe5" name="afac01eb6c131705719e497d09f63cbe5"></a>enum class &#160;</td><td class="memItemRight" valign="bottom"><b>Ld</b> { <b>Compact</b>
-, <b>Padded</b>
- }</td></tr>
-<tr class="separator:afac01eb6c131705719e497d09f63cbe5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
+Macros</h2></td></tr>
+<tr class="memitem:ad98924d44617765432a85c1c3eb12ce5" id="r_ad98924d44617765432a85c1c3eb12ce5"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="allocation_8h.html#ad98924d44617765432a85c1c3eb12ce5">MATRIXALLOCATIONSPEC_ASSERT_MESSAGE</a></td></tr>
+<tr class="separator:ad98924d44617765432a85c1c3eb12ce5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
+<h2 class="groupheader">Macro Definition Documentation</h2>
+<a id="ad98924d44617765432a85c1c3eb12ce5" name="ad98924d44617765432a85c1c3eb12ce5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad98924d44617765432a85c1c3eb12ce5">&#9670;&#160;</a></span>MATRIXALLOCATIONSPEC_ASSERT_MESSAGE</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define MATRIXALLOCATIONSPEC_ASSERT_MESSAGE</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Value:</b><div class="fragment"><div class="line">  <span class="stringliteral">&quot;Constructor signature is AllocationSpec(AllocationLayoutType, LdType);\n&quot;</span> \</div>
+<div class="line">  <span class="stringliteral">&quot;All parameters are optional, but order is enforced.&quot;</span></div>
+</div><!-- fragment -->
+</div>
+</div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

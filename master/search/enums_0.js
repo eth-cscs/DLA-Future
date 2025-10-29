@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['ordering_0',['Ordering',['../index2d_8h.html#a02419996f0ffc187079c310f0175ce76',1,'dlaf::common']]]
+  ['ld_0',['Ld',['../allocation__types_8h.html#afac01eb6c131705719e497d09f63cbe5',1,'dlaf::matrix']]]
 ];

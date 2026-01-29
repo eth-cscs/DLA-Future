@@ -24,17 +24,58 @@ namespace dlaf::comm {
 /// is enabled. If GPU-aware MPI is disabled, the value will always be
 /// Device::CPU.
 template <Device D>
-struct CommunicationDevice {
+struct CommunicationDeviceP2P {
+  static constexpr Device value = D;
+};
+
+template <Device D>
+struct CommunicationDeviceBroadcast {
+  static constexpr Device value = D;
+};
+
+template <Device D>
+struct CommunicationDeviceReduce {
+  static constexpr Device value = D;
+};
+
+template <Device D>
+struct CommunicationDeviceAllReduce {
   static constexpr Device value = D;
 };
 
 #if defined(DLAF_WITH_GPU) && !defined(DLAF_WITH_MPI_GPU_AWARE)
 template <>
-struct CommunicationDevice<Device::GPU> {
+struct CommunicationDeviceP2P<Device::GPU> {
+  static constexpr Device value = Device::CPU;
+};
+
+template <>
+struct CommunicationDeviceBroadcast<Device::GPU> {
+  static constexpr Device value = Device::CPU;
+};
+#endif
+
+#if defined(DLAF_WITH_GPU) && (!defined(DLAF_WITH_MPI_GPU_AWARE) || defined(DLAF_WITH_MPI_GPU_AWARE_NO_REDUCE_OPS)
+template <>
+struct CommunicationDeviceReduce<Device::GPU> {
+  static constexpr Device value = Device::CPU;
+};
+
+template <>
+struct CommunicationDeviceAllReduce<Device::GPU> {
   static constexpr Device value = Device::CPU;
 };
 #endif
 
 template <Device D>
-inline constexpr auto CommunicationDevice_v = CommunicationDevice<D>::value;
+inline constexpr auto CommunicationDeviceP2P_v = CommunicationDeviceP2P<D>::value;
+
+template <Device D>
+inline constexpr auto CommunicationDeviceBroadcast_v = CommunicationDeviceBroadcast<D>::value;
+
+template <Device D>
+inline constexpr auto CommunicationDeviceReduce_v = CommunicationDeviceReduce<D>::value;
+
+template <Device D>
+inline constexpr auto CommunicationDeviceAllReduce_v = CommunicationDeviceAllReduce<D>::value;
 }

@@ -34,7 +34,7 @@ namespace dlaf::comm::internal {
 template <class T, Device DIn, Device DOut>
 auto allReduce(const Communicator& comm, MPI_Op reduce_op, const matrix::Tile<const T, DIn>& tile_in,
                const matrix::Tile<T, DOut>& tile_out, MPI_Request* req) {
-#if !defined(DLAF_WITH_MPI_GPU_AWARE)
+#if !defined(DLAF_WITH_MPI_GPU_AWARE) || defined(DLAF_WITH_MPI_GPU_AWARE_NO_REDUCE_OPS)
   static_assert(DIn == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
   static_assert(DOut == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
 #endif
@@ -54,7 +54,6 @@ template <Device DCommIn, Device DCommOut, class T, Device DIn, Device DOut>
     pika::execution::experimental::unique_any_sender<CommunicatorPipelineExclusiveWrapper> pcomm,
     MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender<T, DIn> tile_in,
     dlaf::matrix::ReadWriteTileSender<T, DOut> tile_out) {
-  using dlaf::comm::CommunicationDevice_v;
   using dlaf::comm::internal::allReduce_o;
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::CopyFromDestination;
@@ -86,7 +85,7 @@ template <Device DCommIn, Device DCommOut, class T, Device DIn, Device DOut>
                           RequireContiguous::Yes>(std::move(tile_in), std::move(all_reduce)));
   };
 
-#if !defined(DLAF_WITH_MPI_GPU_AWARE)
+#if !defined(DLAF_WITH_MPI_GPU_AWARE) || defined(DLAF_WITH_MPI_GPU_AWARE_NO_REDUCE_OPS)
   static_assert(DCommIn == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
   static_assert(DCommOut == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
 #endif
@@ -103,7 +102,7 @@ template <Device DCommIn, Device DCommOut, class T, Device DIn, Device DOut>
 template <class T, Device D>
 auto allReduceInPlace(const Communicator& comm, MPI_Op reduce_op, const matrix::Tile<T, D>& tile,
                       MPI_Request* req) {
-#if !defined(DLAF_WITH_MPI_GPU_AWARE)
+#if !defined(DLAF_WITH_MPI_GPU_AWARE) || defined(DLAF_WITH_MPI_GPU_AWARE_NO_REDUCE_OPS)
   static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
 #endif
   DLAF_ASSERT(tile.is_contiguous(), "");
@@ -119,7 +118,6 @@ template <Device DComm, class T, Device D>
 [[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> schedule_all_reduce_in_place(
     pika::execution::experimental::unique_any_sender<CommunicatorPipelineExclusiveWrapper> pcomm,
     MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender<T, D> tile) {
-  using dlaf::comm::CommunicationDevice_v;
   using dlaf::comm::internal::allReduceInPlace_o;
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::CopyFromDestination;
@@ -140,7 +138,7 @@ template <Device DComm, class T, Device D>
 #pragma GCC diagnostic pop
 #endif
 
-#if !defined(DLAF_WITH_MPI_GPU_AWARE)
+#if !defined(DLAF_WITH_MPI_GPU_AWARE) || defined(DLAF_WITH_MPI_GPU_AWARE_NO_REDUCE_OPS)
   static_assert(DComm == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
 #endif
 

@@ -55,7 +55,8 @@ struct CommunicationDeviceBroadcast<Device::GPU> {
 };
 #endif
 
-#if defined(DLAF_WITH_GPU) && (!defined(DLAF_WITH_MPI_GPU_AWARE) || defined(DLAF_WITH_MPI_GPU_AWARE_NO_REDUCE_OPS)
+#if defined(DLAF_WITH_GPU) && \
+    (!defined(DLAF_WITH_MPI_GPU_AWARE) || defined(DLAF_WITH_MPI_GPU_AWARE_NO_REDUCE_OPS))
 template <>
 struct CommunicationDeviceReduce<Device::GPU> {
   static constexpr Device value = Device::CPU;

@@ -75,13 +75,13 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         variant("mpi_gpu_aware", default="no", values=("no", "all", "no_reduce_ops"), description="Use GPU-aware MPI.")
         requires("mpi_gpu_aware=no", when="~cuda ~rocm", msg="GPU-aware MPI requires +cuda or +rocm")
         conflicts("mpi_gpu_aware=all", when="^[virtuals=mpi] openmpi", msg="Not supported by OPENMPI")
+
         variant(
             "mpi_gpu_force_contiguous",
             default=True,
-            when="mpi_gpu_aware=all",
-            when="mpi_gpu_aware=no_reduce_ops",
             description="Force GPU communication buffers to be contiguous before communicating.",
         )
+        conflicts("mpi_gpu_force_contiguous", when="mpi_gpu_aware=no", msg="Option available only if mpi_gpu_aware is enabled")
 
     generator("ninja")
 

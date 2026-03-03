@@ -19,8 +19,7 @@
 
 const char* pika_argv[] = {
     "@test_target_name@",
-    "@PIKA_EXTRA_ARGS_LIST_CAPI@",
-    "--pika:print-bind",
+    "@PIKA_EXTRA_ARGS_LIST_CAPI@"
 };
 const char* dlaf_argv[] = {"@test_target_name@"};
 

@@ -278,10 +278,10 @@ function(DLAF_addTargetTest test_target_name)
       _set_element_to_fallback_value(
         _PIKA_EXTRA_ARGS_LIST_CAPI "--pika:threads" "--pika:threads=${_DLAF_PIKA_THREADS}"
       )
-
-      if(DLAF_CI_RUNNER_USES_MPIRUN)
-        list(APPEND _PIKA_EXTRA_ARGS_LIST_CAPI "--pika:print-bind")
-      endif()
+    endif()
+      
+    if(DLAF_CI_RUNNER_USES_MPIRUN)
+      list(APPEND _PIKA_EXTRA_ARGS_LIST_CAPI "--pika:print-bind")
     endif()
 
     string(REPLACE ";" "\", \"" PIKA_EXTRA_ARGS_LIST_CAPI "${_PIKA_EXTRA_ARGS_LIST_CAPI}")

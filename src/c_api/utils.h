@@ -22,3 +22,12 @@ dlaf::matrix::ColMajorLayout make_layout(const struct DLAF_descriptor dlaf_desc,
 dlaf::common::Ordering char2order(const char order);
 
 dlaf::comm::CommunicatorGrid& grid_from_context(int dlaf_context);
+
+struct PikaRunningScope{
+    PikaRunningScope() {
+        pika::resume();
+    }
+    ~PikaRunningScope() {
+        pika::suspend();
+    }
+};

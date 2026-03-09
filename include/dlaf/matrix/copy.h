@@ -145,7 +145,7 @@ void copy(Matrix<const T, Source>& src, Matrix<T, Destination>& dst, comm::Commu
   DLAF_ASSERT_MODERATE(equal_process_grid(dst, grid), dst.commGridSize(), grid.size());
 
   DLAF_ASSERT_MODERATE(single_tile_per_block(src), src);
-  DLAF_ASSERT_MODERATE(single_tile_per_block(src), dst);
+  DLAF_ASSERT_MODERATE(single_tile_per_block(dst), dst);
 
   // Note:
   // From an algorithmic point of view it would be better to reason in terms of block instead of tiles,

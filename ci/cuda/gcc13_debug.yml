@@ -30,7 +30,6 @@ cuda gcc13 debug build:
 cuda gcc13 debug test:
   extends: .run_common
   variables:
-    DLAF_CI_BIND_GPU: "ALPS-GH200"
     PIKA_MPI_ENABLE_POOL: 1
     PIKA_MPI_COMPLETION_MODE: 30
     MPICH_GPU_SUPPORT_ENABLED: 0

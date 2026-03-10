@@ -515,7 +515,9 @@ TEST(SubPipeline, TaskParentAccess) {
   // The last parent access should not complete until the sub pipeline has been reset.
   EXPECT_FALSE(last_parent_access_done);
   auto sub_pipeline_from_sender = tt::sync_wait(std::move(spawn_sub_pipeline));
-  { [[maybe_unused]] auto wrapper = tt::sync_wait(sub_pipeline_from_sender.readwrite()); }
+  {
+    [[maybe_unused]] auto wrapper = tt::sync_wait(sub_pipeline_from_sender.readwrite());
+  }
   EXPECT_TRUE(first_parent_access_done);
   EXPECT_TRUE(first_access_done);
   EXPECT_TRUE(second_access_done);

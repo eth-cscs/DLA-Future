@@ -23,11 +23,17 @@ dlaf::common::Ordering char2order(const char order);
 
 dlaf::comm::CommunicatorGrid& grid_from_context(int dlaf_context);
 
-struct PikaRunningScope {
+struct [[nodiscard]] PikaRunningScope {
   PikaRunningScope() {
     pika::resume();
   }
+
   ~PikaRunningScope() {
     pika::suspend();
   }
+
+  PikaRunningScope(const PikaRunningScope&) = delete;
+  PikaRunningScope& operator=(const PikaRunningScope&) = delete;
+  PikaRunningScope(PikaRunningScope&&) = delete;
+  PikaRunningScope& operator=(PikaRunningScope&&) = delete;
 };

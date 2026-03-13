@@ -61,15 +61,27 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         description="Build C API compatible with ScaLAPACK",
     )
 
-    variant("mpi_gpu_aware", default=False, when="@0.5.0:", description="Use GPU-aware MPI.")
-    conflicts("+mpi_gpu_aware", when="~cuda ~rocm", msg="GPU-aware MPI requires +cuda or +rocm")
+    with when("@0.5:0.10"):
+        variant("mpi_gpu_aware", default=False, description="Use GPU-aware MPI.")
+        conflicts("+mpi_gpu_aware", when="~cuda ~rocm", msg="GPU-aware MPI requires +cuda or +rocm")
+        variant(
+            "mpi_gpu_force_contiguous",
+            default=True,
+            when="+mpi_gpu_aware",
+            description="Force GPU communication buffers to be contiguous before communicating.",
+        )
 
-    variant(
-        "mpi_gpu_force_contiguous",
-        default=True,
-        when="@0.5.0: +mpi_gpu_aware",
-        description="Force GPU communication buffers to be contiguous before communicating.",
-    )
+    with when("@0.11:"):
+        variant("mpi_gpu_aware", default="no", values=("no", "all", "no_reduce_ops"), description="Use GPU-aware MPI.")
+        requires("mpi_gpu_aware=no", when="~cuda ~rocm", msg="GPU-aware MPI requires +cuda or +rocm")
+        conflicts("mpi_gpu_aware=all", when="^[virtuals=mpi] openmpi", msg="Not supported by OPENMPI")
+
+        variant(
+            "mpi_gpu_force_contiguous",
+            default=True,
+            description="Force GPU communication buffers to be contiguous before communicating.",
+        )
+        conflicts("mpi_gpu_force_contiguous", when="mpi_gpu_aware=no", msg="Option available only if mpi_gpu_aware is enabled")
 
     generator("ninja")
 
@@ -273,7 +285,15 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
         args.append(self.define_from_variant("DLAF_WITH_SCALAPACK", "scalapack"))
 
-        args.append(self.define_from_variant("DLAF_WITH_MPI_GPU_AWARE", "mpi_gpu_aware"))
+        with when("@0.5:0.10"):
+            args.append(self.define_from_variant("DLAF_WITH_MPI_GPU_AWARE", "mpi_gpu_aware"))
+        with when("@0.11:"):
+            if spec.satisfies("mpi_gpu_aware=all"):
+                args.append(self.define("DLAF_WITH_MPI_GPU_AWARE", True))
+            if spec.satisfies("mpi_gpu_aware=no_reduce_ops"):
+                args.append(self.define("DLAF_WITH_MPI_GPU_AWARE", True))
+                args.append(self.define("DLAF_WITH_MPI_GPU_AWARE_NO_REDUCE_OPS", True))
+
         args.append(
             self.define_from_variant(
                 "DLAF_WITH_MPI_GPU_FORCE_CONTIGUOUS", "mpi_gpu_force_contiguous"

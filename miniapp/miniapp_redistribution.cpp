@@ -180,7 +180,7 @@ int main(int argc, char** argv) {
   desc_commandline.add_options()
     ("matrix-size",     value<SizeType>() ->default_value(4096), "Matrix size")
     ("block-size",      value<SizeType>() ->default_value(  64), "Source block cyclic distribution size")
-    ("block-size-dst",  value<SizeType>() ->default_value( 512), "Destination block cyclic distribution size")
+    ("block-size-dst",  value<SizeType>() ->default_value(1024), "Destination block cyclic distribution size")
   ;
   // clang-format on
 

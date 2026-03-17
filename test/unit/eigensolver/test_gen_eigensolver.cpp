@@ -225,7 +225,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
   if (mat_a_h.size().isEmpty() || eval_idx_end == 0)
     return;
 
-  testGenEigensolverCorrectness(uplo, reference_a, reference_b, ret, 0l, eval_idx_end, grid...);
+  testGenEigensolverCorrectness(uplo, reference_a, reference_b, mat_b_h, ret, 0l, eval_idx_end, grid...);
 }
 
 TYPED_TEST(GenEigensolverTestMC, CorrectnessLocal) {

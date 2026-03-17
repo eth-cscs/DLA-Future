@@ -34,6 +34,7 @@ namespace dlaf::test {
 template <class T, Device D, class... GridIfDistributed>
 void testGenEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::CPU>& reference_a,
                                    Matrix<const T, Device::CPU>& reference_b,
+                                   Matrix<const T, Device::CPU>& mat_b,
                                    dlaf::EigensolverResult<T, D>& ret, SizeType eval_index_begin,
                                    SizeType eval_index_end, GridIfDistributed&... grid) {
   using dlaf::matrix::MatrixMirror;
@@ -111,6 +112,35 @@ void testGenEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device
 
   // Check A E == Lambda E
   CHECK_MATRIX_NEAR(mat_be_local, workspace2, m * TypeUtilities<T>::error, m * TypeUtilities<T>::error);
+
+  // Check that mat_b is a Cholesky factorization of reference_b (i.e. B == L L^H or B == U^H U)
+  DLAF_ASSERT(mat_b.size().rows() == mat_b.size().cols(), mat_b.size());
+  DLAF_ASSERT(reference_b.size().rows() == reference_b.size().cols(), mat_b.size());
+
+  auto mat_c_local = allGather<T>(uplo, mat_b, grid...);
+
+  // Zero out the non-triangular part
+  for (SizeType j = 0; j < m; ++j) {
+    if (uplo == blas::Uplo::Lower) {
+      for (SizeType i = 0; i < j; ++i)
+        mat_c_local({i, j}) = T{0};
+    }
+    else {
+      for (SizeType i = j + 1; i < m; ++i)
+        mat_c_local({i, j}) = T{0};
+    }
+  }
+
+  // Compute L * L^H (Lower) or U^H * U (Upper)
+  const blas::Op op_a = (uplo == blas::Uplo::Lower) ? blas::Op::NoTrans : blas::Op::ConjTrans;
+  const blas::Op op_b = (uplo == blas::Uplo::Lower) ? blas::Op::ConjTrans : blas::Op::NoTrans;
+
+  MatrixLocal<T> b_check({m, m}, reference_a.blockSize());
+  blas::gemm(blas::Layout::ColMajor, op_a, op_b, m, m, m, T{1}, mat_c_local.ptr(), mat_c_local.ld(),
+             mat_c_local.ptr(), mat_c_local.ld(), T{0}, b_check.ptr(), b_check.ld());
+
+  // Check B == L L^H or B == U^H U
+  CHECK_MATRIX_NEAR(mat_b_local, b_check, m * TypeUtilities<T>::error, m * TypeUtilities<T>::error);
 }
 
 }

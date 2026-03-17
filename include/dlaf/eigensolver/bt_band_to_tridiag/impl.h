@@ -628,9 +628,9 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, MatrixRef<T,
   const SizeType nsweeps = nrSweeps<T>(mat_hh.size().cols());
 
   const LocalTileSize tiles_per_block_hh(mat_hh.blockSize().rows() / b, mat_hh.blockSize().cols() / b);
-  Matrix<const T, Device::CPU> mat_hh_rt = mat_hh.retiledSubPipelineConst(tiles_per_block_hh);
+  Matrix<const T, Device::CPU> mat_hh_rt = mat_hh.retiled_sub_pipeline_const(tiles_per_block_hh);
   const LocalTileSize tiles_per_block_e(mat_e.blockSize().rows() / b, 1);
-  Matrix<T, D> mat_e_rt = mat_e.retiledSubPipeline(tiles_per_block_e);
+  Matrix<T, D> mat_e_rt = mat_e.retiled_sub_pipeline(tiles_per_block_e);
 
   const auto& dist_hh_rt = mat_hh_rt.distribution();
   const auto& dist_e_rt = mat_e_rt.distribution();

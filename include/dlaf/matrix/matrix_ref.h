@@ -80,9 +80,14 @@ public:
   /// @pre blockSize() is divisible by @p tiles_per_block
   /// @pre blockSize() == tile_size()
   /// @pre the origin of the reference matrix is at the top-left corner of the original matrix
-  Matrix<const T, D> retiledSubPipelineConst(const LocalTileSize& tiles_per_block) {
+  Matrix<const T, D> retiled_sub_pipeline_const(const LocalTileSize& tiles_per_block) {
     DLAF_ASSERT(origin_.row() == 0 && origin_.col() == 0, origin_);
     return Matrix<const T, D>(*this, tiles_per_block);
+  }
+
+  DLAF_MATRIX_DEPRECATED("method has been renamed in snake case")
+  Matrix<const T, D> retiledSubPipelineConst(const LocalTileSize& tiles_per_block) {
+    return retiled_sub_pipeline_const(tiles_per_block);
   }
 
   /// Returns a read-only sender of the Tile with local index @p index.

@@ -131,7 +131,7 @@ TYPED_TEST(RetiledMatrixLocalTest, LocalConstructor) {
         set(mat, el1);
 
         {
-          Matrix<const Type, Device::CPU> rt_mat = mat.retiledSubPipelineConst(tiles_per_block);
+          Matrix<const Type, Device::CPU> rt_mat = mat.retiled_sub_pipeline_const(tiles_per_block);
           EXPECT_EQ(expected_distribution, rt_mat.distribution());
           CHECK_MATRIX_EQ(el1, rt_mat);
           EXPECT_TRUE(is_allocated_as(rt_mat, exp_alloc));
@@ -139,13 +139,13 @@ TYPED_TEST(RetiledMatrixLocalTest, LocalConstructor) {
         CHECK_MATRIX_EQ(el1, mat);
       }
 
-      // Const retiled matrix from const matrix
+,      // Const retiled matrix from const matrix
       {
         set(mat, el1);
         Matrix<const Type, Device::CPU>& mat_const = mat;
 
         {
-          Matrix<const Type, Device::CPU> rt_mat = mat_const.retiledSubPipelineConst(tiles_per_block);
+          Matrix<const Type, Device::CPU> rt_mat = mat_const.retiled_sub_pipeline_const(tiles_per_block);
           EXPECT_EQ(expected_distribution, rt_mat.distribution());
           CHECK_MATRIX_EQ(el1, rt_mat);
           EXPECT_TRUE(is_allocated_as(rt_mat, exp_alloc));
@@ -207,7 +207,7 @@ TYPED_TEST(RetiledMatrixTest, GlobalConstructor) {
           set(mat, el1);
 
           {
-            Matrix<const Type, Device::CPU> rt_mat = mat.retiledSubPipelineConst(tiles_per_block);
+            Matrix<const Type, Device::CPU> rt_mat = mat.retiled_sub_pipeline_const(tiles_per_block);
             EXPECT_EQ(expected_distribution, rt_mat.distribution());
             CHECK_MATRIX_EQ(el1, rt_mat);
             EXPECT_TRUE(is_allocated_as(rt_mat, exp_alloc));
@@ -221,7 +221,7 @@ TYPED_TEST(RetiledMatrixTest, GlobalConstructor) {
           Matrix<const Type, Device::CPU>& mat_const = mat;
 
           {
-            Matrix<const Type, Device::CPU> rt_mat = mat_const.retiledSubPipelineConst(tiles_per_block);
+            Matrix<const Type, Device::CPU> rt_mat = mat_const.retiled_sub_pipeline_const(tiles_per_block);
             EXPECT_EQ(expected_distribution, rt_mat.distribution());
             CHECK_MATRIX_EQ(el1, rt_mat);
             EXPECT_TRUE(is_allocated_as(rt_mat, exp_alloc));

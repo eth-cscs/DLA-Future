@@ -1037,7 +1037,8 @@ void multiplyEigenvectors(const SizeType sub_offset, const SizeType n, const Siz
       ex::when_all(std::forward<KSender>(k), std::forward<UDLSenders>(n_udl)) |
       ex::continues_on(dlaf::internal::getBackendScheduler<Backend::MC>(thread_priority::high)) |
       ex::then([sub_offset, n, n_upper, n_lower, e0 = e0.sub_pipeline(), e1 = e1.sub_pipeline_const(),
-                e2 = e2.sub_pipeline_const()](const SizeType k, std::array<std::size_t, 3> n_udl) mutable {
+                e2 = e2.sub_pipeline_const()](const SizeType k,
+                                              std::array<std::size_t, 3> n_udl) mutable {
         using dlaf::matrix::internal::MatrixRef;
 
         const SizeType n_uh = to_SizeType(n_udl[ev_sort_order(ColType::UpperHalf)]);

@@ -169,14 +169,14 @@ void testSubMatrix(const SubMatrixCopyConfig& test, const matrix::Distribution& 
   Matrix<T, Device::CPU> mat_in(dist_in, compact_tiles);
   Matrix<T, Device::CPU> mat_out(dist_out, compact_tiles);
 
-  // Note: currently `subPipeline`-ing does not support sub-matrices
+  // Note: currently `sub_pipeline`-ing does not support sub-matrices
   if (isFullMatrix(dist_in, test.sub_in())) {
     set(mat_in, inputValues<T>);
     set(mat_out, outputValues<T>);
 
     {
-      Matrix<const T, Device::CPU> mat_sub_src_const = mat_in.subPipelineConst();
-      Matrix<T, Device::CPU> mat_sub_dst = mat_out.subPipeline();
+      Matrix<const T, Device::CPU> mat_sub_src_const = mat_in.sub_pipeline_const();
+      Matrix<T, Device::CPU> mat_sub_dst = mat_out.sub_pipeline();
 
       copy(mat_sub_src_const, mat_sub_dst);
     }
@@ -240,16 +240,16 @@ void testSubMatrixOnGPU(const SubMatrixCopyConfig& test, const matrix::Distribut
   Matrix<T, Device::GPU> mat_in_gpu(dist_in, compact_tiles);
   Matrix<T, Device::GPU> mat_out_gpu(dist_out, compact_tiles);
 
-  // Note: currently `subPipeline`-ing does not support sub-matrices
+  // Note: currently `sub_pipeline`-ing does not support sub-matrices
   if (isFullMatrix(dist_in, test.sub_in())) {
     set(mat_in, inputValues<T>);
     set(mat_out, outputValues<T>);
 
     {
-      Matrix<const T, Device::CPU> mat_sub_src_const = mat_in.subPipelineConst();
-      Matrix<T, Device::GPU> mat_sub_gpu1 = mat_in_gpu.subPipeline();
-      Matrix<T, Device::GPU> mat_sub_gpu2 = mat_out_gpu.subPipeline();
-      Matrix<T, Device::CPU> mat_sub_dst = mat_out.subPipeline();
+      Matrix<const T, Device::CPU> mat_sub_src_const = mat_in.sub_pipeline_const();
+      Matrix<T, Device::GPU> mat_sub_gpu1 = mat_in_gpu.sub_pipeline();
+      Matrix<T, Device::GPU> mat_sub_gpu2 = mat_out_gpu.sub_pipeline();
+      Matrix<T, Device::CPU> mat_sub_dst = mat_out.sub_pipeline();
 
       copy(mat_sub_src_const, mat_sub_gpu1);
       copy(mat_sub_gpu1, mat_sub_gpu2);

@@ -956,11 +956,11 @@ TYPED_TEST(MatrixTest, LocalGlobalAccessOperatorCall) {
             EXPECT_EQ(ptr_global, ptr_local);
 
             const TypeParam* ptr_sub_global = [&]() {
-              auto mat_sub = mat.subPipeline();
+              auto mat_sub = mat.sub_pipeline();
               return tt::sync_wait(mat_sub.readwrite(global_index)).ptr(TileElementIndex{0, 0});
             }();
             const TypeParam* ptr_sub_local = [&]() {
-              auto mat_sub = mat.subPipeline();
+              auto mat_sub = mat.sub_pipeline();
               return tt::sync_wait(mat_sub.readwrite(local_index)).ptr(TileElementIndex{0, 0});
             }();
 
@@ -1003,11 +1003,11 @@ TYPED_TEST(MatrixTest, LocalGlobalAccessRead) {
             EXPECT_EQ(ptr_global, ptr_local);
 
             const TypeParam* ptr_sub_global = [&]() {
-              auto mat_sub = mat.subPipeline();
+              auto mat_sub = mat.sub_pipeline();
               return tt::sync_wait(mat_sub.read(global_index)).get().ptr(TileElementIndex{0, 0});
             }();
             const TypeParam* ptr_sub_local = [&]() {
-              auto mat_sub = mat.subPipeline();
+              auto mat_sub = mat.sub_pipeline();
               return tt::sync_wait(mat_sub.read(local_index)).get().ptr(TileElementIndex{0, 0});
             }();
 
@@ -1050,7 +1050,7 @@ TYPED_TEST(MatrixTest, ConstructorExisting) {
       CHECK_LAYOUT(mem(), layout, mat);
 
       {
-        auto mat_sub = mat.subPipeline();
+        auto mat_sub = mat.sub_pipeline();
         CHECK_LAYOUT(mem(), layout, mat_sub);
       }
 
@@ -1162,7 +1162,7 @@ TYPED_TEST(MatrixTest, DependenciesSubPipeline) {
       EXPECT_TRUE(checkSendersStep(0, senders1));
 
       auto [rosenders2a, rosenders2b, senders3] = [&]() {
-        auto mat_sub = mat.subPipeline();
+        auto mat_sub = mat.sub_pipeline();
 
         auto rosenders2a = getReadSendersUsingLocalIndex(mat_sub);
         EXPECT_TRUE(checkSendersStep(0, rosenders2a));
@@ -1229,13 +1229,13 @@ TYPED_TEST(MatrixTest, DependenciesSubSubPipeline) {
       EXPECT_TRUE(checkSendersStep(0, senders1));
 
       auto [rosenders2a, rosenders2b, senders3, rosenders4a] = [&]() {
-        auto mat_sub = mat.subPipeline();
+        auto mat_sub = mat.sub_pipeline();
 
         auto rosenders2a = getReadSendersUsingLocalIndex(mat_sub);
         EXPECT_TRUE(checkSendersStep(0, rosenders2a));
 
         auto [rosenders2b, senders3] = [&]() {
-          auto mat_sub_sub = mat_sub.subPipeline();
+          auto mat_sub_sub = mat_sub.sub_pipeline();
 
           auto rosenders2b = getReadSendersUsingGlobalIndex(mat_sub_sub);
           EXPECT_TRUE(checkSendersStep(0, rosenders2b));
@@ -1695,7 +1695,7 @@ TYPED_TEST(MatrixTest, FromColMajor) {
         CHECK_LAYOUT(mem(), layout, mat);
 
         {
-          auto mat_sub = mat.subPipeline();
+          auto mat_sub = mat.sub_pipeline();
           ASSERT_FALSE(haveConstElements(mat_sub));
           CHECK_LAYOUT(mem(), layout, mat_sub);
         }
@@ -1722,7 +1722,7 @@ TYPED_TEST(MatrixTest, FromColMajor) {
         CHECK_LAYOUT(mem(), layout, mat);
 
         {
-          auto mat_sub = mat.subPipeline();
+          auto mat_sub = mat.sub_pipeline();
           ASSERT_FALSE(haveConstElements(mat_sub));
           CHECK_LAYOUT(mem(), layout, mat_sub);
         }
@@ -1909,7 +1909,7 @@ TEST_F(MatrixGenericTest, SelectTilesReadonlySubPipeline) {
 
       Distribution distribution(size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
       MatrixT mat(std::move(distribution), tiles_compact);
-      auto mat_sub = mat.subPipeline();
+      auto mat_sub = mat.sub_pipeline();
 
       // if this rank has no tiles locally, there's nothing interesting to do...
       if (distribution.localNrTiles().isEmpty())
@@ -1998,7 +1998,7 @@ TEST_F(MatrixGenericTest, SelectTilesReadwriteSubPipeline) {
 
       Distribution distribution(size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
       MatrixT mat(std::move(distribution), tiles_compact);
-      auto mat_sub = mat.subPipeline();
+      auto mat_sub = mat.sub_pipeline();
 
       // if this rank has no tiles locally, there's nothing interesting to do...
       if (distribution.localNrTiles().isEmpty())
@@ -2197,7 +2197,7 @@ TEST(MatrixDestructor, NonConstAfterReadSubPipeline) {
   std::atomic<bool> is_exited_from_scope{false};
   {
     auto matrix = create_matrix<T>();
-    auto matrix_sub = matrix.subPipeline();
+    auto matrix_sub = matrix.sub_pipeline();
 
     auto tile_sender = matrix_sub.read(LocalTileIndex(0, 0));
     last_task = std::move(tile_sender) |
@@ -2236,7 +2236,7 @@ TEST(MatrixDestructor, NonConstAfterReadWriteSubPipeline) {
   std::atomic<bool> is_exited_from_scope{false};
   {
     auto matrix = create_matrix<T>();
-    auto matrix_sub = matrix.subPipeline();
+    auto matrix_sub = matrix.sub_pipeline();
 
     auto tile_sender = matrix_sub.readwrite(LocalTileIndex(0, 0));
     last_task = std::move(tile_sender) |
@@ -2256,7 +2256,7 @@ TEST(MatrixDestructor, NonConstAfterReadSubPipeline_UserMemory) {
   {
     T data;
     auto matrix = create_matrix<T>(data);
-    auto matrix_sub = matrix.subPipeline();
+    auto matrix_sub = matrix.sub_pipeline();
 
     auto tile_sender = matrix.read(LocalTileIndex(0, 0));
     last_task = std::move(tile_sender) |

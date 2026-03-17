@@ -139,7 +139,7 @@ TYPED_TEST(RetiledMatrixLocalTest, LocalConstructor) {
         CHECK_MATRIX_EQ(el1, mat);
       }
 
-,      // Const retiled matrix from const matrix
+      // Const retiled matrix from const matrix
       {
         set(mat, el1);
         Matrix<const Type, Device::CPU>& mat_const = mat;

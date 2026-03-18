@@ -47,9 +47,9 @@ var searchData=
   ['stedc_44',['stedc',['../lapack_2tile_8h.html#a68163899b7b15f447fdbb05e475d9cc6',1,'dlaf::tile']]],
   ['stride_45',['stride',['../structdlaf_1_1common_1_1_data_descriptor.html#ab4c4694a381e4cfb44d304cf150743f9',1,'dlaf::common::DataDescriptor']]],
   ['sub_5fpipeline_46',['sub_pipeline',['../classdlaf_1_1common_1_1_pipeline.html#ab38504a2b3ee8ddc12db6ca4a7de689a',1,'dlaf::common::Pipeline::sub_pipeline()'],['../classdlaf_1_1comm_1_1_communicator_pipeline.html#af96e70a8d3f144a445da0132cbdac629',1,'dlaf::comm::CommunicatorPipeline::sub_pipeline()'],['../classdlaf_1_1matrix_1_1_matrix.html#ae826dee7476e24be6c31faa2bb2425c8',1,'dlaf::matrix::Matrix::sub_pipeline()']]],
-  ['submatrixview_47',['SubMatrixView',['../structdlaf_1_1matrix_1_1_sub_matrix_view.html#a7c7cde76a018f82ab23c749de90fe46d',1,'dlaf::matrix::SubMatrixView']]],
-  ['subpanelview_48',['SubPanelView',['../structdlaf_1_1matrix_1_1_sub_panel_view.html#a556b70975f5928ca81f2196d549be232',1,'dlaf::matrix::SubPanelView']]],
-  ['subpipelineconst_49',['subPipelineConst',['../classdlaf_1_1matrix_1_1_matrix_3_01const_01_t_00_01_d_01_4.html#aa00bb4dd8e50ec14ad04c8d600982d8c',1,'dlaf::matrix::Matrix&lt; const T, D &gt;']]],
+  ['sub_5fpipeline_5fconst_47',['sub_pipeline_const',['../classdlaf_1_1matrix_1_1_matrix_3_01const_01_t_00_01_d_01_4.html#a592e7bc3a7e91a6ec35f44a607305553',1,'dlaf::matrix::Matrix&lt; const T, D &gt;']]],
+  ['submatrixview_48',['SubMatrixView',['../structdlaf_1_1matrix_1_1_sub_matrix_view.html#a7c7cde76a018f82ab23c749de90fe46d',1,'dlaf::matrix::SubMatrixView']]],
+  ['subpanelview_49',['SubPanelView',['../structdlaf_1_1matrix_1_1_sub_panel_view.html#a556b70975f5928ca81f2196d549be232',1,'dlaf::matrix::SubPanelView']]],
   ['subtilereference_50',['subtilereference',['../classdlaf_1_1matrix_1_1_tile.html#a670161e49f6a18b5979e9938e4e7e867',1,'dlaf::matrix::Tile::subTileReference()'],['../classdlaf_1_1matrix_1_1_tile_3_01const_01_t_00_01_d_01_4.html#a4adf525073d06baaa47b06886272da41',1,'dlaf::matrix::Tile&lt; const T, D &gt;::subTileReference()']]],
   ['sum_51',['sum',['../util__math_8h.html#afa826e9affbc0fc9e9dbe24d233a9ffb',1,'dlaf::util::size_t::sum()'],['../util__math_8h.html#ae1dbf257cc807e5bdba5a63087e3a2bc',1,'dlaf::util::ptrdiff_t::sum()']]]
 ];

@@ -412,9 +412,13 @@ public:
   /// All accesses to the sub-pipelined matrix are sequenced after previous accesses and before later
   /// accesses to the original matrix, independently of when tiles are accessed in the sub-pipelined
   /// matrix.
+  Matrix sub_pipeline_const() {
+    return Matrix(*this, SubPipelineTag{});
+  }
+
   DLAF_MATRIX_DEPRECATED("method has been renamed in snake case")
   Matrix subPipelineConst() {
-    return Matrix(*this, SubPipelineTag{});
+    return sub_pipeline_const();
   }
 
   /// Create a sub-pipelined, retiled matrix which can be accessed thread-safely with respect to the
@@ -426,9 +430,13 @@ public:
   ///
   /// @pre blockSize() is divisible by @p tiles_per_block
   /// @pre blockSize() == tile_size()
+  Matrix retiled_sub_pipeline_const(const LocalTileSize& tiles_per_block) {
+    return Matrix(*this, tiles_per_block);
+  }
+
   DLAF_MATRIX_DEPRECATED("method has been renamed in snake case")
   Matrix retiledSubPipelineConst(const LocalTileSize& tiles_per_block) {
-    return Matrix(*this, tiles_per_block);
+    return retiled_sub_pipeline_const(tiles_per_block);
   }
 
   /// Mark the tile at @p index as done

@@ -1036,8 +1036,9 @@ void multiplyEigenvectors(const SizeType sub_offset, const SizeType n, const Siz
   ex::start_detached(
       ex::when_all(std::forward<KSender>(k), std::forward<UDLSenders>(n_udl)) |
       ex::continues_on(dlaf::internal::getBackendScheduler<Backend::MC>(thread_priority::high)) |
-      ex::then([sub_offset, n, n_upper, n_lower, e0 = e0.subPipeline(), e1 = e1.subPipelineConst(),
-                e2 = e2.subPipelineConst()](const SizeType k, std::array<std::size_t, 3> n_udl) mutable {
+      ex::then([sub_offset, n, n_upper, n_lower, e0 = e0.sub_pipeline(), e1 = e1.sub_pipeline_const(),
+                e2 = e2.sub_pipeline_const()](const SizeType k,
+                                              std::array<std::size_t, 3> n_udl) mutable {
         using dlaf::matrix::internal::MatrixRef;
 
         const SizeType n_uh = to_SizeType(n_udl[ev_sort_order(ColType::UpperHalf)]);
@@ -1764,8 +1765,8 @@ void multiplyEigenvectors(const GlobalElementIndex sub_offset, const matrix::Dis
   ex::start_detached(
       ex::when_all(std::forward<KLcSender>(k_lc), std::forward<UDLSenders>(n_udl)) |
       ex::continues_on(dlaf::internal::getBackendScheduler<Backend::MC>(thread_priority::high)) |
-      ex::then([dist_sub, sub_offset, n_upper, n_lower, e0 = e0.subPipeline(),
-                e1 = e1.subPipelineConst(), e2 = e2.subPipelineConst(),
+      ex::then([dist_sub, sub_offset, n_upper, n_lower, e0 = e0.sub_pipeline(),
+                e1 = e1.sub_pipeline_const(), e2 = e2.sub_pipeline_const(),
                 sub_comm_row = row_task_chain.sub_pipeline(),
                 sub_comm_col = col_task_chain.sub_pipeline()](
                    const SizeType k_lc, const std::array<SizeType, 3>& n_udl) mutable {

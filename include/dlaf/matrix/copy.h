@@ -69,13 +69,53 @@ void copy(LocalTileIndex idx_begin, LocalTileSize sz, Matrix<const T, Source>& s
   copy(sz, idx_begin, source, idx_begin, dest);
 }
 
-/// \overload copy()
+/// This overload copies all local tiles of @p source to @p dest starting at tile (0, 0).
 ///
-/// This overload makes sure that all local tiles of @p source are copied to @p dest starting at tile (0, 0).
+/// If @p source and @p dest have different tile sizes (only supported for local matrices),
+/// both are retiled to a common granularity and copied tile-by-tile.
 ///
+/// @pre source.size() == dest.size()
+/// @pre If tile sizes differ: local_matrix(source) && local_matrix(dest)
+/// @pre If tile sizes differ: single_tile_per_block(source) && single_tile_per_block(dest)
+/// @pre If tile sizes differ: tile sizes must be commensurate (divisible by their min)
 template <class T, Device Source, Device Destination>
 void copy(Matrix<const T, Source>& source, Matrix<T, Destination>& dest) {
-  copy(source.distribution().localNrTiles(), LocalTileIndex(0, 0), source, LocalTileIndex(0, 0), dest);
+  if (source.tile_size() == dest.tile_size()) {
+    copy(source.distribution().local_nr_tiles(), LocalTileIndex(0, 0), source, LocalTileIndex(0, 0),
+         dest);
+    return;
+  }
+
+  namespace ex = pika::execution::experimental;
+
+  DLAF_ASSERT_MODERATE(equal_size(source, dest), source.size(), dest.size());
+  DLAF_ASSERT(local_matrix(source), source);
+  DLAF_ASSERT(local_matrix(dest), dest);
+  DLAF_ASSERT_MODERATE(single_tile_per_block(source), source);
+  DLAF_ASSERT_MODERATE(single_tile_per_block(dest), dest);
+
+  const TileElementSize tile_sizes_src = source.tile_size();
+  const TileElementSize tile_sizes_dst = dest.tile_size();
+
+  const SizeType mb = std::min(tile_sizes_src.rows(), tile_sizes_dst.rows());
+  const SizeType nb = std::min(tile_sizes_src.cols(), tile_sizes_dst.cols());
+
+  DLAF_ASSERT_MODERATE(tile_sizes_src.rows() % mb == 0, tile_sizes_src.rows(), mb);
+  DLAF_ASSERT_MODERATE(tile_sizes_dst.rows() % mb == 0, tile_sizes_dst.rows(), mb);
+  DLAF_ASSERT_MODERATE(tile_sizes_src.cols() % nb == 0, tile_sizes_src.cols(), nb);
+  DLAF_ASSERT_MODERATE(tile_sizes_dst.cols() % nb == 0, tile_sizes_dst.cols(), nb);
+
+  const LocalTileSize scale_factor_src{tile_sizes_src.rows() / mb, tile_sizes_src.cols() / nb};
+  const LocalTileSize scale_factor_dst{tile_sizes_dst.rows() / mb, tile_sizes_dst.cols() / nb};
+
+  Matrix<const T, Source> src_retiled = source.retiled_sub_pipeline_const(scale_factor_src);
+  Matrix<T, Destination> dst_retiled = dest.retiled_sub_pipeline(scale_factor_dst);
+
+  const dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>> policy;
+  for (const LocalTileIndex ij : common::iterate_range2d(dst_retiled.distribution().local_nr_tiles())) {
+    ex::start_detached(ex::when_all(src_retiled.read(ij), dst_retiled.readwrite(ij)) |
+                       matrix::copy(policy));
+  }
 }
 
 namespace internal {
@@ -168,8 +208,8 @@ void copy(Matrix<const T, Source>& src, Matrix<T, Destination>& dst, comm::Commu
   const LocalTileSize scale_factor_src{tile_size_src.rows() / mb, tile_size_src.cols() / nb};
   const LocalTileSize scale_factor_dst{tile_size_dst.rows() / mb, tile_size_dst.cols() / nb};
 
-  Matrix<const T, Source> src_retiled = src.retiledSubPipelineConst(scale_factor_src);
-  Matrix<T, Destination> dst_retiled = dst.retiledSubPipeline(scale_factor_dst);
+  Matrix<const T, Source> src_retiled = src.retiled_sub_pipeline_const(scale_factor_src);
+  Matrix<T, Destination> dst_retiled = dst.retiled_sub_pipeline(scale_factor_dst);
 
   const comm::Index2D rank = grid.rank();
   auto mpi_chain = grid.full_communicator_pipeline();

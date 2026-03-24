@@ -116,6 +116,8 @@ variables:
     # can be overwritten in the configuration as needed
     DOCKERFILE: ci/docker/deploy.Dockerfile
     PIP_OPTS: ""
+    KUBERNETES_MEMORY_REQUEST: '64Gi'
+    KUBERNETES_MEMORY_LIMIT: '64Gi'
   artifacts:
     paths:
       - pipeline.yml

@@ -72,8 +72,6 @@ variables:
     CXXSTD: 20
     USE_MKL: "OFF"
     USE_CODECOV: "false"
-    KUBERNETES_MEMORY_REQUEST: '64Gi'
-    KUBERNETES_MEMORY_LIMIT: '64Gi'
 
 .build_deps_common:
   extends:

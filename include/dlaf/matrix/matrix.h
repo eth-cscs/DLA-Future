@@ -249,6 +249,7 @@ void Matrix<T, D>::set_up_non_preallocated_tiles(const AllocationSpec& alloc) no
   //          See AllocationLayoutDefault{} v.s. tune parameter default_allocation_layout.
   const auto& allocation = this->allocation_layout();
   const auto& ld = alloc.ld();
+  const auto& allocate_on = alloc.allocate_on();
 
   using MemView = memory::MemoryView<T, D>;
   const Distribution& dist = this->distribution();
@@ -269,7 +270,7 @@ void Matrix<T, D>::set_up_non_preallocated_tiles(const AllocationSpec& alloc) no
     SizeType mat_ld = compute_ld(local_size.rows(), ld);
 
     ColMajorLayout layout_mapper(dist, mat_ld);
-    MemView mem(layout_mapper.min_mem_size());
+    MemView mem(layout_mapper.min_mem_size(), allocate_on);
 
     for (SizeType j = 0; j < local_nr_tiles.cols(); ++j) {
       for (SizeType i = 0; i < local_nr_tiles.rows(); ++i) {
@@ -307,7 +308,7 @@ void Matrix<T, D>::set_up_non_preallocated_tiles(const AllocationSpec& alloc) no
           SizeType block_ld = compute_ld(mb, ld);
           if (j_el_bl == 0) {
             // Create a MemView for each block in the block column.
-            mem_views.emplace_back(block_ld * nb);
+            mem_views.emplace_back(block_ld * nb, allocate_on);
           }
           for (SizeType i_el_bl = 0; i_el_bl < mb;) {
             // Create the tile using the correct MemView
@@ -337,7 +338,7 @@ void Matrix<T, D>::set_up_non_preallocated_tiles(const AllocationSpec& alloc) no
         SizeType tile_ld = compute_ld(tile_size.rows(), ld);
         SizeType nr_elements = tile_ld * tile_size.cols();
 
-        tile_managers_.emplace_back(TileDataType(tile_size, MemView(nr_elements), tile_ld));
+        tile_managers_.emplace_back(TileDataType(tile_size, MemView(nr_elements, allocate_on), tile_ld));
       }
     }
   }

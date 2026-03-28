@@ -15,11 +15,12 @@
 #include <variant>
 
 #include <dlaf/matrix/allocation_types.h>
+#include <dlaf/memory/allocation.h>
 #include <dlaf/tune.h>
 #include <dlaf/types.h>
 
-#define MATRIXALLOCATIONSPEC_ASSERT_MESSAGE                                  \
-  "Constructor signature is AllocationSpec(AllocationLayoutType, LdType);\n" \
+#define MATRIXALLOCATIONSPEC_ASSERT_MESSAGE                                                  \
+  "Constructor signature is AllocationSpec(AllocationLayoutType, LdType, AllocateOnType);\n" \
   "All parameters are optional, but order is enforced."
 
 namespace dlaf::matrix {
@@ -29,6 +30,9 @@ class AllocationSpec {
 public:
   using AllocationLayoutType = std::variant<AllocationLayoutDefault, AllocationLayout>;
   using LdType = std::variant<LdDefault, LdSpec>;
+  using AllocateOn = memory::AllocateOn;
+  using AllocateOnDefault = memory::AllocateOnDefault;
+  using AllocateOnType = memory::AllocateOnType;
 
   ///@{
   /// Construct a AllocationSpec object
@@ -36,6 +40,8 @@ public:
   /// @params layout (optional, default AllocationLayoutDefault{}) can be either of type
   ///         @p AllocationLayoutDefault or @p AllocationLayout (see layout() for more details).
   /// @params ld (optional, default LdDefault{}) can be either of type
+  ///         @p LdDefault, @p LdSpec, @p Ld or @p SizeType (see ld() for more details).
+  /// @params allocate_on (optional, default AllocateOnDefault{}) can be either of type
   ///         @p LdDefault, @p LdSpec, @p Ld or @p SizeType (see ld() for more details).
   AllocationSpec() {}
 
@@ -58,6 +64,14 @@ public:
   /// See ld() for more details.
   AllocationSpec& set_ld(LdType ld) noexcept {
     ld_ = ld;
+    return *this;
+  }
+
+  /// Sets when allocating the buffer.
+  ///
+  /// See allocate_on() for more details.
+  AllocationSpec& set_allocate_on(AllocateOnType allocate_on) noexcept {
+    allocate_on_ = allocate_on;
     return *this;
   }
 
@@ -85,6 +99,13 @@ public:
     return std::get<LdSpec>(ld_);
   }
 
+  /// Returns when allocating the buffer for the matrix.
+  ///
+  /// If allocate_on is set to default the default value set in tune parameters is returned.
+  AllocateOn allocate_on() const noexcept {
+    return memory::get_allocate_on(allocate_on_);
+  }
+
 private:
   template <int>
   void set() {}
@@ -101,9 +122,16 @@ private:
     set_ld(ld);
     set<2>(params...);
   }
+  template <int index, class... T>
+  void set(AllocateOnType allocate_on, T... params) {
+    static_assert(index < 3, MATRIXALLOCATIONSPEC_ASSERT_MESSAGE);
+    set_allocate_on(allocate_on);
+    set<3>(params...);
+  }
 
   AllocationLayoutType layout_ = AllocationLayoutDefault{};
   LdType ld_ = LdDefault{};
+  AllocateOnType allocate_on_ = AllocateOnDefault{};
 };
 }
 

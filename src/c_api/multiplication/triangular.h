@@ -32,8 +32,7 @@
 template <typename T>
 int triangular_multiplication(const int dlaf_context, const char side, const char uplo, const char op,
                               const char diag, const T alpha, const T* a,
-                              const DLAF_descriptor dlaf_desca, T* b,
-                              const DLAF_descriptor dlaf_descb) {
+                              const DLAF_descriptor dlaf_desca, T* b, const DLAF_descriptor dlaf_descb) {
   using MatrixMirrorA = dlaf::matrix::MatrixMirror<const T, dlaf::Device::Default, dlaf::Device::CPU>;
   using MatrixMirrorB = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
 

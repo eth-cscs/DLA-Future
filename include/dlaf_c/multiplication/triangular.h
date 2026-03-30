@@ -41,38 +41,28 @@
 /// @param b Local part of the global matrix \f$\mathbf{B}\f$
 /// @param dlaf_descb DLA-Future descriptor of the global matrix \f$\mathbf{B}\f$
 /// @return 0 if the operation completed normally
-DLAF_EXTERN_C int dlaf_triangular_multiplication_s(const int dlaf_context, const char side,
-                                                   const char uplo, const char op, const char diag,
-                                                   const float alpha, const float* a,
-                                                   const struct DLAF_descriptor dlaf_desca, float* b,
-                                                   const struct DLAF_descriptor dlaf_descb)
-    DLAF_NOEXCEPT;
+DLAF_EXTERN_C int dlaf_triangular_multiplication_s(
+    const int dlaf_context, const char side, const char uplo, const char op, const char diag,
+    const float alpha, const float* a, const struct DLAF_descriptor dlaf_desca, float* b,
+    const struct DLAF_descriptor dlaf_descb) DLAF_NOEXCEPT;
 
 /// @copydoc dlaf_triangular_multiplication_s
-DLAF_EXTERN_C int dlaf_triangular_multiplication_d(const int dlaf_context, const char side,
-                                                   const char uplo, const char op, const char diag,
-                                                   const double alpha, const double* a,
-                                                   const struct DLAF_descriptor dlaf_desca, double* b,
-                                                   const struct DLAF_descriptor dlaf_descb)
-    DLAF_NOEXCEPT;
+DLAF_EXTERN_C int dlaf_triangular_multiplication_d(
+    const int dlaf_context, const char side, const char uplo, const char op, const char diag,
+    const double alpha, const double* a, const struct DLAF_descriptor dlaf_desca, double* b,
+    const struct DLAF_descriptor dlaf_descb) DLAF_NOEXCEPT;
 
 /// @copydoc dlaf_triangular_multiplication_s
-DLAF_EXTERN_C int dlaf_triangular_multiplication_c(const int dlaf_context, const char side,
-                                                   const char uplo, const char op, const char diag,
-                                                   const dlaf_complex_c alpha, const dlaf_complex_c* a,
-                                                   const struct DLAF_descriptor dlaf_desca,
-                                                   dlaf_complex_c* b,
-                                                   const struct DLAF_descriptor dlaf_descb)
-    DLAF_NOEXCEPT;
+DLAF_EXTERN_C int dlaf_triangular_multiplication_c(
+    const int dlaf_context, const char side, const char uplo, const char op, const char diag,
+    const dlaf_complex_c alpha, const dlaf_complex_c* a, const struct DLAF_descriptor dlaf_desca,
+    dlaf_complex_c* b, const struct DLAF_descriptor dlaf_descb) DLAF_NOEXCEPT;
 
 /// @copydoc dlaf_triangular_multiplication_s
-DLAF_EXTERN_C int dlaf_triangular_multiplication_z(const int dlaf_context, const char side,
-                                                   const char uplo, const char op, const char diag,
-                                                   const dlaf_complex_z alpha, const dlaf_complex_z* a,
-                                                   const struct DLAF_descriptor dlaf_desca,
-                                                   dlaf_complex_z* b,
-                                                   const struct DLAF_descriptor dlaf_descb)
-    DLAF_NOEXCEPT;
+DLAF_EXTERN_C int dlaf_triangular_multiplication_z(
+    const int dlaf_context, const char side, const char uplo, const char op, const char diag,
+    const dlaf_complex_z alpha, const dlaf_complex_z* a, const struct DLAF_descriptor dlaf_desca,
+    dlaf_complex_z* b, const struct DLAF_descriptor dlaf_descb) DLAF_NOEXCEPT;
 
 #ifdef DLAF_WITH_SCALAPACK
 
@@ -115,9 +105,9 @@ DLAF_EXTERN_C int dlaf_triangular_multiplication_z(const int dlaf_context, const
 /// submatrix \f$\mathbf{B}\f$, has to be 1
 /// @param descb ScaLAPACK array descriptor of the global matrix \f$\mathbf{B}\f$
 DLAF_EXTERN_C void dlaf_pstrmm(const char side, const char uplo, const char op, const char diag,
-                               const int m, const int n, const float alpha, const float* a,
-                               const int ia, const int ja, const int desca[9], float* b, const int ib,
-                               const int jb, const int descb[9]) DLAF_NOEXCEPT;
+                               const int m, const int n, const float alpha, const float* a, const int ia,
+                               const int ja, const int desca[9], float* b, const int ib, const int jb,
+                               const int descb[9]) DLAF_NOEXCEPT;
 
 /// @copydoc dlaf_pstrmm
 DLAF_EXTERN_C void dlaf_pdtrmm(const char side, const char uplo, const char op, const char diag,
@@ -128,15 +118,15 @@ DLAF_EXTERN_C void dlaf_pdtrmm(const char side, const char uplo, const char op, 
 /// @copydoc dlaf_pstrmm
 DLAF_EXTERN_C void dlaf_pctrmm(const char side, const char uplo, const char op, const char diag,
                                const int m, const int n, const dlaf_complex_c alpha,
-                               const dlaf_complex_c* a, const int ia, const int ja,
-                               const int desca[9], dlaf_complex_c* b, const int ib, const int jb,
+                               const dlaf_complex_c* a, const int ia, const int ja, const int desca[9],
+                               dlaf_complex_c* b, const int ib, const int jb,
                                const int descb[9]) DLAF_NOEXCEPT;
 
 /// @copydoc dlaf_pstrmm
 DLAF_EXTERN_C void dlaf_pztrmm(const char side, const char uplo, const char op, const char diag,
                                const int m, const int n, const dlaf_complex_z alpha,
-                               const dlaf_complex_z* a, const int ia, const int ja,
-                               const int desca[9], dlaf_complex_z* b, const int ib, const int jb,
+                               const dlaf_complex_z* a, const int ia, const int ja, const int desca[9],
+                               dlaf_complex_z* b, const int ib, const int jb,
                                const int descb[9]) DLAF_NOEXCEPT;
 
 #endif

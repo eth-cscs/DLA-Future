@@ -52,17 +52,17 @@ const std::vector<blas::Op> blas_ops({blas::Op::NoTrans, blas::Op::Trans, blas::
 const std::vector<blas::Diag> blas_diags({blas::Diag::NonUnit, blas::Diag::Unit});
 
 const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
-    {0, 0, 1, 1},                                              // m, n = 0
-    {0, 2, 1, 2}, {7, 0, 2, 1},                                // m = 0 or n = 0
-    {2, 2, 5, 5}, {10, 10, 2, 3},                              // m = n
-    {12, 3, 5, 5}, {7, 6, 3, 2}, {15, 7, 3, 5},                // m > n
-    {4, 13, 5, 5}, {7, 8, 2, 9}, {19, 25, 6, 5},               // m < n
+    {0, 0, 1, 1},                                   // m, n = 0
+    {0, 2, 1, 2},  {7, 0, 2, 1},                    // m = 0 or n = 0
+    {2, 2, 5, 5},  {10, 10, 2, 3},                  // m = n
+    {12, 3, 5, 5}, {7, 6, 3, 2},   {15, 7, 3, 5},   // m > n
+    {4, 13, 5, 5}, {7, 8, 2, 9},   {19, 25, 6, 5},  // m < n
 };
 
 template <class T, API api>
 void testTriangularMultiplication(comm::CommunicatorGrid& grid, blas::Side side, blas::Uplo uplo,
-                                 blas::Op op, blas::Diag diag, const SizeType m, const SizeType n,
-                                 const SizeType mb, const SizeType nb) {
+                                  blas::Op op, blas::Diag diag, const SizeType m, const SizeType n,
+                                  const SizeType mb, const SizeType nb) {
   auto dlaf_context = c_api_test_initialize<api>(pika_argc, pika_argv, dlaf_argc, dlaf_argv, grid);
 
   // In normal use the runtime is resumed by the C API call
@@ -91,8 +91,8 @@ void testTriangularMultiplication(comm::CommunicatorGrid& grid, blas::Side side,
   // Set up matrices with test data
   T alpha = TypeUtilities<T>::element(1.5, .5);
   auto [el_op_a, res_b, el_b] =
-      getTriangularSystem<GlobalElementIndex, T>(side, uplo, op, diag, static_cast<T>(1.0) / alpha,
-                                                 m, n);
+      getTriangularSystem<GlobalElementIndex, T>(side, uplo, op, diag, static_cast<T>(1.0) / alpha, m,
+                                                 n);
 
   set(mat_a, el_op_a, op);
   set(mat_b, el_b);
@@ -112,33 +112,38 @@ void testTriangularMultiplication(comm::CommunicatorGrid& grid, blas::Side side,
   pika::suspend();
 
   if constexpr (api == API::dlaf) {
-    DLAF_descriptor dlaf_desc_a = {(int) a_size,     (int) a_size,     (int) a_block, (int) a_block,
-                                   src_rank_index.row(), src_rank_index.col(), 0,              0,
+    DLAF_descriptor dlaf_desc_a = {(int) a_size,
+                                   (int) a_size,
+                                   (int) a_block,
+                                   (int) a_block,
+                                   src_rank_index.row(),
+                                   src_rank_index.col(),
+                                   0,
+                                   0,
                                    lld_a};
-    DLAF_descriptor dlaf_desc_b = {(int) m,     (int) n,     (int) mb, (int) nb,
-                                   src_rank_index.row(), src_rank_index.col(), 0,              0,
-                                   lld_b};
+    DLAF_descriptor dlaf_desc_b =
+        {(int) m, (int) n, (int) mb, (int) nb, src_rank_index.row(), src_rank_index.col(), 0, 0, lld_b};
 
     int err = -1;
     if constexpr (std::is_same_v<T, double>) {
-      err = C_dlaf_triangular_multiplication_d(dlaf_context, dlaf_side, dlaf_uplo, dlaf_op, dlaf_diag,
-                                              alpha, local_a_ptr, dlaf_desc_a, local_b_ptr,
-                                              dlaf_desc_b);
+      err =
+          C_dlaf_triangular_multiplication_d(dlaf_context, dlaf_side, dlaf_uplo, dlaf_op, dlaf_diag,
+                                             alpha, local_a_ptr, dlaf_desc_a, local_b_ptr, dlaf_desc_b);
     }
     else if constexpr (std::is_same_v<T, float>) {
-      err = C_dlaf_triangular_multiplication_s(dlaf_context, dlaf_side, dlaf_uplo, dlaf_op, dlaf_diag,
-                                              alpha, local_a_ptr, dlaf_desc_a, local_b_ptr,
-                                              dlaf_desc_b);
+      err =
+          C_dlaf_triangular_multiplication_s(dlaf_context, dlaf_side, dlaf_uplo, dlaf_op, dlaf_diag,
+                                             alpha, local_a_ptr, dlaf_desc_a, local_b_ptr, dlaf_desc_b);
     }
     else if constexpr (std::is_same_v<T, std::complex<double>>) {
-      err = C_dlaf_triangular_multiplication_z(dlaf_context, dlaf_side, dlaf_uplo, dlaf_op, dlaf_diag,
-                                              alpha, local_a_ptr, dlaf_desc_a, local_b_ptr,
-                                              dlaf_desc_b);
+      err =
+          C_dlaf_triangular_multiplication_z(dlaf_context, dlaf_side, dlaf_uplo, dlaf_op, dlaf_diag,
+                                             alpha, local_a_ptr, dlaf_desc_a, local_b_ptr, dlaf_desc_b);
     }
     else if constexpr (std::is_same_v<T, std::complex<float>>) {
-      err = C_dlaf_triangular_multiplication_c(dlaf_context, dlaf_side, dlaf_uplo, dlaf_op, dlaf_diag,
-                                              alpha, local_a_ptr, dlaf_desc_a, local_b_ptr,
-                                              dlaf_desc_b);
+      err =
+          C_dlaf_triangular_multiplication_c(dlaf_context, dlaf_side, dlaf_uplo, dlaf_op, dlaf_diag,
+                                             alpha, local_a_ptr, dlaf_desc_a, local_b_ptr, dlaf_desc_b);
     }
     else {
       DLAF_ASSERT(false, typeid(T).name());
@@ -168,20 +173,20 @@ void testTriangularMultiplication(comm::CommunicatorGrid& grid, blas::Side side,
                     lld_b};
 
     if constexpr (std::is_same_v<T, double>) {
-      C_dlaf_pdtrmm(dlaf_side, dlaf_uplo, dlaf_op, dlaf_diag, (int) m, (int) n, alpha, local_a_ptr, 1,
-                   1, desc_a, local_b_ptr, 1, 1, desc_b);
+      C_dlaf_pdtrmm(dlaf_side, dlaf_uplo, dlaf_op, dlaf_diag, (int) m, (int) n, alpha, local_a_ptr, 1, 1,
+                    desc_a, local_b_ptr, 1, 1, desc_b);
     }
     else if constexpr (std::is_same_v<T, float>) {
-      C_dlaf_pstrmm(dlaf_side, dlaf_uplo, dlaf_op, dlaf_diag, (int) m, (int) n, alpha, local_a_ptr, 1,
-                   1, desc_a, local_b_ptr, 1, 1, desc_b);
+      C_dlaf_pstrmm(dlaf_side, dlaf_uplo, dlaf_op, dlaf_diag, (int) m, (int) n, alpha, local_a_ptr, 1, 1,
+                    desc_a, local_b_ptr, 1, 1, desc_b);
     }
     else if constexpr (std::is_same_v<T, std::complex<double>>) {
-      C_dlaf_pztrmm(dlaf_side, dlaf_uplo, dlaf_op, dlaf_diag, (int) m, (int) n, alpha, local_a_ptr, 1,
-                   1, desc_a, local_b_ptr, 1, 1, desc_b);
+      C_dlaf_pztrmm(dlaf_side, dlaf_uplo, dlaf_op, dlaf_diag, (int) m, (int) n, alpha, local_a_ptr, 1, 1,
+                    desc_a, local_b_ptr, 1, 1, desc_b);
     }
     else if constexpr (std::is_same_v<T, std::complex<float>>) {
-      C_dlaf_pctrmm(dlaf_side, dlaf_uplo, dlaf_op, dlaf_diag, (int) m, (int) n, alpha, local_a_ptr, 1,
-                   1, desc_a, local_b_ptr, 1, 1, desc_b);
+      C_dlaf_pctrmm(dlaf_side, dlaf_uplo, dlaf_op, dlaf_diag, (int) m, (int) n, alpha, local_a_ptr, 1, 1,
+                    desc_a, local_b_ptr, 1, 1, desc_b);
     }
     else {
       DLAF_ASSERT(false, typeid(T).name());

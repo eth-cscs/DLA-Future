@@ -84,6 +84,8 @@ variables:
   extends: .build_deps_common
   variables:
     COMMON_SPACK_ENVIRONMENT: ci/docker/common-amdgpu.yaml
+    KUBERNETES_MEMORY_REQUEST: '64Gi'
+    KUBERNETES_MEMORY_LIMIT: '64Gi'
 
 .build_deps_common_gh200:
   timeout: 6 hours

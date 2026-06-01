@@ -34,7 +34,7 @@ template <class T, Device D, class CommSender>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<> schedule_send(
     CommSender pcomm, IndexT_MPI dest, IndexT_MPI tag, dlaf::matrix::ReadOnlyTileSender<T, D> tile) {
   using dlaf::internal::RequireContiguous;
-  constexpr Device DComm = CommunicationDevice_v<D>;
+  constexpr Device DComm = CommunicationDeviceP2P_v<D>;
   constexpr auto require_contiguous =
 #if defined(DLAF_WITH_MPI_GPU_AWARE) && defined(DLAF_WITH_MPI_GPU_FORCE_CONTIGUOUS)
       DComm == Device::GPU ? RequireContiguous::Yes :
@@ -55,7 +55,7 @@ template <class T, Device D, class CommSender>
 [[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> schedule_recv(
     CommSender pcomm, IndexT_MPI source, IndexT_MPI tag, dlaf::matrix::ReadWriteTileSender<T, D> tile) {
   using dlaf::internal::RequireContiguous;
-  constexpr Device DComm = CommunicationDevice_v<D>;
+  constexpr Device DComm = CommunicationDeviceP2P_v<D>;
   constexpr auto require_contiguous =
 #if defined(DLAF_WITH_MPI_GPU_AWARE) && defined(DLAF_WITH_MPI_GPU_FORCE_CONTIGUOUS)
       DComm == Device::GPU ? RequireContiguous::Yes :

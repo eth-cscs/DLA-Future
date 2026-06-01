@@ -35,7 +35,7 @@ template <class T, Device D>
 [[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> schedule_reduce_recv_in_place(
     pika::execution::experimental::unique_any_sender<CommunicatorPipelineExclusiveWrapper> pcomm,
     MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender<T, D> tile) {
-  constexpr Device DComm = CommunicationDevice_v<D>;
+  constexpr Device DComm = CommunicationDeviceReduce_v<D>;
 
   return internal::schedule_reduce_recv_in_place<DComm>(std::move(pcomm), reduce_op, std::move(tile));
 }
@@ -47,7 +47,7 @@ template <class T, Device D>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<> schedule_reduce_send(
     pika::execution::experimental::unique_any_sender<CommunicatorPipelineExclusiveWrapper> pcomm,
     comm::IndexT_MPI rank_root, MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender<T, D> tile) {
-  constexpr Device DComm = CommunicationDevice_v<D>;
+  constexpr Device DComm = CommunicationDeviceReduce_v<D>;
 
   return internal::schedule_reduce_send<DComm>(std::move(pcomm), rank_root, reduce_op, std::move(tile));
 }

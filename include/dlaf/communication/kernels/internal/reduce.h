@@ -34,7 +34,7 @@ namespace dlaf::comm::internal {
 template <class T, Device D>
 void reduceRecvInPlace(const Communicator& comm, MPI_Op reduce_op, const matrix::Tile<T, D>& tile,
                        MPI_Request* req) {
-#if !defined(DLAF_WITH_MPI_GPU_AWARE)
+#if !defined(DLAF_WITH_MPI_GPU_AWARE) || defined(DLAF_WITH_MPI_GPU_AWARE_NO_REDUCE_OPS)
   static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
 #endif
   DLAF_ASSERT(tile.is_contiguous(), "");
@@ -49,7 +49,7 @@ DLAF_MAKE_CALLABLE_OBJECT(reduceRecvInPlace);
 template <class T, Device D>
 void reduceSend(const Communicator& comm, comm::IndexT_MPI rank_root, MPI_Op reduce_op,
                 const matrix::Tile<const T, D>& tile, MPI_Request* req) {
-#if !defined(DLAF_WITH_MPI_GPU_AWARE)
+#if !defined(DLAF_WITH_MPI_GPU_AWARE) || defined(DLAF_WITH_MPI_GPU_AWARE_NO_REDUCE_OPS)
   static_assert(D == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
 #endif
   DLAF_ASSERT(tile.is_contiguous(), "");
@@ -85,7 +85,7 @@ template <Device DComm, class T, Device D>
 #pragma GCC diagnostic pop
 #endif
 
-#if !defined(DLAF_WITH_MPI_GPU_AWARE)
+#if !defined(DLAF_WITH_MPI_GPU_AWARE) || defined(DLAF_WITH_MPI_GPU_AWARE_NO_REDUCE_OPS)
   static_assert(DComm == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
 #endif
 
@@ -115,7 +115,7 @@ template <Device DComm, class T, Device D>
            transformMPI(reduceSend_o);
   };
 
-#if !defined(DLAF_WITH_MPI_GPU_AWARE)
+#if !defined(DLAF_WITH_MPI_GPU_AWARE) || defined(DLAF_WITH_MPI_GPU_AWARE_NO_REDUCE_OPS)
   static_assert(DComm == Device::CPU, "DLAF_WITH_MPI_GPU_AWARE=off, MPI accepts only CPU memory.");
 #endif
 

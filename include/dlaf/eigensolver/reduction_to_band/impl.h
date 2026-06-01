@@ -1455,7 +1455,7 @@ Matrix<T, D> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix
           dist.template nextLocalTileFromGlobalElement<Coord::Col>(at_offset.col()),
       };
 
-      if constexpr (dlaf::comm::CommunicationDevice_v<D> == D) {
+      if constexpr (dlaf::comm::CommunicationDeviceBroadcast_v<D> == D) {
         // Note:
         // if there is no need for additional buffers, we can just wait that xt[0] is ready for
         // reading.

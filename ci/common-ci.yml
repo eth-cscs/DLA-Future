@@ -48,7 +48,7 @@ variables:
   variables:
     SPACK_SHA: f36409b78591f8b02e8332eb4ad78da62c02571e # 1.0.4
     SPACK_PACKAGES_SHA: 0a06237f76b21a2b0b373c2bf02fab119709419c # develop on 2026-03-06
-    ALPS_CLUSTER_CONFIG_SHA: d3eec058d82025a9d7cb544bd9a9099fcb8672f3
+    ALPS_CLUSTER_CONFIG_SHA: 425a35ade60ab43734048d00a95aa276f9a753ef
     SPACK_DLAF_REPO: ./spack
     DOCKER_BUILD_ARGS: '[
         "BASE_IMAGE",
@@ -84,6 +84,8 @@ variables:
   extends: .build_deps_common
   variables:
     COMMON_SPACK_ENVIRONMENT: ci/docker/common-amdgpu.yaml
+    KUBERNETES_MEMORY_REQUEST: '64Gi'
+    KUBERNETES_MEMORY_LIMIT: '64Gi'
 
 .build_deps_common_gh200:
   timeout: 6 hours
@@ -116,6 +118,8 @@ variables:
     # can be overwritten in the configuration as needed
     DOCKERFILE: ci/docker/deploy.Dockerfile
     PIP_OPTS: ""
+    KUBERNETES_MEMORY_REQUEST: '64Gi'
+    KUBERNETES_MEMORY_LIMIT: '64Gi'
   artifacts:
     paths:
       - pipeline.yml

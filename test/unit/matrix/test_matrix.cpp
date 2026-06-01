@@ -137,7 +137,7 @@ TYPED_TEST(MatrixLocalTest, Constructor) {
       CHECK_MATRIX_EQ(el, mat);
 
       {
-        auto mat_sub = mat.subPipelineConst();
+        auto mat_sub = mat.sub_pipeline_const();
         EXPECT_EQ(mat_sub.distribution(), mat.distribution());
 
         CHECK_MATRIX_EQ(el, mat_sub);
@@ -146,7 +146,7 @@ TYPED_TEST(MatrixLocalTest, Constructor) {
       c = 1.0;
 
       {
-        auto mat_sub = mat.subPipeline();
+        auto mat_sub = mat.sub_pipeline();
         EXPECT_EQ(mat_sub.distribution(), mat.distribution());
 
         set(mat_sub, el);
@@ -569,7 +569,7 @@ TYPED_TEST(MatrixTest, Constructor) {
 
         CHECK_MATRIX_EQ(el, mat);
         {
-          auto mat_sub = mat.subPipelineConst();
+          auto mat_sub = mat.sub_pipeline_const();
           EXPECT_EQ(mat_sub.distribution(), mat.distribution());
 
           CHECK_MATRIX_EQ(el, mat_sub);
@@ -578,7 +578,7 @@ TYPED_TEST(MatrixTest, Constructor) {
         c = 1.0;
 
         {
-          auto mat_sub = mat.subPipeline();
+          auto mat_sub = mat.sub_pipeline();
           EXPECT_EQ(mat_sub.distribution(), mat.distribution());
 
           set(mat_sub, el);
@@ -956,11 +956,11 @@ TYPED_TEST(MatrixTest, LocalGlobalAccessOperatorCall) {
             EXPECT_EQ(ptr_global, ptr_local);
 
             const TypeParam* ptr_sub_global = [&]() {
-              auto mat_sub = mat.subPipeline();
+              auto mat_sub = mat.sub_pipeline();
               return tt::sync_wait(mat_sub.readwrite(global_index)).ptr(TileElementIndex{0, 0});
             }();
             const TypeParam* ptr_sub_local = [&]() {
-              auto mat_sub = mat.subPipeline();
+              auto mat_sub = mat.sub_pipeline();
               return tt::sync_wait(mat_sub.readwrite(local_index)).ptr(TileElementIndex{0, 0});
             }();
 
@@ -1003,11 +1003,11 @@ TYPED_TEST(MatrixTest, LocalGlobalAccessRead) {
             EXPECT_EQ(ptr_global, ptr_local);
 
             const TypeParam* ptr_sub_global = [&]() {
-              auto mat_sub = mat.subPipeline();
+              auto mat_sub = mat.sub_pipeline();
               return tt::sync_wait(mat_sub.read(global_index)).get().ptr(TileElementIndex{0, 0});
             }();
             const TypeParam* ptr_sub_local = [&]() {
-              auto mat_sub = mat.subPipeline();
+              auto mat_sub = mat.sub_pipeline();
               return tt::sync_wait(mat_sub.read(local_index)).get().ptr(TileElementIndex{0, 0});
             }();
 
@@ -1015,11 +1015,11 @@ TYPED_TEST(MatrixTest, LocalGlobalAccessRead) {
             EXPECT_EQ(ptr_sub_local, ptr_global);
 
             const TypeParam* ptr_sub_const_global = [&]() {
-              auto mat_sub = mat.subPipelineConst();
+              auto mat_sub = mat.sub_pipeline_const();
               return tt::sync_wait(mat_sub.read(global_index)).get().ptr(TileElementIndex{0, 0});
             }();
             const TypeParam* ptr_sub_const_local = [&]() {
-              auto mat_sub = mat.subPipelineConst();
+              auto mat_sub = mat.sub_pipeline_const();
               return tt::sync_wait(mat_sub.read(local_index)).get().ptr(TileElementIndex{0, 0});
             }();
 
@@ -1050,12 +1050,12 @@ TYPED_TEST(MatrixTest, ConstructorExisting) {
       CHECK_LAYOUT(mem(), layout, mat);
 
       {
-        auto mat_sub = mat.subPipeline();
+        auto mat_sub = mat.sub_pipeline();
         CHECK_LAYOUT(mem(), layout, mat_sub);
       }
 
       {
-        auto mat_sub_const = mat.subPipelineConst();
+        auto mat_sub_const = mat.sub_pipeline_const();
         CHECK_LAYOUT(mem(), layout, mat_sub_const);
       }
     }
@@ -1081,7 +1081,7 @@ TYPED_TEST(MatrixTest, ConstructorExistingConst) {
       CHECK_LAYOUT(mem(), layout, mat);
 
       {
-        auto mat_sub_const = mat.subPipelineConst();
+        auto mat_sub_const = mat.sub_pipeline_const();
         CHECK_LAYOUT(mem(), layout, mat_sub_const);
       }
     }
@@ -1162,7 +1162,7 @@ TYPED_TEST(MatrixTest, DependenciesSubPipeline) {
       EXPECT_TRUE(checkSendersStep(0, senders1));
 
       auto [rosenders2a, rosenders2b, senders3] = [&]() {
-        auto mat_sub = mat.subPipeline();
+        auto mat_sub = mat.sub_pipeline();
 
         auto rosenders2a = getReadSendersUsingLocalIndex(mat_sub);
         EXPECT_TRUE(checkSendersStep(0, rosenders2a));
@@ -1229,13 +1229,13 @@ TYPED_TEST(MatrixTest, DependenciesSubSubPipeline) {
       EXPECT_TRUE(checkSendersStep(0, senders1));
 
       auto [rosenders2a, rosenders2b, senders3, rosenders4a] = [&]() {
-        auto mat_sub = mat.subPipeline();
+        auto mat_sub = mat.sub_pipeline();
 
         auto rosenders2a = getReadSendersUsingLocalIndex(mat_sub);
         EXPECT_TRUE(checkSendersStep(0, rosenders2a));
 
         auto [rosenders2b, senders3] = [&]() {
-          auto mat_sub_sub = mat_sub.subPipeline();
+          auto mat_sub_sub = mat_sub.sub_pipeline();
 
           auto rosenders2b = getReadSendersUsingGlobalIndex(mat_sub_sub);
           EXPECT_TRUE(checkSendersStep(0, rosenders2b));
@@ -1301,7 +1301,7 @@ TYPED_TEST(MatrixTest, DependenciesSubPipelineConst) {
       EXPECT_TRUE(checkSendersStep(0, senders1));
 
       auto [rosenders2a, rosenders2b] = [&]() {
-        auto mat_sub = mat.subPipelineConst();
+        auto mat_sub = mat.sub_pipeline_const();
 
         auto rosenders2a = getReadSendersUsingLocalIndex(mat_sub);
         EXPECT_TRUE(checkSendersStep(0, rosenders2a));
@@ -1376,7 +1376,7 @@ TYPED_TEST(MatrixTest, DependenciesConstSubPipelineConst) {
       EXPECT_TRUE(checkSendersStep(rosenders1.size(), rosenders1));
 
       auto rosenders2 = [&]() {
-        auto const_mat_sub = const_mat.subPipelineConst();
+        auto const_mat_sub = const_mat.sub_pipeline_const();
         return getReadSendersUsingLocalIndex(const_mat_sub);
       }();
       // NOTE: This is a limitation of the current implementation. Semantically
@@ -1479,7 +1479,7 @@ TYPED_TEST(MatrixTest, DependenciesReferenceMixSubPipeline) {
       EXPECT_TRUE(checkSendersStep(0, rosenders2a));
 
       auto rosenders2b = [&]() {
-        auto mat_sub = mat.subPipelineConst();
+        auto mat_sub = mat.sub_pipeline_const();
         auto rosenders2b = getReadSendersUsingLocalIndex(mat_sub);
         EXPECT_TRUE(checkSendersStep(0, rosenders2b));
         return rosenders2b;
@@ -1489,7 +1489,7 @@ TYPED_TEST(MatrixTest, DependenciesReferenceMixSubPipeline) {
       EXPECT_TRUE(checkSendersStep(0, senders3));
 
       auto rosenders4a = [&]() {
-        auto mat_sub = mat.subPipelineConst();
+        auto mat_sub = mat.sub_pipeline_const();
         auto rosenders4a = getReadSendersUsingLocalIndex(mat_sub);
         EXPECT_TRUE(checkSendersStep(0, rosenders4a));
         return rosenders4a;
@@ -1587,8 +1587,8 @@ TYPED_TEST(MatrixTest, TileSize) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = global_test_size({test.m, test.n}, comm_grid.size());
       Matrix<Type, Device::CPU> mat(size, test.tile_size, comm_grid);
-      auto mat_sub = mat.subPipeline();
-      auto mat_sub_const = mat.subPipelineConst();
+      auto mat_sub = mat.sub_pipeline();
+      auto mat_sub_const = mat.sub_pipeline_const();
 
       for (SizeType i = 0; i < mat.nrTiles().rows(); ++i) {
         SizeType mb = mat.tile_size().rows();
@@ -1641,13 +1641,13 @@ TYPED_TEST(MatrixLocalTest, FromColMajor) {
     CHECK_LAYOUT_LOCAL(mem(), layout, mat);
 
     {
-      auto mat_sub = mat.subPipeline();
+      auto mat_sub = mat.sub_pipeline();
       ASSERT_FALSE(haveConstElements(mat_sub));
       CHECK_LAYOUT_LOCAL(mem(), layout, mat_sub);
     }
 
     {
-      auto mat_sub_const = mat.subPipelineConst();
+      auto mat_sub_const = mat.sub_pipeline_const();
       ASSERT_TRUE(haveConstElements(mat_sub_const));
       CHECK_LAYOUT_LOCAL(mem(), layout, mat_sub_const);
     }
@@ -1668,7 +1668,7 @@ TYPED_TEST(MatrixLocalTest, FromColMajorConst) {
     CHECK_LAYOUT_LOCAL(mem(), layout, mat);
 
     {
-      auto mat_sub_const = mat.subPipelineConst();
+      auto mat_sub_const = mat.sub_pipeline_const();
       ASSERT_TRUE(haveConstElements(mat_sub_const));
       CHECK_LAYOUT_LOCAL(mem(), layout, mat_sub_const);
     }
@@ -1695,13 +1695,13 @@ TYPED_TEST(MatrixTest, FromColMajor) {
         CHECK_LAYOUT(mem(), layout, mat);
 
         {
-          auto mat_sub = mat.subPipeline();
+          auto mat_sub = mat.sub_pipeline();
           ASSERT_FALSE(haveConstElements(mat_sub));
           CHECK_LAYOUT(mem(), layout, mat_sub);
         }
 
         {
-          auto mat_sub_const = mat.subPipelineConst();
+          auto mat_sub_const = mat.sub_pipeline_const();
           ASSERT_TRUE(haveConstElements(mat_sub_const));
           CHECK_LAYOUT(mem(), layout, mat_sub_const);
         }
@@ -1722,13 +1722,13 @@ TYPED_TEST(MatrixTest, FromColMajor) {
         CHECK_LAYOUT(mem(), layout, mat);
 
         {
-          auto mat_sub = mat.subPipeline();
+          auto mat_sub = mat.sub_pipeline();
           ASSERT_FALSE(haveConstElements(mat_sub));
           CHECK_LAYOUT(mem(), layout, mat_sub);
         }
 
         {
-          auto mat_sub_const = mat.subPipelineConst();
+          auto mat_sub_const = mat.sub_pipeline_const();
           ASSERT_TRUE(haveConstElements(mat_sub_const));
           CHECK_LAYOUT(mem(), layout, mat_sub_const);
         }
@@ -1758,7 +1758,7 @@ TYPED_TEST(MatrixTest, FromColMajorConst) {
         CHECK_LAYOUT(mem(), layout, mat);
 
         {
-          auto mat_sub_const = mat.subPipelineConst();
+          auto mat_sub_const = mat.sub_pipeline_const();
           ASSERT_TRUE(haveConstElements(mat_sub_const));
           CHECK_LAYOUT(mem(), layout, mat_sub_const);
         }
@@ -1780,7 +1780,7 @@ TYPED_TEST(MatrixTest, FromColMajorConst) {
         CHECK_LAYOUT(mem(), layout, mat);
 
         {
-          auto mat_sub_const = mat.subPipelineConst();
+          auto mat_sub_const = mat.sub_pipeline_const();
           ASSERT_TRUE(haveConstElements(mat_sub_const));
           CHECK_LAYOUT(mem(), layout, mat_sub_const);
         }
@@ -1909,7 +1909,7 @@ TEST_F(MatrixGenericTest, SelectTilesReadonlySubPipeline) {
 
       Distribution distribution(size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
       MatrixT mat(std::move(distribution), tiles_compact);
-      auto mat_sub = mat.subPipeline();
+      auto mat_sub = mat.sub_pipeline();
 
       // if this rank has no tiles locally, there's nothing interesting to do...
       if (distribution.localNrTiles().isEmpty())
@@ -1998,7 +1998,7 @@ TEST_F(MatrixGenericTest, SelectTilesReadwriteSubPipeline) {
 
       Distribution distribution(size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
       MatrixT mat(std::move(distribution), tiles_compact);
-      auto mat_sub = mat.subPipeline();
+      auto mat_sub = mat.sub_pipeline();
 
       // if this rank has no tiles locally, there's nothing interesting to do...
       if (distribution.localNrTiles().isEmpty())
@@ -2197,7 +2197,7 @@ TEST(MatrixDestructor, NonConstAfterReadSubPipeline) {
   std::atomic<bool> is_exited_from_scope{false};
   {
     auto matrix = create_matrix<T>();
-    auto matrix_sub = matrix.subPipeline();
+    auto matrix_sub = matrix.sub_pipeline();
 
     auto tile_sender = matrix_sub.read(LocalTileIndex(0, 0));
     last_task = std::move(tile_sender) |
@@ -2216,7 +2216,7 @@ TEST(MatrixDestructor, NonConstAfterReadSubPipelineConst) {
   std::atomic<bool> is_exited_from_scope{false};
   {
     auto matrix = create_matrix<T>();
-    auto matrix_sub = matrix.subPipelineConst();
+    auto matrix_sub = matrix.sub_pipeline_const();
 
     auto tile_sender = matrix_sub.read(LocalTileIndex(0, 0));
     last_task = std::move(tile_sender) |
@@ -2236,7 +2236,7 @@ TEST(MatrixDestructor, NonConstAfterReadWriteSubPipeline) {
   std::atomic<bool> is_exited_from_scope{false};
   {
     auto matrix = create_matrix<T>();
-    auto matrix_sub = matrix.subPipeline();
+    auto matrix_sub = matrix.sub_pipeline();
 
     auto tile_sender = matrix_sub.readwrite(LocalTileIndex(0, 0));
     last_task = std::move(tile_sender) |
@@ -2256,7 +2256,7 @@ TEST(MatrixDestructor, NonConstAfterReadSubPipeline_UserMemory) {
   {
     T data;
     auto matrix = create_matrix<T>(data);
-    auto matrix_sub = matrix.subPipeline();
+    auto matrix_sub = matrix.sub_pipeline();
 
     auto tile_sender = matrix.read(LocalTileIndex(0, 0));
     last_task = std::move(tile_sender) |
@@ -2276,7 +2276,7 @@ TEST(MatrixDestructor, NonConstAfterReadSubPipelineConst_UserMemory) {
   {
     T data;
     auto matrix = create_matrix<T>(data);
-    auto matrix_sub = matrix.subPipelineConst();
+    auto matrix_sub = matrix.sub_pipeline_const();
 
     auto tile_sender = matrix.read(LocalTileIndex(0, 0));
     last_task = std::move(tile_sender) |
@@ -2297,7 +2297,7 @@ TEST(MatrixDestructor, NonConstAfterReadWriteSubPipeline_UserMemory) {
   {
     T data;
     auto matrix = create_matrix<T>(data);
-    auto matrix_sub = matrix.subPipeline();
+    auto matrix_sub = matrix.sub_pipeline();
 
     auto tile_sender = matrix_sub.readwrite(LocalTileIndex(0, 0));
     last_task = std::move(tile_sender) |
@@ -2317,7 +2317,7 @@ TEST(MatrixDestructor, ConstAfterReadSubPipeline_UserMemory) {
   {
     T data;
     auto matrix = create_const_matrix<T>(data);
-    auto matrix_sub = matrix.subPipelineConst();
+    auto matrix_sub = matrix.sub_pipeline_const();
 
     auto tile_sender = matrix.read(LocalTileIndex(0, 0));
     last_task = std::move(tile_sender) |

@@ -178,7 +178,7 @@ TYPED_TEST(RetiledMatrixRefLocalTest, LocalConstructor) {
         set(mat, el1);
         CHECK_MATRIX_EQ(el1, mat_ref);
         {
-          Matrix<const Type, Device::CPU> rt_mat = mat_ref.retiledSubPipelineConst(tiles_per_block);
+          Matrix<const Type, Device::CPU> rt_mat = mat_ref.retiled_sub_pipeline_const(tiles_per_block);
           EXPECT_EQ(expected_distribution, rt_mat.distribution());
           CHECK_MATRIX_EQ(el1, rt_mat);
           EXPECT_TRUE(is_allocated_as(rt_mat, exp_alloc));
@@ -196,7 +196,7 @@ TYPED_TEST(RetiledMatrixRefLocalTest, LocalConstructor) {
         CHECK_MATRIX_EQ(el1, mat_ref);
         {
           Matrix<const Type, Device::CPU> rt_mat =
-              mat_ref_const.retiledSubPipelineConst(tiles_per_block);
+              mat_ref_const.retiled_sub_pipeline_const(tiles_per_block);
           EXPECT_EQ(expected_distribution, rt_mat.distribution());
           CHECK_MATRIX_EQ(el1, rt_mat);
           EXPECT_TRUE(is_allocated_as(rt_mat, exp_alloc));
@@ -266,7 +266,7 @@ TYPED_TEST(RetiledMatrixRefTest, GlobalConstructor) {
           set(mat, el1);
           CHECK_MATRIX_EQ(el1, mat_ref);
           {
-            Matrix<const Type, Device::CPU> rt_mat = mat_ref.retiledSubPipelineConst(tiles_per_block);
+            Matrix<const Type, Device::CPU> rt_mat = mat_ref.retiled_sub_pipeline_const(tiles_per_block);
             EXPECT_EQ(expected_distribution, rt_mat.distribution());
             CHECK_MATRIX_EQ(el1, rt_mat);
             EXPECT_TRUE(is_allocated_as(rt_mat, exp_alloc));
@@ -284,7 +284,7 @@ TYPED_TEST(RetiledMatrixRefTest, GlobalConstructor) {
           CHECK_MATRIX_EQ(el1, mat_ref);
           {
             Matrix<const Type, Device::CPU> rt_mat =
-                mat_ref_const.retiledSubPipelineConst(tiles_per_block);
+                mat_ref_const.retiled_sub_pipeline_const(tiles_per_block);
             EXPECT_EQ(expected_distribution, rt_mat.distribution());
             CHECK_MATRIX_EQ(el1, rt_mat);
             EXPECT_TRUE(is_allocated_as(rt_mat, exp_alloc));

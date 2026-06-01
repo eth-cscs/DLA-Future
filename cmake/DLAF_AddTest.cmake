@@ -280,6 +280,10 @@ function(DLAF_addTargetTest test_target_name)
       )
     endif()
 
+    if(DLAF_CI_RUNNER_USES_MPIRUN)
+      list(APPEND _PIKA_EXTRA_ARGS_LIST_CAPI "--pika:print-bind")
+    endif()
+
     string(REPLACE ";" "\", \"" PIKA_EXTRA_ARGS_LIST_CAPI "${_PIKA_EXTRA_ARGS_LIST_CAPI}")
 
     configure_file(

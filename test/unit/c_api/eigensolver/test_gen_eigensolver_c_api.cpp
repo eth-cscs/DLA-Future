@@ -413,7 +413,7 @@ void testGenEigensolver(int dlaf_context, const blas::Uplo uplo, const SizeType 
   pika::resume();
 
   if (!mat_a_h.size().isEmpty() && eval_idx_end != 0) {
-    testGenEigensolverCorrectness(uplo, reference_a, reference_b, ret, 0l, eval_idx_end, grid);
+    testGenEigensolverCorrectness(uplo, reference_a, reference_b, mat_b_h, ret, 0l, eval_idx_end, grid);
   }
 
   // Suspend pika to make sure dlaf_finalize resumes it

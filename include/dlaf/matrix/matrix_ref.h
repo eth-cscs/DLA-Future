@@ -80,6 +80,12 @@ public:
   /// @pre blockSize() is divisible by @p tiles_per_block
   /// @pre blockSize() == tile_size()
   /// @pre the origin of the reference matrix is at the top-left corner of the original matrix
+  Matrix<const T, D> retiled_sub_pipeline_const(const LocalTileSize& tiles_per_block) {
+    DLAF_ASSERT(origin_.row() == 0 && origin_.col() == 0, origin_);
+    return Matrix<const T, D>(*this, tiles_per_block);
+  }
+
+  DLAF_MATRIX_DEPRECATED("method has been renamed in snake case")
   Matrix<const T, D> retiledSubPipelineConst(const LocalTileSize& tiles_per_block) {
     DLAF_ASSERT(origin_.row() == 0 && origin_.col() == 0, origin_);
     return Matrix<const T, D>(*this, tiles_per_block);
@@ -214,9 +220,15 @@ public:
   /// @pre blockSize() is divisible by @p tiles_per_block
   /// @pre blockSize() == tile_size()
   /// @pre the origin of the reference matrix is at the top-left corner of the original matrix
-  Matrix<T, D> retiledSubPipeline(const LocalTileSize& tiles_per_block) noexcept {
+
+  Matrix<T, D> retiled_sub_pipeline(const LocalTileSize& tiles_per_block) noexcept {
     DLAF_ASSERT(origin_.row() == 0 && origin_.col() == 0, origin_);
     return Matrix<T, D>(*this, tiles_per_block);
+  }
+
+  DLAF_MATRIX_DEPRECATED("method has been renamed in snake case")
+  Matrix<T, D> retiledSubPipeline(const LocalTileSize& tiles_per_block) noexcept {
+    return retiled_sub_pipeline(tiles_per_block);
   }
 
   /// Returns a sender of the Tile with local index @p index.

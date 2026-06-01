@@ -42,7 +42,7 @@ int hermitian_eigensolver(const int dlaf_context, const char uplo, T* a,
   DLAF_ASSERT(dlaf_descz.i == 0, dlaf_descz.i);
   DLAF_ASSERT(dlaf_descz.j == 0, dlaf_descz.j);
 
-  pika::resume();
+  PikaRunningScope pika_scope;
 
   auto& communicator_grid = grid_from_context(dlaf_context);
 
@@ -68,7 +68,6 @@ int hermitian_eigensolver(const int dlaf_context, const char uplo, T* a,
   eigenvalues_host.waitLocalTiles();
   eigenvectors_host.waitLocalTiles();
 
-  pika::suspend();
   return 0;
 }
 
@@ -84,7 +83,7 @@ void pxheevd(const char uplo, const int m, T* a, const int ia, const int ja, con
   DLAF_ASSERT(ia == 1, ia);
   DLAF_ASSERT(ja == 1, ja);
   DLAF_ASSERT(iz == 1, iz);
-  DLAF_ASSERT(iz == 1, iz);
+  DLAF_ASSERT(jz == 1, jz);
   DLAF_ASSERT(m > 0 ? eigenvalues_index_begin >= 1 : eigenvalues_index_begin == 1, m,
               eigenvalues_index_begin);
   DLAF_ASSERT(m > 0 ? eigenvalues_index_end <= m : eigenvalues_index_end == 0, m, eigenvalues_index_end);

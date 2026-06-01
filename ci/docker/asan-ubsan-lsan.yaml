@@ -29,3 +29,6 @@ spack:
         - 'build_type=RelWithDebInfo'
         - 'malloc=system'
         - '+sanitizers'
+    cray-mpich:
+      require:
+        - '@8.1.32'

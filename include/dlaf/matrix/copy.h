@@ -91,8 +91,6 @@ void copy(Matrix<const T, Source>& source, Matrix<T, Destination>& dest) {
   DLAF_ASSERT_MODERATE(equal_size(source, dest), source.size(), dest.size());
   DLAF_ASSERT(local_matrix(source), source);
   DLAF_ASSERT(local_matrix(dest), dest);
-  DLAF_ASSERT_MODERATE(single_tile_per_block(source), source);
-  DLAF_ASSERT_MODERATE(single_tile_per_block(dest), dest);
 
   const TileElementSize tile_sizes_src = source.tile_size();
   const TileElementSize tile_sizes_dst = dest.tile_size();

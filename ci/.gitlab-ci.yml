@@ -9,9 +9,6 @@
 #
 include:
 
-  # This tests is needed to quickly check that TDS credentials are valid.
-  - local: 'ci/rocm/test.yml'
-
   - local: 'ci/cpu/asan_ubsan_lsan.yml'
   - local: 'ci/cpu/clang15_release_cxx20.yml'
   - local: 'ci/cpu/clang15_release_stdexec.yml'

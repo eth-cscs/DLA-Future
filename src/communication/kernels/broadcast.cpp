@@ -37,7 +37,7 @@ template <class T, Device D, class Comm>
     pika::execution::experimental::unique_any_sender<Comm> pcomm,
     dlaf::matrix::ReadOnlyTileSender<T, D> tile) {
   using dlaf::internal::RequireContiguous;
-  constexpr Device DComm = CommunicationDevice_v<D>;
+  constexpr Device DComm = CommunicationDeviceBroadcast_v<D>;
   constexpr auto require_contiguous =
 #if defined(DLAF_WITH_MPI_GPU_AWARE) && defined(DLAF_WITH_MPI_GPU_FORCE_CONTIGUOUS)
       DComm == Device::GPU ? RequireContiguous::Yes :
@@ -61,7 +61,7 @@ template <class T, Device D, class Comm>
     pika::execution::experimental::unique_any_sender<Comm> pcomm, comm::IndexT_MPI root_rank,
     dlaf::matrix::ReadWriteTileSender<T, D> tile) {
   using dlaf::internal::RequireContiguous;
-  constexpr Device DComm = CommunicationDevice_v<D>;
+  constexpr Device DComm = CommunicationDeviceBroadcast_v<D>;
   constexpr auto require_contiguous =
 #if defined(DLAF_WITH_MPI_GPU_AWARE) && defined(DLAF_WITH_MPI_GPU_FORCE_CONTIGUOUS)
       DComm == Device::GPU ? RequireContiguous::Yes :

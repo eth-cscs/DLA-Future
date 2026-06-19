@@ -509,7 +509,7 @@ struct communicationMiniapp {
                               matrix_ref);
       benchmark_internal_all_reduce<Device::CPU, B>(run_index, opts, world,
                                                     comm_grid.full_communicator_pipeline(), matrix_ref);
-#ifdef DLAF_WITH_MPI_GPU_AWARE
+#if defined(DLAF_WITH_MPI_GPU_AWARE) && !defined(DLAF_WITH_MPI_GPU_AWARE_NO_REDUCE_OPS)
       benchmark_internal_all_reduce<Device::GPU, B>(run_index, opts, world,
                                                     comm_grid.full_communicator_pipeline(), matrix_ref);
 #endif
@@ -519,7 +519,7 @@ struct communicationMiniapp {
       benchmark_internal_all_reduce_in_place<Device::CPU, B>(run_index, opts, world,
                                                              comm_grid.full_communicator_pipeline(),
                                                              matrix_ref);
-#ifdef DLAF_WITH_MPI_GPU_AWARE
+#if defined(DLAF_WITH_MPI_GPU_AWARE) && !defined(DLAF_WITH_MPI_GPU_AWARE_NO_REDUCE_OPS)
       benchmark_internal_all_reduce_in_place<Device::GPU, B>(run_index, opts, world,
                                                              comm_grid.full_communicator_pipeline(),
                                                              matrix_ref);
@@ -568,7 +568,7 @@ struct communicationMiniapp {
       benchmark_reduce<B>(run_index, opts, world, comm_grid.full_communicator_pipeline(), matrix_ref);
       benchmark_internal_reduce<Device::CPU, B>(run_index, opts, world,
                                                 comm_grid.full_communicator_pipeline(), matrix_ref);
-#ifdef DLAF_WITH_MPI_GPU_AWARE
+#if defined(DLAF_WITH_MPI_GPU_AWARE) && !defined(DLAF_WITH_MPI_GPU_AWARE_NO_REDUCE_OPS)
       benchmark_internal_reduce<Device::GPU, B>(run_index, opts, world,
                                                 comm_grid.full_communicator_pipeline(), matrix_ref);
 #endif

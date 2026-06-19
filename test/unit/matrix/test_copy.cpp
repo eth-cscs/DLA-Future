@@ -97,6 +97,78 @@ TYPED_TEST(MatrixCopyTest, FullMatrixCPU) {
   }
 }
 
+struct DifferentTileSizeCopyConfig {
+  LocalElementSize size;
+  TileElementSize tile_size_src;
+  TileElementSize tile_size_dst;
+};
+
+const std::vector<DifferentTileSizeCopyConfig> different_tile_sizes_tests({
+    // Same tile sizes (no retiling needed)
+    {{12, 12}, {4, 4}, {4, 4}},
+    // Source tiles are larger than destination tiles
+    {{12, 12}, {6, 6}, {3, 3}},
+    {{12, 12}, {6, 6}, {2, 2}},
+    // Destination tiles are larger than source tiles
+    {{12, 12}, {3, 3}, {6, 6}},
+    {{12, 12}, {2, 2}, {6, 6}},
+    // Non-square tiles
+    {{12, 18}, {6, 9}, {3, 3}},
+    {{12, 18}, {3, 3}, {6, 9}},
+    // Mixed: one dimension same, other different
+    {{12, 12}, {6, 4}, {3, 4}},
+    {{12, 12}, {3, 4}, {6, 4}},
+    // Empty matrix
+    {{0, 0}, {6, 6}, {3, 3}},
+    // Single row/column of tiles
+    {{3, 12}, {3, 6}, {3, 3}},
+    {{12, 3}, {6, 3}, {3, 3}},
+});
+
+TYPED_TEST(MatrixCopyTest, FullMatrixLocalDifferentTileSizesCPU) {
+  using dlaf::matrix::util::set;
+
+  for (const auto& test : different_tile_sizes_tests) {
+    Matrix<TypeParam, Device::CPU> mat_src(test.size, test.tile_size_src);
+    set(mat_src, inputValues<TypeParam>);
+    Matrix<const TypeParam, Device::CPU> mat_src_const = std::move(mat_src);
+
+    Matrix<TypeParam, Device::CPU> mat_dst_1(test.size, test.tile_size_dst);
+    set(mat_dst_1, outputValues<TypeParam>);
+
+    Matrix<TypeParam, Device::CPU> mat_dst_2(test.size, test.tile_size_src);
+    set(mat_dst_2, outputValues<TypeParam>);
+
+    copy(mat_src_const, mat_dst_1);
+    CHECK_MATRIX_NEAR(inputValues<TypeParam>, mat_dst_1, 0, TypeUtilities<TypeParam>::error);
+
+    copy(mat_dst_1, mat_dst_2);
+    CHECK_MATRIX_NEAR(inputValues<TypeParam>, mat_dst_2, 0, TypeUtilities<TypeParam>::error);
+  }
+}
+
+#if DLAF_WITH_GPU
+TYPED_TEST(MatrixCopyTest, FullMatrixLocalDifferentTileSizesGPU) {
+  using dlaf::matrix::util::set;
+
+  for (const auto& test : different_tile_sizes_tests) {
+    Matrix<TypeParam, Device::CPU> mat_src(test.size, test.tile_size_src);
+    set(mat_src, inputValues<TypeParam>);
+    Matrix<const TypeParam, Device::CPU> mat_src_const = std::move(mat_src);
+
+    Matrix<TypeParam, Device::GPU> mat_gpu(test.size, test.tile_size_dst);
+
+    Matrix<TypeParam, Device::CPU> mat_dst(test.size, test.tile_size_src);
+    set(mat_dst, outputValues<TypeParam>);
+
+    copy(mat_src_const, mat_gpu);
+    copy(mat_gpu, mat_dst);
+
+    CHECK_MATRIX_NEAR(inputValues<TypeParam>, mat_dst, 0, TypeUtilities<TypeParam>::error);
+  }
+}
+#endif
+
 #if DLAF_WITH_GPU
 TYPED_TEST(MatrixCopyTest, FullMatrixGPU) {
   using dlaf::matrix::util::set;

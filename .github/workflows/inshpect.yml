@@ -30,7 +30,7 @@ jobs:
           mv inshpect /usr/local/bin/inshpect
           popd
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Inshpect
         if: always()
         run: |

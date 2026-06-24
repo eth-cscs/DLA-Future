@@ -10,6 +10,7 @@
 
 #include <dlaf/init.h>
 #include <dlaf/matrix/allocation_io.h>
+#include <dlaf/memory/allocation_io.h>
 #include <dlaf/tune.h>
 
 namespace dlaf {
@@ -20,6 +21,7 @@ TuneParameters& getTuneParameters() {
 }
 
 std::ostream& operator<<(std::ostream& os, const TuneParameters& params) {
+  os << "  default_allocate_on = " << params.default_allocate_on << std::endl;
   os << "  default_allocation_layout = " << params.default_allocation_layout << std::endl;
   os << "  tfactor_num_threads = " << params.tfactor_num_threads << std::endl;
   os << "  tfactor_num_streams = " << params.tfactor_num_streams << std::endl;

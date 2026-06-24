@@ -41,6 +41,8 @@ constexpr SizeType m = 37;
 constexpr SizeType n = 87;
 constexpr SizeType ld = 133;
 
+constexpr memory::AllocateOn allocate_on_construction = memory::AllocateOn::Construction;
+
 SizeType elIndex(TileElementIndex index, SizeType ld) {
   return index.row() + ld * index.col();
 }
@@ -89,7 +91,7 @@ TYPED_TEST(TileTest, Constructor) {
     for (const auto n : sizes) {
       SizeType min_ld = std::max<SizeType>(1, m);
       for (const SizeType ld : {min_ld, min_ld + 64}) {
-        memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+        memory::MemoryView<Type, Device::CPU> memory_view(ld * n, memory::AllocateOn::Construction);
         TileElementSize size(m, n);
         for (SizeType j = 0; j < size.cols(); ++j) {
           for (SizeType i = 0; i < size.rows(); ++i) {
@@ -135,7 +137,7 @@ TYPED_TEST(TileTest, ConstructorConst) {
     for (const auto n : sizes) {
       SizeType min_ld = std::max<SizeType>(1, m);
       for (const SizeType ld : {min_ld, min_ld + 64}) {
-        memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+        memory::MemoryView<Type, Device::CPU> memory_view(ld * n, memory::AllocateOn::Construction);
         TileElementSize size(m, n);
         for (SizeType j = 0; j < size.cols(); ++j) {
           for (SizeType i = 0; i < size.rows(); ++i) {
@@ -161,7 +163,7 @@ TYPED_TEST(TileTest, ConstructorConst) {
 
 TYPED_TEST(TileTest, MoveConstructor) {
   using Type = TypeParam;
-  memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+  memory::MemoryView<Type, Device::CPU> memory_view(ld * n, allocate_on_construction);
 
   TileElementSize size(m, n);
   auto mem_view = memory_view;  // Copy the memory view to check the elements later.
@@ -177,7 +179,7 @@ TYPED_TEST(TileTest, MoveConstructor) {
 
 TYPED_TEST(TileTest, MoveConstructorConst) {
   using Type = TypeParam;
-  memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+  memory::MemoryView<Type, Device::CPU> memory_view(ld * n, allocate_on_construction);
 
   TileElementSize size(m, n);
   auto mem_view = memory_view;  // Copy the memory view to check the elements later.
@@ -193,7 +195,7 @@ TYPED_TEST(TileTest, MoveConstructorConst) {
 
 TYPED_TEST(TileTest, MoveConstructorMix) {
   using Type = TypeParam;
-  memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+  memory::MemoryView<Type, Device::CPU> memory_view(ld * n, allocate_on_construction);
 
   TileElementSize size(m, n);
   auto mem_view = memory_view;  // Copy the memory view to check the elements later.
@@ -209,12 +211,13 @@ TYPED_TEST(TileTest, MoveConstructorMix) {
 
 TYPED_TEST(TileTest, MoveAssignment) {
   using Type = TypeParam;
-  memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+  memory::MemoryView<Type, Device::CPU> memory_view(ld * n, allocate_on_construction);
 
   TileElementSize size(m, n);
   auto mem_view = memory_view;  // Copy the memory view to check the elements later.
   Tile<Type, Device::CPU> tile0(size, std::move(mem_view), ld);
-  Tile<Type, Device::CPU> tile({1, 1}, memory::MemoryView<Type, Device::CPU>(1), 1);
+  Tile<Type, Device::CPU> tile({1, 1},
+                               memory::MemoryView<Type, Device::CPU>(1, allocate_on_construction), 1);
 
   tile = std::move(tile0);
   EXPECT_EQ(TileSizes({0, 0}, 1), getSizes(tile0));
@@ -226,12 +229,13 @@ TYPED_TEST(TileTest, MoveAssignment) {
 
 TYPED_TEST(TileTest, MoveAssignmentConst) {
   using Type = TypeParam;
-  memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+  memory::MemoryView<Type, Device::CPU> memory_view(ld * n, allocate_on_construction);
 
   TileElementSize size(m, n);
   auto mem_view = memory_view;  // Copy the memory view to check the elements later.
   Tile<const Type, Device::CPU> const_tile0(size, std::move(mem_view), ld);
-  Tile<const Type, Device::CPU> const_tile({1, 1}, memory::MemoryView<Type, Device::CPU>(1), 1);
+  Tile<const Type, Device::CPU> const_tile(
+      {1, 1}, memory::MemoryView<Type, Device::CPU>(1, allocate_on_construction), 1);
 
   const_tile = std::move(const_tile0);
   EXPECT_EQ(TileSizes({0, 0}, 1), getSizes(const_tile0));
@@ -243,12 +247,13 @@ TYPED_TEST(TileTest, MoveAssignmentConst) {
 
 TYPED_TEST(TileTest, MoveAssignmentMix) {
   using Type = TypeParam;
-  memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+  memory::MemoryView<Type, Device::CPU> memory_view(ld * n, allocate_on_construction);
 
   TileElementSize size(m, n);
   auto mem_view = memory_view;  // Copy the memory view to check the elements later.
   Tile<Type, Device::CPU> tile0(size, std::move(mem_view), ld);
-  Tile<const Type, Device::CPU> const_tile({1, 1}, memory::MemoryView<Type, Device::CPU>(1), 1);
+  Tile<const Type, Device::CPU> const_tile(
+      {1, 1}, memory::MemoryView<Type, Device::CPU>(1, allocate_on_construction), 1);
 
   const_tile = std::move(tile0);
   EXPECT_EQ(TileSizes({0, 0}, 1), getSizes(tile0));
@@ -260,7 +265,7 @@ TYPED_TEST(TileTest, MoveAssignmentMix) {
 
 TYPED_TEST(TileTest, ReferenceMix) {
   using Type = TypeParam;
-  memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+  memory::MemoryView<Type, Device::CPU> memory_view(ld * n, allocate_on_construction);
 
   TileElementSize size(m, n);
   auto mem_view = memory_view;  // Copy the memory view to check the elements later.
@@ -276,7 +281,7 @@ TYPED_TEST(TileTest, ReferenceMix) {
 
 TYPED_TEST(TileTest, PointerMix) {
   using Type = TypeParam;
-  memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
+  memory::MemoryView<Type, Device::CPU> memory_view(ld * n, allocate_on_construction);
 
   TileElementSize size(m, n);
   auto mem_view = memory_view;  // Copy the memory view to check the elements later.
@@ -296,7 +301,7 @@ TYPED_TEST(TileTest, CreateBuffer) {
   SizeType n = 87;
   SizeType ld = 133;
 
-  memory::MemoryView<TypeParam, Device::CPU> memory_view(ld * n);
+  memory::MemoryView<TypeParam, Device::CPU> memory_view(ld * n, allocate_on_construction);
   auto mem_view = memory_view;
 
   TileElementSize size(m, n);
@@ -312,7 +317,7 @@ TYPED_TEST(TileTest, CreateBuffer) {
 
 template <class T, Device D>
 auto createTileAndPtrChecker(TileElementSize size, SizeType ld) {
-  memory::MemoryView<T, D> memory_view(ld * size.cols());
+  memory::MemoryView<T, D> memory_view(ld * size.cols(), allocate_on_construction);
   typename Tile<T, D>::TileDataType tile(size, memory_view, ld);
   Tile<T, D> tile2(size, std::move(memory_view), ld);
   auto tile_ptr = [tile2 = std::move(tile2)](const TileElementIndex& index) { return tile2.ptr(index); };

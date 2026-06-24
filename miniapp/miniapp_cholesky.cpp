@@ -343,7 +343,8 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
         DLAF_ASSERT_HEAVY(owner_transposed.col() == current_rank.col(), owner_transposed, current_rank);
 
         HostTileType workspace(L.blockSize(),
-                               dlaf::memory::MemoryView<T, Device::CPU>(L.blockSize().linear_size()),
+                               dlaf::memory::MemoryView<T, Device::CPU>(
+                                   L.blockSize().linear_size(), dlaf::memory::AllocateOnDefault{}),
                                L.blockSize().rows());
 
         dlaf::comm::sync::broadcast::receive_from(owner_transposed.row(), comm_grid.colCommunicator(),

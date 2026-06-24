@@ -21,6 +21,7 @@
 #include <pika/runtime.hpp>
 
 #include <dlaf/matrix/allocation_types.h>
+#include <dlaf/memory/allocation_types.h>
 #include <dlaf/types.h>
 
 namespace dlaf {
@@ -63,6 +64,10 @@ namespace dlaf {
 ///     Enable dump of tridiagonal solver input/output data to "tridiagonal.h5" file that will be
 ///     created in the working folder (it should not exist before the execution).
 ///     Set with environment variable DLAF_DEBUG_DUMP_TRIDIAG_SOLVER_DATA.
+/// - default_allocate_on:
+///     Specify the default AllocateOn for Matrices and MemoryViews.
+///     Allowed values: Construction (default), Demand.
+///     Set with environment variable DLAF_DEFAULT_ALLOCATE_ON.
 /// - default_allocation_layout:
 ///     Specify the default AllocationLayout for Matrices.
 ///     Allowed values: ColMajor (default), Blocks, Tiles.
@@ -145,6 +150,7 @@ struct TuneParameters {
   bool debug_dump_triangular_inverse_data = false;
   bool debug_dump_tridiag_solver_data = false;
 
+  memory::AllocateOn default_allocate_on = memory::AllocateOn::Construction;
   matrix::AllocationLayout default_allocation_layout = matrix::AllocationLayout::ColMajor;
 
   std::size_t tfactor_num_threads = 1;

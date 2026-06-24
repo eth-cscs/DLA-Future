@@ -13,7 +13,7 @@ DLA-Future runs on x86 and ARM CPUs as well as NVIDIA and AMD GPUs.
 Currently DLA-Future provides the following algorithms which are available in the following interfaces:
 | ScaLAPACK Name | Algorithm | C++ API | C API | Scalapack C API |
 |----------------|-----------|:-------:|:-----:|:---------------:|
-| `P[S,D,C,Z]TRMM` | Triangular matrix multiplication | ✔️ | ❌ | ❌ |
+| `P[S,D,C,Z]TRMM` | Triangular matrix multiplication | ✔️ | ✔️ | ✔️ |
 | `P[C,Z]HEMM`, `P[S,D]SYMM` | Hermitian matrix multiplication | ✔️ | ❌ | ❌ |
 | `P[S,D,C,Z]TRSM` | Triangular solver | ✔️ | ❌ | ❌ |
 | `P[S,D,C,Z]POTRF` | Cholesky decomposition | ✔️ | ✔️ | ✔️ |

@@ -294,10 +294,11 @@ DLAF_addSublibrary(
           c_api/eigensolver/gen_eigensolver.cpp
           c_api/factorization/cholesky.cpp
           c_api/inverse/cholesky.cpp
+          c_api/multiplication/triangular.cpp
           c_api/grid.cpp
           c_api/init.cpp
           c_api/utils.cpp
-  LIBRARIES dlaf.core dlaf.factorization dlaf.inverse dlaf.eigensolver
+  LIBRARIES dlaf.core dlaf.factorization dlaf.inverse dlaf.eigensolver dlaf.multiplication
 )
 
 # Define DLAF's complete library

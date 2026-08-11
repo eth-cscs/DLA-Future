@@ -406,107 +406,113 @@ void copyLocalPartsFromGlobalIndex(const SizeType i_loc_begin, const matrix::Dis
   }
 }
 
-// @param index_map a column matrix that represents a map from local `out` to local `in` indices
-template <class T, Device D, Coord C, class IndexMapSender, class InSender, class OutSender>
-void applyPackingIndex(const matrix::Distribution& subm_dist, IndexMapSender&& index_map, InSender&& in,
-                       OutSender&& out) {
+// Packs local IN elements destined to other ranks into a contiguous send buffer, following
+// `packing_index` (a column matrix that represents a map from packed positions to local `in`
+// indices). Packed positions in `[a, b)`, i.e. the ones destined to this same rank, are skipped:
+// those are instead permuted directly from `in` to the final output by `permuteLocalOnCPU`, without
+// being copied into the send buffer first.
+template <class T, Coord C, class SendCountsSender, class PackingIndexSender, class InSender,
+          class OutSender>
+void packOthersOnCPU(const matrix::Distribution& subm_dist, const matrix::Distribution& dist,
+                     SendCountsSender&& send_counts, PackingIndexSender&& packing_index, InSender&& in,
+                     OutSender&& out) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
-  auto sender = ex::when_all(std::forward<IndexMapSender>(index_map), std::forward<InSender>(in),
-                             std::forward<OutSender>(out));
+  auto setup_pack_f = [rank = dist.rankIndex().get<C>()](auto send_counts, auto index_tile_futs,
+                                                         auto mat_in_tiles, auto mat_out_tiles) {
+    const size_t rank_index = to_sizet(rank);
+    const int a = std::accumulate(send_counts.cbegin(), send_counts.cbegin() + rank, 0);
+    const int b = a + send_counts[rank_index];
 
-  if constexpr (D == Device::CPU) {
-    const SizeType nperms = subm_dist.size().get<C>();
+    return std::tuple(a, b, std::move(index_tile_futs), std::move(mat_in_tiles),
+                      std::move(mat_out_tiles));
+  };
 
-    auto permute_fn = [subm_dist](const auto i_perm, const auto& index_tile_futs,
-                                  const auto& mat_in_tiles, const auto& mat_out_tiles) {
+  auto pack_others_f = [subm_dist](const auto i_perm, const auto a, const auto b,
+                                   const auto& index_tile_futs, const auto& mat_in_tiles,
+                                   const auto& mat_out_tiles) {
+    // Note: here `i_perm` is itself the packed (send) position, unlike in the unpacking kernels
+    // below where it is a local position whose packed position has to be looked up.
+    // [0, a) and [b, end)
+    if (i_perm < a || b <= i_perm) {
       const SizeType* perm_arr = index_tile_futs[0].get().ptr();
-
-      [[maybe_unused]] const SizeType nperms = subm_dist.size().get<C>();
-      DLAF_ASSERT_HEAVY(i_perm >= 0 && i_perm < nperms, i_perm, nperms);
-      DLAF_ASSERT_HEAVY(perm_arr[i_perm] >= 0 && perm_arr[i_perm] < nperms, perm_arr[i_perm], nperms);
-
       applyPermutationOnCPU<T, C>(i_perm, subm_dist, perm_arr, mat_in_tiles, mat_out_tiles);
-    };
+    }
+  };
 
-    ex::start_detached(std::move(sender) | ex::continues_on(di::getBackendScheduler<Backend::MC>()) |
-                       ex::bulk(nperms, std::move(permute_fn)));
-  }
-  else {
-#if defined(DLAF_WITH_GPU)
-    auto permute_fn = [subm_dist](const auto& index_tile_futs, const auto& mat_in_tiles,
-                                  const auto& mat_out_tiles, whip::stream_t stream) {
-      TileElementIndex zero(0, 0);
-      const SizeType* i_ptr = index_tile_futs[0].get().ptr(zero);
-
-      applyPermutationsOnDeviceWrapper<T, C>(GlobalElementIndex(0, 0), subm_dist.size(), 0, subm_dist,
-                                             i_ptr, mat_in_tiles, mat_out_tiles, stream);
-    };
-
-    ex::start_detached(std::move(sender) |
-                       dlaf::internal::transform(dlaf::internal::Policy<Backend::GPU>(),
-                                                 std::move(permute_fn)));
-#endif
-  }
+  ex::start_detached(ex::when_all(std::forward<SendCountsSender>(send_counts),
+                                  std::forward<PackingIndexSender>(packing_index),
+                                  std::forward<InSender>(in), std::forward<OutSender>(out)) |
+                     di::transform(di::Policy<Backend::MC>(), std::move(setup_pack_f)) | ex::unpack() |
+                     ex::bulk(subm_dist.size().get<C>(), std::move(pack_others_f)));
 }
 
-template <class T, Coord C, class SendCountsSender, class RecvCountsSender, class UnpackingIndexSender,
-          class MatSendSender, class MatOutSender>
-void unpackLocalOnCPU(const matrix::Distribution& subm_dist, const matrix::Distribution& dist,
-                      SendCountsSender&& send_counts, RecvCountsSender&& recv_counts,
-                      UnpackingIndexSender&& unpacking_index, MatSendSender&& mat_send,
-                      MatOutSender&& mat_out) {
+// Permutes elements destined to stay on this rank directly from `in` to `out`, without allocating or
+// copying through the send/receive buffers used for communication with other ranks.
+//
+// `packing_index` maps packed (send) positions to local `in` positions, while `unpacking_index` maps
+// local `out` positions to packed (receive) positions; composing the two (after re-aligning send- and
+// recv-side numbering, see the offset note below) gives a direct local `out` -> local `in` map for the
+// entries in `[a, b)`, i.e. the ones this rank sends to itself.
+template <class T, Coord C, class SendCountsSender, class RecvCountsSender, class PackingIndexSender,
+          class UnpackingIndexSender, class InSender, class OutSender>
+void permuteLocalOnCPU(const matrix::Distribution& subm_dist, const matrix::Distribution& dist,
+                       SendCountsSender&& send_counts, RecvCountsSender&& recv_counts,
+                       PackingIndexSender&& packing_index, UnpackingIndexSender&& unpacking_index,
+                       InSender&& in, OutSender&& out) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
-  auto setup_unpack_local_f = [subm_dist,
-                               rank = dist.rankIndex().get<C>()](auto send_counts, auto recv_counts,
-                                                                 auto index_tile_futs, auto mat_in_tiles,
-                                                                 auto mat_out_tiles) {
+  auto setup_permute_local_f = [subm_dist, rank = dist.rankIndex().get<C>()](
+                                   auto send_counts, auto recv_counts, auto packing_index_tile_futs,
+                                   auto unpacking_index_tile_futs, auto mat_in_tiles,
+                                   auto mat_out_tiles) {
     const size_t rank_index = to_sizet(rank);
 
-    const SizeType* perm_arr = index_tile_futs[0].get().ptr();
+    const SizeType* packing_arr = packing_index_tile_futs[0].get().ptr();
+    const SizeType* unpacking_arr = unpacking_index_tile_futs[0].get().ptr();
 
     const int a = std::accumulate(send_counts.cbegin(), send_counts.cbegin() + rank, 0);
     const int b = a + send_counts[rank_index];
 
     // Note:
-    // These are copied directly from mat_send, while unpacking permutation applies to indices on
-    // the receiver side. So, we have to "align" the unpacking permutation, by applying the offset
-    // existing between the send and recv side.
+    // `unpacking_index` applies to indices on the receiver side, so we have to "align" it to the
+    // sender-side numbering used by `packing_index`, by applying the offset existing between the
+    // send and recv side.
     // This is due to the fact that send and recv buffers might be "unbalanced", e.g. rank1 sends 2
     // and receive 1 with rank0, so resulting in a shift in indices between the two buffer sides,
-    // following previous example the local part would start at index (0-based) 2 in mat_send and
-    // at index 1 in mat_recv.
+    // following previous example the local part would start at index (0-based) 2 on the send side and
+    // at index 1 on the recv side.
     const int a_r = std::accumulate(recv_counts.cbegin(), recv_counts.cbegin() + rank, 0);
     const SizeType offset = to_SizeType(a - a_r);
-    std::vector<SizeType> perm_offseted;
-    perm_offseted.reserve(to_sizet(subm_dist.size().get<C>()));
-    std::transform(perm_arr, perm_arr + subm_dist.size().get<C>(), std::back_inserter(perm_offseted),
-                   [offset](const SizeType perm) { return perm + offset; });
 
-    return std::tuple(a, b, std::move(perm_offseted), std::move(mat_in_tiles), std::move(mat_out_tiles));
+    // direct_perm[i_perm] is the local `in` position feeding local `out` position i_perm, for the
+    // entries handled by this rank itself; entries destined elsewhere are marked with -1 and skipped.
+    std::vector<SizeType> direct_perm;
+    direct_perm.reserve(to_sizet(subm_dist.size().get<C>()));
+    for (SizeType i_perm = 0; i_perm < subm_dist.size().get<C>(); ++i_perm) {
+      const SizeType packed_pos = unpacking_arr[i_perm] + offset;
+      direct_perm.push_back(a <= packed_pos && packed_pos < b ? packing_arr[packed_pos] : SizeType(-1));
+    }
+
+    return std::tuple(std::move(direct_perm), std::move(mat_in_tiles), std::move(mat_out_tiles));
   };
 
-  auto permutations_unpack_local_f = [subm_dist](const auto i_perm, const auto a, const auto b,
-                                                 const auto& perm_offseted, const auto& mat_in_tiles,
-                                                 const auto& mat_out_tiles) {
-    const SizeType* perm_arr = perm_offseted.data();
-
-    // [a, b)
-    if (a <= perm_arr[i_perm] && perm_arr[i_perm] < b) {
-      applyPermutationOnCPU<T, C>(i_perm, subm_dist, perm_arr, mat_in_tiles, mat_out_tiles);
+  auto permute_local_f = [subm_dist](const auto i_perm, const auto& direct_perm,
+                                     const auto& mat_in_tiles, const auto& mat_out_tiles) {
+    if (direct_perm[to_sizet(i_perm)] != SizeType(-1)) {
+      applyPermutationOnCPU<T, C>(i_perm, subm_dist, direct_perm.data(), mat_in_tiles, mat_out_tiles);
     }
   };
 
-  ex::start_detached(
-      ex::when_all(std::forward<SendCountsSender>(send_counts),
-                   std::forward<RecvCountsSender>(recv_counts),
-                   std::forward<UnpackingIndexSender>(unpacking_index),
-                   std::forward<MatSendSender>(mat_send), std::forward<MatOutSender>(mat_out)) |
-      di::transform(di::Policy<Backend::MC>(), std::move(setup_unpack_local_f)) | ex::unpack() |
-      ex::bulk(subm_dist.size().get<C>(), std::move(permutations_unpack_local_f)));
+  ex::start_detached(ex::when_all(std::forward<SendCountsSender>(send_counts),
+                                  std::forward<RecvCountsSender>(recv_counts),
+                                  std::forward<PackingIndexSender>(packing_index),
+                                  std::forward<UnpackingIndexSender>(unpacking_index),
+                                  std::forward<InSender>(in), std::forward<OutSender>(out)) |
+                     di::transform(di::Policy<Backend::MC>(), std::move(setup_permute_local_f)) |
+                     ex::unpack() | ex::bulk(subm_dist.size().get<C>(), std::move(permute_local_f)));
 }
 
 template <class T, Coord C, class RecvCountsSender, class UnpackingIndexSender, class MatRecvSender,
@@ -614,23 +620,26 @@ void permuteOnCPU(
       initPackingIndex<C, true>(nranks, offset_sub, dist, local2global_index, packing_index) |
       ex::split();
 
-  // Pack local rows or columns to be sent from this rank
-  applyPackingIndex<T, D, C>(subm_dist, whenAllReadOnlyTilesArray(packing_index),
-                             whenAllReadOnlyTilesArray(i_loc_begin, i_loc_end, mat_in),
-                             whenAllReadWriteTilesArray(mat_send));
+  // Pack rows or columns destined to other ranks to be sent from this rank. Entries destined to this
+  // same rank are permuted directly below by permuteLocalOnCPU, without an intermediate copy.
+  packOthersOnCPU<T, C>(subm_dist, dist, send_counts_sender, whenAllReadOnlyTilesArray(packing_index),
+                        whenAllReadOnlyTilesArray(i_loc_begin, i_loc_end, mat_in),
+                        whenAllReadWriteTilesArray(mat_send));
 
   // Unpacking
   // separate unpacking:
   // - locals
   // - communicated
   // and then start two different tasks:
-  // - the first depends on mat_send instead of mat_recv (no dependency on comm)
+  // - the first permutes directly from mat_in to mat_out (no dependency on comm, no support buffer)
   // - the last is the same, but it has to skip the part already done for local
 
   // LOCAL
-  unpackLocalOnCPU<T, C>(subm_dist, dist, send_counts_sender, recv_counts_sender,
-                         whenAllReadOnlyTilesArray(unpacking_index), whenAllReadOnlyTilesArray(mat_send),
-                         whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out));
+  permuteLocalOnCPU<T, C>(subm_dist, dist, send_counts_sender, recv_counts_sender,
+                          whenAllReadOnlyTilesArray(packing_index),
+                          whenAllReadOnlyTilesArray(unpacking_index),
+                          whenAllReadOnlyTilesArray(i_loc_begin, i_loc_end, mat_in),
+                          whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out));
   // COMMUNICATION-dependent
   all2allData<T, D, C>(sub_task_chain, nranks, sz_loc, send_counts_sender, mat_send, recv_counts_sender,
                        mat_recv);
